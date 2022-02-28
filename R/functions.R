@@ -1272,6 +1272,112 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile){
              "Price","Value","CumulativeValue")
   return(m)
 }
+#' predictStemprofile
+#'
+#' Predict and extract stem profiles using taper models based on the log dimensions, in cases when no stem profile is recorded in the hpr file.
+#'
+#' @param hprfile Path to .hpr file
+#' @return Output structure with stem profile containing stem grades
+#' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
+#' @export
+predictStemprofile=function(hprfile){
+  require(XML);require(data.table);require(tcltk)
+  require(TapeR);require(tidyverse)
+  options(scipen=999)#suppress scientific notation
+  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
+  cat("XML parsing complete... ")
+  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+                                       xmlAttrs)) == "Stem"]
+  cat("Extracting stem profiles... ")
+  NoStemProfile=c()
+  pb=tkProgressBar(title = "progress bar", min = 0,
+                   max = length(stems), width = 300)
+  result=list()
+  i=1
+  for(i in 1:length(stems)){#
+    S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
+    SpeciesGroupKey=as.integer(
+      xmlValue(stems[[i]][["SpeciesGroupKey"]]))
+    gran=ProductData$SpeciesGroupKey_enkel[ProductData$SpeciesGroupKey==SpeciesGroupKey]%>% unique()==1
+    if(gran){
+      l=stems[[i]][["SingleTreeProcessedStem"]]
+      l=l[which(names(l)=="Log")]
+      LogKey=ProductKeys=LogLength=Buttob=
+        Midob=Topob=numeric(length(l))
+      j=1
+      for(j in 1:length(l)){
+        Item=l[[j]] %>% xmlToList()
+        LogKey[j]=Item$LogKey %>% as.integer()
+        ProductKeys[j]=Item$ProductKey %>% as.integer()
+        LogLength[j]=Item$LogMeasurement$LogLength %>% as.integer()
+        l[[j]] %>% class()
+        m=l[[j]][["LogMeasurement"]]
+        m=ldply(xmlToList(m), data.frame)
+        m=m[,which(names(m)%in% c(".id","text",".attrs"))]
+        m=m[!is.na(m$text),]
+        Buttob[j]=m$text[m$.attrs=="Butt ob"]%>% as.numeric()
+        Midob[j]=m$text[m$.attrs=="Mid ob"]%>% as.numeric()
+        Topob[j]=m$text[m$.attrs=="Top ob"]%>% as.numeric()
+      }
+      Dm=rbind(Buttob,
+               Midob,
+               Topob) %>% as.vector()/10
+      LogLengths=c(0*LogLength,
+                   .5*LogLength,
+                   1*LogLength)
+      seqs=ProductKey=c()
+      for(k in seq_len(j)){
+        seqs=c(seqs,seq(k,j*3,j))
+        ProductKey=c(ProductKey,rep(ProductKeys[k],3))
+      }
+      LogLengths=LogLengths[seqs]
+      l=cbind(LogLengths,Dm,ProductKey)
+      Hm=Reduce("+",l[,1],accumulate=T)/100
+      l=cbind(l,Hm) %>% data.table() %>% tibble()
+      l=tibble(l)
+      lm=l[!duplicated(Dm),]
+      lm=lm[lm$Hm>=0.5,]
+      mHt=hfromd(d = lm$Dm,
+                 h = lm$Hm,
+                 sp="spruce",
+                 output = "H")
+      diameterPosition=seq(0,max(l$Hm),.1)
+      DiameterValue=kublin_no(Hx = diameterPosition,
+                              Hm = lm$Hm,
+                              Dm = lm$Dm,
+                              mHt = mHt[1],
+                              sp = 1)
+      DiameterValue=sort(DiameterValue$DHx,decreasing = T)
+      df=data.frame(d=DiameterValue,h=diameterPosition)
+      cat(plot(lm$Hm,lm$Dm,xlab = "height (m)",ylab="diameter (cm)"))
+      cat(points(df$h,df$d,type="l"))
+      StemGrade=rep(-1,length(diameterPosition))
+      k=1
+      for(k in  1:(unique(l$ProductKey) %>% length())){
+        min=min(l$Hm[l$ProductKey==unique(l$ProductKey)[k]])
+        max=max(l$Hm[l$ProductKey==unique(l$ProductKey)[k]])
+        idxmin=which(near(diameterPosition,round_any(min,.1)))
+        idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
+        grade=PermittedGrades[[as.character(unique(l$ProductKey)[k])]] %>% max()
+        StemGrade[idxmin:idxmax]=grade
+      }
+      stempr=cbind(S,SpeciesGroupKey,
+                   diameterPosition,
+                   DiameterValue,StemGrade) %>% data.table()
+      colnames(stempr)=c("StemKey",
+                         "SpeciesGroupKey",
+                         "diameterPosition",
+                         "DiameterValue","StemGrade")
+      result[[i]]=stempr
+      setTkProgressBar(pb, i, label=paste(
+        round(i/length(stems)*100, 0),"% done"))
+    }
+  }
+  result[[1]] %>% class()
+  result=rbindlist(result)
+  close(pb)
+  return(result)
+}
 #' getHarvestedArea
 #'
 #' Extract harvested area
