@@ -2,7 +2,7 @@
 #'
 #' Optimal bucking
 #'
-#' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,...,end
+#' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,20,...
 #' @param DiameterValue numeric vector of corresponding diameters (mm)
 #' @param StemGrade vector of corresponding stem grades
 #' @param SpeciesGroupKey Species group key
@@ -567,7 +567,7 @@ getProductData=function(hprfile){
   ProductData$VolumeDiameterCategory=ProductData$VolumeDiameterCategory %>% as.character()
   ProductData$VolumeLengthCategory=ProductData$VolumeLengthCategory %>% as.character()
   ProductData=ProductData[!ProductData$ProductKey==999999,]
-  ProductData=ProductData[!is.na(ProductData$ProductName),]
+  #ProductData=ProductData[!is.na(ProductData$ProductName),]
   nSpecies=length(unique(ProductData$SpeciesGroupKey))
   Waste=data.frame( ObjectName =rep(ObjectName,nSpecies),
                     ProductKey =rep("999999",nSpecies),
