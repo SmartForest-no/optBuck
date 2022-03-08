@@ -1390,7 +1390,7 @@ predictStemprofile=function(hprfile){
 #' getHarvestedArea(Stems)
 #' @export
 getHarvestedArea=function(Stems){
-  require(sp)
+  require(sp);require(sf)
   sf=st_as_sf(as.data.frame(Stems),coords=c("Latitude","Longitude"))
   st_crs(sf)=CRS("+proj=longlat +datum=WGS84")
   sf=st_transform(sf, CRS("+init=epsg:25832"))
