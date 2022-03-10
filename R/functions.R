@@ -39,7 +39,10 @@ optBuck=function( diameterPosition,
   DiameterTopPositions = ProductData$DiameterTopPositions
   m = tt = c()
   bult = seq(0, 100, 10)
-  m = matrix(0, 1, 6)
+  m = matrix(0, 1, 8)
+  colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
+                "ProductKey",
+                "Volume", "Value", "Acc_Value")
   k = 50
   for (k in 1:length(c(bult, SeqAsp))) {
     StartPos = diameterPosition[1]
@@ -134,6 +137,9 @@ optBuck=function( diameterPosition,
         }
         Top_ob = DiameterValue[diameterPosition == round((StopPos -
                                                             DiameterTopPosition)/10) * 10]
+        Top_ub = BarkFunction(DiameterValue[IdxStop],
+                              SpeciesGroupKey, SpeciesGroupDefinition,
+                              Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
         if (VolumeDiameterCategory == "All diameters (solid volume)") {
           if (DiameterUnderBark == T) {
             DV = BarkFunction(DV, SpeciesGroupKey, SpeciesGroupDefinition,
@@ -152,9 +158,6 @@ optBuck=function( diameterPosition,
         }
         if (VolumeDiameterCategory == "Top") {
           if (DiameterUnderBark == T) {
-            Top_ub = BarkFunction(DiameterValue[IdxStop],
-                                  SpeciesGroupKey, SpeciesGroupDefinition,
-                                  Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
             r1 = Top_ub/2
             r2 = (Top_ub + LogLength * 0.01)/2
             v = ((1/3) * pi * (r1^2 + r2^2 + (r1 * r2)) *
@@ -169,10 +172,11 @@ optBuck=function( diameterPosition,
         }
       }
       Value = v * Price
-      subs = matrix(m[m[, 2] == StartPos, ], ncol = 6)
-      sub = matrix(subs[which.max(subs[, 6]), ], ncol = 6)
-      acc_Value = Value + sub[, 6]
-      m = rbind(m, c(StartPos, StopPos, ProductKey[1],
+      subs = matrix(m[m[, 2] == StartPos, ], ncol = 8)
+      sub = matrix(subs[which.max(subs[, 8]), ], ncol = 8)
+      acc_Value = Value + sub[, 8]
+      m = rbind(m, c(StartPos, StopPos,Top_ub , LogLength,
+                     ProductKey[1],
                      v, Value, acc_Value))
     }
   }
@@ -275,6 +279,9 @@ optBuck=function( diameterPosition,
           Top_ob = DiameterValue[diameterPosition ==
                                    round((StopPos - DiameterTopPosition)/10) *
                                    10]
+          Top_ub = BarkFunction(DiameterValue[IdxStop],
+                                SpeciesGroupKey, SpeciesGroupDefinition,
+                                Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
           if (VolumeDiameterCategory == "All diameters (solid volume)") {
             if (DiameterUnderBark == T) {
               DV = BarkFunction(DV, SpeciesGroupKey,
@@ -294,9 +301,6 @@ optBuck=function( diameterPosition,
           }
           if (VolumeDiameterCategory == "Top") {
             if (DiameterUnderBark == T) {
-              Top_ub = BarkFunction(DiameterValue[IdxStop],
-                                    SpeciesGroupKey, SpeciesGroupDefinition,
-                                    Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
               r1 = Top_ub/2
               r2 = (Top_ub + LogLength * 0.01)/2
               v = ((1/3) * pi * (r1^2 + r2^2 + (r1 *
@@ -311,10 +315,11 @@ optBuck=function( diameterPosition,
           }
         }
         Value = v * Price
-        subs = matrix(m[m[, 2] == StartPos, ], ncol = 6)
-        sub = matrix(subs[which.max(subs[, 6]), ], ncol = 6)
-        acc_Value = Value + sub[, 6]
-        m = rbind(m, c(StartPos, StopPos, ProductKey[1],
+        subs = matrix(m[m[, 2] == StartPos, ], ncol = 8)
+        sub = matrix(subs[which.max(subs[, 8]), ], ncol = 8)
+        acc_Value = Value + sub[, 8]
+        m = rbind(m, c(StartPos, StopPos,Top_ub , LogLength,
+                       ProductKey[1],
                        v, Value, acc_Value))
       }
     }
@@ -322,14 +327,13 @@ optBuck=function( diameterPosition,
   if (is.null(nrow(m))) {
     m = matrix(m, nrow = 1)
   }
-  tt = matrix(m[which.max(m[, 6]), ], ncol = 6)
+  tt = matrix(m[which.max(m[, 8]), ], ncol = 8)
   if (nrow(tt) == 1) {
     tt = track_trace(m, tt)
-    tt = matrix(tt, ncol = 6)
+    tt = matrix(tt, ncol = 8)
     tt = cbind(1:nrow(tt), tt)
   }
-  colnames(tt) = c("LogKey", "StartPos", "StopPos",
-                   "ProductKey", "Volume", "Value", "CumulativeValue")
+  colnames(tt) = c("LogKey", colnames(m))
   return(tt)
 }
 
@@ -362,7 +366,7 @@ optBuck_hpr=function(hprfile,
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   ProductData=ProductData[!is.na(ProductData$ProductName),]
-  i=9
+  i=6
   for(i in 1:length(stems)){#
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
@@ -406,6 +410,7 @@ optBuck_hpr=function(hprfile,
     print(paste("Done with stem",i,"out of",length(stems)))
   }
   close(pb)
+  res[,7][res[,7]==0]=999999
   return(res)
 }
 #' getStemprofile
@@ -1449,12 +1454,12 @@ is.whole=function(a, tol = 1e-7){
 track_trace=function(m,tt){
   low=min(tt[,1])
   while(low>0){
-    id_previous=tt[,6][order(tt[,1])[1]]-
-      tt[,5][order(tt[,1])[1]]
-    prev=m[which(near(m[,6],id_previous) & m[,2]==low),]
+    id_previous=tt[,which(colnames(m)=="Acc_Value")][order(tt[,which(colnames(m)=="StartPos")])[1]]-
+      tt[,which(colnames(m)=="Value")][order(tt[,which(colnames(m)=="StartPos")])[1]]
+    prev=m[which(near(m[,which(colnames(m)=="Acc_Value")],id_previous) & m[,which(colnames(m)=="StopPos")]==low),]
     if(!is.vector(prev)){prev=prev[1,]}
     tt=rbind(tt,prev) %>% unname()
-    low=min(tt[,1])
+    low=min(tt[,which(colnames(m)=="StartPos")])
     if(low<10){break}
   }
   tt=tt[nrow(tt):1,]
