@@ -413,12 +413,11 @@ optBuck_hpr=function(hprfile,
 #' Extract stem profiles from .hpr files
 #'
 #' @param hprfile Path to input .hpr file
-#' @param logs output from getLogs()
 #' @return Stem profiles of harvested stems with stem grades
 #' @seealso optBuck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getStemprofile=function(hprfile,logs){
+getStemprofile=function(hprfile){
   require(XML);require(data.table);require(tcltk)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
@@ -426,11 +425,10 @@ getStemprofile=function(hprfile,logs){
                                        xmlAttrs)) == "Stem"]
   stemprofile=stemGradedata=data.table()
   cat("Extracting stem profiles... ")
-  i=1
   NoStemProfile=c()
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
-  i=1
+  i=1872
   for(i in 1:length(stems)){
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     Waste=Logs[Logs$StemKey==S&Logs$ProductKey==999999,]
@@ -475,8 +473,8 @@ getStemprofile=function(hprfile,logs){
         StartWaste=EndWaste=c()
         w=1
         for( w in 1:nrow(Waste)){
-          StartWaste[w]=Waste$StartPos[w]%>% round_any(10,f=floor)
-          EndWaste[w]=StartWaste[w]+Waste$LogLength[w] %>% round_any(10,f=ceiling)
+          StartWaste[w]=Waste$StartPos[w]%>% round_any(10,f=ceiling)+10
+          EndWaste[w]=StartWaste[w]+Waste$LogLength[w] %>% round_any(10,f=floor)-10
           stempr$V6[which(stempr$V4==StartWaste[w]):which(stempr$V4==EndWaste[w])]="-1" #impute waste
         }
       }
@@ -494,6 +492,8 @@ getStemprofile=function(hprfile,logs){
               NoStemProfile))
   return(stemprofile)
 }
+
+
 #' getProductData
 #'
 #' Extract product data from .hpr files
@@ -1289,7 +1289,7 @@ predictStemprofile=function(hprfile){
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   result=list()
-  i=1
+  i=493
   for(i in 1:length(stems)){#
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
@@ -1334,15 +1334,17 @@ predictStemprofile=function(hprfile){
       l=tibble(l)
       lm=l[!duplicated(Dm),]
       lm=lm[lm$Hm>=0.5,]
+      # funksjon fra taperNO
       mHt=hfromd(d = lm$Dm,
                  h = lm$Hm,
                  sp="spruce",
-                 output = "H")
+                 output = "h")
+      if(length(mHt)>1){
       diameterPosition=seq(0,max(l$Hm),.1)
       DiameterValue=kublin_no(Hx = diameterPosition,
                               Hm = lm$Hm,
                               Dm = lm$Dm,
-                              mHt = mHt[1],
+                              mHt = mHt[[1]][1],
                               sp = 1)
       DiameterValue=sort(DiameterValue$DHx,decreasing = T)
       df=data.frame(d=DiameterValue,h=diameterPosition)
@@ -1366,11 +1368,11 @@ predictStemprofile=function(hprfile){
                          "diameterPosition",
                          "DiameterValue","StemGrade")
       result[[i]]=stempr
+      }
       setTkProgressBar(pb, i, label=paste(
         round(i/length(stems)*100, 0),"% done"))
     }
   }
-  result[[1]] %>% class()
   result=rbindlist(result)
   close(pb)
   return(result)
