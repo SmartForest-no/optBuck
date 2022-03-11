@@ -1297,13 +1297,13 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile){
 }
 #' predictStemprofile
 #'
-#' Predict and extract stem profiles using taper models based on the log dimensions, in cases when no stem profile is recorded in the hpr file.
+#' Predict and extract stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
 #'
 #' @param hprfile Path to .hpr file
 #' @return Output structure with stem profile containing stem grades
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-predictStemprofile=function(hprfile){
+predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   require(XML);require(data.table);require(tcltk)
   require(TapeR);require(tidyverse)
   options(scipen=999)#suppress scientific notation
@@ -1380,13 +1380,15 @@ predictStemprofile=function(hprfile){
       cat(points(df$h,df$d,type="l"))
       StemGrade=rep(-1,length(diameterPosition))
       k=1
-      for(k in  1:(unique(l$ProductKey) %>% length())){
-        min=min(l$Hm[l$ProductKey==unique(l$ProductKey)[k]])
-        max=max(l$Hm[l$ProductKey==unique(l$ProductKey)[k]])
+      for(k in  1:(unique(lm$ProductKey) %>% length())){
+        min=min(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
+        max=max(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
         idxmin=which(near(diameterPosition,round_any(min,.1)))
         idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
-        grade=PermittedGrades[[as.character(unique(l$ProductKey)[k])]] %>% max()
-        StemGrade[idxmin:idxmax]=grade
+        if(!length(idxmin)==0&!length(idxmax)==0){
+           grade=PermittedGrades[[as.character(unique(lm$ProductKey)[k])]] %>% max()
+           StemGrade[idxmin:idxmax]=grade
+        }
       }
       stempr=cbind(S,SpeciesGroupKey,
                    diameterPosition,
@@ -1397,7 +1399,6 @@ predictStemprofile=function(hprfile){
                          "DiameterValue","StemGrade")
       result[[i]]=stempr
       }
-
       }
       setTkProgressBar(pb, i, label=paste(
         round(i/length(stems)*100, 0),"% done"))
