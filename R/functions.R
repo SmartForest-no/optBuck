@@ -390,7 +390,7 @@ optBuck_hpr=function(hprfile,
                    max = length(stems), width = 300)
   ProductData=ProductData[!is.na(ProductData$ProductName),]
   i=1
-  for(i in 1:10){#length(stems)
+  for(i in 1:11){#length(stems)
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
     if(nrow(stem)>0){
