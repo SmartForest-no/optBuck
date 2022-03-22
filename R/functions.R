@@ -30,7 +30,9 @@ optBuck=function( diameterPosition,
                   LengthClassMAX,
                   DiameterClassLowerLimit,
                   DiameterClassMAX,
-                  VolumeDiameterCategory){
+                  VolumeDiameterCategory,
+                  PermittedGrades,
+                  PriceMatrices){
   require(magrittr)
   m = matrix(0, 1, 8)
   colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
@@ -433,7 +435,9 @@ optBuck_hpr=function(hprfile,
                   LengthClassMAX,
                   DiameterClassLowerLimit,
                   DiameterClassMAX,
-                  VolumeDiameterCategory)
+                  VolumeDiameterCategory,
+                  PermittedGrades,
+                  PriceMatrices)
 
       out=cbind(rep(StemKey,nrow(out)),out)
       colnames(out)[1]=c("StemKey")
