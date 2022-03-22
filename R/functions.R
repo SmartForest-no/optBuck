@@ -75,7 +75,7 @@ optBuck=function( diameterPosition,
                             SpeciesGroupKey, SpeciesGroupDefinition,
                             Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
       if (!StopPos - StartPos < min(LengthClassLowerLimit)) {
-        g = 1
+        g = 2
         for (g in 1:length(asos)) {
           PrKey = names(SGKG)[asos[g]]
           idx = which(ProductData$ProductKey == PrKey)[1]
@@ -99,9 +99,10 @@ optBuck=function( diameterPosition,
                         as.numeric())
             col = sum(topdiam >= colnames(PriceMatrices[[idx]]) %>%
                         as.numeric())
-            if (PriceMatrices[[idx[1]]][row, col] > Price)
-              Price = PriceMatrices[[idx]][row, col]
-            ProductKey = as.integer(ProductKeys[idx])
+            if (PriceMatrices[[PrKey]][row, col] > Price){
+              Price = PriceMatrices[[PrKey]][row, col]
+              ProductKey = as.integer(PrKey)
+            }
           }
         }
       }
@@ -227,7 +228,7 @@ optBuck=function( diameterPosition,
                               SpeciesGroupKey, SpeciesGroupDefinition,
                               Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
         if (!StopPos - StartPos < min(LengthClassLowerLimit)) {
-          g = 1
+          g = 2
           for (g in 1:length(asos)) {
             PrKey = names(SGKG)[asos[g]]
             idx = which(ProductData$ProductKey == PrKey)[1]
@@ -251,9 +252,10 @@ optBuck=function( diameterPosition,
                           as.numeric())
               col = sum(topdiam >= colnames(PriceMatrices[[idx]]) %>%
                           as.numeric())
-              if (PriceMatrices[[idx[1]]][row, col] > Price)
-                Price = PriceMatrices[[idx]][row, col]
-              ProductKey = as.integer(ProductKeys[idx])
+              if (PriceMatrices[[PrKey]][row, col] > Price){
+                  Price = PriceMatrices[[PrKey]][row, col]
+                  ProductKey = as.integer(PrKey)
+              }
             }
           }
         }
@@ -400,8 +402,8 @@ optBuck_hpr=function(hprfile,
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   ProductData=ProductData[!is.na(ProductData$ProductName),]
-  i=136
-  for(i in 1:length(stems)){#11
+  i=14
+  for(i in 1:20){#11length(stems)
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
     if(nrow(stem)>0){
@@ -1327,7 +1329,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   result=list()
-  i=1
+  i=493
   for(i in 1:length(stems)){#
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
@@ -1378,7 +1380,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
                    h = lm$Hm,
                    sp="spruce",
                    output = "h")
-        if(length(mHt)>0&(!is.na(mHt))){
+        if(length(mHt[[1]][1])>0&(!is.na(mHt[[1]][1]))){
           diameterPosition=seq(0,max(l$Hm),.1)
           DiameterValue=kublin_no(Hx = diameterPosition,
                                   Hm = lm$Hm,
