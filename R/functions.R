@@ -32,18 +32,21 @@ optBuck=function( diameterPosition,
                   DiameterClassMAX,
                   VolumeDiameterCategory){
   require(magrittr)
+  m = matrix(0, 1, 8)
+  colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
+                "ProductKey",
+                "Volume", "Value", "Acc_Value")
   SeqStart=min(LengthClassLowerLimit[LengthClassLowerLimit>0])
   SeqStop=ifelse(max(LengthClassMAX)<max(diameterPosition),
                  max(LengthClassMAX),max(diameterPosition))
+
+  if(SeqStart<SeqStop){
+
   SeqAsp = seq(SeqStart, SeqStop, 10)
   StartPos = StopPos = grade = vol = price = acc_price = 0
   DiameterTopPosition = ProductData$DiameterTopPositions
   tt = c()
   bult = seq(10, 100, 10)
-  m = matrix(0, 1, 8)
-  colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
-                "ProductKey",
-                "Volume", "Value", "Acc_Value")
   k = 1
   for(k in 1:length(c(bult, SeqAsp))){
     StartPos = diameterPosition[1]
@@ -346,18 +349,26 @@ optBuck=function( diameterPosition,
      }
     }
     #m=m[!which(colnames(m)=="StopPos")]
-  if (is.null(nrow(m))) {
+  if (is.null(nrow(m))){
     m = matrix(m, nrow = 1)
   }
   tt = matrix(m[which.max(m[, 8]), ], ncol = 8)
-  if(nrow(tt) == 1&tt[which(colnames(m)=="ProductKey")]){
-    tt = track_trace(m, tt)
-    tt = matrix(tt, ncol = 8)
+  if(nrow(tt) == 1){
+    m = track_trace(m, tt)
+    m = matrix(m, ncol = 8)
   }
-  tt = cbind(1:nrow(tt), tt)
-  colnames(tt) = c("LogKey", colnames(m))
-  tt[,which(colnames(tt)=="ProductKey")][tt[,which(colnames(tt)=="ProductKey")]==0]=999999
- return(tt)
+  }
+  colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
+                "ProductKey",
+                "Volume", "Value", "Acc_Value")
+  # tt = cbind(1:nrow(tt), tt)
+  # colnames(tt) = c("LogKey", colnames(m))
+  # tt[,which(colnames(tt)=="ProductKey")][tt[,which(colnames(tt)=="ProductKey")]==0]=999999
+  # return(tt)
+  m = cbind(1:nrow(m), m)
+  colnames(m)[1] = "LogKey"
+  m[,which(colnames(m)=="ProductKey")][m[,which(colnames(m)=="ProductKey")]==0]=999999
+  return(m)
 }
 
 #' optBuck_hpr
@@ -384,13 +395,13 @@ optBuck_hpr=function(hprfile,
   cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                        xmlAttrs)) == "Stem"]
-  res=c()
+  res=list()
   cat("Calculating optimal bucking outcomes... ")
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   ProductData=ProductData[!is.na(ProductData$ProductName),]
-  i=1
-  for(i in 1:11){#length(stems)
+  i=136
+  for(i in 1:length(stems)){#11
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
     if(nrow(stem)>0){
@@ -424,14 +435,14 @@ optBuck_hpr=function(hprfile,
 
       out=cbind(rep(StemKey,nrow(out)),out)
       colnames(out)[1]=c("StemKey")
-      res=rbind(res,
-                out)
+      res[[i]]=out
     }
     setTkProgressBar(pb, i,
                      label=paste( round(i/length(stems)*100, 0),
                                   "% done"))
     print(paste("Done with stem",i,"out of",length(stems)))
   }
+  res=do.call(rbind.data.frame, res)
   close(pb)
   return(res)
 }
@@ -1317,7 +1328,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
                    max = length(stems), width = 300)
   result=list()
   i=2
-  for(i in 1:length(stems)){#
+  for(i in 490:length(stems)){#
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
@@ -1363,42 +1374,42 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
       lm=lm[lm$Hm>=0.5,]
       if(nrow(lm)>2){
         # funksjon fra taperNO
-      mHt=hfromd(d = lm$Dm,
-                 h = lm$Hm,
-                 sp="spruce",
-                 output = "h")
-      if(length(mHt)>1){
-      diameterPosition=seq(0,max(l$Hm),.1)
-      DiameterValue=kublin_no(Hx = diameterPosition,
-                              Hm = lm$Hm,
-                              Dm = lm$Dm,
-                              mHt = mHt[[1]][1],
-                              sp = 1)
-      DiameterValue=sort(DiameterValue$DHx,decreasing = T)
-      df=data.frame(d=DiameterValue,h=diameterPosition)
-      cat(plot(lm$Hm,lm$Dm,xlab = "height (m)",ylab="diameter (cm)"))
-      cat(points(df$h,df$d,type="l"))
-      StemGrade=rep(-1,length(diameterPosition))
-      k=1
-      for(k in  1:(unique(lm$ProductKey) %>% length())){
-        min=min(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
-        max=max(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
-        idxmin=which(near(diameterPosition,round_any(min,.1)))
-        idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
-        if(!length(idxmin)==0&!length(idxmax)==0){
-           grade=PermittedGrades[[as.character(unique(lm$ProductKey)[k])]] %>% max()
-           StemGrade[idxmin:idxmax]=grade
+        mHt=hfromd(d = lm$Dm,
+                   h = lm$Hm,
+                   sp="spruce",
+                   output = "h")
+        if(length(mHt)>0&(!is.na(mHt))){
+          diameterPosition=seq(0,max(l$Hm),.1)
+          DiameterValue=kublin_no(Hx = diameterPosition,
+                                  Hm = lm$Hm,
+                                  Dm = lm$Dm,
+                                  mHt = mHt[[1]][1],
+                                  sp = 1)
+          DiameterValue=sort(DiameterValue$DHx,decreasing = T)
+          df=data.frame(d=DiameterValue,h=diameterPosition)
+          cat(plot(lm$Hm,lm$Dm,xlab = "height (m)",ylab="diameter (cm)"))
+          cat(points(df$h,df$d,type="l"))
+          StemGrade=rep(-1,length(diameterPosition))
+          k=1
+          for(k in  1:(unique(lm$ProductKey) %>% length())){
+            min=min(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
+            max=max(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
+            idxmin=which(near(diameterPosition,round_any(min,.1)))
+            idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
+            if(!length(idxmin)==0&!length(idxmax)==0){
+              grade=PermittedGrades[[as.character(unique(lm$ProductKey)[k])]] %>% max()
+              StemGrade[idxmin:idxmax]=grade
+            }
+          }
+          stempr=cbind(S,SpeciesGroupKey,
+                       diameterPosition,
+                       DiameterValue,StemGrade) %>% data.table()
+          colnames(stempr)=c("StemKey",
+                             "SpeciesGroupKey",
+                             "diameterPosition",
+                             "DiameterValue","StemGrade")
+          result[[i]]=stempr
         }
-      }
-      stempr=cbind(S,SpeciesGroupKey,
-                   diameterPosition,
-                   DiameterValue,StemGrade) %>% data.table()
-      colnames(stempr)=c("StemKey",
-                         "SpeciesGroupKey",
-                         "diameterPosition",
-                         "DiameterValue","StemGrade")
-      result[[i]]=stempr
-      }
       }
       setTkProgressBar(pb, i, label=paste(
         round(i/length(stems)*100, 0),"% done"))
@@ -1408,6 +1419,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   close(pb)
   return(result)
 }
+
 #' getHarvestedArea
 #'
 #' Extract harvested area
@@ -1490,11 +1502,11 @@ track_trace=function(m,tt){
   }
   tt=tt[nrow(tt):1,]
   if(is.vector(tt)){
-    tt[3]=ifelse(tt[3]==0,
+    tt[5]=ifelse(tt[5]==0,
                  999999,
-                 tt[3])
+                 tt[5])
   }else{
-    tt[,3][which(tt[,3]==0)]=999999
+    tt[,5][which(tt[,5]==0)]=999999
   }
   return(tt)
 }
