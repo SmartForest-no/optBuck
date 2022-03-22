@@ -1327,8 +1327,8 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   result=list()
-  i=2
-  for(i in 490:length(stems)){#
+  i=1
+  for(i in 1:length(stems)){#
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
