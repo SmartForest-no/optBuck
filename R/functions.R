@@ -405,7 +405,7 @@ optBuck_hpr=function(hprfile,
                    max = length(stems), width = 300)
   ProductData=ProductData[!is.na(ProductData$ProductName),]
   i=14
-  for(i in 1:20){#11length(stems)
+  for(i in 1:length(stems)){#11
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
     if(nrow(stem)>0){
@@ -1621,4 +1621,29 @@ getSortimentOverview=function(Logs,ProductData){
     geom_col()
   print(p)
   return(res[,c(2,1)])
+}
+
+#' StemprofileIncrement
+#'
+#' Predict Stemprofile at another point in time given a vector of new DBHs
+#'
+#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile)
+#' @param DBH2 a numeric vector of new DBHs, of the same length as unique StemKeys in Stemprofile
+#' @return A new Stemprofile object in which the new diameters are added
+#' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
+#' @export
+StemprofileIncrement=function(Stemprofile,DBH2){
+  res=list()
+  i=1
+  for(i in 1:length(unique(Stemprofile$StemKey))){
+    SK=unique(Stemprofile$StemKey)[i]
+    Stem=Stemprofile[Stemprofile$StemKey==SK,]
+    DBH1=Stem$DiameterValue[Stem$diameterPosition==1.3]
+    ratio=DBH2[i]/DBH1
+    Stem$DiameterValue2=Stem$DiameterValue*ratio
+    res[[i]]=Stem
+    print(i)
+  }
+  res=do.call(rbind.data.frame, res)
+  return(res)
 }
