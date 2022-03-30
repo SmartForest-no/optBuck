@@ -19,46 +19,45 @@
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
-optBuck=function( diameterPosition,
-                  DiameterValue,
-                  StemGrade,
-                  DBH,
-                  SpeciesGroupKey,
-                  ProductData,
-                  ProductKeys,
-                  LengthClassLowerLimit,
-                  LengthClassMAX,
-                  DiameterClassLowerLimit,
-                  DiameterClassMAX,
-                  VolumeDiameterCategory,
-                  PermittedGrades,
-                  PriceMatrices){
+optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupKey,
+                  ProductData, ProductKeys, LengthClassLowerLimit, LengthClassMAX,
+                  DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
+                  PermittedGrades, PriceMatrices)
+{
   require(magrittr)
   m = matrix(0, 1, 8)
-  colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
-                "ProductKey",
-                "Volume", "Value", "Acc_Value")
-  SeqStart=min(LengthClassLowerLimit[LengthClassLowerLimit>0])
-  SeqStop=ifelse(max(LengthClassMAX)<max(diameterPosition),
-                 max(LengthClassMAX),max(diameterPosition))
-
-  if(SeqStart<SeqStop){
-
+  colnames(m) = c("StartPos", "StopPos", "Top_ub",
+                  "LogLength", "ProductKey", "Volume",
+                  "Value", "Acc_Value")
+  SeqStart = min(LengthClassLowerLimit[LengthClassLowerLimit >
+                                         0])
+  SeqStop = ifelse(max(LengthClassMAX) < max(diameterPosition),
+                   max(LengthClassMAX), max(diameterPosition))
+  if (SeqStart < SeqStop) {
     SeqAsp = seq(SeqStart, SeqStop, 10)
     StartPos = StopPos = grade = vol = price = acc_price = 0
     DiameterTopPosition = ProductData$DiameterTopPositions
     tt = c()
     bult = seq(10, 100, 10)
     k = 3
-    for(k in 1:length(c(bult, SeqAsp))){
+    for (k in 1:length(c(bult, SeqAsp))) {
       StartPos = diameterPosition[1]
       StopPos = StartPos + c(bult, SeqAsp)[k]
-      if (StopPos <= max(diameterPosition)){
+      if (StopPos <= max(diameterPosition)) {
         idx_bottom = which(near(diameterPosition, StartPos))
         idx_top = which(near(diameterPosition, StopPos))
         LogLength = StopPos - StartPos
         rotdiam = DiameterValue[idx_bottom]
-
+        #set default Top_ub:
+        DiameterTopPosition=names(table(DiameterTopPositions))[order(table(DiameterTopPositions),decreasing = T)[1] %>% unname()] %>% as.numeric()
+        Top_ob = DiameterValue[diameterPosition ==
+                                 paste(round((StopPos - DiameterTopPosition)/10) *
+                                         10)]
+        Top_ub = BarkFunction(Top_ob, SpeciesGroupKey,
+                              SpeciesGroupDefinition, Top_ob = Top_ob,
+                              DBH = DBH, LogLength = LogLength)
+        #topdiam = ifelse(DiameterUnderBark, Top_ub,
+        #                 Top_ob)
         grd = unique(StemGrade[which(near(diameterPosition,
                                           StartPos)):which(near(diameterPosition, StopPos))])
         SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
@@ -68,13 +67,10 @@ optBuck=function( diameterPosition,
         }
         SGKG = PermittedGrades[as.character(SGPK)]
         asos = unlist(c(sapply(grd, function(x, list) which(unlist(lapply(list,
-                                                                          function(y, z) z %in% y, z = x))), list = SGKG))) %>% unique()
+                                                                          function(y, z) z %in% y, z = x))), list = SGKG))) %>%
+          unique()
         Price = 0
         ProductKey = 999999
-        # Top_ub = BarkFunction(DiameterValue[diameterPosition == round((StopPos -
-        #                                                                  10)/10) * 10],
-        #                       SpeciesGroupKey, SpeciesGroupDefinition,
-        #                       Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
         if (!StopPos - StartPos < min(LengthClassLowerLimit)) {
           g = 1
           for (g in 1:length(asos)) {
@@ -83,22 +79,25 @@ optBuck=function( diameterPosition,
             DiameterUnderBark = ProductData$DiameterUnderBark[idx]
             DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[ProductData$ProductKey ==
                                                                                 PrKey])[1]
-            Top_ob = DiameterValue[diameterPosition == paste(round((StopPos-DiameterTopPosition)/10)*10)]
-            Top_ub = BarkFunction(Top_ob,
-                                  SpeciesGroupKey, SpeciesGroupDefinition,
-                                  Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
-            topdiam=ifelse(DiameterUnderBark,Top_ub,Top_ob)
+            Top_ob = DiameterValue[diameterPosition ==
+                                     paste(round((StopPos - DiameterTopPosition)/10) *
+                                             10)]
+            Top_ub = BarkFunction(Top_ob, SpeciesGroupKey,
+                                  SpeciesGroupDefinition, Top_ob = Top_ob,
+                                  DBH = DBH, LogLength = LogLength)
+            topdiam = ifelse(DiameterUnderBark, Top_ub,
+                             Top_ob)
             if (StopPos - StartPos >= LengthClassLowerLimit[idx] &
                 StopPos - StartPos <= LengthClassMAX[idx] &
-                topdiam > DiameterClassLowerLimit[idx]&
+                topdiam > DiameterClassLowerLimit[idx] &
                 rotdiam < DiameterClassMAX[idx] & sum(grd %in%
                                                       PermittedGrades[[idx]]) == length(grd)) {
-
               row = sum(LogLength >= rownames(PriceMatrices[[idx]]) %>%
                           as.numeric())
               col = sum(topdiam >= colnames(PriceMatrices[[idx]]) %>%
                           as.numeric())
-              if (PriceMatrices[[PrKey]][row, col] > Price){
+              if (PriceMatrices[[PrKey]][row, col] >
+                  Price) {
                 Price = PriceMatrices[[PrKey]][row, col]
                 ProductKey = as.integer(PrKey)
               }
@@ -114,7 +113,8 @@ optBuck=function( diameterPosition,
           VolumeDiameterCategory = "All diameters (solid volume)"
           VolumeLengthCategory = "Physical length cm"
           buttEndProfileExtrapolationMethod = "false"
-        }else{
+        }
+        else {
           VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[ProductData$ProductKey ==
                                                                             ProductKey][1]
           VolumeDiameterCategory = ProductData$VolumeDiameterCategory[ProductData$ProductKey ==
@@ -126,7 +126,6 @@ optBuck=function( diameterPosition,
         }
         VolumeDiameterCategory = ProductData$VolumeDiameterCategory[ProductData$ProductKey ==
                                                                       ProductKey][1]
-
         DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[ProductData$ProductKey ==
                                                                             ProductKey[1]])[1]
         v = 0
@@ -147,20 +146,21 @@ optBuck=function( diameterPosition,
             IdxStop = which(diameterPosition == paste(StopPos))
           }
           if (VolumeLengthCategory == "Physical length cm") {
-            IdxStop = which(diameterPosition == paste(round((StopPos)/10)*10))
+            IdxStop = which(diameterPosition == paste(round((StopPos)/10) *
+                                                        10))
           }
           DV = DiameterValue[IdxStart:IdxStop]
           if (VolumeDiameterAdjustment == "Measured diameter rounded downwards to cm") {
             DV = round_any(DV, 10, floor)
           }
-
           if (VolumeDiameterCategory == "All diameters (solid volume)") {
             if (DiameterUnderBark == T) {
-              DV = BarkFunction(DV, SpeciesGroupKey, SpeciesGroupDefinition,
-                                Top_ob, DBH, LogLength)
+              DV = BarkFunction(DV, SpeciesGroupKey,
+                                SpeciesGroupDefinition, Top_ob, DBH,
+                                LogLength)
             }
             r = DV/2
-            v = sum(pi * (r^2) * 10)/1e+08
+            v = sum(pi * (r^2) * 10)/100000000
           }
           if (VolumeDiameterCategory == "Calculated Norwegian mid") {
             Dt = ifelse(DiameterUnderBark == T, BarkFunction(Top_ob,
@@ -174,14 +174,14 @@ optBuck=function( diameterPosition,
             if (DiameterUnderBark == T) {
               r1 = Top_ub/2
               r2 = (Top_ub + LogLength * 0.01)/2
-              v = ((1/3) * pi * (r1^2 + r2^2 + (r1 * r2)) *
-                     LogLength)/1e+08
+              v = ((1/3) * pi * (r1^2 + r2^2 + (r1 *
+                                                  r2)) * LogLength)/100000000
             }
             else {
               S1 = pi * ((Top_ob/2)^2)
               S2 = pi * (((Top_ob + LogLength * 0.01)/2)^2)
               v = (LogLength/3) * (S1 + S2 + sqrt(S1 *
-                                                    S2))/1e+08
+                                                    S2))/100000000
             }
           }
         }
@@ -189,25 +189,37 @@ optBuck=function( diameterPosition,
         subs = matrix(m[m[, 2] == StartPos, ], ncol = 8)
         sub = matrix(subs[which.max(subs[, 8]), ], ncol = 8)
         acc_Value = Value + sub[, 8]
-        Top_ub=ifelse(is.na(Top_ub),
-                      NA,Top_ub)
-        m = rbind(m, c(StartPos, StopPos,Top_ub , LogLength,
-                       ProductKey[1],
-                       v, Value, acc_Value))
+        Top_ub = ifelse(is.na(Top_ub), NA, Top_ub)
+        if(length(c(StartPos, StopPos, Top_ub, LogLength,
+                    ProductKey[1], v, Value, acc_Value))<8){
+          stop("Missing values in result matrix")
+        }
+        m = rbind(m, c(StartPos, StopPos, Top_ub, LogLength,
+                       ProductKey[1], v, Value, acc_Value))
       }
     }
     m
-    while (StartPos < max(diameterPosition) - min(LengthClassLowerLimit[LengthClassLowerLimit>0])){
+    while (StartPos < max(diameterPosition) - min(LengthClassLowerLimit[LengthClassLowerLimit >
+                                                                        0])) {
       StartPos = sort(m[, 2][!m[, 2] %in% m[, 1]])[1]
       k = 1
       for (k in 1:length(SeqAsp)) {
         StopPos = StartPos + SeqAsp[k]
-        if (StopPos <= max(diameterPosition)){
+        if (StopPos <= max(diameterPosition)) {
           idx_bottom = which(near(diameterPosition, StartPos))
           idx_top = which(near(diameterPosition, StopPos))
           LogLength = StopPos - StartPos
           rotdiam = DiameterValue[idx_bottom]
-
+          #set default Top_ub:
+          DiameterTopPosition=names(table(DiameterTopPositions))[order(table(DiameterTopPositions),decreasing = T)[1] %>% unname()] %>% as.numeric()
+          Top_ob = DiameterValue[diameterPosition ==
+                                   paste(round((StopPos - DiameterTopPosition)/10) *
+                                           10)]
+          Top_ub = BarkFunction(Top_ob, SpeciesGroupKey,
+                                SpeciesGroupDefinition, Top_ob = Top_ob,
+                                DBH = DBH, LogLength = LogLength)
+          #topdiam = ifelse(DiameterUnderBark, Top_ub,
+          #                 Top_ob)
           grd = unique(StemGrade[which(near(diameterPosition,
                                             StartPos)):which(near(diameterPosition, StopPos))])
           SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
@@ -221,10 +233,6 @@ optBuck=function( diameterPosition,
             unique()
           Price = 0
           ProductKey = 999999
-          # Top_ub = BarkFunction(DiameterValue[diameterPosition == round((StopPos -
-          #                                                                  10)/10) * 10],
-          #                       SpeciesGroupKey, SpeciesGroupDefinition,
-          #                       Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
           if (!StopPos - StartPos < min(LengthClassLowerLimit)) {
             g = 1
             for (g in 1:length(asos)) {
@@ -233,23 +241,29 @@ optBuck=function( diameterPosition,
               DiameterUnderBark = ProductData$DiameterUnderBark[idx]
               DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[ProductData$ProductKey ==
                                                                                   PrKey])[1]
-              Top_ob = DiameterValue[diameterPosition == paste(round((StopPos-DiameterTopPosition)/10)*10)]
-              Top_ub = BarkFunction(Top_ob,
-                                    SpeciesGroupKey, SpeciesGroupDefinition,
-                                    Top_ob = Top_ob, DBH = DBH, LogLength = LogLength)
-              topdiam=ifelse(DiameterUnderBark,Top_ub,Top_ob)
+              Top_ob = DiameterValue[diameterPosition ==
+                                       paste(round((StopPos - DiameterTopPosition)/10) *
+                                               10)]
+              Top_ub = BarkFunction(Top_ob, SpeciesGroupKey,
+                                    SpeciesGroupDefinition, Top_ob = Top_ob,
+                                    DBH = DBH, LogLength = LogLength)
+              topdiam = ifelse(DiameterUnderBark, Top_ub,
+                               Top_ob)
               if (StopPos - StartPos >= LengthClassLowerLimit[idx] &
                   StopPos - StartPos <= LengthClassMAX[idx] &
-                  topdiam > DiameterClassLowerLimit[idx]&
+                  topdiam > DiameterClassLowerLimit[idx] &
                   rotdiam < DiameterClassMAX[idx] & sum(grd %in%
                                                         PermittedGrades[[idx]]) == length(grd)) {
-
                 row = sum(LogLength >= rownames(PriceMatrices[[idx]]) %>%
                             as.numeric())
+
+
                 col = sum(topdiam >= colnames(PriceMatrices[[idx]]) %>%
                             as.numeric())
-                if (PriceMatrices[[PrKey]][row, col] > Price){
-                  Price = PriceMatrices[[PrKey]][row, col]
+                if (PriceMatrices[[PrKey]][row, col] >
+                    Price) {
+                  Price = PriceMatrices[[PrKey]][row,
+                                                 col]
                   ProductKey = as.integer(PrKey)
                 }
               }
@@ -264,7 +278,7 @@ optBuck=function( diameterPosition,
             VolumeDiameterCategory = "All diameters (solid volume)"
             VolumeLengthCategory = "Physical length cm"
             buttEndProfileExtrapolationMethod = "false"
-          }else{
+          } else {
             VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[ProductData$ProductKey ==
                                                                               ProductKey]
             VolumeDiameterCategory = ProductData$VolumeDiameterCategory[ProductData$ProductKey ==
@@ -276,12 +290,12 @@ optBuck=function( diameterPosition,
           }
           VolumeDiameterCategory = ProductData$VolumeDiameterCategory[ProductData$ProductKey ==
                                                                         ProductKey][1]
-
           DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[ProductData$ProductKey ==
                                                                               ProductKey[1]])[1]
           v = 0
           if (ProductKey != 0) {
-            IdxStart = which(diameterPosition == paste(round((StartPos)/10)*10))
+            IdxStart = which(diameterPosition == paste(round((StartPos)/10) *
+                                                         10))
             if (VolumeLengthCategory == "Rounded downwards to nearest dm-module") {
               IdxStop = which(diameterPosition == round_any((StopPos),
                                                             10, f = floor))
@@ -296,77 +310,82 @@ optBuck=function( diameterPosition,
               IdxStop = which(diameterPosition == paste(StopPos))
             }
             if (VolumeLengthCategory == "Physical length cm") {
-              IdxStop = which(diameterPosition == paste(round((StopPos)/10)*10))
+              IdxStop = which(diameterPosition == paste(round((StopPos)/10) *
+                                                          10))
             }
             DV = DiameterValue[IdxStart:IdxStop]
             if (VolumeDiameterAdjustment == "Measured diameter rounded downwards to cm") {
               DV = round_any(DV, 10, floor)
             }
-
             if (VolumeDiameterCategory == "All diameters (solid volume)") {
               if (DiameterUnderBark == T) {
-                DV = BarkFunction(DV, SpeciesGroupKey, SpeciesGroupDefinition,
-                                  Top_ob, DBH, LogLength)
+                DV = BarkFunction(DV, SpeciesGroupKey,
+                                  SpeciesGroupDefinition, Top_ob, DBH,
+                                  LogLength)
               }
               r = DV/2
-              v = sum(pi * (r^2) * 10)/1e+08
+              v = sum(pi * (r^2) * 10)/100000000
             }
             if (VolumeDiameterCategory == "Calculated Norwegian mid") {
               Dt = ifelse(DiameterUnderBark == T, BarkFunction(Top_ob,
                                                                SpeciesGroupKey, SpeciesGroupDefinition,
-                                                               Top_ob, DBH, LogLength), Top_ob) %>% round()
+                                                               Top_ob, DBH, LogLength), Top_ob) %>%
+                round()
               Dmid = Dt + (LogLength/2 * 0.1) + 0.5
-              v = (((Dmid/100) * (Dmid/100)) * pi/4 * (LogLength/10)) *
-                0.001
+              v = (((Dmid/100) * (Dmid/100)) * pi/4 *
+                     (LogLength/10)) * 0.001
             }
             if (VolumeDiameterCategory == "Top") {
               if (DiameterUnderBark == T) {
                 r1 = Top_ub/2
                 r2 = (Top_ub + LogLength * 0.01)/2
-                v = ((1/3) * pi * (r1^2 + r2^2 + (r1 * r2)) *
-                       LogLength)/1e+08
+                v = ((1/3) * pi * (r1^2 + r2^2 + (r1 *
+                                                    r2)) * LogLength)/100000000
               }
               else {
                 S1 = pi * ((Top_ob/2)^2)
                 S2 = pi * (((Top_ob + LogLength * 0.01)/2)^2)
                 v = (LogLength/3) * (S1 + S2 + sqrt(S1 *
-                                                      S2))/1e+08
+                                                      S2))/100000000
               }
             }
           }
           Value = v * Price
           subs = matrix(m[m[, 2] == StartPos, ], ncol = 8)
-          sub = matrix(subs[which.max(subs[, 8]), ], ncol = 8)
+          sub = matrix(subs[which.max(subs[, 8]), ],
+                       ncol = 8)
           acc_Value = Value + sub[, 8]
-          m = rbind(m, c(StartPos, StopPos,Top_ub , LogLength,
-                         ProductKey[1],
-                         v, Value, acc_Value))
+
+          if(length(Top_ub)<1){
+            Top_ub=NA
+          }
+          if(length(c(StartPos, StopPos, Top_ub, LogLength,
+                      ProductKey[1], v, Value, acc_Value))<8){
+            stop("Missing values in result matrix")
+          }
+          m = rbind(m, c(StartPos, StopPos, Top_ub, LogLength,
+                         ProductKey[1], v, Value, acc_Value))
         }
       }
     }
-    #m=m[!which(colnames(m)=="StopPos")]
-    if (is.null(nrow(m))){
+    if (is.null(nrow(m))) {
       m = matrix(m, nrow = 1)
     }
     tt = matrix(m[which.max(m[, 8]), ], ncol = 8)
-    if(nrow(tt) == 1){
+    if (nrow(tt) == 1) {
       m = track_trace(m, tt)
       m = matrix(m, ncol = 8)
     }
   }
-  colnames(m)=c("StartPos", "StopPos","Top_ub" , "LogLength",
-                "ProductKey",
-                "Volume", "Value", "Acc_Value")
-  # tt = cbind(1:nrow(tt), tt)
-  # colnames(tt) = c("LogKey", colnames(m))
-  # tt[,which(colnames(tt)=="ProductKey")][tt[,which(colnames(tt)=="ProductKey")]==0]=999999
-  # return(tt)
+  colnames(m) = c("StartPos", "StopPos", "Top_ub",
+                  "LogLength", "ProductKey", "Volume",
+                  "Value", "Acc_Value")
   m = cbind(1:nrow(m), m)
   colnames(m)[1] = "LogKey"
-  m[,which(colnames(m)=="ProductKey")][m[,which(colnames(m)=="ProductKey")]==0]=999999
+  m[, which(colnames(m) == "ProductKey")][m[, which(colnames(m) ==
+                                                      "ProductKey")] == 0] = 999999
   return(m)
 }
-
 #' optBuck_hpr
 #'
 #' Calculate optimal bucking for hpr files
@@ -1326,7 +1345,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   pb=tkProgressBar(title = "progress bar", min = 0,
                    max = length(stems), width = 300)
   result=list()
-  i=2
+  i=1
   for(i in 1:length(stems)){#
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
@@ -1369,7 +1388,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
       Hm=Reduce("+",l[,1],accumulate=T)/100
       l=cbind(l,Hm) %>% data.table() %>% tibble()
       l=tibble(l)
-      lm=l[!duplicated(Dm),]
+      lm_for_stemgr=lm=l[!duplicated(Dm),]
       lm=lm[lm$Hm>=0.5,]
       if(nrow(lm)>2){
         # funksjon fra taperNO
@@ -1388,21 +1407,25 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
           df=data.frame(d=DiameterValue,h=diameterPosition)
           cat(plot(lm$Hm,lm$Dm,xlab = "height (m)",ylab="diameter (cm)"))
           cat(points(df$h,df$d,type="l"))
-          StemGrade=rep(-1,length(diameterPosition))
+          StemGrade=rep(NA,length(diameterPosition))
           k=1
-          for(k in  1:(unique(lm$ProductKey) %>% length())){
-            min=min(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
-            max=max(lm$Hm[lm$ProductKey==unique(lm$ProductKey)[k]])
+          for(k in  1:(unique(lm_for_stemgr$ProductKey) %>% length())){
+            min=min(lm_for_stemgr$Hm[lm_for_stemgr$ProductKey==unique(lm_for_stemgr$ProductKey)[k]])
+            max=max(lm_for_stemgr$Hm[lm_for_stemgr$ProductKey==unique(lm_for_stemgr$ProductKey)[k]])
+            if(k<(unique(lm_for_stemgr$ProductKey) %>% length())){
+              max=lm_for_stemgr$Hm[which(lm_for_stemgr$Hm==max)+1]
+            }
             idxmin=which(near(diameterPosition,round_any(min,.1)))
             idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
             if(!length(idxmin)==0&!length(idxmax)==0){
-              grade=PermittedGrades[[as.character(unique(lm$ProductKey)[k])]] %>% max()
+              grade=PermittedGrades[[as.character(unique(lm_for_stemgr$ProductKey)[k])]] %>% max()
               StemGrade[idxmin:idxmax]=grade
             }
           }
           stempr=cbind(S,SpeciesGroupKey,
                        diameterPosition,
                        DiameterValue,StemGrade) %>% data.table()
+          stempr=stempr[!is.na(stempr$StemGrade),]
           colnames(stempr)=c("StemKey",
                              "SpeciesGroupKey",
                              "diameterPosition",
@@ -1627,13 +1650,13 @@ getSortimentOverview=function(Logs,ProductData){
 #' @return A new Stemprofile object in which the new diameters are added
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-StemprofileIncrement=function(Stemprofile,DBH2){
+StemprofileIncrement=function(Stemprofile,DBH2,breastheight){
   res=list()
   i=1
   for(i in 1:length(unique(Stemprofile$StemKey))){
     SK=unique(Stemprofile$StemKey)[i]
     Stem=Stemprofile[Stemprofile$StemKey==SK,]
-    DBH1=Stem$DiameterValue[Stem$diameterPosition==1.3]
+    DBH1=Stem$DiameterValue[Stem$diameterPosition==breastheight]
     ratio=DBH2[i]/DBH1
     Stem$DiameterValue2=Stem$DiameterValue*ratio
     res[[i]]=Stem
@@ -1642,3 +1665,4 @@ StemprofileIncrement=function(Stemprofile,DBH2){
   res=do.call(rbind.data.frame, res)
   return(res)
 }
+
