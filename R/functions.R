@@ -1346,7 +1346,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   result=list()
   i=1
   for(i in 1:length(stems)){#
-
+#=0356774529000529984
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
@@ -1428,7 +1428,6 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
           if(is.na(stempr$StemGrade[nrow(stempr)])){
             stempr=stempr[-nrow(stempr),]
           }
-          stempr=stempr[!is.na(stempr$StemGrade),]
           colnames(stempr)=c("StemKey",
                              "SpeciesGroupKey",
                              "diameterPosition",
@@ -1659,7 +1658,7 @@ StemprofileIncrement=function(Stemprofile,DBH2,breastheight){
   for(i in 1:length(unique(Stemprofile$StemKey))){
     SK=unique(Stemprofile$StemKey)[i]
     Stem=Stemprofile[Stemprofile$StemKey==SK,]
-    DBH1=Stem$DiameterValue[Stem$diameterPosition==breastheight]
+    DBH1=Stem$DiameterValue[Stem$diameterPosition==paste(breastheight)]
     ratio=DBH2[i]/DBH1
     Stem$DiameterValue2=Stem$DiameterValue*ratio
     res[[i]]=Stem
