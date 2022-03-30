@@ -113,8 +113,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
           VolumeDiameterCategory = "All diameters (solid volume)"
           VolumeLengthCategory = "Physical length cm"
           buttEndProfileExtrapolationMethod = "false"
-        }
-        else {
+        } else {
           VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[ProductData$ProductKey ==
                                                                             ProductKey][1]
           VolumeDiameterCategory = ProductData$VolumeDiameterCategory[ProductData$ProductKey ==
@@ -189,6 +188,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
         subs = matrix(m[m[, 2] == StartPos, ], ncol = 8)
         sub = matrix(subs[which.max(subs[, 8]), ], ncol = 8)
         acc_Value = Value + sub[, 8]
+        Top_ub = ifelse(length(Top_ub)<1, NA, Top_ub)
         Top_ub = ifelse(is.na(Top_ub), NA, Top_ub)
         if(length(c(StartPos, StopPos, Top_ub, LogLength,
                     ProductKey[1], v, Value, acc_Value))<8){
@@ -355,10 +355,8 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
           sub = matrix(subs[which.max(subs[, 8]), ],
                        ncol = 8)
           acc_Value = Value + sub[, 8]
-
-          if(length(Top_ub)<1){
-            Top_ub=NA
-          }
+          Top_ub = ifelse(length(Top_ub)<1, NA, Top_ub)
+          Top_ub = ifelse(is.na(Top_ub), NA, Top_ub)
           if(length(c(StartPos, StopPos, Top_ub, LogLength,
                       ProductKey[1], v, Value, acc_Value))<8){
             stop("Missing values in result matrix")
@@ -386,6 +384,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
                                                       "ProductKey")] == 0] = 999999
   return(m)
 }
+
 #' optBuck_hpr
 #'
 #' Calculate optimal bucking for hpr files
@@ -1347,6 +1346,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   result=list()
   i=1
   for(i in 1:length(stems)){#
+
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
@@ -1425,6 +1425,9 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
           stempr=cbind(S,SpeciesGroupKey,
                        diameterPosition,
                        DiameterValue,StemGrade) %>% data.table()
+          if(is.na(stempr$StemGrade[nrow(stempr)])){
+            stempr=stempr[-nrow(stempr),]
+          }
           stempr=stempr[!is.na(stempr$StemGrade),]
           colnames(stempr)=c("StemKey",
                              "SpeciesGroupKey",
