@@ -785,72 +785,81 @@ getLengthClasses=function(hprfile){
 #' @seealso optBuck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getStems=function(hprfile){
-  require(XML);require(data.table);require(tcltk)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
+getStems=function(hprfile)
+{
+  require(XML)
+  require(data.table)
+  require(tcltk)
+  r = xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
-  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
-                                       xmlAttrs)) == "Stem"]
-  res=data.table()
+  stems = r[["Machine"]][names(xmlSApply(r[["Machine"]],
+                                         xmlAttrs)) == "Stem"]
+  res = data.table()
   cat("Extracting stem data... ")
-  pb=tkProgressBar(title = "progress bar", min = 0,
-                   max = length(stems), width = 300)
-  StemKey=SpeciesGroupKey=Date=
-    Latitude=Longitude=Altitude=
-    DBH=m3subs=m3sobs=ComHeight=numeric(length(stems))
-  i=1
-  for(i in 1:length(stems)){
-    SK=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
-    SGK=as.numeric(xmlValue(stems[[i]][["SpeciesGroupKey"]]))
-    D=xmlValue(stems[[i]][["HarvestDate"]])
-    if(D=="vasket"){
-      D=xmlValue(stems[[i]][["Extension"]][["FellCutStartTime"]])
+  pb = tkProgressBar(title = "progress bar", min = 0,
+                     max = length(stems), width = 300)
+  StemKey = SpeciesGroupKey = Date = Latitude = Longitude =
+    Altitude = DBH = m3sub = m3sob = ComHeight = c()
+  i = 1
+  for (i in 1:length(stems)) {#
+    SK = xmlValue(stems[[i]][["StemKey"]])
+    SGK = as.numeric(xmlValue(stems[[i]][["SpeciesGroupKey"]]))
+    D = xmlValue(stems[[i]][["HarvestDate"]])
+    if (D == "vasket") {
+      D = xmlValue(stems[[i]][["Extension"]][["FellCutStartTime"]])
     }
-    D=as.Date(D) %>% as.character() %>% gsub("-","",.) %>% as.numeric()
-
-    coord=stems[[i]][names(xmlSApply(stems[[i]],
-                                     xmlAttrs)) == "StemCoordinates"][2]
-    Lat=coord[["StemCoordinates"]][["Latitude"]]%>% xmlValue() %>% as.numeric()
-    Lon=coord[["StemCoordinates"]][["Longitude"]]%>% xmlValue() %>% as.numeric()
-    Alt=as.numeric(xmlValue(stems[[i]][["StemCoordinates"]][["Altitude"]]))
-    D=xmlValue(stems[[i]][["SingleTreeProcessedStem"]][["DBH"]]) %>% as.numeric
-    logs=stems[[i]][["SingleTreeProcessedStem"]]
-    idx=which(names(logs)=="Log")
-    if(length(idx)>0){
-      m3subs=m3sobs=CH=numeric(length(idx))
-      for(j in 1:length(idx)){
-        log=logs[[idx[j]]]
-        LogKey=as.numeric(xmlValue(log[["LogKey"]]))
-        df=ldply(xmlToList(log), data.frame)
-        LogVolume=df[df$.id=="LogVolume",]
-        LogVolume=LogVolume[,which(names(LogVolume)%in% c(".id","text",".attrs"))]
-        m3sub=LogVolume$text[LogVolume$.attrs=="m3subEstimated"|LogVolume$.attrs=="m3sub"] %>% as.numeric()
-        m3sob=LogVolume$text[LogVolume$.attrs=="m3sobEstimated"|LogVolume$.attrs=="m3sob"] %>% as.numeric()
-        LogLength=as.numeric(xmlValue(log[["LogMeasurement"]][["LogLength"]]))
-        m3subs[j]=m3sub
-        m3sobs[j]=m3sob
-        CH[j]=LogLength
+    D=substr(D,1,10)
+    coord = stems[[i]][names(xmlSApply(stems[[i]], xmlAttrs)) ==
+                         "StemCoordinates"][2]
+    Lat = coord[["StemCoordinates"]][["Latitude"]] %>%
+      xmlValue() %>% as.numeric()
+    Lon = coord[["StemCoordinates"]][["Longitude"]] %>%
+      xmlValue() %>% as.numeric()
+    Alt = as.numeric(xmlValue(stems[[i]][["StemCoordinates"]][["Altitude"]]))
+    dbh = xmlValue(stems[[i]][["SingleTreeProcessedStem"]][["DBH"]]) %>%
+      as.numeric
+    logs = stems[[i]][["SingleTreeProcessedStem"]]
+    idx = which(names(logs) == "Log")
+    if (length(idx) > 0) {
+      m3subs = m3sobs = CH = numeric(length(idx))
+      j=1
+      for (j in 1:length(idx)) {
+        log = logs[[idx[j]]]
+        LogKey = as.numeric(xmlValue(log[["LogKey"]]))
+        df = ldply(xmlToList(log), data.frame)
+        LogVolume = df[df$.id == "LogVolume", ]
+        LogVolume = LogVolume[, which(names(LogVolume) %in%
+                                        c(".id", "text", ".attrs"))]
+        sub = LogVolume$text[LogVolume$.attrs == "m3subEstimated" |
+                               LogVolume$.attrs == "m3sub"] %>% as.numeric()
+        sob = LogVolume$text[LogVolume$.attrs == "m3sobEstimated" |
+                               LogVolume$.attrs == "m3sob"] %>% as.numeric()
+        LogLength = as.numeric(xmlValue(log[["LogMeasurement"]][["LogLength"]]))
+        m3subs[j] = sub
+        m3sobs[j] = sob
+        CH[j] = LogLength
       }
-      StemKey[i]=SK
-      SpeciesGroupKey[i]=SGK
-      Date[i]=D
-      Latitude[i]=Lat
-      Longitude[i]=Lon
-      Altitude[i]=Alt
-      DBH[i]=D
-      m3sub[i]=sum(m3subs)
-      m3sob[i]=sum(m3sobs)
-      ComHeight[i]=sum(CH)
+      StemKey = c(StemKey,SK)
+      SpeciesGroupKey = c(SpeciesGroupKey,SGK)
+      Date = c(Date,D)
+      Latitude = c(Latitude,Lat)
+      Longitude = c(Longitude,Lon)
+      Altitude = c(Altitude,Alt)
+      DBH = c(DBH,dbh)
+      m3sub = c(m3sub,sum(m3subs))
+      m3sob = c(m3sob,sum(m3sobs))
+      ComHeight = c(ComHeight,sum(CH))
     }
-    setTkProgressBar(pb,i,
-                     label=paste(round(i/length(stems)*100,0),
-                                 "% done"))
+    setTkProgressBar(pb, i, label = paste(round(i/length(stems) *
+                                                  100, 0), "% done"))
   }
   close(pb)
-  res=cbind(StemKey,SpeciesGroupKey,Date,
-            Latitude,Longitude,Altitude,
-            DBH,m3sub,m3sob,ComHeight)
-  res=res[!res[,1]==0,]#remove empty rows
+  res = as.data.frame(cbind(StemKey, SpeciesGroupKey, Date,
+                            Altitude, DBH, m3sub, m3sob, ComHeight))
+  #res = res[!res[, 1] == 0, ]
+  for(i in 4:ncol(res)){
+    res[,i]=as.numeric(res[,i])
+  }
   return(res)
 }
 
@@ -1346,7 +1355,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   result=list()
   i=1
   for(i in 1:length(stems)){#
-#=0356774529000529984
+#S=0356774529000529984
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
