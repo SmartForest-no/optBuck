@@ -1463,7 +1463,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
     }
   }
   result=rbindlist(result)
-  unique(check$StemKey)
+  #unique(check$StemKey)
   result$diameterPosition=as.numeric(result$diameterPosition)*100
   result$DiameterValue=as.numeric(result$DiameterValue)*10
   result$StemGrade=as.integer(result$StemGrade)
