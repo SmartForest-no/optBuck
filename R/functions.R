@@ -13,7 +13,8 @@
 #' @param DiameterClassLowerLimit numeric vector of minimum log diameters corresponding to the assortments
 #' @param DiameterClassMAX numeric vector of maximum log diameters corresponding to the assortments
 #' @param VolumeDiameterCategory vector (character) of Stanford 2010 volume measurement methods corresponding to the assortments. Alternatives are "All diameters (solid volume)", "Calculated Norwegian mid" and "Top".
-#' @param PriceMatrices list of prices matrices for all ProductKeys
+#' @param PriceMatrices list of prices matrices for all ProductKeys (see getPriceMatrices())
+#' @param LengthClasses list of prices length classes for all ProductKeys (see getLengthClasses())
 #' @return result structure with optimum bucking solution for the input stem
 #' @seealso getPermittedGrades, getPriceMatrices, getProductData
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -22,7 +23,7 @@
 optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupKey,
                   ProductData, ProductKeys, LengthClassLowerLimit, LengthClassMAX,
                   DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
-                  PermittedGrades, PriceMatrices)
+                  PermittedGrades, PriceMatrices,LengthClasses)
 {
   require(magrittr)
   m = matrix(0, 1, 8)
@@ -138,7 +139,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
           if (VolumeLengthCategory == "Length as defined in LengthClasses") {
             LengthClass = LengthClasses[which(names(LengthClasses) ==
                                                 ProductKey)] %>% unlist() %>% unname()
-            LogLength = LengthClass[max(which(LogLength >
+            LogLength = LengthClass[max(which(LogLength >=
                                                 LengthClass))]
             StopPos = StartPos + LogLength
             StopPos = round(StopPos/10) * 10
@@ -303,7 +304,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
             if (VolumeLengthCategory == "Length as defined in LengthClasses") {
               LengthClass = LengthClasses[which(names(LengthClasses) ==
                                                   ProductKey)] %>% unlist() %>% unname()
-              LogLength = LengthClass[max(which(LogLength >
+              LogLength = LengthClass[max(which(LogLength >=
                                                   LengthClass))]
               StopPos = StartPos + LogLength
               StopPos = round(StopPos/10) * 10
@@ -326,7 +327,8 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
               r = DV/2
               v = sum(pi * (r^2) * 10)/100000000
             }
-            if (VolumeDiameterCategory == "Calculated Norwegian mid") {
+            if (VolumeDiameterCategory == "Calculated Norwegian mid"|
+                VolumeDiameterCategory == "Mid") {
               Dt = ifelse(DiameterUnderBark == T, BarkFunction(Top_ob,
                                                                SpeciesGroupKey, SpeciesGroupDefinition,
                                                                Top_ob, DBH, LogLength), Top_ob) %>%
