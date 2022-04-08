@@ -1354,9 +1354,15 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
                    max = length(stems), width = 300)
   result=list()
   i=1
+
+   for(i in 1:length(stems)){
+   if(xmlValue(stems[[i]][["StemKey"]])=="356774529007580001"){print(i)}
+   }
+
+  i=758
   for(i in 1:length(stems)){#
 #S=0356774529000529984
-    S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
+    S=xmlValue(stems[[i]][["StemKey"]]) #%>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
     gran=ProductData$SpeciesGroupKey_enkel[ProductData$SpeciesGroupKey==SpeciesGroupKey]%>% unique()==1
@@ -1397,7 +1403,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
       Hm=Reduce("+",l[,1],accumulate=T)/100
       l=cbind(l,Hm) %>% data.table() %>% tibble()
       l=tibble(l)
-      lm_for_stemgr=lm=l[!duplicated(Dm),]
+      #lm_for_stemgr=lm=l[!duplicated(Dm),]
       lm=lm[lm$Hm>=0.5,]
       if(nrow(lm)>2){
         # funksjon fra taperNO
@@ -1417,17 +1423,25 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
           cat(plot(lm$Hm,lm$Dm,xlab = "height (m)",ylab="diameter (cm)"))
           cat(points(df$h,df$d,type="l"))
           StemGrade=rep(NA,length(diameterPosition))
-          k=1
-          for(k in  1:(unique(lm_for_stemgr$ProductKey) %>% length())){
-            min=min(lm_for_stemgr$Hm[lm_for_stemgr$ProductKey==unique(lm_for_stemgr$ProductKey)[k]])
-            max=max(lm_for_stemgr$Hm[lm_for_stemgr$ProductKey==unique(lm_for_stemgr$ProductKey)[k]])
-            if(k<(unique(lm_for_stemgr$ProductKey) %>% length())){
-              max=lm_for_stemgr$Hm[which(lm_for_stemgr$Hm==max)+1]
+          l
+          keys=c()
+          for(k in 1:nrow(l)){
+            key=l$ProductKey[k]
+            if(!key%in%keys[length(keys)]){
+              keys=c(keys,key)
             }
+          }
+          k=1
+          for(k in  1:length( keys)){
+            min=min(l$Hm[l$ProductKey==keys[k]])
+            max=max(l$Hm[l$ProductKey==keys[k]])
+            #if(k<length(keys)){
+            #  max=l$Hm[which(l$Hm==max)+1]
+            #}
             idxmin=which(near(diameterPosition,round_any(min,.1)))
             idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
             if(!length(idxmin)==0&!length(idxmax)==0){
-              grade=PermittedGrades[[as.character(unique(lm_for_stemgr$ProductKey)[k])]] %>% max()
+              grade=PermittedGrades[[as.character(keys[k])]] %>% max()
               StemGrade[idxmin:idxmax]=grade
             }
           }
@@ -1449,8 +1463,10 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
     }
   }
   result=rbindlist(result)
-  result$diameterPosition=result$diameterPosition*100
-  result$DiameterValue=result$DiameterValue*10
+  unique(check$StemKey)
+  result$diameterPosition=as.numeric(result$diameterPosition)*100
+  result$DiameterValue=as.numeric(result$DiameterValue)*10
+  result$StemGrade=as.integer(result$StemGrade)
   close(pb)
   return(result)
 }
