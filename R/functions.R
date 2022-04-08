@@ -1403,7 +1403,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
       Hm=Reduce("+",l[,1],accumulate=T)/100
       l=cbind(l,Hm) %>% data.table() %>% tibble()
       l=tibble(l)
-      #lm_for_stemgr=lm=l[!duplicated(Dm),]
+      lm=l[!duplicated(Dm),]
       lm=lm[lm$Hm>=0.5,]
       if(nrow(lm)>2){
         # funksjon fra taperNO
