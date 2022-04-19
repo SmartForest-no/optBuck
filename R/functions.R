@@ -1361,7 +1361,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
    if(xmlValue(stems[[i]][["StemKey"]])=="356774529007580001"){print(i)}
    }
 
-  i=758
+  i=1
   for(i in 1:length(stems)){#
 #S=0356774529000529984
     S=xmlValue(stems[[i]][["StemKey"]]) #%>% as.numeric()
@@ -1369,6 +1369,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
     gran=ProductData$SpeciesGroupKey_enkel[ProductData$SpeciesGroupKey==SpeciesGroupKey]%>% unique()==1
     gran=gran[!is.na(gran)]
+    gran=ifelse(length(gran)<1,F,T)
     if(gran){
       l=stems[[i]][["SingleTreeProcessedStem"]]
       l=l[which(names(l)=="Log")]
