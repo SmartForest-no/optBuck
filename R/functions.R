@@ -395,6 +395,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
 #' @param ProductData Matrix containing product data (see getProductData())
 #' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile())
 #' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades())
+#' @param SpeciesGroupDefinition See getSpeciesGroupDefinition()
 #' @param ... others
 #' @return result structure with optimum bucking solution for the stems in the input .hpr file
 #' @seealso getPermittedGrades, getPriceMatrices, getProductData
@@ -405,7 +406,9 @@ optBuck_hpr=function(hprfile,
                      PriceMatrices,
                      ProductData,
                      StemProfile,
-                     PermittedGrades,...){
+                     PermittedGrades,
+                     SpeciesGroupDefinition,
+                     ...){
   require(XML);require(plyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
@@ -469,6 +472,7 @@ optBuck_hpr=function(hprfile,
 #' Extract stem profiles from .hpr files
 #'
 #' @param hprfile Path to input .hpr file
+#' @param Logs Harvested logs (getLogs())
 #' @return Stem profiles of harvested stems with stem grades
 #' @seealso optBuck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -792,6 +796,7 @@ getStems=function(hprfile)
   require(XML)
   require(data.table)
   require(tcltk)
+  require(dplyr)
   r = xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
   stems = r[["Machine"]][names(xmlSApply(r[["Machine"]],
