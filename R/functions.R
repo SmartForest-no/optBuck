@@ -1099,14 +1099,14 @@ VolumeCalc=function(
 #'
 #' Calculates diametervalues under bark
 #'
-#' @param DiameterValue numeric vector of corresponding diameters (mm)
-#' @param SpeciesGroupKey Species ID
-#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements(see getSpeciesGroupDefinition)
-#' @param Top_ob Starting position of log along the stem
+#' @param DiameterValue Numeric vector of diameters (mm)
+#' @param SpeciesGroupKey Species ID (see e.g. getProductData())
+#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements (see getSpeciesGroupDefinition())
+#' @param Top_ob Top diameter ober bark
 #' @param DBH in mm, for  Skogforsk 2004 barkFunction categories
-#' @param LogLength Optional, in cm
+#' @param LogLength in cm
 #' @return Log volume in m3
-#' @seealso Buck
+#' @seealso optBuck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_ob,DBH,LogLength){

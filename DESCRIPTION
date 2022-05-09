@@ -1,12 +1,17 @@
 Package: optBuck
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Optimal bucking
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Lennart Noordermeer
+Maintainer: Lennart Noordermeer <lennart.noordermeer@nmbu.no>
+Description: This package contains functions for extracting and handling data from cut-to-length harvesters and 
+optimizing the bucking. It uses harvester production report (.hpr) files as input. The main function is optBuck() 
+which optimizes the bucking of tree stems using dynamic programming. The package is based on harvester production 
+data retrieved from cut-to-length harvesters in the StanFord data format. Therefore, input data, units, variable 
+names, and parameters follow this format. In case of the input data not originating from .hpr files, but for 
+example from .pri files or field data, a set of taper functions are provided to transform the input data into 
+the required format. 
+License: Copyleft 
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.2
