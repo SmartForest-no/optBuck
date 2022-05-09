@@ -17,7 +17,7 @@ predictStemprofile(hprfile, ProductData, PermittedGrades)
 Output structure with stem profile containing stem grades
 }
 \description{
-Predict and extract stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
+Predict and extract Norway spruce stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
 }
 \author{
 Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}

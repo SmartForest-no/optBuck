@@ -13,10 +13,7 @@ impute_top(tt)
 new matrix which includes the tree top as waste
 }
 \description{
-Impute unused top of stem into result matrix of OptApt (waste)
-}
-\seealso{
-OptApt
+Impute unused top of stem into result matrix of optBuck (waste)
 }
 \author{
 Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}

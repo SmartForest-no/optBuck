@@ -15,7 +15,7 @@ strsplits(x, splits)
 List of permitted grades for assortments
 }
 \description{
-modified strsplit for multiple splits
+Helper function: modified strsplit for multiple splits
 }
 \seealso{
 getPriceMatrices

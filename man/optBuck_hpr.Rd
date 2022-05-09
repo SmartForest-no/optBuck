@@ -16,21 +16,21 @@ optBuck_hpr(
 \arguments{
 \item{hprfile}{Path to input .hpr file}
 
-\item{PriceMatrices}{list of price matrices for all ProductKeys (see getPriceMatrices)}
+\item{PriceMatrices}{list of price matrices for all ProductKeys (see getPriceMatrices())}
 
-\item{ProductData}{Matrix containing product data (see getProductData)}
+\item{ProductData}{Matrix containing product data (see getProductData())}
 
-\item{StemProfile}{Stem profiles for all stems in hprfile (see getStemProfile)}
+\item{StemProfile}{Stem profiles for all stems in hprfile (see getStemProfile())}
 
-\item{PermittedGrades}{list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades)}
+\item{PermittedGrades}{list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades())}
 
 \item{...}{others}
 }
 \value{
-result structure with optimum bucking solution for the stems in the input hpr file
+result structure with optimum bucking solution for the stems in the input .hpr file
 }
 \description{
-Calculate optimal bucking for hpr files
+Calculate optimal bucking for all stems in a hpr file
 }
 \references{
 Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf

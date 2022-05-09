@@ -13,16 +13,13 @@ plotBucking(diameterPosition, DiameterValue, StemGrade, res)
 
 \item{StemGrade}{vector of corresponding stem grades}
 
-\item{res}{the bucome outcome, i.e., output of OptApt()}
+\item{res}{the bucing outcome, i.e., output from optBuck()}
 }
 \value{
 plot of bucking outcome
 }
 \description{
 Plot the bucking outcome
-}
-\seealso{
-OptApt
 }
 \author{
 Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
