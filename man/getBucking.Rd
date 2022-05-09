@@ -9,11 +9,11 @@ getBucking(hprfile, PriceMatrices, ProductData, StemProfile)
 \arguments{
 \item{hprfile}{Path to .hpr file}
 
-\item{PriceMatrices}{list of prices matrices for all ProductKeys}
+\item{PriceMatrices}{list of prices matrices for all ProductKeys (see getPriceMatrices())}
 
-\item{ProductData}{Matrix containing product data (see getProductData)}
+\item{ProductData}{Matrix containing product data (see getProductData())}
 
-\item{StemProfile}{Stem profiles for all stems in hprfile (see getStemProfile)}
+\item{StemProfile}{Stem profiles for all stems in hprfile (see getStemProfile())}
 }
 \value{
 Output structure with bucking outcomes

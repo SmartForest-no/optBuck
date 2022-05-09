@@ -15,10 +15,7 @@ track_trace(m, tt)
 Logical: "True" if whole and "False" if decimal
 }
 \description{
-Back-track optimum bucking solution
-}
-\seealso{
-OptApt
+helper function for optBuck: back-track optimum bucking solution
 }
 \author{
 Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}

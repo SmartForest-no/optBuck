@@ -14,17 +14,17 @@ BarkFunction(
 )
 }
 \arguments{
-\item{DiameterValue}{numeric vector of corresponding diameters (mm)}
+\item{DiameterValue}{Numeric vector of diameters (mm)}
 
-\item{SpeciesGroupKey}{Species ID}
+\item{SpeciesGroupKey}{Species ID (see e.g. getProductData())}
 
-\item{SpeciesGroupDefinition}{List of species group information, with speciesgroupkey as the name of the elements(see getSpeciesGroupDefinition)}
+\item{SpeciesGroupDefinition}{List of species group information, with speciesgroupkey as the name of the elements (see getSpeciesGroupDefinition())}
 
-\item{Top_ob}{Starting position of log along the stem}
+\item{Top_ob}{Top diameter ober bark}
 
 \item{DBH}{in mm, for  Skogforsk 2004 barkFunction categories}
 
-\item{LogLength}{Optional, in cm}
+\item{LogLength}{in cm}
 }
 \value{
 Log volume in m3
@@ -33,7 +33,7 @@ Log volume in m3
 Calculates diametervalues under bark
 }
 \seealso{
-Buck
+optBuck
 }
 \author{
 Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}

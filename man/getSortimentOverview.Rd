@@ -15,7 +15,7 @@ getSortimentOverview(Logs, ProductData)
 figure in viewer
 }
 \description{
-show figure of distribution of harvested volume over assortments
+Extract distribution of harvested volume over assortments
 }
 \seealso{
 getLogs, getProductData

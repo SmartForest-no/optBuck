@@ -15,8 +15,7 @@
 #' @param VolumeDiameterCategory vector (character) of Stanford 2010 volume measurement methods corresponding to the assortments. Alternatives are "All diameters (solid volume)", "Calculated Norwegian mid" and "Top".
 #' @param PriceMatrices list of prices matrices for all ProductKeys (see getPriceMatrices())
 #' @param LengthClasses list of prices length classes for all ProductKeys (see getLengthClasses())
-#' @return result structure with optimum bucking solution for the input stem
-#' @seealso getPermittedGrades, getPriceMatrices, getProductData
+#' @return result structure with optimum bucking solution
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
@@ -389,15 +388,15 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
 
 #' optBuck_hpr
 #'
-#' Calculate optimal bucking for hpr files
+#' Calculate optimal bucking for all stems in a hpr file
 #'
 #' @param hprfile Path to input .hpr file
-#' @param PriceMatrices list of price matrices for all ProductKeys (see getPriceMatrices)
-#' @param ProductData Matrix containing product data (see getProductData)
-#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile)
-#' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades)
+#' @param PriceMatrices list of price matrices for all ProductKeys (see getPriceMatrices())
+#' @param ProductData Matrix containing product data (see getProductData())
+#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile())
+#' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades())
 #' @param ... others
-#' @return result structure with optimum bucking solution for the stems in the input hpr file
+#' @return result structure with optimum bucking solution for the stems in the input .hpr file
 #' @seealso getPermittedGrades, getPriceMatrices, getProductData
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
@@ -749,7 +748,7 @@ getSpeciesGroupDefinition=function(hprfile){
   }
   return(SpeciesGroupDefinition)
 }
-#' LengthClasses
+#' getLengthClasses
 #'
 #' Extract the length classes for each assortment from .hpr files, needed for volume calculation when VolumeLengthCategory=="Length as defined in LengthClasses"
 #'
@@ -866,8 +865,6 @@ getStems=function(hprfile)
   return(res)
 }
 
-
-
 #' getLogs
 #'
 #' Extract information on harvested logs from .hpr files
@@ -932,6 +929,7 @@ getLogs=function(hprfile){
   close(pb)
   return(res)
 }
+
 #' PriceVolumeCalc
 #'
 #' Calculates log price volume, i.e., the volume which is used for price calculation
@@ -1157,9 +1155,9 @@ BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_o
 #' Extract bucking outcomes from a .hpr file
 #'
 #' @param hprfile Path to .hpr file
-#' @param PriceMatrices list of prices matrices for all ProductKeys
-#' @param ProductData Matrix containing product data (see getProductData)
-#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile)
+#' @param PriceMatrices list of prices matrices for all ProductKeys (see getPriceMatrices())
+#' @param ProductData Matrix containing product data (see getProductData())
+#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile())
 #' @return Output structure with bucking outcomes
 #' @seealso OptBuck, Optbuck_hpr
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -1338,7 +1336,7 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile){
 }
 #' predictStemprofile
 #'
-#' Predict and extract stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
+#' Predict and extract Norway spruce stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
 #'
 #' @param hprfile Path to .hpr file
 #' @param ProductData output of getProductData()
@@ -1498,54 +1496,13 @@ getHarvestedArea=function(Stems){
   plot(sf,col="red") %>% print()
   return(sf)
 }
-#' equal.lengths
-#'
-#' Test whether vectors are of equal lengths
-#'
-#' @return error when vector lengths are not equal
-#' @seealso OptApt
-#' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
-#' @examples
-#' a=c(1,2);b=c(1,2,3)
-#' equal.lengths(a,b)
-#' @export
-equal.lengths=function(){
-  vec.list=list(...)
-  if(!all(sapply(vec.list,length)==length(vec.list[[1]]))){
-    stop("Input parameter lengths not equal")
-  }
-}
-#' is.whole
-#'
-#' Test if number(s) is/are whole or decimal
-#'
-#' @param a A number
-#' @param tol Tolerance
-#' @return Logical: "True" if whole and "False" if decimal
-#' @seealso OptApt
-#' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
-#' @examples
-#' a=c(1,2);b=1.2
-#' is.whole(a)
-#' is.whole(b)
-#' @export
-is.whole=function(a, tol = 1e-7){
-  is.eq=function(x,y){
-    r=all.equal(x,y
-                , tol=tol)
-    is.logical(r) && r
-  }
-  (is.numeric(a) && is.eq(a, floor(a))) ||
-    (is.complex(a) && {ri=c(Re(a),Im(a));is.eq(ri, floor(ri))})
-}
 #' track_trace
 #'
-#' Back-track optimum bucking solution
+#' helper function for optBuck: back-track optimum bucking solution
 #'
 #' @param m matrix of potential cuts
 #' @param tt matrix of log segment which maximize cumulative value
 #' @return Logical: "True" if whole and "False" if decimal
-#' @seealso OptApt
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 track_trace=function(m,tt){
@@ -1571,11 +1528,10 @@ track_trace=function(m,tt){
 }
 #' impute_top
 #'
-#' Impute unused top of stem into result matrix of OptApt (waste)
+#' Impute unused top of stem into result matrix of optBuck (waste)
 #'
 #' @param tt matrix of log segments which maximize cumulative value
 #' @return new matrix which includes the tree top as waste
-#' @seealso OptApt
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 impute_top=function(tt){ # impute unused top of stem (waste)
@@ -1600,9 +1556,8 @@ impute_top=function(tt){ # impute unused top of stem (waste)
 #' @param diameterPosition vector of diameter positions (cm) of a stem profile: 0,10,...,end
 #' @param DiameterValue vector of corresponding diameters (mm) for those diameter positions
 #' @param StemGrade vector of corresponding stem grades
-#' @param res the bucome outcome, i.e., output of OptApt()
+#' @param res the bucing outcome, i.e., output from optBuck()
 #' @return plot of bucking outcome
-#' @seealso OptApt
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 plotBucking = function(diameterPosition,DiameterValue,StemGrade,res){
@@ -1638,7 +1593,7 @@ plotBucking = function(diameterPosition,DiameterValue,StemGrade,res){
 }
 #' strsplits
 #'
-#' modified strsplit for multiple splits
+#' Helper function: modified strsplit for multiple splits
 #'
 #' @param x character vector to split
 #' @param splits vector of character patterns used to split
@@ -1654,7 +1609,7 @@ strsplits=function(x,splits){
 }
 #' getSortimentOverview
 #'
-#' show figure of distribution of harvested volume over assortments
+#' Extract distribution of harvested volume over assortments
 #'
 #' @param Logs otput from getLogs
 #' @param ProductData output from getProductData

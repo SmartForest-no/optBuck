@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.R
 \name{getLengthClasses}
 \alias{getLengthClasses}
-\title{LengthClasses}
+\title{getLengthClasses}
 \usage{
 getLengthClasses(hprfile)
 }
