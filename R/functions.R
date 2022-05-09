@@ -396,6 +396,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
 #' @param ProductData Matrix containing product data (see getProductData)
 #' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile)
 #' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades)
+#' @param ... others
 #' @return result structure with optimum bucking solution for the stems in the input hpr file
 #' @seealso getPermittedGrades, getPriceMatrices, getProductData
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -931,11 +932,13 @@ getLogs=function(hprfile){
   close(pb)
   return(res)
 }
-#' VolumeCalc
+#' PriceVolumeCalc
 #'
 #' Calculates log price volume, i.e., the volume which is used for price calculation
 #'
-#' @param VolumeDiameterCategory Volume calculation method according to stanford2010.
+#' @param VolumeDiameterAdjustment Volume diameter adjustment according to stanford2010 (see getProductData()).
+#' @param VolumeDiameterCategory Volume calculation method according to stanford2010 (see getProductData()).
+#' @param VolumeLengthCategory Volume length category according to stanford2010 (see getProductData()).
 #' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,...,end
 #' @param DiameterValue numeric vector of corresponding diameters (mm)
 #' @param StartPos Starting position of log along the stem
@@ -947,6 +950,7 @@ getLogs=function(hprfile){
 #' @param DBH Optional, in mm (see BarkFunction)
 #' @param LogLength Optional, in cm (see BarkFunction)
 #' @param LengthClasses List of length classes for the assortments (see getLengthClasses)
+#' @param ProductKey Assortment key (see getProductData())
 #' @return Log volume in m3
 #' @seealso Buck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -1050,7 +1054,6 @@ PriceVolumeCalc=function(
 #'
 #' Calculates log volume from all diameters as solid volume
 #'
-#' @param VolumeDiameterCategory Volume calculation method according to stanford2010.
 #' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,...,end
 #' @param DiameterValue numeric vector of corresponding diameters (mm)
 #' @param StartPos Starting position of log along the stem
@@ -1061,7 +1064,6 @@ PriceVolumeCalc=function(
 #' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements(see getSpeciesGroupDefinition)
 #' @param DBH Optional, in mm (see BarkFunction)
 #' @param LogLength Optional, in cm (see BarkFunction)
-#' @param LengthClasses List of length classes for the assortments (see getLengthClasses)
 #' @return Log volume in m3
 #' @seealso Buck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -1339,6 +1341,8 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile){
 #' Predict and extract stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
 #'
 #' @param hprfile Path to .hpr file
+#' @param ProductData output of getProductData()
+#' @param PermittedGrades output of getPermittedGrades()
 #' @return Output structure with stem profile containing stem grades
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
@@ -1478,6 +1482,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
 #'
 #' Extract harvested area
 #'
+#' @param Stems output of getStems()
 #' @return Simple feature object of area around harvested trees
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @examples
@@ -1504,7 +1509,7 @@ getHarvestedArea=function(Stems){
 #' a=c(1,2);b=c(1,2,3)
 #' equal.lengths(a,b)
 #' @export
-equal.lengths=function(...){
+equal.lengths=function(){
   vec.list=list(...)
   if(!all(sapply(vec.list,length)==length(vec.list[[1]]))){
     stop("Input parameter lengths not equal")
@@ -1592,9 +1597,9 @@ impute_top=function(tt){ # impute unused top of stem (waste)
 #'
 #' Plot the bucking outcome
 #'
-#' @param DiamPos vector of diameter positions (cm) of a stem profile: 0,10,...,end
-#' @param Diam vector of corresponding diameters (mm) for those diameter positions
-#' @param Qlt vector of corresponding stem grades
+#' @param diameterPosition vector of diameter positions (cm) of a stem profile: 0,10,...,end
+#' @param DiameterValue vector of corresponding diameters (mm) for those diameter positions
+#' @param StemGrade vector of corresponding stem grades
 #' @param res the bucome outcome, i.e., output of OptApt()
 #' @return plot of bucking outcome
 #' @seealso OptApt
@@ -1651,7 +1656,7 @@ strsplits=function(x,splits){
 #'
 #' show figure of distribution of harvested volume over assortments
 #'
-#' @param logs otput from getLogs
+#' @param Logs otput from getLogs
 #' @param ProductData output from getProductData
 #' @return figure in viewer
 #' @seealso getLogs, getProductData
@@ -1675,8 +1680,9 @@ getSortimentOverview=function(Logs,ProductData){
 #'
 #' Predict Stemprofile at another point in time given a vector of new DBHs
 #'
-#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile)
+#' @param Stemprofile Stem profiles for all stems in hprfile (see getStemProfile)
 #' @param DBH2 a numeric vector of new DBHs, of the same length as unique StemKeys in Stemprofile
+#' @param breastheight height in cm which is considered breastheight (numeric), typically 110 or 130.
 #' @return A new Stemprofile object in which the new diameters are added
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
