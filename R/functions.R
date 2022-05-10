@@ -478,7 +478,7 @@ optBuck_hpr=function(hprfile,
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getStemprofile=function(hprfile){
-  require(XML);require(data.table);require(tcltk)
+  require(XML);require(data.table);require(tcltk);require(plyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
@@ -548,8 +548,6 @@ getStemprofile=function(hprfile){
                           "SpeciesGroupKey",
                           "diameterPosition",
                           "DiameterValue","StemGrade")
-  print(paste("No stemprofile for StemKey:",
-              NoStemProfile))
   return(stemprofile)
 }
 
@@ -880,7 +878,7 @@ getStems=function(hprfile)
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getLogs=function(hprfile){
-  require(XML);require(data.table);require(tcltk)
+  require(XML);require(data.table);require(tcltk);require(plyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
@@ -1163,11 +1161,12 @@ BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_o
 #' @param PriceMatrices list of prices matrices for all ProductKeys (see getPriceMatrices())
 #' @param ProductData Matrix containing product data (see getProductData())
 #' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile())
+#' @param LengthClasses See getLengthClasses()
 #' @return Output structure with bucking outcomes
 #' @seealso OptBuck, Optbuck_hpr
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile){
+getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses){
   require(XML);require(plyr);require(tcltk)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   cat("XML parsing complete... ")
@@ -1558,43 +1557,60 @@ impute_top=function(tt){ # impute unused top of stem (waste)
 #'
 #' Plot the bucking outcome
 #'
-#' @param diameterPosition vector of diameter positions (cm) of a stem profile: 0,10,...,end
-#' @param DiameterValue vector of corresponding diameters (mm) for those diameter positions
-#' @param StemGrade vector of corresponding stem grades
-#' @param res the bucing outcome, i.e., output from optBuck()
+#' @param Bucking output structure of getBucking(), optBuck() or optBuck_hpr()
+#' @param StemProfile StemProfile (see getStemprofile())
+#' @param Key StemKey of the stem to be plotted
 #' @return plot of bucking outcome
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-plotBucking = function(diameterPosition,DiameterValue,StemGrade,res){
-  tre=cbind(diameterPosition,DiameterValue,StemGrade)
-  h=diameterPosition
-  d=DiameterValue/2
-  maxd=max(d)+1
-  maxh=max(h)+1
-  secondMaxH=head(tail(h, n=2), n=1)
-  secondMaxH_d=head(tail(d, n=2), n=1)
-  plot(d,h,asp=2,type="n",ylab="Tree height (cm)",xlab="Radius (+/- cm)",
-       xlim=c(-maxd, maxd),ylim=c(0, maxh),cex.main=0.9) #
-  for(i in 1:nrow(res)){
-    log=tre[which(diameterPosition==res[,which(colnames(res)=="start")][i]):
-              which(diameterPosition==res[,which(colnames(res)=="stop")][i]),]
-    log=cbind(log,res[,3][i] ) %>% as.data.frame()
-    D_Bob=max(log$DiameterValue)/2 # bottom
-    D_Mob=median(log$DiameterValue)/2 # middle
-    D_Tob=min(log$DiameterValue)/2 # top
-    H_B=min(log$diameterPosition)
-    H_M=median(log$diameterPosition)
-    H_T=max(log$diameterPosition)
-    polygon(c(D_Bob,D_Mob,D_Tob,-D_Tob,-D_Mob,-D_Bob,D_Bob),
-            c(H_B,H_M,H_T,H_T,H_M,H_B,H_B),col=log$V4)
+plotBucking=function(Bucking, StemProfile, Key){
+  require(ggplot2)
+  require(plyr)
+  tab=Bucking[Bucking$StemKey==Key,]
+  tre=StemProfile[StemProfile$StemKey==paste(Key),]
+  h = tre$diameterPosition
+  d = tre$DiameterValue/2
+  maxd = max(d) + 1
+  maxh = max(h) + 1
+  secondMaxH = head(tail(h, n = 2), n = 1)
+  secondMaxH_d = head(tail(d, n = 2), n = 1)
+  plotdf=c()
+  i=1
+  for (i in 1:nrow(tab)){
+    log = tre[which(h == round_any(tab[, which(colnames(tab)=="StartPos")][i],10)):which(h == round_any(tab[, which(colnames(tab) =="StopPos")][i],10)),]
+    log = cbind(log, unique(ProductData$ProductName[which(ProductData$ProductKey==tab$ProductKey[i])]) ) %>% as.data.frame()
+    names(log)[ncol(log)]="ProductName"
+    D_Bob = max(log$DiameterValue)/2
+    D_Mob = median(log$DiameterValue)/2
+    D_Tob = min(log$DiameterValue)/2
+    H_B = min(log$diameterPosition)
+    H_M = median(log$diameterPosition)
+    H_T = max(log$diameterPosition)
+    log=data.frame(x=c(D_Bob, D_Mob, D_Tob, -D_Tob, -D_Mob, -D_Bob, D_Bob),
+                   diameterPosition=c(H_B, H_M, H_T, H_T, H_M, H_B, H_B),
+                   ProductName=unique(log$ProductName))
+    plotdf=rbind(plotdf,log)
   }
-  aso$productKey=row.names(aso)
-  products=res[,which(colnames(res)=="assortment")] %>% as.data.frame()
-  names(products)=c("productKey")
-  usedPrd=merge(aso, products, by = "productKey",all.x = F)
-  legend("topright", inset=.02, title="Assortiment",
-         as.character(usedPrd$Sortim), fill=usedPrd$productKey,
-         horiz=F, cex=0.8)
+  plotdf$ProductName=factor(plotdf$ProductName, levels=unique(plotdf$ProductName))
+  ticks=seq(0,round_any(max(plotdf$diameterPosition),100),by=200)
+  lim=c(0,round_any(max(tre$diameterPosition),200,f = ceiling))
+  plot=ggplot(plotdf, aes(x = x, y = diameterPosition)) +
+    geom_polygon(aes(fill = as.factor(ProductName)),color="black")+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          legend.position="bottom",
+          axis.text.y=element_blank(),
+          axis.ticks.y = element_blank(),
+          legend.title = element_blank(),
+          aspect.ratio = .1)+
+    scale_y_continuous(limits=lim,breaks = ticks)+#,
+    xlab("")+
+    ylab("Diameter position (cm)")+
+    scale_fill_brewer(palette="Spectral")+#RdYIGn
+    coord_flip()
+  plot
+  return(plot)
 }
 #' strsplits
 #'
