@@ -4,16 +4,14 @@
 \alias{plotBucking}
 \title{plotBucking}
 \usage{
-plotBucking(diameterPosition, DiameterValue, StemGrade, res)
+plotBucking(Bucking, StemProfile, Key)
 }
 \arguments{
-\item{diameterPosition}{vector of diameter positions (cm) of a stem profile: 0,10,...,end}
+\item{Bucking}{output structure of getBucking(), optBuck() or optBuck_hpr()}
 
-\item{DiameterValue}{vector of corresponding diameters (mm) for those diameter positions}
+\item{StemProfile}{StemProfile (see getStemprofile())}
 
-\item{StemGrade}{vector of corresponding stem grades}
-
-\item{res}{the bucing outcome, i.e., output from optBuck()}
+\item{Key}{StemKey of the stem to be plotted}
 }
 \value{
 plot of bucking outcome

@@ -8,6 +8,8 @@ getStemprofile(hprfile)
 }
 \arguments{
 \item{hprfile}{Path to input .hpr file}
+
+\item{Logs}{Harvested logs (getLogs())}
 }
 \value{
 Stem profiles of harvested stems with stem grades
