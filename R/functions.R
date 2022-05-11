@@ -652,7 +652,7 @@ getProductData=function(hprfile){
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getPriceMatrices=function(hprfile){
-  require(XML)
+  require(XML);require(dplyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
   a=r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                    xmlAttrs)) == "ProductDefinition"]

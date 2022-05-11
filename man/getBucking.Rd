@@ -4,7 +4,7 @@
 \alias{getBucking}
 \title{getBucking}
 \usage{
-getBucking(hprfile, PriceMatrices, ProductData, StemProfile)
+getBucking(hprfile, PriceMatrices, ProductData, StemProfile, LengthClasses)
 }
 \arguments{
 \item{hprfile}{Path to .hpr file}
@@ -14,6 +14,8 @@ getBucking(hprfile, PriceMatrices, ProductData, StemProfile)
 \item{ProductData}{Matrix containing product data (see getProductData())}
 
 \item{StemProfile}{Stem profiles for all stems in hprfile (see getStemProfile())}
+
+\item{LengthClasses}{See getLengthClasses()}
 }
 \value{
 Output structure with bucking outcomes

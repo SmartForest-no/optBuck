@@ -10,6 +10,7 @@ optBuck_hpr(
   ProductData,
   StemProfile,
   PermittedGrades,
+  SpeciesGroupDefinition,
   ...
 )
 }
@@ -23,6 +24,8 @@ optBuck_hpr(
 \item{StemProfile}{Stem profiles for all stems in hprfile (see getStemProfile())}
 
 \item{PermittedGrades}{list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades())}
+
+\item{SpeciesGroupDefinition}{See getSpeciesGroupDefinition()}
 
 \item{...}{others}
 }
