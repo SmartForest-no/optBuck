@@ -33,19 +33,19 @@ Although machine manufacturers provide software solutions for handling productio
 # Example features
 
 Below we demonstrate some features of the package using example data. We refer to the package pdf manual for the complete range of features.
-```{r, echo=T, message=F, results='hide'}
+```
 #installation
 devtools::install_github("https://github.com/lennartnoordermeer/optBuck",force=T)
 library(XML);library(optBuck)
 ```
 Path to the external example data: 
-```{r, echo=T, message=F, results='hide'}
+```
 hprfile=system.file("extdata",
                     "example.hpr",
                     package = "optBuck")
 ```
 Extract production data:
-```{r, echo=T, message=F, results='hide'}
+```
 PriceMatrices=getPriceMatrices(hprfile)
 ProductData=getProductData(hprfile)
 Logs=getLogs(hprfile)
@@ -55,21 +55,20 @@ SpeciesGroupDefinition=getSpeciesGroupDefinition(hprfile)
 LengthClasses=getLengthClasses(hprfile)
 ```
 Extract the bucking outcomes:
-```{r, echo=T, message=F, results='hide'}
+```
 Bucking=getBucking(hprfile, PriceMatrices, ProductData, StemProfile, LengthClasses)
 ```
 Compute the optimal bucking outcomes:
-```{r, echo=T, message=F}
+```
 OptimalBucking=optBuck_hpr(hprfile,
                            PriceMatrices,
                            ProductData,
                            StemProfile,
                            PermittedGrades,
                            SpeciesGroupDefinition)
-head(OptimalBucking)[,c(1:4,7,9)]
 ```
 Bucking outcomes can be plotted and compared for given stems:
-```{r, echo=T, message=F, results='hide'}
+```
 Stem=337463
 Actual=plotBucking(Bucking, StemProfile,
                    Stem, ProductData)
