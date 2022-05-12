@@ -8635,9 +8635,9 @@ Stubbar: Repola</Description>
 			</StemCoordinates>
 			<Extension>
 				<SessionId>10106</SessionId>
-				<FellCutStartTime>2021-12-10T08:06:46.4222726+01:00</FellCutStartTime>
-				<FellCutEndTime>2021-12-10T08:06:46.4222726+01:00</FellCutEndTime>
-				<TiltUpStartTime>2021-12-10T08:07:55.4016375+01:00</TiltUpStartTime>
+				<FellCutStartTime>vasket</FellCutStartTime>
+				<FellCutEndTime>vasket</FellCutEndTime>
+				<TiltUpStartTime>vasket</TiltUpStartTime>
 				<AnalyzedLength>2260</AnalyzedLength>
 				<LevelArea dia="415" pos="240">100</LevelArea>
 				<DiameterDrop dia="460" pos="101">61</DiameterDrop>
@@ -8951,8 +8951,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-10T08:07:05.0419012+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-10T08:07:06.4319012+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>0</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -8977,8 +8977,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-10T08:07:22.0814411+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-10T08:07:22.9214411+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>322</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9003,8 +9003,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-10T08:07:29.9914446+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-10T08:07:30.5714446+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>817</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9029,8 +9029,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-10T08:07:40.2121073+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-10T08:07:40.6621073+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>1310</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9055,8 +9055,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-10T08:07:45.6516687+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-10T08:07:45.9716687+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>1684</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9081,8 +9081,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-10T08:07:53.5432942+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-10T08:07:53.7332942+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>1992</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9120,9 +9120,9 @@ Stubbar: Repola</Description>
 			</StemCoordinates>
 			<Extension>
 				<SessionId>10096</SessionId>
-				<FellCutStartTime>2021-12-09T08:49:54.6430000+01:00</FellCutStartTime>
-				<FellCutEndTime>2021-12-09T08:49:57.0530000+01:00</FellCutEndTime>
-				<TiltUpStartTime>2021-12-09T08:50:41.2030000+01:00</TiltUpStartTime>
+				<FellCutStartTime>vasket</FellCutStartTime>
+				<FellCutEndTime>vasket</FellCutEndTime>
+				<TiltUpStartTime>vasket</TiltUpStartTime>
 				<AnalyzedLength>1920</AnalyzedLength>
 				<LevelArea dia="227" pos="660">120</LevelArea>
 				<LevelArea dia="203" pos="980">100</LevelArea>
@@ -9398,8 +9398,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-09T08:50:01.6030000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-09T08:50:01.6030000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>0</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9424,8 +9424,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-09T08:50:15.0230000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-09T08:50:15.5930000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>31</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9450,8 +9450,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-09T08:50:21.2230000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-09T08:50:21.6930000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>405</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9476,8 +9476,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-09T08:50:26.7530000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-09T08:50:27.1130000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>838</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9502,8 +9502,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-09T08:50:32.5800000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-09T08:50:32.8700000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>1332</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9528,8 +9528,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-09T08:50:38.3830000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-09T08:50:38.5430000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>1639</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9567,9 +9567,9 @@ Stubbar: Repola</Description>
 			</StemCoordinates>
 			<Extension>
 				<SessionId>10084</SessionId>
-				<FellCutStartTime>2021-12-08T08:40:35.0030000+01:00</FellCutStartTime>
-				<FellCutEndTime>2021-12-08T08:40:36.9530000+01:00</FellCutEndTime>
-				<TiltUpStartTime>2021-12-08T08:41:03.5600000+01:00</TiltUpStartTime>
+				<FellCutStartTime>vasket</FellCutStartTime>
+				<FellCutEndTime>vasket</FellCutEndTime>
+				<TiltUpStartTime>vasket</TiltUpStartTime>
 				<AnalyzedLength>1600</AnalyzedLength>
 				<LevelArea dia="261" pos="200">140</LevelArea>
 				<LevelArea dia="217" pos="650">100</LevelArea>
@@ -9804,8 +9804,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-08T08:40:45.9230000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-08T08:40:46.6430000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>0</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9830,8 +9830,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-08T08:40:51.4700000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-08T08:40:52.0200000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>373</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9856,8 +9856,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Other manual</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-08T08:40:56.8400000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-08T08:40:57.2300000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>747</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
@@ -9882,8 +9882,8 @@ Stubbar: Repola</Description>
 						<CuttingReason>Automatic</CuttingReason>
 					</CuttingCategory>
 					<Extension>
-						<CuttingStartTime>2021-12-08T08:41:01.5730000+01:00</CuttingStartTime>
-						<CuttingEndTime>2021-12-08T08:41:01.8130000+01:00</CuttingEndTime>
+						<CuttingStartTime>vasket</CuttingStartTime>
+						<CuttingEndTime>vasket</CuttingEndTime>
 						<StartPos>1181</StartPos>
 					</Extension>
 					<LogMeasurement logMeasurementCategory="Machine">
