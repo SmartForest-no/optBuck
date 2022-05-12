@@ -33,19 +33,19 @@ Although machine manufacturers provide software solutions for handling productio
 # Example features
 
 Below we demonstrate some features of the package using example data. We refer to the package pdf manual for the complete range of features.
-```ruby
+``` py 
 #installation
 devtools::install_github("https://github.com/lennartnoordermeer/optBuck",force=T)
 library(XML);library(optBuck)
 ```
 Path to the external example data: 
-```ruby
+``` py 
 hprfile=system.file("extdata",
                     "example.hpr",
                     package = "optBuck")
 ```
 Extract production data:
-```ruby
+``` py 
 PriceMatrices=getPriceMatrices(hprfile)
 ProductData=getProductData(hprfile)
 Logs=getLogs(hprfile)
@@ -55,11 +55,11 @@ SpeciesGroupDefinition=getSpeciesGroupDefinition(hprfile)
 LengthClasses=getLengthClasses(hprfile)
 ```
 Extract the bucking outcomes:
-```ruby
+``` py 
 Bucking=getBucking(hprfile, PriceMatrices, ProductData, StemProfile, LengthClasses)
 ```
 Compute the optimal bucking outcomes:
-```ruby
+``` py 
 OptimalBucking=optBuck_hpr(hprfile,
                            PriceMatrices,
                            ProductData,
@@ -68,7 +68,7 @@ OptimalBucking=optBuck_hpr(hprfile,
                            SpeciesGroupDefinition)
 ```
 Bucking outcomes can be plotted and compared for given stems:
-```ruby
+``` py 
 Stem=337463
 Actual=plotBucking(Bucking, StemProfile,
                    Stem, ProductData)
