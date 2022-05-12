@@ -30,7 +30,7 @@ Bucking, i.e., cutting felled trees into logs, is a primary task in timber harve
 
 Although machine manufacturers provide software solutions for handling production data obtained from harvesters, few other software tools, and no R packages, currently provide the functionality to read and process hpr files. In addition, no R package currently provides a bucking algorithm which can be used for bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can thus be used to evaluate the bucking efficiency (Figure 1) as well as for research purposes.
 
-![Figure 1. Evaluating the bucking outcome](Figure.png){ width=50% }
+![Figure 1. Evaluating the bucking outcome from a harvester production file.](Figure.png){ width=75% }
 
 # Funding details
 
