@@ -1639,6 +1639,7 @@ strsplits=function(x,splits){
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getSortimentOverview=function(Logs,ProductData){
+  require(ggplot2)
   res=aggregate(Logs$m3sob,by=list(Logs$ProductKey),sum)
   names(res)=c("ProductKey","m3sob")
   ProductData=ProductData[ProductData$ProductKey%in%res$ProductKey,]
