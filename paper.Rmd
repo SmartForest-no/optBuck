@@ -10,7 +10,7 @@ authors:
 - name: Terje Gobakken
 affiliation: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
 
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: 12 May 2022
 output: 
   pdf_document:
 
