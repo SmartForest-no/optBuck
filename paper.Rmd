@@ -1,15 +1,15 @@
 ---
 title: optBuck – An R package for handling single-grip forest harvester data and bucking optimization
-
-authors: Lennart Noordermeer & Terje Gobakken
-
-affiliation: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
-
 tags:
 - R
 - Forestry
 - Harvester data
 - Optimal bucking
+authors: 
+- name: Lennart Noordermeer 
+- name: Terje Gobakken
+affiliation: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
+
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   pdf_document:
@@ -25,13 +25,11 @@ The R package optBuck provides a set of functions for reading and handling produ
 
 # Statement of need
 
-Single-grip harvesters record large amounts of standardised production data during operation. Sensors mounted on the harvester head record log dimensions and volumes, and each cut is allocated a time stamp and stored on an on-board computer. The operator selects and records tree species and timber grades, providing information on the characteristics and quality of the harvested logs. Additionally, most operating systems can be coupled with Global Navigation Satellite Systems [@olivera2016exploring], providing spatial data on the machine’s operation path and harvested trees. Harvester data are a key source of information in the fields of harvester productivity assessment, forest inventory, operation management and bucking optimization [@kemmerer2021using].   
+Single-grip harvesters record large amounts of standardized production data during operation. Sensors mounted on the harvester head record log dimensions and volumes, and each cut is allocated a time stamp and stored on an on-board computer. The operator selects and records tree species and timber grades, providing information on the characteristics and quality of the harvested logs. Additionally, most operating systems can be coupled with Global Navigation Satellite Systems [@olivera2016exploring], providing spatial data on the machine’s operation path and harvested trees. Harvester data are a key source of information in the fields of harvester productivity assessment, forest inventory, operation management and bucking optimization [@kemmerer2021using].   
 
 Bucking, i.e., cutting felled trees into logs, is a primary task in timber harvesting and has great impact on the value of the produced timber (e.g. Bowers, 1998, Olsen et al., 1991). A given stem can be bucked into different numbers of logs with different dimensions, assortments, and values. Many such potential outcomes typically exist, whereby suboptimal bucking typically results in reduced timber quality and volume utilization and can reduce the economic value of the stem substantially. Besides being used in on-board computers in harvesters to aid machine operators in bucking harvested stems, bucking algorithms have found widespread application in research. For example, studies have used bucking algorithms for timber market assessments [@nybakk2007bucking; @puumalainen1998optimal] and economic simulations [@gobakken2000effect; @malinen2007comparing].   
 
 Although machine manufacturers provide software solutions for handling production data obtained from harvesters, few other software tools, and no R packages, currently provide the functionality to read and process hpr files. In addition, no R package currently provides a bucking algorithm which can be used for bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can thus be used to evaluate the bucking efficiency (actual vs optimal value) as well as for research purposes.
-
-BlaBLA
 
 # Example features
 
