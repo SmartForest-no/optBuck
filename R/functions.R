@@ -411,13 +411,10 @@ optBuck_hpr=function(hprfile,
                      ...){
   require(XML);require(plyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
-                                       xmlAttrs)) == "Stem"]
+                             xmlAttrs)) == "Stem"]
   res=list()
-  cat("Calculating optimal bucking outcomes... ")
-  pb=tkProgressBar(title = "progress bar", min = 0,
-                   max = length(stems), width = 300)
+  pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   ProductData=ProductData[!is.na(ProductData$ProductName),]
   i=14
   for(i in 1:length(stems)){#11
@@ -458,10 +455,7 @@ optBuck_hpr=function(hprfile,
       colnames(out)[1]=c("StemKey")
       res[[i]]=out
     }
-    setTkProgressBar(pb, i,
-                     label=paste( round(i/length(stems)*100, 0),
-                                  "% done"))
-    print(paste("Done with stem",i,"out of",length(stems)))
+    setTxtProgressBar(pb,i)
   }
   res=do.call(rbind.data.frame, res)
   close(pb)
@@ -477,17 +471,14 @@ optBuck_hpr=function(hprfile,
 #' @seealso optBuck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getStemprofile=function(hprfile){
+getStemprofile=function(hprfile,Logs){
   require(XML);require(data.table);require(tcltk);require(plyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   stemprofile=stemGradedata=data.table()
-  cat("Extracting stem profiles... ")
   NoStemProfile=c()
-  pb=tkProgressBar(title = "progress bar", min = 0,
-                   max = length(stems), width = 300)
+  pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   i=1872
   for(i in 1:length(stems)){
     S=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
@@ -540,8 +531,7 @@ getStemprofile=function(hprfile){
       }
       stemprofile=rbind(stemprofile,stempr)
     }
-    setTkProgressBar(pb, i, label=paste( round(i/length(stems)*100, 0),
-                                         "% done"))
+    setTxtProgressBar(pb,i)
   }
   close(pb)
   colnames(stemprofile)=c("ObjectName","StemKey",
@@ -550,7 +540,6 @@ getStemprofile=function(hprfile){
                           "DiameterValue","StemGrade")
   return(stemprofile)
 }
-
 
 #' getProductData
 #'
@@ -796,13 +785,10 @@ getStems=function(hprfile)
   require(tcltk)
   require(dplyr)
   r = xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  cat("XML parsing complete... ")
   stems = r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                          xmlAttrs)) == "Stem"]
   res = data.table()
-  cat("Extracting stem data... ")
-  pb = tkProgressBar(title = "progress bar", min = 0,
-                     max = length(stems), width = 300)
+  pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   StemKey = SpeciesGroupKey = Date = Latitude = Longitude =
     Altitude = DBH = m3sub = m3sob = ComHeight = c()
   i = 1
@@ -855,8 +841,7 @@ getStems=function(hprfile)
       m3sob = c(m3sob,sum(m3sobs))
       ComHeight = c(ComHeight,sum(CH))
     }
-    setTkProgressBar(pb, i, label = paste(round(i/length(stems) *
-                                                  100, 0), "% done"))
+    setTxtProgressBar(pb,i)
   }
   close(pb)
   res = as.data.frame(cbind(StemKey, SpeciesGroupKey, Date,
@@ -880,13 +865,10 @@ getStems=function(hprfile)
 getLogs=function(hprfile){
   require(XML);require(data.table);require(tcltk);require(plyr)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   res=data.table()
-  cat("Extracting log data... ")
-  pb=tkProgressBar(title = "progress bar", min = 0,
-                   max = length(stems), width = 300)
+  pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   i=1
   for(i in 1:length(stems)){
     StemKey=xmlValue(stems[[i]][["StemKey"]]) %>% as.numeric()
@@ -925,9 +907,7 @@ getLogs=function(hprfile){
         res=rbindlist(list(res,log))
       }
     }
-    setTkProgressBar(pb,i,
-                     label=paste(round(i/length(stems)*100,0),
-                                 "% done"))
+    setTxtProgressBar(pb,i)
   }
   close(pb)
   return(res)
@@ -1169,20 +1149,17 @@ BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_o
 getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses){
   require(XML);require(plyr);require(tcltk)
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   m=c()
   StemKeys=LogKeys=StartPoss=StopPoss=LogLengths=Volumes=hprvolumes=hprm3prices=
     vol_prices=ProductKeys=Prices=Values=CumulativeValues=c()
-  cat("Extracting bucking outcomes... ")
   #for(i in 1:length(stems)){
   #  StemKey=as.integer(xmlValue(stems[[i]][["StemKey"]]))
   #
   #  if(StemKey==334020      ){print(i)}
   #}
-  pb <- tkProgressBar(title = "progress bar", min = 0,
-                      max = length(stems), width = 300)
+  pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   i=160
   for(i in 1:length(stems)){
     StemKey=as.integer(xmlValue(stems[[i]][["StemKey"]]))
@@ -1323,8 +1300,7 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses)
       Values=c(Values,Value)
       CumulativeValues=c(CumulativeValues,CumulativeValue)
     }
-    setTkProgressBar(pb, i, label=paste( round(i/length(stems)*100, 0),
-                                         "% done"))
+    setTxtProgressBar(pb,i)
   }
   close(pb)
   m=cbind(StemKeys,StartPoss,StopPoss,
@@ -1353,13 +1329,10 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   require(TapeR);require(tidyverse)
   options(scipen=999)#suppress scientific notation
   r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  cat("XML parsing complete... ")
   stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
                                        xmlAttrs)) == "Stem"]
-  cat("Extracting stem profiles... ")
   NoStemProfile=c()
-  pb=tkProgressBar(title = "progress bar", min = 0,
-                   max = length(stems), width = 300)
+  pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   result=list()
   i=1
 
@@ -1467,8 +1440,7 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
           result[[i]]=stempr
         }
       }
-      setTkProgressBar(pb, i, label=paste(
-        round(i/length(stems)*100, 0),"% done"))
+      setTxtProgressBar(pb,i)
     }
   }
   result=rbindlist(result)
