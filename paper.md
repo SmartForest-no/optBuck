@@ -32,7 +32,7 @@ Although machine manufacturers provide software solutions for handling productio
 
 <img src="Figure.png" alt="drawing" width="2000"/>
 
-{ Figure 1. Bucking example. }
+<figcaption align = "center"><b>Fig.1 - Bucking example.</b></figcaption>
 
 # Funding details
 
