@@ -36,7 +36,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
   if (SeqStart < SeqStop) {
     SeqAsp = seq(SeqStart, SeqStop, 10)
     StartPos = StopPos = grade = vol = price = acc_price = 0
-    DiameterTopPosition = ProductData$DiameterTopPositions
+    DiameterTopPositions = ProductData$DiameterTopPositions
     tt = c()
     bult = seq(10, 100, 10)
     k = 3
