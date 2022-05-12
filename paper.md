@@ -30,55 +30,9 @@ Bucking, i.e., cutting felled trees into logs, is a primary task in timber harve
 
 Although machine manufacturers provide software solutions for handling production data obtained from harvesters, few other software tools, and no R packages, currently provide the functionality to read and process hpr files. In addition, no R package currently provides a bucking algorithm which can be used for bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can thus be used to evaluate the bucking efficiency (actual vs optimal value) as well as for research purposes.
 
-# Example features
+![Bucking example.\label{fig:example}](figure.tiff)
 
-Below we demonstrate some features of the package using example data. We refer to the package pdf manual for the complete range of features.
-``` py 
-#installation
-devtools::install_github("https://github.com/lennartnoordermeer/optBuck",force=T)
-library(XML);library(optBuck)
-```
-Path to the external example data: 
-``` py 
-hprfile=system.file("extdata",
-                    "example.hpr",
-                    package = "optBuck")
-```
-Extract production data:
-``` py 
-PriceMatrices=getPriceMatrices(hprfile)
-ProductData=getProductData(hprfile)
-Logs=getLogs(hprfile)
-StemProfile=getStemprofile(hprfile,Logs)
-PermittedGrades=getPermittedGrades(hprfile)
-SpeciesGroupDefinition=getSpeciesGroupDefinition(hprfile)
-LengthClasses=getLengthClasses(hprfile)
-```
-Extract the bucking outcomes:
-``` py 
-Bucking=getBucking(hprfile, PriceMatrices, ProductData, StemProfile, LengthClasses)
-```
-Compute the optimal bucking outcomes:
-``` py 
-OptimalBucking=optBuck_hpr(hprfile,
-                           PriceMatrices,
-                           ProductData,
-                           StemProfile,
-                           PermittedGrades,
-                           SpeciesGroupDefinition)
-```
-Bucking outcomes can be plotted and compared for given stems:
-``` py 
-Stem=337463
-Actual=plotBucking(Bucking, StemProfile,
-                   Stem, ProductData)
-Optimal=plotBucking(OptimalBucking, StemProfile,
-                    Stem, ProductData)
-library(ggpubr)
-ggarrange(Actual,Optimal,nrow=2,align="v",
-                         common.legend = T,legend="bottom",
-                         labels = c("Actual","Optimal"))
-```
+![Caption for example figure.](figure.png){ width=40% }
 
 # Funding details
 
