@@ -8,13 +8,12 @@ tags:
 authors: 
 - name: Lennart Noordermeer 
 - name: Terje Gobakken
-affiliation: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
+affiliations: 
+- name: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
 
 date: 12 May 2022
-output: 
-  pdf_document:
-
 bibliography: References.bib
+
 aas-doi: 10.3847/xxxxx
 aas-journal: Journal of Open Source Software
 ---
