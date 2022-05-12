@@ -1535,21 +1535,15 @@ impute_top=function(tt){ # impute unused top of stem (waste)
 #' @return plot of bucking outcome
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-plotBucking=function(Bucking, StemProfile, Key){
-  require(ggplot2)
-  require(plyr)
-  tab=Bucking[Bucking$StemKey==Key,]
-  tre=StemProfile[StemProfile$StemKey==paste(Key),]
+plotBucking=function(Res, StemProfile, Stem, ProductData){
+  require(ggplot2);require(plyr);require(RColorBrewer)
+  tab=Res[Res$StemKey==Stem,]
+  tre=StemProfile[StemProfile$StemKey==paste(Stem),]
   h = tre$diameterPosition
-  d = tre$DiameterValue/2
-  maxd = max(d) + 1
-  maxh = max(h) + 1
-  secondMaxH = head(tail(h, n = 2), n = 1)
-  secondMaxH_d = head(tail(d, n = 2), n = 1)
   plotdf=c()
   i=1
   for (i in 1:nrow(tab)){
-    log = tre[which(h == round_any(tab[, which(colnames(tab)=="StartPos")][i],10)):which(h == round_any(tab[, which(colnames(tab) =="StopPos")][i],10)),]
+    log = tre[which(tre$diameterPosition == round_any(tab[, which(colnames(tab)=="StartPos")][i],10)):which(tre$diameterPosition == round_any(tab[, which(colnames(tab) =="StopPos")][i],10)),]
     log = cbind(log, unique(ProductData$ProductName[which(ProductData$ProductKey==tab$ProductKey[i])]) ) %>% as.data.frame()
     names(log)[ncol(log)]="ProductName"
     D_Bob = max(log$DiameterValue)/2
@@ -1558,16 +1552,22 @@ plotBucking=function(Bucking, StemProfile, Key){
     H_B = min(log$diameterPosition)
     H_M = median(log$diameterPosition)
     H_T = max(log$diameterPosition)
-    log=data.frame(x=c(D_Bob, D_Mob, D_Tob, -D_Tob, -D_Mob, -D_Bob, D_Bob),
+    log=data.frame(log=i,
+                   diam=c(D_Bob, D_Mob, D_Tob, -D_Tob, -D_Mob, -D_Bob, D_Bob),
                    diameterPosition=c(H_B, H_M, H_T, H_T, H_M, H_B, H_B),
                    ProductName=unique(log$ProductName))
     plotdf=rbind(plotdf,log)
   }
-  plotdf$ProductName=factor(plotdf$ProductName, levels=unique(plotdf$ProductName))
+  ProductData$ProductName=factor(
+    ProductData$ProductName, levels=unique(ProductData$ProductName))
+  plotdf$ProductName=factor(plotdf$ProductName,
+                            levels=unique(ProductData$ProductName))
+  colors=brewer.pal(length(unique(ProductData$ProductName)),"Spectral")
+  colors=colors[unique(ProductData$ProductName)%in%unique(plotdf$ProductName)]
   ticks=seq(0,round_any(max(plotdf$diameterPosition),100),by=200)
   lim=c(0,round_any(max(tre$diameterPosition),200,f = ceiling))
-  plot=ggplot(plotdf, aes(x = x, y = diameterPosition)) +
-    geom_polygon(aes(fill = as.factor(ProductName)),color="black")+
+  plot=ggplot(plotdf, aes(x=diam,y=diameterPosition,group=log)) +
+    geom_polygon(aes(fill = ProductName),color="black")+
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
@@ -1576,10 +1576,10 @@ plotBucking=function(Bucking, StemProfile, Key){
           axis.ticks.y = element_blank(),
           legend.title = element_blank(),
           aspect.ratio = .1)+
-    scale_y_continuous(limits=lim,breaks = ticks)+#,
+    scale_y_continuous(limits=lim,breaks = ticks)+
     xlab("")+
     ylab("Diameter position (cm)")+
-    scale_fill_brewer(palette="Spectral")+#RdYIGn
+    scale_fill_manual(values=colors)+
     coord_flip()
   plot
   return(plot)
