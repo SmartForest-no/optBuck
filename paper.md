@@ -30,6 +30,57 @@ Bucking, i.e., cutting felled trees into logs, is a primary task in timber harve
 
 Although machine manufacturers provide software solutions for handling production data obtained from harvesters, few other software tools, and no R packages, currently provide the functionality to read and process hpr files. In addition, no R package currently provides a bucking algorithm which can be used for bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can thus be used to evaluate the bucking efficiency (actual vs optimal value) as well as for research purposes.
 
+# Example features
+
+Below we demonstrate some features of the package using example data. We refer to the package pdf manual for the complete range of features.
+```{r, echo=T, message=F, results='hide'}
+#installation
+devtools::install_github("https://github.com/lennartnoordermeer/optBuck",force=T)
+library(XML);library(optBuck)
+```
+Path to the external example data: 
+```{r, echo=T, message=F, results='hide'}
+hprfile=system.file("extdata",
+                    "example.hpr",
+                    package = "optBuck")
+```
+Extract production data:
+```{r, echo=T, message=F, results='hide'}
+PriceMatrices=getPriceMatrices(hprfile)
+ProductData=getProductData(hprfile)
+Logs=getLogs(hprfile)
+StemProfile=getStemprofile(hprfile,Logs)
+PermittedGrades=getPermittedGrades(hprfile)
+SpeciesGroupDefinition=getSpeciesGroupDefinition(hprfile)
+LengthClasses=getLengthClasses(hprfile)
+```
+Extract the bucking outcomes:
+```{r, echo=T, message=F, results='hide'}
+Bucking=getBucking(hprfile, PriceMatrices, ProductData, StemProfile, LengthClasses)
+```
+Compute the optimal bucking outcomes:
+```{r, echo=T, message=F}
+OptimalBucking=optBuck_hpr(hprfile,
+                           PriceMatrices,
+                           ProductData,
+                           StemProfile,
+                           PermittedGrades,
+                           SpeciesGroupDefinition)
+head(OptimalBucking)[,c(1:4,7,9)]
+```
+Bucking outcomes can be plotted and compared for given stems:
+```{r, echo=T, message=F, results='hide'}
+Stem=337463
+Actual=plotBucking(Bucking, StemProfile,
+                   Stem, ProductData)
+Optimal=plotBucking(OptimalBucking, StemProfile,
+                    Stem, ProductData)
+library(ggpubr)
+ggarrange(Actual,Optimal,nrow=2,align="v",
+                         common.legend = T,legend="bottom",
+                         labels = c("Actual","Optimal"))
+```
+
 # Funding details
 
 The optBuck package was developed as part of the project SmartForest, funded by Research council of Norway (project no. 309671). 
