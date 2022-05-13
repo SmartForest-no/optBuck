@@ -10,7 +10,11 @@ authors:
 - name: Terje Gobakken
 affiliations: 
 - name: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
+<<<<<<< HEAD:paper.Rmd
 
+=======
+  
+>>>>>>> 48aa701b29631b617203e8664ec866a7fc9cebf4:paper.md
 date: 12 May 2022
 bibliography: References.bib
 
@@ -28,8 +32,9 @@ Single-grip harvesters record large amounts of standardized production data duri
 
 Bucking, i.e., cutting felled trees into logs, is a primary task in timber harvesting and has great impact on the value of the produced timber (e.g. Bowers, 1998, Olsen et al., 1991). A given stem can be bucked into different numbers of logs with different dimensions, assortments, and values. Many such potential outcomes typically exist, whereby suboptimal bucking typically results in reduced timber quality and volume utilization and can reduce the economic value of the stem substantially. Besides being used in on-board computers in harvesters to aid machine operators in bucking harvested stems, bucking algorithms have found widespread application in research. For example, studies have used bucking algorithms for timber market assessments [@nybakk2007bucking; @puumalainen1998optimal] and economic simulations [@gobakken2000effect; @malinen2007comparing].   
 
-Although machine manufacturers provide software solutions for handling production data obtained from harvesters, few other software tools, and no R packages, currently provide the functionality to read and process hpr files. In addition, no R package currently provides a bucking algorithm which can be used for bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can thus be used to evaluate the bucking efficiency (actual vs optimal value) as well as for research purposes.
+Although machine manufacturers provide software solutions for handling production data obtained from harvesters, few other software tools, and no R packages, currently provide the functionality to read and process hpr files. In addition, no R package currently provides a bucking algorithm which can be used for bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can thus be used to evaluate the bucking efficiency (Figure 1) as well as for research purposes.
 
+<<<<<<< HEAD:paper.Rmd
 # Example features
 
 Below we demonstrate some features of the package using example data. We refer to the package pdf manual for the complete range of features.
@@ -80,6 +85,9 @@ ggarrange(Actual,Optimal,nrow=2,align="v",
                          common.legend = T,legend="bottom",
                          labels = c("Actual","Optimal"))
 ```
+=======
+![Figure 1. Evaluating the bucking outcome from a harvester production file.](Figure.png){ width=75% }
+>>>>>>> 48aa701b29631b617203e8664ec866a7fc9cebf4:paper.md
 
 # Funding details
 
