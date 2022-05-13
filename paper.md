@@ -10,11 +10,7 @@ authors:
 - name: Terje Gobakken
 affiliations: 
 - name: Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
-<<<<<<< HEAD:paper.Rmd
 
-=======
-  
->>>>>>> 48aa701b29631b617203e8664ec866a7fc9cebf4:paper.md
 date: 12 May 2022
 bibliography: References.bib
 
