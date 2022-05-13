@@ -1,25 +1,25 @@
-#' optBuck
+#' buckStem
 #'
-#' Optimal bucking
+#' Optimal bucking of a tree stem
 #'
 #' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,20,...
 #' @param DiameterValue numeric vector of corresponding diameters (mm)
 #' @param StemGrade vector of corresponding stem grades
 #' @param SpeciesGroupKey Species group key
-#' @param PermittedGrades list with the same length of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades)
+#' @param PermittedGrades list with the same length of assortments, each element containing the stemgrades allowed in each assortment (getPermittedGrades())
 #' @param ProductKeys Vector of assortment keys (Integer)
 #' @param LengthClassLowerLimit numeric vector of minimum log lengths corresponding to the assortments
 #' @param LengthClassMAX numeric vector of maximum log lengths corresponding to the assortments
 #' @param DiameterClassLowerLimit numeric vector of minimum log diameters corresponding to the assortments
 #' @param DiameterClassMAX numeric vector of maximum log diameters corresponding to the assortments
 #' @param VolumeDiameterCategory vector (character) of Stanford 2010 volume measurement methods corresponding to the assortments. Alternatives are "All diameters (solid volume)", "Calculated Norwegian mid" and "Top".
-#' @param PriceMatrices list of prices matrices for all ProductKeys (see getPriceMatrices())
-#' @param LengthClasses list of prices length classes for all ProductKeys (see getLengthClasses())
+#' @param PriceMatrices list of prices matrices for all ProductKeys (getPriceMatrices())
+#' @param LengthClasses list of prices length classes for all ProductKeys (getLengthClasses())
 #' @return result structure with optimum bucking solution
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
-optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupKey,
+buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupKey,
                   ProductData, ProductKeys, LengthClassLowerLimit, LengthClassMAX,
                   DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
                   PermittedGrades, PriceMatrices,LengthClasses)
@@ -56,8 +56,6 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
         Top_ub = BarkFunction(Top_ob, SpeciesGroupKey,
                               SpeciesGroupDefinition, Top_ob = Top_ob,
                               DBH = DBH, LogLength = LogLength)
-        #topdiam = ifelse(DiameterUnderBark, Top_ub,
-        #                 Top_ob)
         grd = unique(StemGrade[which(near(diameterPosition,
                                           StartPos)):which(near(diameterPosition, StopPos))])
         SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
@@ -218,8 +216,6 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
           Top_ub = BarkFunction(Top_ob, SpeciesGroupKey,
                                 SpeciesGroupDefinition, Top_ob = Top_ob,
                                 DBH = DBH, LogLength = LogLength)
-          #topdiam = ifelse(DiameterUnderBark, Top_ub,
-          #                 Top_ob)
           grd = unique(StemGrade[which(near(diameterPosition,
                                             StartPos)):which(near(diameterPosition, StopPos))])
           SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
@@ -372,7 +368,7 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
     }
     tt = matrix(m[which.max(m[, 8]), ], ncol = 8)
     if (nrow(tt) == 1) {
-      m = track_trace(m, tt)
+      m = trackTrace(m, tt)
       m = matrix(m, ncol = 8)
     }
   }
@@ -386,23 +382,23 @@ optBuck=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupK
   return(m)
 }
 
-#' optBuck_hpr
+#' buckHpr
 #'
 #' Calculate optimal bucking for all stems in a hpr file
 #'
 #' @param hprfile Path to input .hpr file
-#' @param PriceMatrices list of price matrices for all ProductKeys (see getPriceMatrices())
-#' @param ProductData Matrix containing product data (see getProductData())
-#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile())
-#' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (see getPermittedGrades())
-#' @param SpeciesGroupDefinition See getSpeciesGroupDefinition()
+#' @param PriceMatrices list of price matrices for all ProductKeys (getPriceMatrices())
+#' @param ProductData Matrix containing product data (getProductData())
+#' @param StemProfile Stem profiles for all stems in hprfile (getStemProfile())
+#' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (getPermittedGrades())
+#' @param SpeciesGroupDefinition getSpeciesGroupDefinition()
 #' @param ... others
 #' @return result structure with optimum bucking solution for the stems in the input .hpr file
 #' @seealso getPermittedGrades, getPriceMatrices, getProductData
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
-optBuck_hpr=function(hprfile,
+buckHpr=function(hprfile,
                      PriceMatrices,
                      ProductData,
                      StemProfile,
@@ -436,7 +432,7 @@ optBuck_hpr=function(hprfile,
       DiameterTopPositions=ProductData$DiameterTopPosition
       DBH=xmlValue(stems[[i]][["SingleTreeProcessedStem"]][["DBH"]]) %>% as.numeric()
 
-      out=optBuck(diameterPosition,
+      out=buckStem(diameterPosition,
                   DiameterValue,
                   StemGrade,
                   DBH,
@@ -468,7 +464,7 @@ optBuck_hpr=function(hprfile,
 #' @param hprfile Path to input .hpr file
 #' @param Logs Harvested logs (getLogs())
 #' @return Stem profiles of harvested stems with stem grades
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getStemprofile=function(hprfile,Logs){
@@ -547,7 +543,7 @@ getStemprofile=function(hprfile,Logs){
 #'
 #' @param hprfile Path to input .hpr file
 #' @return Information on ProductKeys, ProductNames, ProductGroupName, SpeciesGroupKey, DiameterUnderBark, DiameterClassLowerLimit, DiameterClassMAX, LengthClassLowerLimit, LengthClassMAX, VolumeDiameterCategory, DiameterTopPositions
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getProductData=function(hprfile){
@@ -637,7 +633,7 @@ getProductData=function(hprfile){
 #'
 #' @param hprfile Path to input .hpr file
 #' @return list of prices matrices for all ProductKeys. Element names are productkeys.
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getPriceMatrices=function(hprfile){
@@ -682,7 +678,7 @@ getPriceMatrices=function(hprfile){
 #'
 #' @param hprfile Path to input .hpr file
 #' @return List of permitted grades for assortments, element names correspond to product keys
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getPermittedGrades=function(hprfile){
@@ -712,7 +708,7 @@ getPermittedGrades=function(hprfile){
 #'
 #' @param hprfile Path to input .hpr file
 #' @return List of species group information, with speciesgroupkey as the name of the elements
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getSpeciesGroupDefinition=function(hprfile){
@@ -745,7 +741,7 @@ getSpeciesGroupDefinition=function(hprfile){
 #'
 #' @param hprfile Path to input .hpr file
 #' @return List of length classes for assortments, element names correspond to product keys
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getLengthClasses=function(hprfile){
@@ -775,7 +771,7 @@ getLengthClasses=function(hprfile){
 #'
 #' @param hprfile Path to input .hpr file
 #' @return data table with stem information
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getStems=function(hprfile)
@@ -859,7 +855,7 @@ getStems=function(hprfile)
 #'
 #' @param hprfile Path to input .hpr file
 #' @return data table with log information
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getLogs=function(hprfile){
@@ -917,9 +913,9 @@ getLogs=function(hprfile){
 #'
 #' Calculates log price volume, i.e., the volume which is used for price calculation
 #'
-#' @param VolumeDiameterAdjustment Volume diameter adjustment according to stanford2010 (see getProductData()).
-#' @param VolumeDiameterCategory Volume calculation method according to stanford2010 (see getProductData()).
-#' @param VolumeLengthCategory Volume length category according to stanford2010 (see getProductData()).
+#' @param VolumeDiameterAdjustment Volume diameter adjustment according to stanford2010 (getProductData()).
+#' @param VolumeDiameterCategory Volume calculation method according to stanford2010 (getProductData()).
+#' @param VolumeLengthCategory Volume length category according to stanford2010 (getProductData()).
 #' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,...,end
 #' @param DiameterValue numeric vector of corresponding diameters (mm)
 #' @param StartPos Starting position of log along the stem
@@ -927,11 +923,11 @@ getLogs=function(hprfile){
 #' @param DiameterTopPosition Position from top end of log where top diameter is measured. Cm
 #' @param DiameterUnderBark Logical TRUE/FALSE
 #' @param SpeciesGroupKey Species ID
-#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements(see getSpeciesGroupDefinition)
-#' @param DBH Optional, in mm (see BarkFunction)
-#' @param LogLength Optional, in cm (see BarkFunction)
-#' @param LengthClasses List of length classes for the assortments (see getLengthClasses)
-#' @param ProductKey Assortment key (see getProductData())
+#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements(getSpeciesGroupDefinition())
+#' @param DBH Optional, in mm (BarkFunction())
+#' @param LogLength Optional, in cm (for BarkFunction())
+#' @param LengthClasses List of length classes for the assortments (getLengthClasses())
+#' @param ProductKey Assortment key (getProductData())
 #' @return Log volume in m3
 #' @seealso Buck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -952,7 +948,6 @@ PriceVolumeCalc=function(
   LogLength=NA,
   LengthClasses=NA,
   ProductKey=NA){
-
   IdxStart=which(diameterPosition==round((StartPos)/10)*10)
   if(VolumeLengthCategory=="Rounded downwards to nearest dm-module"){
     IdxStop=which(diameterPosition==round_any((StopPos),10,f=floor))#rounded down
@@ -970,13 +965,10 @@ PriceVolumeCalc=function(
     #IdxStop=52
   }
   DV=DiameterValue[IdxStart:IdxStop]
-
-
   if(VolumeDiameterAdjustment=="Measured diameter rounded downwards to cm"){
     DV=round_any(DV,10,floor)
   }
   Top_ob=DiameterValue[diameterPosition==round((StopPos-DiameterTopPosition)/10)*10]
-
   if(VolumeDiameterCategory=="All diameters (solid volume)"){
     if(DiameterUnderBark==T){
       #SpeciesGroup=SpeciesGroupDefinition[as.character(SpeciesGroupKey)]
@@ -1013,11 +1005,6 @@ PriceVolumeCalc=function(
                           Top_ob=Top_ob,
                           DBH=DBH,
                           LogLength=LogLength)
-      # LogLength
-      # S1=pi*((Top_ub/2)^2)
-      # S2=pi*(((Top_ub+LogLength*.01)/2)^2)
-      # v=(LogLength/3)*(S1+S2+sqrt(S1*S2))/1e+08
-      #different equeation, same result:
       r1=Top_ub/2
       r2=(Top_ub+LogLength*.01)/2
       v=((1/3)*pi*(r1^2+r2^2+(r1*r2))*LogLength)/1e+08
@@ -1030,7 +1017,6 @@ PriceVolumeCalc=function(
   return(v)
 }
 
-
 #' VolumeCalc
 #'
 #' Calculates log volume from all diameters as solid volume
@@ -1042,9 +1028,9 @@ PriceVolumeCalc=function(
 #' @param DiameterTopPosition Position from top end of log where top diameter is measured. Cm
 #' @param DiameterUnderBark Logical TRUE/FALSE
 #' @param SpeciesGroupKey Species ID
-#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements(see getSpeciesGroupDefinition)
-#' @param DBH Optional, in mm (see BarkFunction)
-#' @param LogLength Optional, in cm (see BarkFunction)
+#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements(getSpeciesGroupDefinition())
+#' @param DBH Optional, in mm (for BarkFunction())
+#' @param LogLength Optional, in cm (for BarkFunction())
 #' @return Log volume in m3
 #' @seealso Buck
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -1075,36 +1061,30 @@ VolumeCalc=function(
   return(v)
 }
 
-
 #' BarkFunction
 #'
 #' Calculates diametervalues under bark
 #'
 #' @param DiameterValue Numeric vector of diameters (mm)
-#' @param SpeciesGroupKey Species ID (see e.g. getProductData())
-#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements (see getSpeciesGroupDefinition())
+#' @param SpeciesGroupKey Species ID (getProductData())
+#' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements (getSpeciesGroupDefinition())
 #' @param Top_ob Top diameter ober bark
 #' @param DBH in mm, for  Skogforsk 2004 barkFunction categories
 #' @param LogLength in cm
 #' @return Log volume in m3
-#' @seealso optBuck
+#' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_ob,DBH,LogLength){
   #names(SpeciesGroupDefinition)
   BarkFunction=SpeciesGroupDefinition[[which(names(SpeciesGroupDefinition)==as.character(SpeciesGroupKey))]]$BarkFunction
   BarkFunction=ldply(xmlToList(BarkFunction), data.frame)
-  # if(nrow(BarkFunction)==2){
-  #   barkFunctionCategory=BarkFunction$X..i..[1]
-  # }else{
-  #   barkFunctionCategory=BarkFunction$X..i..[2]
-  # }
   barkFunctionCategory="Skogforsk 2004, Norway spruce"
   if(barkFunctionCategory=="Swedish Zacco"){
-    a=strsplits(string, c(
+    a=strSplits(string, c(
       '.*<ConstantA>',
       "</ConstantA>.*")) %>% as.numeric()
-    b=strsplits(string, c(
+    b=strSplits(string, c(
       '.*<FactorB>',
       "</FactorB>.*")) %>% as.numeric()
     Double_bark_thickness = a + b * Top_ob
@@ -1138,12 +1118,12 @@ BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_o
 #' Extract bucking outcomes from a .hpr file
 #'
 #' @param hprfile Path to .hpr file
-#' @param PriceMatrices list of prices matrices for all ProductKeys (see getPriceMatrices())
-#' @param ProductData Matrix containing product data (see getProductData())
-#' @param StemProfile Stem profiles for all stems in hprfile (see getStemProfile())
-#' @param LengthClasses See getLengthClasses()
+#' @param PriceMatrices list of prices matrices for all ProductKeys (getPriceMatrices())
+#' @param ProductData Matrix containing product data (getProductData())
+#' @param StemProfile Stem profiles for all stems in hprfile (getStemProfile())
+#' @param LengthClasses getLengthClasses()
 #' @return Output structure with bucking outcomes
-#' @seealso OptBuck, Optbuck_hpr
+#' @seealso buckStem, buckHpr
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses){
@@ -1197,7 +1177,6 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses)
       Mid_ub=LogMeasurement$text[LogMeasurement$.attrs=="Mid ub"]%>% as.numeric()
       Top_ob=LogMeasurement$text[LogMeasurement$.attrs=="Top ob"]%>% as.numeric()
       Top_ub=LogMeasurement$text[LogMeasurement$.attrs=="Top ub"]%>% as.numeric()
-
       if(ProductKey==999999){
         DiameterTopPosition=10
         VolumeDiameterAdjustment="Measured diameter in mm"
@@ -1334,15 +1313,11 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
   NoStemProfile=c()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   result=list()
-  i=1
-
-   for(i in 1:length(stems)){
-   if(xmlValue(stems[[i]][["StemKey"]])=="356774529007580001"){print(i)}
-   }
-
+   # for(i in 1:length(stems)){
+   # if(xmlValue(stems[[i]][["StemKey"]])=="356774529007580001"){print(i)}
+   # }
   i=1
   for(i in 1:length(stems)){#
-#S=0356774529000529984
     S=xmlValue(stems[[i]][["StemKey"]]) #%>% as.numeric()
     SpeciesGroupKey=as.integer(
       xmlValue(stems[[i]][["SpeciesGroupKey"]]))
@@ -1417,9 +1392,6 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
           for(k in  1:length( keys)){
             min=min(l$Hm[l$ProductKey==keys[k]])
             max=max(l$Hm[l$ProductKey==keys[k]])
-            #if(k<length(keys)){
-            #  max=l$Hm[which(l$Hm==max)+1]
-            #}
             idxmin=which(near(diameterPosition,round_any(min,.1)))
             idxmax=which(near(diameterPosition,round_any(max,.1,f = floor)))
             if(!length(idxmin)==0&!length(idxmax)==0){
@@ -1444,7 +1416,6 @@ predictStemprofile=function(hprfile,ProductData,PermittedGrades){
     }
   }
   result=rbindlist(result)
-  #unique(check$StemKey)
   result$diameterPosition=as.numeric(result$diameterPosition)*100
   result$DiameterValue=as.numeric(result$DiameterValue)*10
   result$StemGrade=as.integer(result$StemGrade)
@@ -1472,16 +1443,17 @@ getHarvestedArea=function(Stems){
   plot(sf,col="red") %>% print()
   return(sf)
 }
-#' track_trace
+
+#' trackTrace
 #'
-#' helper function for optBuck: back-track optimum bucking solution
+#' helper function for buckStem: back-track optimum bucking solution
 #'
 #' @param m matrix of potential cuts
 #' @param tt matrix of log segment which maximize cumulative value
 #' @return Logical: "True" if whole and "False" if decimal
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-track_trace=function(m,tt){
+trackTrace=function(m,tt){
   low=min(tt[,1])
   while(low>0){
     id_previous=tt[,which(colnames(m)=="Acc_Value")][order(tt[,which(colnames(m)=="StartPos")])[1]]-
@@ -1504,7 +1476,7 @@ track_trace=function(m,tt){
 }
 #' impute_top
 #'
-#' Impute unused top of stem into result matrix of optBuck (waste)
+#' Impute unused top of stem into result matrix of buckStem (waste)
 #'
 #' @param tt matrix of log segments which maximize cumulative value
 #' @return new matrix which includes the tree top as waste
@@ -1529,8 +1501,8 @@ impute_top=function(tt){ # impute unused top of stem (waste)
 #'
 #' Plot the bucking outcome
 #'
-#' @param Bucking output structure of getBucking(), optBuck() or optBuck_hpr()
-#' @param StemProfile StemProfile (see getStemprofile())
+#' @param Bucking output structure of getBucking(), buckStem() or buckHpr()
+#' @param StemProfile StemProfile (getStemprofile())
 #' @param Key StemKey of the stem to be plotted
 #' @return plot of bucking outcome
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
@@ -1584,9 +1556,10 @@ plotBucking=function(Res, StemProfile, Stem, ProductData){
   plot
   return(plot)
 }
-#' strsplits
+
+#' strSplits
 #'
-#' Helper function: modified strsplit for multiple splits
+#' Helper function: modified strsplit() for multiple splits
 #'
 #' @param x character vector to split
 #' @param splits vector of character patterns used to split
@@ -1594,7 +1567,7 @@ plotBucking=function(Res, StemProfile, Stem, ProductData){
 #' @seealso getPriceMatrices
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-strsplits=function(x,splits){
+strSplits=function(x,splits){
   for(split in splits){
     x=unlist(strsplit(x, split))
   }
@@ -1629,7 +1602,7 @@ getSortimentOverview=function(Logs,ProductData){
 #'
 #' Predict Stemprofile at another point in time given a vector of new DBHs
 #'
-#' @param Stemprofile Stem profiles for all stems in hprfile (see getStemProfile)
+#' @param Stemprofile Stem profiles for all stems in hprfile (getStemProfile)
 #' @param DBH2 a numeric vector of new DBHs, of the same length as unique StemKeys in Stemprofile
 #' @param breastheight height in cm which is considered breastheight (numeric), typically 110 or 130.
 #' @return A new Stemprofile object in which the new diameters are added
