@@ -1,3 +1,16 @@
+
+#' getXMLNode
+#'
+#' Parse the hpr file
+#'
+#' @param hprfile Path to hpr file
+#' @return XMLNode object parsed from the hpr file
+#' @export
+getXMLNode=function(hprfile){
+  require(XML)
+  return(xmlRoot(xmlTreeParse(hprfile, getDTD = F)))
+}
+
 #' buckStem
 #'
 #' Optimal bucking of a tree stem
@@ -386,7 +399,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
 #'
 #' Calculate optimal bucking for all stems in a hpr file
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode ouput from getXMLNode()
 #' @param PriceMatrices list of price matrices for all ProductKeys (getPriceMatrices())
 #' @param ProductData Matrix containing product data (getProductData())
 #' @param StemProfile Stem profiles for all stems in hprfile (getStemProfile())
@@ -398,16 +411,15 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
-buckHpr=function(hprfile,
-                     PriceMatrices,
-                     ProductData,
-                     StemProfile,
-                     PermittedGrades,
-                     SpeciesGroupDefinition,
-                     ...){
+buckHpr=function(XMLNode,
+                 PriceMatrices,
+                 ProductData,
+                 StemProfile,
+                 PermittedGrades,
+                 SpeciesGroupDefinition,
+                 ...){
   require(XML);require(plyr)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  stems=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                              xmlAttrs)) == "Stem"]
   res=list()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
@@ -461,16 +473,15 @@ buckHpr=function(hprfile,
 #'
 #' Extract stem profiles from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @param Logs Harvested logs (getLogs())
 #' @return Stem profiles of harvested stems with stem grades
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getStemprofile=function(hprfile,Logs){
+getStemprofile=function(XMLNode,Logs){
   require(XML);require(data.table);require(tcltk);require(plyr)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  stems=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   stemprofile=stemGradedata=data.table()
   NoStemProfile=c()
@@ -541,20 +552,19 @@ getStemprofile=function(hprfile,Logs){
 #'
 #' Extract product data from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return Information on ProductKeys, ProductNames, ProductGroupName, SpeciesGroupKey, DiameterUnderBark, DiameterClassLowerLimit, DiameterClassMAX, LengthClassLowerLimit, LengthClassMAX, VolumeDiameterCategory, DiameterTopPositions
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getProductData=function(hprfile){
+getProductData=function(XMLNode){
   require(XML)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  b=names(xmlSApply(r[["Machine"]], xmlAttrs)) == "ProductDefinition"
-  a=r[["Machine"]][b]
+  b=names(xmlSApply(XMLNode[["Machine"]], xmlAttrs)) == "ProductDefinition"
+  a=XMLNode[["Machine"]][b]
   ProductData=c()
   i=2
   for(i in 1:length(a)){
-    ObjectName=xmlValue(r[["Machine"]][["ObjectDefinition"]][["ObjectName"]])
+    ObjectName=xmlValue(XMLNode[["Machine"]][["ObjectDefinition"]][["ObjectName"]])
     ProductKey=as.numeric(xmlValue(a[[i]][["ProductKey"]]))
     ProductName=xmlValue(a[[i]][["ClassifiedProductDefinition"]][["ProductName"]])
     ProductGroupName=xmlValue(a[[i]][["ClassifiedProductDefinition"]][["ProductGroupName"]])
@@ -631,15 +641,14 @@ getProductData=function(hprfile){
 #'
 #' Extract product data from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return list of prices matrices for all ProductKeys. Element names are productkeys.
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getPriceMatrices=function(hprfile){
+getPriceMatrices=function(XMLNode){
   require(XML);require(dplyr)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  a=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  a=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                    xmlAttrs)) == "ProductDefinition"]
   productdata=c()
   price_matrices=list()
@@ -676,15 +685,14 @@ getPriceMatrices=function(hprfile){
 #'
 #' Extract the permitted stem grades for each assortment from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return List of permitted grades for assortments, element names correspond to product keys
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getPermittedGrades=function(hprfile){
+getPermittedGrades=function(XMLNode){
   require(XML)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  a=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  a=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                    xmlAttrs)) == "ProductDefinition"]
   grades=list()
   for(i in 1:length(a)){
@@ -706,15 +714,14 @@ getPermittedGrades=function(hprfile){
 #'
 #' Extract information on species groups from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return List of species group information, with speciesgroupkey as the name of the elements
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getSpeciesGroupDefinition=function(hprfile){
+getSpeciesGroupDefinition=function(XMLNode){
   require(XML)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  a=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  a=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                    xmlAttrs)) == "SpeciesGroupDefinition"]
   SpeciesGroupDefinition=list()
   i=1
@@ -739,16 +746,15 @@ getSpeciesGroupDefinition=function(hprfile){
 #'
 #' Extract the length classes for each assortment from .hpr files, needed for volume calculation when VolumeLengthCategory=="Length as defined in LengthClasses"
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return List of length classes for assortments, element names correspond to product keys
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getLengthClasses=function(hprfile){
+getLengthClasses=function(XMLNode){
   require(XML)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  b=names(xmlSApply(r[["Machine"]], xmlAttrs)) == "ProductDefinition"
-  a=r[["Machine"]][b]
+  b=names(xmlSApply(XMLNode[["Machine"]], xmlAttrs)) == "ProductDefinition"
+  a=XMLNode[["Machine"]][b]
   LengthClasses=list()
   i=1
   for(i in 1:length(a)){
@@ -769,19 +775,15 @@ getLengthClasses=function(hprfile){
 #'
 #' Extract information on harvested stems from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return data table with stem information
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getStems=function(hprfile)
+getStems=function(XMLNode)
 {
-  require(XML)
-  require(data.table)
-  require(tcltk)
-  require(dplyr)
-  r = xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  stems = r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  require(XML);require(data.table);require(tcltk);require(dplyr)
+  stems = XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                          xmlAttrs)) == "Stem"]
   res = data.table()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
@@ -853,15 +855,14 @@ getStems=function(hprfile)
 #'
 #' Extract information on harvested logs from .hpr files
 #'
-#' @param hprfile Path to input .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @return data table with log information
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getLogs=function(hprfile){
+getLogs=function(XMLNode){
   require(XML);require(data.table);require(tcltk);require(plyr)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  stems=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   res=data.table()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
@@ -1117,7 +1118,7 @@ BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_o
 #'
 #' Extract bucking outcomes from a .hpr file
 #'
-#' @param hprfile Path to .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @param PriceMatrices list of prices matrices for all ProductKeys (getPriceMatrices())
 #' @param ProductData Matrix containing product data (getProductData())
 #' @param StemProfile Stem profiles for all stems in hprfile (getStemProfile())
@@ -1126,10 +1127,9 @@ BarkFunction=function(DiameterValue,SpeciesGroupKey,SpeciesGroupDefinition,Top_o
 #' @seealso buckStem, buckHpr
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses){
+getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses){
   require(XML);require(plyr);require(tcltk)
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  stems=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   m=c()
   StemKeys=LogKeys=StartPoss=StopPoss=LogLengths=Volumes=hprvolumes=hprm3prices=
@@ -1297,25 +1297,21 @@ getBucking=function(hprfile,PriceMatrices,ProductData,StemProfile,LengthClasses)
 #'
 #' Predict and extract Norway spruce stem profiles using taper models based on the log dimensions, for cases when no stem profile is recorded in the hpr file.
 #'
-#' @param hprfile Path to .hpr file
+#' @param XMLNode Output of getXMLNode()
 #' @param ProductData output of getProductData()
 #' @param PermittedGrades output of getPermittedGrades()
 #' @return Output structure with stem profile containing stem grades
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-predictStemprofile=function(hprfile,ProductData,PermittedGrades){
+predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
   require(XML);require(data.table);require(tcltk)
   require(TapeR);require(tidyverse)
   options(scipen=999)#suppress scientific notation
-  r=xmlRoot(xmlTreeParse(hprfile, getDTD = F))
-  stems=r[["Machine"]][names(xmlSApply(r[["Machine"]],
+  stems=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                        xmlAttrs)) == "Stem"]
   NoStemProfile=c()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   result=list()
-   # for(i in 1:length(stems)){
-   # if(xmlValue(stems[[i]][["StemKey"]])=="356774529007580001"){print(i)}
-   # }
   i=1
   for(i in 1:length(stems)){#
     S=xmlValue(stems[[i]][["StemKey"]]) #%>% as.numeric()
