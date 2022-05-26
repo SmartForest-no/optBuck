@@ -467,12 +467,14 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       }else{
         StopPos = StartPos + SeqAsp
       }
-      StopPos = StopPos[StopPos <= max(diameterPosition)&StopPos > 0]
+      StopPos = StopPos[StopPos <= max(diameterPosition) &
+                          StopPos > 0]
       if (length(StopPos) < 1) {
         break
       }
       LogLength = StopPos - StartPos
-      rotdiam = DiameterValue[which(near(diameterPosition, StartPos))]
+      rotdiam = DiameterValue[which(near(diameterPosition,
+                                         StartPos))]
       idxstart = which(near(diameterPosition, StartPos))
       idxstop = match(StopPos, diameterPosition)
       grd = lapply(idxstop, grdFinder)
@@ -540,12 +542,11 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
           l = 1
           for (l in 1:nrow(WithLengthClass)) {
             LengthClass = LengthClasses[[WithLengthClass$ProductKey[l]]]
-            WithLengthClass$LogLength[l] = LengthClass[max(which(WithLengthClass$LogLength[l] >=
-                                                                   LengthClass))]
+            WithLengthClass$LogLength[l] = round_any(LengthClass[max(which(WithLengthClass$LogLength[l] >=
+                                                                             LengthClass))],10,f=floor)
             WithLengthClass$StopPos[l] = WithLengthClass$StartPos[l] +
               WithLengthClass$LogLength[l]
-            WithLengthClass$idxstop[l] = which(diameterPosition ==
-                                                 paste(WithLengthClass$StopPos[l]))
+            WithLengthClass$idxstop[l] = which(diameterPosition == paste(round_any(WithLengthClass$StopPos[l],10,f=floor)))
           }
           tab$LogLength[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$LogLength
           tab$StopPos[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$StopPos
@@ -614,6 +615,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   colnames(res)[1] = "LogKey"
   return(res)
 }
+
 #' buckHpr
 #'
 #' Calculate optimal bucking for all stems in a hpr file
