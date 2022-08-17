@@ -21,7 +21,7 @@ getXMLNode=function(hprfile){
 #' @seealso buckStem
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getProductData=function(XMLNode){
+getProductData=function(XMLNode,SpeciesGroupDefinition){
   require(XML)
   b = names(xmlSApply(XMLNode[["Machine"]], xmlAttrs)) ==
     "ProductDefinition"
@@ -61,6 +61,7 @@ getProductData=function(XMLNode){
                             "VolumeDiameterAdjustment", "VolumeDiameterCategory",
                             "VolumeLengthCategory")
   ProductData = as.data.frame(ProductData)
+  ProductData=ProductData[!is.na(ProductData$ProductName),]
   ProductData$ObjectName = ProductData$ObjectName %>% as.character()
   ProductData$ProductName = ProductData$ProductName %>% as.character()
   ProductData$ProductGroupName = ProductData$ProductGroupName %>%
@@ -857,7 +858,7 @@ PriceVolumeCalc=function(
     v = (((Dmid/100)*(Dmid/100)) * pi/4 * (LogLength/10) )*.001
     #hprm3price
   }
-  if(VolumeDiameterCategory=="Top"){#toppmalt tommer og en avsmalning på 1 cm pr. meter
+  if(VolumeDiameterCategory=="Top"){#toppmalt tommer og en avsmalning pC% 1 cm pr. meter
     if(DiameterUnderBark==T){
       Top_ub=BarkFunction(DiameterValue[IdxStop],
                           SpeciesGroupKey,
