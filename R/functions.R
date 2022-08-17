@@ -272,7 +272,7 @@ getStems=function(XMLNode)
     SK = xmlValue(stems[[i]][["StemKey"]])
     SGK = as.numeric(xmlValue(stems[[i]][["SpeciesGroupKey"]]))
     D = xmlValue(stems[[i]][["HarvestDate"]])
-    if (D == "vasket") {
+    if (!is.na(D) & D == "vasket") {
       D = xmlValue(stems[[i]][["Extension"]][["FellCutStartTime"]])
     }
     D=substr(D,1,10)
@@ -718,7 +718,7 @@ getStemprofile=function(XMLNode,Logs){
       NoStemProfile = c(NoStemProfile, xmlValue(stems[[i]][["StemKey"]]))
     }
     else{
-      ObjectName = xmlValue(r[["Machine"]][["ObjectDefinition"]][["ObjectName"]])
+      ObjectName = xmlValue(XMLNode[["Machine"]][["ObjectDefinition"]][["ObjectName"]])
       StemKey = as.integer(xmlValue(stems[[i]][["StemKey"]]))
       SpeciesGroupKey = as.integer(xmlValue(stems[[i]][["SpeciesGroupKey"]]))
       diams = diams[names(xmlSApply(diams, xmlAttrs)) ==
