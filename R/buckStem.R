@@ -26,37 +26,6 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
 {
   require(magrittr)
   require(data.table)
-  grdFinder = function(x) {
-    unique(StemGrade[idxstart:x])
-  }
-  asoFinder = function(x) {
-    names(SGKG)[sapply(SGKG, function(y) all(grd[[x]] %in%
-                                               y))]
-  }
-  DiameterValueFinder = function(x) {
-    DiameterValue[vec[[x]]]
-  }
-  Rounder = function(x) {
-    res = round_any(DV[idx][[x]], 10, floor)
-    if (sum(idx) > 1) {
-      res
-    }
-    else {
-      list(res)
-    }
-  }
-  BarkFinder = function(x) {
-    BarkFunction(DV[idx][[x]], SpeciesGroupKey, SpeciesGroupDefinition,
-                 Top_ob = tab[idx, ][x]$Top_ob, DBH = DBH, LogLength = tab[idx,
-                 ][x]$LogLength)
-  }
-  rowFinder = function(x) sum(commercial$LogLength[x] >= rownames[[x]] %>%
-                                as.numeric())
-  colFinder = function(x) sum(commercial$topdiam[x] >= colnames[[x]] %>%
-                                as.numeric())
-  priceFinder = function(x) lis[[x]][row[x], col[x]]
-  seqVectozied = Vectorize(seq.default, vectorize.args = c("from",
-                                                           "to"))
   SeqStart = min(LengthClassLowerLimit[LengthClassLowerLimit >
                                          0])
   SeqStop = ifelse(max(LengthClassMAX) < max(diameterPosition),
@@ -233,8 +202,6 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
 #' @param res data table of potential cuts
 #' @param tt log segment which maximize cumulative value
 #' @return Optimal bucking pattern
-#' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
-#' @export
 trackTrace=function(res, tt){
   low = min(tt[, "StartPos"])
   while (low > 0){
@@ -244,7 +211,7 @@ trackTrace=function(res, tt){
     if (!is.vector(prev)){
       prev = prev[1, ]
     }
-    tt = rbind(tt, prev) #%>% unname()
+    tt = rbind(tt, prev)
     low = min(tt$StartPos)
   }
   tt = tt[nrow(tt):1, ]
@@ -253,3 +220,87 @@ trackTrace=function(res, tt){
   }
   return(tt)
 }
+#' grdFinder
+#'
+#' helper function for buckStem: identify stem grades in a log
+#'
+#' @param x idxstop: the index of the stop position of the log
+#' @return Stem grades present in a log
+grdFinder = function(x) {
+  unique(StemGrade[idxstart:x])
+}
+#' asoFinder
+#'
+#' helper function for buckStem: identify potential assortments for a log
+#'
+#' @param x a list of vectors of stem grades for potential logs
+#' @return Potential assortments for a log
+asoFinder = function(x) {
+  names(SGKG)[sapply(SGKG, function(y) all(grd[[x]] %in%
+                                             y))]
+}
+#' DiameterValueFinder
+#'
+#' helper function for buckStem: returns diameters for given indeces in the stem profile
+#'
+#' @param x an index of
+#' @return Vector of diameter values
+DiameterValueFinder = function(x) {
+  DiameterValue[vec[[x]]]
+}
+#' Rounder
+#'
+#' helper function for buckStem: rounds values down to the 10 cm intervals present in hpr stem profile measurements
+#'
+#' @param x an index of the diameter values
+#' @return Diameter values rounded down to the nearest 10 cm
+Rounder = function(x) {
+  res = round_any(DV[idx][[x]], 10, floor)
+  if (sum(idx) > 1) {
+    res
+  }
+  else {
+    list(res)
+  }
+}
+#' BarkFinder
+#'
+#' helper function for buckStem: Calculates volume under bark for a log
+#'
+#' @param x an index of the end of the log
+#' @return Diameter values under bark
+BarkFinder = function(x) {
+  BarkFunction(DV[idx][[x]], SpeciesGroupKey, SpeciesGroupDefinition,
+               Top_ob = tab[idx, ][x]$Top_ob, DBH = DBH, LogLength = tab[idx,
+               ][x]$LogLength)
+}
+#' rowFinder
+#'
+#' helper function for buckStem: finds the row number in the price matrix
+#'
+#' @param x log length in cm
+#' @return Index of the row in the price matrix
+rowFinder = function(x) sum(commercial$LogLength[x] >= rownames[[x]] %>%
+                              as.numeric())
+#' colFinder
+#'
+#' helper function for buckStem: finds the column number in the price matrix
+#'
+#' @param x top diameter in mm
+#' @return Index of the column in the price matrix
+colFinder = function(x) sum(commercial$topdiam[x] >= colnames[[x]] %>%
+                              as.numeric())
+#' priceFinder
+#'
+#' helper function for buckStem: finds the price for a log
+#'
+#' @param x index of the list element corresponding to the current log
+#' @return Timber price for the current assortment, log lenght and diameter
+priceFinder = function(x) lis[[x]][row[x], col[x]]
+#' seqVectozied
+#'
+#' helper function for buckStem: vectorizes a sequence of diameter positions for all potential logs
+#'
+#' @return List of diameter positions for the potential logs
+seqVectozied = Vectorize(seq.default, vectorize.args = c("from",
+                                                         "to"))
