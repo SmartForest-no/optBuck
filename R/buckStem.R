@@ -67,10 +67,9 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   bult = seq(10, 100, 10)
   SeqAsp = seq(SeqStart, SeqStop, 10)
   if (SeqStart < SeqStop) {
-    res = data.table()
-    res[, `:=`(StartPos = -1, StopPos = 0, Top_ub = NA,
-               LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
-               Acc_Value = 0)]
+    res = data.table(StartPos = -1, StopPos = 0, Top_ub = NA,
+                     LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
+                     Acc_Value = 0)
     StartPos = 0
     while (StartPos < max(diameterPosition) - min(LengthClassLowerLimit[LengthClassLowerLimit >
                                                                         0])) {
@@ -104,15 +103,15 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       r = r[order(r)]
       tab = data.table(idxstop = r, ProductKey = unlist(asos))
       idx = match(tab$ProductKey, ProductData$ProductKey)
-      tab[, `:=`(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
-                 LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
-                 LengthClassMAX = ProductData$LengthClassMAX[idx],
-                 DiameterClassLowerLimit = ProductData$DiameterClassLowerLimit[idx],
-                 DiameterClassMAX = ProductData$DiameterClassMAX[idx],
-                 VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[idx],
-                 VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
-                 VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
-                 DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx]))]
+      tab=cbind(tab,data.table(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
+                               LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
+                               LengthClassMAX = ProductData$LengthClassMAX[idx],
+                               DiameterClassLowerLimit = ProductData$DiameterClassLowerLimit[idx],
+                               DiameterClassMAX = ProductData$DiameterClassMAX[idx],
+                               VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[idx],
+                               VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
+                               VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
+                               DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx])))
       tab = merge(m, tab, "idxstop")
       tab$StopPosAdj = round((tab$StopPos - tab$DiameterTopPosition)/10) *
         10
