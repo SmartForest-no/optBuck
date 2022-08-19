@@ -60,7 +60,8 @@ buckHpr=function(XMLNode,
                    DiameterClassMAX,
                    VolumeDiameterCategory,
                    PermittedGrades,
-                   PriceMatrices)
+                   PriceMatrices,
+                   LengthClasses)
 
       out=cbind(rep(StemKey,nrow(out)),out)
       colnames(out)[1]=c("StemKey")
