@@ -57,6 +57,24 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   priceFinder = function(x) lis[[x]][row[x], col[x]]
   seqVectozied = Vectorize(seq.default, vectorize.args = c("from",
                                                            "to"))
+  trackTrace=function(res, tt){
+    low = min(tt[, "StartPos"])
+    while (low > 0){
+      id_previous = tt$Acc_Value[order(tt$StartPos)[1]]-tt$Value[order(tt$StartPos)[1]]
+      sub=res[res$StopPos==low,]
+      prev = sub[which(near(sub$Acc_Value,id_previous)),]
+      if (!is.vector(prev)){
+        prev = prev[1, ]
+      }
+      tt = rbind(tt, prev)
+      low = min(tt$StartPos)
+    }
+    tt = tt[nrow(tt):1, ]
+    if (is.vector(tt)) {
+      tt[5] = ifelse(tt[5] == 0, 999999, tt[5])
+    }
+    return(tt)
+  }
   SeqStart = min(LengthClassLowerLimit[LengthClassLowerLimit >
                                          0])
   SeqStop = ifelse(max(LengthClassMAX) < max(diameterPosition),
@@ -224,31 +242,5 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   res = cbind(1:nrow(res), res)
   colnames(res)[1] = "LogKey"
   return(res)
-}
-
-#' trackTrace
-#'
-#' helper function for buckStem: back-track optimum bucking solution
-#'
-#' @param res data table of potential cuts
-#' @param tt log segment which maximize cumulative value
-#' @return Optimal bucking pattern
-trackTrace=function(res, tt){
-  low = min(tt[, "StartPos"])
-  while (low > 0){
-    id_previous = tt$Acc_Value[order(tt$StartPos)[1]]-tt$Value[order(tt$StartPos)[1]]
-    sub=res[res$StopPos==low,]
-    prev = sub[which(near(sub$Acc_Value,id_previous)),]
-    if (!is.vector(prev)){
-      prev = prev[1, ]
-    }
-    tt = rbind(tt, prev)
-    low = min(tt$StartPos)
-  }
-  tt = tt[nrow(tt):1, ]
-  if (is.vector(tt)) {
-    tt[5] = ifelse(tt[5] == 0, 999999, tt[5])
-  }
-  return(tt)
 }
 
