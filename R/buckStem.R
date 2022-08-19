@@ -26,8 +26,6 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
 {
   require(magrittr)
   require(data.table)
-
-
   grdFinder = function(x) {
     unique(StemGrade[idxstart:x])
   }
@@ -103,15 +101,15 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       r = r[order(r)]
       tab = data.table(idxstop = r, ProductKey = unlist(asos))
       idx = match(tab$ProductKey, ProductData$ProductKey)
-      tab=cbind(tab,data.table(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
-                               LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
-                               LengthClassMAX = ProductData$LengthClassMAX[idx],
-                               DiameterClassLowerLimit = ProductData$DiameterClassLowerLimit[idx],
-                               DiameterClassMAX = ProductData$DiameterClassMAX[idx],
-                               VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[idx],
-                               VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
-                               VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
-                               DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx])))
+      tab = cbind(tab, data.table(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
+                                  LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
+                                  LengthClassMAX = ProductData$LengthClassMAX[idx],
+                                  DiameterClassLowerLimit = ProductData$DiameterClassLowerLimit[idx],
+                                  DiameterClassMAX = ProductData$DiameterClassMAX[idx],
+                                  VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[idx],
+                                  VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
+                                  VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
+                                  DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx])))
       tab = merge(m, tab, "idxstop")
       tab$StopPosAdj = round((tab$StopPos - tab$DiameterTopPosition)/10) *
         10
@@ -155,10 +153,12 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
           for (l in 1:nrow(WithLengthClass)) {
             LengthClass = LengthClasses[[WithLengthClass$ProductKey[l]]]
             WithLengthClass$LogLength[l] = round_any(LengthClass[max(which(WithLengthClass$LogLength[l] >=
-                                                                             LengthClass))],10,f=floor)
+                                                                             LengthClass))], 10, f = floor)
             WithLengthClass$StopPos[l] = WithLengthClass$StartPos[l] +
               WithLengthClass$LogLength[l]
-            WithLengthClass$idxstop[l] = which(diameterPosition == paste(round_any(WithLengthClass$StopPos[l],10,f=floor)))
+            WithLengthClass$idxstop[l] = which(diameterPosition ==
+                                                 paste(round_any(WithLengthClass$StopPos[l],
+                                                                 10, f = floor)))
           }
           tab$LogLength[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$LogLength
           tab$StopPos[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$StopPos
@@ -209,8 +209,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
         sub = res[res$StopPos == paste(tab$StartPos[1])]
         sub = sub[which.max(sub$Acc_Value), ]
         m$Acc_Value = m$Value + sub$Acc_Value
-      }
-      else {
+      }else{
         m = data.table(StartPos = StartPos, StopPos = StopPos,
                        Top_ub = NA, LogLength = NA, ProductKey = NA,
                        Volume = NA, Value = NA, Acc_Value = NA)
@@ -227,6 +226,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   colnames(res)[1] = "LogKey"
   return(res)
 }
+
 #' trackTrace
 #'
 #' helper function for buckStem: back-track optimum bucking solution
