@@ -85,14 +85,13 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       LogLength = StopPos - StartPos
       rotdiam = DiameterValue[which(near(diameterPosition,
                                          StartPos))]
-      idxstart = which(near(diameterPosition, StartPos))
-      idxstop = match(StopPos, diameterPosition)
+      idxstart = as.numeric(which(near(diameterPosition, StartPos)))
+      idxstop = as.numeric(match(StopPos, diameterPosition))
       grd = lapply(idxstop, grdFinder)
       SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
                                       SpeciesGroupKey[1]]
       m = data.table(idxstart, idxstop, StartPos, StopPos,
                      LogLength, rotdiam)
-      m = m[, lapply(.SD, as.numeric)]
       m = m[m$StopPos <= max(diameterPosition), ]
       SGKG = PermittedGrades[as.character(SGPK)]
       asos = lapply(1:length(grd), asoFinder)
