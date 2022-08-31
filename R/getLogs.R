@@ -21,6 +21,7 @@ getLogs=function(XMLNode){
 
     if(length(idx)>0){
       StartPos=0
+      j=1
       for(j in 1:length(idx)){
         log=logs[[idx[j]]]
         LogKey=as.numeric(xmlValue(log[["LogKey"]]))
@@ -39,7 +40,9 @@ getLogs=function(XMLNode){
         LogMeasurement=LogMeasurement[,which(names(LogMeasurement)%in% c(".id","text",".attrs"))]
         LogMeasurement=LogMeasurement[!is.na(LogMeasurement$text),]
         Butt_ob=LogMeasurement$text[LogMeasurement$.attrs=="Butt ob"]%>% as.numeric()
+        Butt_ob=ifelse(identical(Butt_ob, numeric(0)),NA,Butt_ob)
         Butt_ub=LogMeasurement$text[LogMeasurement$.attrs=="Butt ub"]%>% as.numeric()
+        Butt_ub=ifelse(identical(Butt_ub, numeric(0)),NA,Butt_ub)
         Mid_ob=LogMeasurement$text[LogMeasurement$.attrs=="Mid ob"]%>% as.numeric()
         Mid_ub=LogMeasurement$text[LogMeasurement$.attrs=="Mid ub"]%>% as.numeric()
         Top_ob=LogMeasurement$text[LogMeasurement$.attrs=="Top ob"]%>% as.numeric()

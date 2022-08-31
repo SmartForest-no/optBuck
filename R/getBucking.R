@@ -18,15 +18,10 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
   m=c()
   StemKeys=LogKeys=StartPoss=StopPoss=LogLengths=Volumes=hprvolumes=hprm3prices=
     vol_prices=ProductKeys=Prices=Values=CumulativeValues=c()
-  #for(i in 1:length(stems)){
-  #  StemKey=as.integer(xmlValue(stems[[i]][["StemKey"]]))
-  #
-  #  if(StemKey==334020      ){print(i)}
-  #}
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
-  i=160
-  for(i in 1:length(stems)){
-    StemKey=as.integer(xmlValue(stems[[i]][["StemKey"]]))
+  i=3
+  for(i in 1:length(stems)){#
+    StemKey=ST=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     SpeciesGroupKey=as.integer(xmlValue(stems[[i]][["SpeciesGroupKey"]]))
     logs=stems[[i]][["SingleTreeProcessedStem"]]
     if(is.null(logs)){
@@ -35,15 +30,26 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
     DBH=xmlValue(stems[[i]][["SingleTreeProcessedStem"]][["DBH"]]) %>% as.numeric
     idx=which(names(logs)=="Log")
     CumulativeValue=0
-    j=2
+    j=1
     for(j in 1:length(idx)){
       log=logs[[idx[j]]]
       LogKey=as.numeric(xmlValue(log[["LogKey"]]))
       diameterPosition=StemProfile$diameterPosition[StemProfile$StemKey==StemKey]
       StartPos=as.numeric(xmlValue(log[["Extension"]][["StartPos"]]))
+      if(is.na(StartPos)&j==1){
+        StartPos=0
+      }
+      if(is.na(StartPos)&j>1){
+        if(i == 1)print("Log start positions not included in hpr file, extracting from stem profile")
+        tab=StemProfile[StemProfile$StemKey==ST,]
+        StartPos=tab$diameterPosition[tab$diameterPosition== round_any(StopPoss[length(StopPoss)],10,f=floor)]
+      }
       LogLength=as.numeric(xmlValue(log[["LogMeasurement"]][["LogLength"]]))
       StopPos=StartPos+LogLength
       ProductKey=as.numeric(xmlValue(log[["ProductKey"]]))
+      ProductKey=ifelse(ProductKey%in%ProductData$ProductKey,
+                        ProductKey,
+                        999999)
       LengthClass=LengthClasses[names(LengthClasses)==ProductKey]
       df=ldply(xmlToList(log), data.frame)
       LogVolume=df[df$.id=="LogVolume",]
@@ -55,12 +61,7 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
       LogMeasurement=ldply(xmlToList(LogMeasurement), data.frame)
       LogMeasurement=LogMeasurement[,which(names(LogMeasurement)%in% c(".id","text",".attrs"))]
       LogMeasurement=LogMeasurement[!is.na(LogMeasurement$text),]
-      Butt_ob=LogMeasurement$text[LogMeasurement$.attrs=="Butt ob"]%>% as.numeric()
-      Butt_ub=LogMeasurement$text[LogMeasurement$.attrs=="Butt ub"]%>% as.numeric()
-      Mid_ob=LogMeasurement$text[LogMeasurement$.attrs=="Mid ob"]%>% as.numeric()
-      Mid_ub=LogMeasurement$text[LogMeasurement$.attrs=="Mid ub"]%>% as.numeric()
       Top_ob=LogMeasurement$text[LogMeasurement$.attrs=="Top ob"]%>% as.numeric()
-      Top_ub=LogMeasurement$text[LogMeasurement$.attrs=="Top ub"]%>% as.numeric()
       if(ProductKey==999999){
         DiameterTopPosition=10
         VolumeDiameterAdjustment="Measured diameter in mm"
@@ -73,7 +74,6 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
         VolumeLengthCategory=ProductData$VolumeLengthCategory[ProductData$ProductKey == ProductKey]
         DiameterTopPosition=as.numeric(ProductData$DiameterTopPositions[ProductData$ProductKey == ProductKey])
       }
-
       if(length(diameterPosition)==0){
         Volume=ifelse(
           DiameterUnderBark==T,
@@ -81,9 +81,9 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
           m3sob
         )
       }else{
-        IdxStart=which(diameterPosition==round((StartPos)/10)*10)
-        IdxStop=which(diameterPosition==round((StopPos-DiameterTopPosition)/10)*10)
-        IdxMid=(IdxStop)/2
+        #IdxStart=which(diameterPosition==round((StartPos)/10)*10)
+        #IdxStop=which(diameterPosition==round((StopPos-DiameterTopPosition)/10)*10)
+        #IdxMid=(IdxStop)/2
         DiameterValue=StemProfile$DiameterValue[StemProfile$StemKey==StemKey]
         DiameterUnderBark=ifelse( ProductKey==999999,
                                   T,

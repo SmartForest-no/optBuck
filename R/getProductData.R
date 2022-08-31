@@ -21,21 +21,21 @@ getProductData=function(XMLNode,SpeciesGroupDefinition){
     ProductGroupName = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["ProductGroupName"]])
     SpeciesGroupKey = as.numeric(xmlValue(a[[i]][["ClassifiedProductDefinition"]][["SpeciesGroupKey"]]))
     SpeciesGroupName = NA
-    mindiam = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterClasses"]][["DiameterClass"]][["DiameterClassLowerLimit"]])
-    maxdiam = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterMAXButt"]])
-    if (is.na(maxdiam)) {
-      maxdiam = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterClasses"]][["DiameterClassMAX"]])
+    DiameterClassLowerLimit = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterClasses"]][["DiameterClass"]][["DiameterClassLowerLimit"]])
+    DiameterMAXButt = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterMAXButt"]])
+    if (is.na(DiameterMAXButt)) {
+      DiameterMAXButt = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterClasses"]][["DiameterClassMAX"]])
     }
     DiameterUnderBark = as.logical(xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterClasses"]][["DiameterUnderBark"]]))
-    minleng = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["LengthDefinition"]][["LengthClass"]][["LengthClassLowerLimit"]])
-    maxleng = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["LengthDefinition"]][["LengthClassMAX"]])
+    LengthClassLowerLimit = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["LengthDefinition"]][["LengthClass"]][["LengthClassLowerLimit"]])
+    LengthClassMAX = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["LengthDefinition"]][["LengthClassMAX"]])
     DiameterTopPositions = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["DiameterDefinition"]][["DiameterTopPosition"]])
     VolumeDiameterAdjustment = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["PriceDefinition"]][["VolumeDiameterAdjustment"]])
     VolumeDiameterCategory = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["PriceDefinition"]][["VolumeDiameterCategory"]])
     VolumeLengthCategory = xmlValue(a[[i]][["ClassifiedProductDefinition"]][["PriceDefinition"]][["VolumeLengthCategory"]])
     data = c(ObjectName, ProductKey, ProductName, ProductGroupName,
-             SpeciesGroupKey, SpeciesGroupName,DiameterUnderBark, mindiam, maxdiam,
-             minleng, maxleng, DiameterTopPositions, VolumeDiameterAdjustment,
+             SpeciesGroupKey, SpeciesGroupName,DiameterUnderBark, DiameterClassLowerLimit, DiameterMAXButt,
+             LengthClassLowerLimit, LengthClassMAX, DiameterTopPositions, VolumeDiameterAdjustment,
              VolumeDiameterCategory, VolumeLengthCategory)
     ProductData = rbind(ProductData, data)
   }
@@ -47,7 +47,7 @@ getProductData=function(XMLNode,SpeciesGroupDefinition){
                             "VolumeDiameterAdjustment", "VolumeDiameterCategory",
                             "VolumeLengthCategory")
   ProductData = as.data.frame(ProductData)
-  ProductData=ProductData[!is.na(ProductData$ProductName),]
+  ProductData=ProductData[!is.na(ProductData$ProductKey),]
   ProductData$ObjectName = ProductData$ObjectName %>% as.character()
   ProductData$ProductName = ProductData$ProductName %>% as.character()
   ProductData$ProductGroupName = ProductData$ProductGroupName %>%
@@ -61,9 +61,9 @@ getProductData=function(XMLNode,SpeciesGroupDefinition){
   ProductData$DiameterClassMAX = ProductData$DiameterClassMAX %>%
     as.character() %>% as.numeric()
   ProductData$LengthClassLowerLimit = ProductData$LengthClassLowerLimit %>%
-    as.character() %>% as.numeric()
+    as.character() %>% as.numeric() %>%  round_any(10)
   ProductData$LengthClassMAX = ProductData$LengthClassMAX %>%
-    as.character() %>% as.numeric()
+    as.character() %>% as.numeric() %>%  round_any(10)
   ProductData$DiameterTopPositions = ProductData$DiameterTopPositions %>%
     as.character() %>% as.numeric()
   ProductData$VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment %>%
@@ -95,6 +95,7 @@ getProductData=function(XMLNode,SpeciesGroupDefinition){
   #add species
   for(i in 1:nSpecies){
     Key=unique(ProductData$SpeciesGroupKey)[i]
+    if()
     Name=SpeciesGroupDefinition[[which(names(SpeciesGroupDefinition)==as.character(Key))]]$SpeciesGroupName
     ProductData$SpeciesGroupName[ProductData$SpeciesGroupKey==Key]=Name
   }
