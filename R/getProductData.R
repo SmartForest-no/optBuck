@@ -95,7 +95,6 @@ getProductData=function(XMLNode,SpeciesGroupDefinition){
   #add species
   for(i in 1:nSpecies){
     Key=unique(ProductData$SpeciesGroupKey)[i]
-    if()
     Name=SpeciesGroupDefinition[[which(names(SpeciesGroupDefinition)==as.character(Key))]]$SpeciesGroupName
     ProductData$SpeciesGroupName[ProductData$SpeciesGroupKey==Key]=Name
   }

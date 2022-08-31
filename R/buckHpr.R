@@ -27,7 +27,7 @@ buckHpr=function(XMLNode,
   res=list()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   ProductData=ProductData[!is.na(ProductData$ProductName),]
-  i=1181
+  i=3142
   for(i in 1:length(stems)){#
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
