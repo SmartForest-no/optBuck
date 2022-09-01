@@ -13,7 +13,7 @@ getPriceMatrices=function(XMLNode){
                                          xmlAttrs)) == "ProductDefinition"]
   productdata=c()
   price_matrices=list()
-  i=1
+  i=6
   for(i in 1:length(a)){
     ProductKey=xmlValue(a[[i]][["ProductKey"]])
     ProductName=xmlValue(a[[i]][["ClassifiedProductDefinition"]][["ProductName"]])
@@ -26,7 +26,7 @@ getPriceMatrices=function(XMLNode){
         Item=l[[m]] %>% xmlToList()
         prices[m]=Item$Price %>% as.numeric()
         dCLL[m]=Item$.attrs[1] %>% as.numeric()
-        lCLL[m]=Item$.attrs[2] %>% as.numeric()
+        lCLL[m]=Item$.attrs[2] %>% as.numeric() %>% round_any(10,floor)
       }
       m=matrix(prices,
                length(unique(lCLL)),
