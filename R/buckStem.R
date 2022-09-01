@@ -69,9 +69,9 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   trackTrace=function(res, tt){
     low = min(tt[, "StartPos"])
     while (low > 0){
-      id_previous = tt$Acc_Value[order(tt$StartPos)[1]]-tt$Value[order(tt$StartPos)[1]]
+      id_previous = tt$CumulativeValue[order(tt$StartPos)[1]]-tt$Value[order(tt$StartPos)[1]]
       sub=res[res$StopPos==low,]
-      prev = sub[which(near(sub$Acc_Value,id_previous)),]
+      prev = sub[which(near(sub$CumulativeValue,id_previous)),]
       if (!is.vector(prev)){
         prev = prev[1, ]
       }
@@ -92,7 +92,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   bult = seq(10, 100, 10)
   res = data.table(StartPos = -1, StopPos = 0, Top_ub = NA,
                      LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
-                     Acc_Value = 0)
+                     CumulativeValue = 0)
   if (SeqStart < SeqStop) {
     SeqAsp = seq(SeqStart, SeqStop, 10)
 
@@ -243,24 +243,24 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
                     "Top_ub", "LogLength", "ProductKey",
                     "Volume", "Value")]
         sub = res[res$StopPos == paste(tab$StartPos[1])]
-        sub = sub[which.max(sub$Acc_Value), ]
-        m$Acc_Value = m$Value + sub$Acc_Value
+        sub = sub[which.max(sub$CumulativeValue), ]
+        m$CumulativeValue = m$Value + sub$CumulativeValue
       }else{
         m = data.table(StartPos = StartPos, StopPos = StopPos,
                        Top_ub = NA, LogLength = NA, ProductKey = NA,
-                       Volume = NA, Value = NA, Acc_Value = NA)
+                       Volume = NA, Value = NA, CumulativeValue = NA)
       }
       res = rbindlist(list(res, m))
     }
   }
   res = res[!is.na(res$LogLength)]
-  tt = res[which.max(res$Acc_Value)]
+  tt = res[which.max(res$CumulativeValue)]
   if (nrow(tt) == 1) {
     res = trackTrace(res, tt)
   }else{
     res = data.table(StartPos = NA, StopPos = NA,
                    Top_ub = NA, LogLength = 1, ProductKey = NA,
-                   Volume = NA, Value = 0, Acc_Value = 0)
+                   Volume = NA, Value = 0, CumulativeValue = 0)
   }
   res = cbind(1:nrow(res), res)
   colnames(res)[1] = "LogKey"
