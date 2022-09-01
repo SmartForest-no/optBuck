@@ -16,7 +16,8 @@ plotBucking=function(Res, StemProfile, Stem, ProductData){
   plotdf=c()
   i=1
   for (i in 1:nrow(tab)){
-    log = tre[which(tre$diameterPosition == round_any(tab[, which(colnames(tab)=="StartPos")][i],10)):which(tre$diameterPosition == round_any(tab[, which(colnames(tab) =="StopPos")][i],10)),]
+    log = tre[which(tre$diameterPosition == round_any(tab$StartPos[i], 10)):which(tre$diameterPosition ==round_any(tab$StopPos[i],
+                                                                                                                   10)), ]
     log = cbind(log, unique(ProductData$ProductName[which(ProductData$ProductKey==tab$ProductKey[i])]) ) %>% as.data.frame()
     names(log)[ncol(log)]="ProductName"
     D_Bob = max(log$DiameterValue)/2
@@ -37,6 +38,7 @@ plotBucking=function(Res, StemProfile, Stem, ProductData){
                             levels=unique(ProductData$ProductName))
   colors=brewer.pal(length(unique(ProductData$ProductName)),"Spectral")
   colors=colors[unique(ProductData$ProductName)%in%unique(plotdf$ProductName)]
+  colors = c("#3288BD", "#F46D43" ,"#E6F598")
   ticks=seq(0,round_any(max(plotdf$diameterPosition),100),by=200)
   lim=c(0,round_any(max(tre$diameterPosition),200,f = ceiling))
   plot=ggplot(plotdf, aes(x=diam,y=diameterPosition,group=log)) +
