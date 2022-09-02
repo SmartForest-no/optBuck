@@ -56,7 +56,7 @@ plotBucking=function(Res, StemProfile, Stem, ProductData){
     ylab("Diameter position (cm)")+
     scale_fill_manual(values=colors)+
     coord_flip()+
-    ggtitle(paste("Stem value:", round(max(tab[,ncol(tab)]))))
+    ggtitle(paste("Stem value:", round(max(tab$CumulativeValue))))
   plot
   return(plot)
 }

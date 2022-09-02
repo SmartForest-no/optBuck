@@ -166,13 +166,13 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
     setTxtProgressBar(pb,i)
   }
   close(pb)
-  m=cbind(StemKeys,StartPoss,StopPoss,
+  m=cbind(StemKeys,LogKeys,StartPoss,StopPoss,
           ProductKeys,LogLengths,Volumes,
           hprvolumes,hprm3prices,vol_prices,
           Prices,Values,CumulativeValues) %>%
     as.data.frame()
-  names(m)=c("StemKey","StartPos","StopPos",
-             "ProductKey","LogLengths", "Volume",
+  names(m)=c("StemKey","LogKey","StartPos","StopPos",
+             "ProductKey","LogLength", "Volume",
              "HprVolume","hprm3prices","vol_prices",
              "Price","Value","CumulativeValue")
   return(m)
