@@ -27,7 +27,7 @@ buckHpr=function(XMLNode,
   res=list()
   pb=txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   ProductData=ProductData[!is.na(ProductData$ProductName),]
-  i=3142
+  i=4515
   for(i in 1:length(stems)){#
     StemKey=SK=as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem=StemProfile[StemProfile$StemKey==SK,]
@@ -68,7 +68,7 @@ buckHpr=function(XMLNode,
       res[[i]]=out
     }
     setTxtProgressBar(pb,i)
-    print(i)
+    #print(i)
   }
   res=do.call(rbind.data.frame, res)
   close(pb)
