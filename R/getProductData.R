@@ -8,7 +8,7 @@
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getProductData=function(XMLNode,SpeciesGroupDefinition){
-  require(XML)
+  require(XML);require(plyr);require(dplyr)
   b = names(xmlSApply(XMLNode[["Machine"]], xmlAttrs)) ==
     "ProductDefinition"
   a = XMLNode[["Machine"]][b]
