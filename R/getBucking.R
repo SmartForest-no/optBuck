@@ -11,7 +11,12 @@
 #' @seealso buckStem, buckHpr
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses){
+getBucking=function(XMLNode,
+                    PriceMatrices,
+                    ProductData,
+                    StemProfile,
+                    LengthClasses){
+
   require(XML);require(plyr);require(tcltk)
   stems=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                              xmlAttrs)) == "Stem"]
@@ -81,9 +86,6 @@ getBucking=function(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
           m3sob
         )
       }else{
-        #IdxStart=which(diameterPosition==round((StartPos)/10)*10)
-        #IdxStop=which(diameterPosition==round((StopPos-DiameterTopPosition)/10)*10)
-        #IdxMid=(IdxStop)/2
         DiameterValue=StemProfile$DiameterValue[StemProfile$StemKey==StemKey]
         DiameterUnderBark=ifelse( ProductKey==999999,
                                   T,

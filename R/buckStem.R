@@ -24,8 +24,15 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
                    DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
                    PermittedGrades, PriceMatrices, LengthClasses)
 {
-  require(magrittr)
-  require(data.table)
+  if (!requireNamespace("magrittr", quietly = TRUE)) {
+    stop("magrittr package needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
+  if (!requireNamespace("data.table", quietly = TRUE)) {
+    stop("data.table package needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   grdFinder = function(x) {
     unique(StemGrade[idxstart:x])
   }
