@@ -16,6 +16,7 @@ predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
   require(taperNO)
   require(tidyverse)
   options(scipen = 999)
+
   stems = XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                                xmlAttrs)) == "Stem"]
   gran=unique(ProductData$SpeciesGroupKey[toupper(ProductData$SpeciesGroupName) %in%
