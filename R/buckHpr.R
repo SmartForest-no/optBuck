@@ -30,12 +30,13 @@ buckHpr<-function(XMLNode,
     stop("plyr package needed for this function to work. Please install it.",
          call. = FALSE)
   }
+  require(XML);require(plyr);require(dplyr);require(data.table)
   stems<-XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
-                                             xmlAttrs)) == "Stem"]
+                                              xmlAttrs)) == "Stem"]
   res<-list()
   pb<-txtProgressBar(min = 0,max = length(stems),style=3,width=50,char="=")
   ProductData<-ProductData[!is.na(ProductData$ProductName),]
-  i<-4515
+  i<-1
   for(i in 1:length(stems)){
     StemKey<-SK<-as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem<-StemProfile[StemProfile$StemKey==SK,]
@@ -44,39 +45,37 @@ buckHpr<-function(XMLNode,
       DiameterValue<-as.numeric(stem$DiameterValue)
       StemGrade<-as.numeric(stem$StemGrade)
       SpeciesGroupKey<-unique(stem$SpeciesGroupKey)
-      #PermittedGrades<-PermittedGrades
       ProductKeys<-ProductData$ProductKey
       LengthClassLowerLimit<-as.numeric(ProductData$LengthClassLowerLimit)
       LengthClassMAX<-as.numeric(ProductData$LengthClassMAX)
       DiameterClassLowerLimit<-as.numeric(ProductData$DiameterClassLowerLimit)
       DiameterClassMAX<-as.numeric(ProductData$DiameterClassMAX)
       VolumeDiameterCategory<-ProductData$VolumeDiameterCategory
-      #PriceMatrices<-PriceMatrices
       DiameterTopPositions<-ProductData$DiameterTopPosition
       DBH<-xmlValue(stems[[i]][["SingleTreeProcessedStem"]][["DBH"]]) %>% as.numeric()
 
       out<-buckStem(diameterPosition,
-                   DiameterValue,
-                   StemGrade,
-                   DBH,
-                   SpeciesGroupKey,
-                   ProductData,
-                   ProductKeys,
-                   LengthClassLowerLimit,
-                   LengthClassMAX,
-                   DiameterClassLowerLimit,
-                   DiameterClassMAX,
-                   VolumeDiameterCategory,
-                   PermittedGrades,
-                   PriceMatrices,
-                   LengthClasses)
+                    DiameterValue,
+                    StemGrade,
+                    DBH,
+                    SpeciesGroupKey,
+                    ProductData,
+                    ProductKeys,
+                    LengthClassLowerLimit,
+                    LengthClassMAX,
+                    DiameterClassLowerLimit,
+                    DiameterClassMAX,
+                    VolumeDiameterCategory,
+                    PermittedGrades,
+                    PriceMatrices,
+                    LengthClasses)
 
       out<-cbind(rep(StemKey,nrow(out)),out)
       colnames(out)[1]<-c("StemKey")
       res[[i]]<-out
     }
     setTxtProgressBar(pb,i)
-    #print(i)
+    print(i)
   }
   res<-do.call(rbind.data.frame, res)
   close(pb)
