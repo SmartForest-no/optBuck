@@ -28,7 +28,6 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
     stop("magrittr package needed for this function to work. Please install it.",
          call. = FALSE)
   }
-
   if (!requireNamespace("data.table", quietly = TRUE)) {
     stop("data.table package needed for this function to work. Please install it.",
          call. = FALSE)
@@ -40,14 +39,16 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
     names(SGKG)[sapply(SGKG, function(y) all(grd[[x]] %in%
                                                y))]
   }
-  asoFinder= function(x) {
-    names(SGKG)[which(SGKG%in%grd[[x]])]
+  asoFinder = function(x) {
+    names(SGKG)[which(SGKG %in% grd[[x]])]
   }
-  asoFinder= function(x) {
-    names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN=function(X) grd[[x]] %in% X),ncol=length(SGKG)))>0)]
+  asoFinder = function(x) {
+    names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN = function(X) grd[[x]] %in%
+                                              X), ncol = length(SGKG))) > 0)]
   }
-  asoFinder= function(x) {
-    names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN=function(X) all(grd[[x]] %in% X)),ncol=length(SGKG)))>0)]
+  asoFinder = function(x) {
+    names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN = function(X) all(grd[[x]] %in%
+                                                                          X)), ncol = length(SGKG))) > 0)]
   }
   DiameterValueFinder = function(x) {
     DiameterValue[vec[[x]]]
@@ -73,13 +74,15 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   priceFinder = function(x) lis[[x]][row[x], col[x]]
   seqVectozied = Vectorize(seq.default, vectorize.args = c("from",
                                                            "to"))
-  trackTrace=function(res, tt){
+  trackTrace = function(res, tt) {
     low = min(tt[, "StartPos"])
-    while (low > 0){
-      id_previous = tt$CumulativeValue[order(tt$StartPos)[1]]-tt$Value[order(tt$StartPos)[1]]
-      sub=res[res$StopPos==low,]
-      prev = sub[which(near(sub$CumulativeValue,id_previous)),]
-      if (!is.vector(prev)){
+    while (low > 0) {
+      id_previous = tt$CumulativeValue[order(tt$StartPos)[1]] -
+        tt$Value[order(tt$StartPos)[1]]
+      sub = res[res$StopPos == low, ]
+      prev = sub[which(near(sub$CumulativeValue, id_previous)),
+      ]
+      if (!is.vector(prev)) {
         prev = prev[1, ]
       }
       tt = rbind(tt, prev)
@@ -92,17 +95,16 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
     return(tt)
   }
   SeqStart = round_any(min(LengthClassLowerLimit[LengthClassLowerLimit >
-                                         0]),10)
+                                                   0]), 10)
   SeqStop = ifelse(max(LengthClassMAX) < max(diameterPosition),
                    max(LengthClassMAX), max(diameterPosition))
   DiameterTopPositions = ProductData$DiameterTopPositions
   bult = seq(10, 100, 10)
   res = data.table(StartPos = -1, StopPos = 0, Top_ub = NA,
-                     LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
-                     CumulativeValue = 0)
+                   LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
+                   CumulativeValue = 0)
   if (SeqStart < SeqStop) {
     SeqAsp = seq(SeqStart, SeqStop, 10)
-
     StartPos = 0
     while (StartPos < max(diameterPosition) - min(LengthClassLowerLimit[LengthClassLowerLimit >
                                                                         0])) {
@@ -114,12 +116,15 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       }
       StopPos = StopPos[StopPos <= max(diameterPosition) &
                           StopPos > 0]
-      if (length(StopPos) < 1){break}
+      if (length(StopPos) < 1) {
+        break
+      }
       LogLength = StopPos - StartPos
       rotdiam = DiameterValue[which(near(diameterPosition,
                                          StartPos))]
-      idxstart = as.numeric(which(near(diameterPosition, StartPos)))
-      idxstop = as.numeric(match(StopPos, diameterPosition))
+      idxstart = as.numeric(which(near(diameterPosition,
+                                       StartPos)))
+      idxstop = as.numeric(match(as.character(StopPos), as.character(diameterPosition)))
       grd = lapply(idxstop, grdFinder)
       SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
                                       SpeciesGroupKey[1]]
@@ -128,14 +133,16 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       m = m[m$StopPos <= max(diameterPosition), ]
       SGKG = PermittedGrades[as.character(SGPK)]
       asos = lapply(1:length(grd), asoFinder)
-      lapply(1:length(grd),    function(x) {
-        names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN=function(X) all(grd[[x]] %in% X)),ncol=length(SGKG)))>0)]
+      lapply(1:length(grd), function(x) {
+        names(SGKG)[which(colSums(matrix(sapply(SGKG,
+                                                FUN = function(X) all(grd[[x]] %in% X)), ncol = length(SGKG))) >
+                            0)]
       })
       m$Price = 0
       r = rep(idxstop, len = sum(lengths(asos)))
       r = r[order(r)]
       tab = data.table(idxstop = r, ProductKey = unlist(asos))
-      idx = match(tab$ProductKey, ProductData$ProductKey)
+      idx = match(as.character(tab$ProductKey), as.character(ProductData$ProductKey))
       tab = cbind(tab, data.table(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
                                   LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
                                   LengthClassMAX = ProductData$LengthClassMAX[idx],
@@ -145,11 +152,12 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
                                   VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
                                   VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
                                   DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx])))
-      tab = merge(m, tab, "idxstop", allow.cartesian=TRUE)
+      tab = merge(m, tab, "idxstop", allow.cartesian = TRUE)
       tab$StopPosAdj = round((tab$StopPos - tab$DiameterTopPosition)/10) *
         10
-      tab$Top_ob = DiameterValue[match(tab$StopPosAdj,
-                                       diameterPosition)]
+
+      tab$Top_ob = DiameterValue[match(as.character(tab$StopPosAdj),
+                                       as.character(diameterPosition))]
       tab$Top_ub = BarkFunction(tab$Top_ob, SpeciesGroupKey,
                                 SpeciesGroupDefinition, Top_ob = Top_ob, DBH = DBH,
                                 LogLength = LogLength)
@@ -175,9 +183,9 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
                                                          priceFinder)
         }
         head(tab)
-        tab$idxstop[tab$VolumeLengthCategory == "Rounded downwards to nearest dm-module"] = match(round_any((tab$StopPos[tab$VolumeLengthCategory ==
-                                                                                                                           "Rounded downwards to nearest dm-module"]),
-                                                                                                            10, f = floor), diameterPosition)
+        tab$idxstop[tab$VolumeLengthCategory == "Rounded downwards to nearest dm-module"] = match(as.character(round_any((tab$StopPos[tab$VolumeLengthCategory ==
+                                                                                                                                        "Rounded downwards to nearest dm-module"]),
+                                                                                                                         10, f = floor)), as.character(diameterPosition))
         WithLengthClass = tab[tab$VolumeLengthCategory ==
                                 "Length as defined in LengthClasses" &
                                 tab$ProductKey != "999999", ]
@@ -203,17 +211,16 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
         DV = sapply(1:length(vec), DiameterValueFinder)
         idx = tab$VolumeDiameterAdjustment == "Measured diameter rounded downwards to cm"
         if (sum(idx) > 0) {
-          if(sum(idx) > 1){ # multiple matches
-            DV[which(idx>0)] = lapply(1:sum(idx), function(x){as.vector(sapply(1:length(DV[which(idx>0)[x]]), Rounder))})
-
-            # for( d in 1:sum(idx)){
-            #  DV[which(idx>0)] = sapply(1:length(DV[which(idx>0)[d]]), Rounder)
-            #}
-          }else{ # single match
-           DV[idx] = sapply(1:length(DV[idx]), Rounder)
+          if (sum(idx) > 1) {
+            DV[which(idx > 0)] = lapply(1:sum(idx), function(x) {
+              as.vector(sapply(1:length(DV[which(idx >
+                                                   0)[x]]), Rounder))
+            })
+          }
+          else {
+            DV[idx] = sapply(1:length(DV[idx]), Rounder)
           }
         }
-
         idx = tab$DiameterUnderBark == T
         if (sum(idx) > 0) {
           DV[idx] = sapply(1:length(DV[idx]), BarkFinder)
@@ -264,10 +271,11 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   tt = res[which.max(res$CumulativeValue)]
   if (nrow(tt) == 1) {
     res = trackTrace(res, tt)
-  }else{
-    res = data.table(StartPos = NA, StopPos = NA,
-                   Top_ub = NA, LogLength = 1, ProductKey = NA,
-                   Volume = NA, Value = 0, CumulativeValue = 0)
+  }
+  else {
+    res = data.table(StartPos = NA, StopPos = NA, Top_ub = NA,
+                     LogLength = 1, ProductKey = NA, Volume = NA, Value = 0,
+                     CumulativeValue = 0)
   }
   res = cbind(1:nrow(res), res)
   colnames(res)[1] = "LogKey"
