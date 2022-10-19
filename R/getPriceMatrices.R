@@ -8,7 +8,7 @@
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
 getPriceMatrices=function(XMLNode){
-  require(XML);require(dplyr)
+  require(XML);require(plyr);require(dplyr)
   a=XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                          xmlAttrs)) == "ProductDefinition"]
   productdata=c()

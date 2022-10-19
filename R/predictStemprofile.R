@@ -5,18 +5,19 @@
 #' @param XMLNode Output of getXMLNode()
 #' @param ProductData output of getProductData()
 #' @param PermittedGrades output of getPermittedGrades()
+#' @param GradeDetermination Either "GradeValue" or "LogsProductKey". Shoud stem grade be based on StemGrade and gradeStartPosition or selected Products of logs
 #' @return Output structure with stem profile containing stem grades
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @export
-predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
+predictStemprofile=function(XMLNode,ProductData,PermittedGrades,GradeDetermination="GradeValue"){
   require(XML)
   require(data.table)
   require(tcltk)
   require(TapeR)
   require(taperNO)
   require(tidyverse)
+  require(plyr)
   options(scipen = 999)
-
   stems = XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                                xmlAttrs)) == "Stem"]
   gran=unique(ProductData$SpeciesGroupKey[toupper(ProductData$SpeciesGroupName) %in%
@@ -27,8 +28,8 @@ predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
                       width = 50, char = "=")
   result = list()
 
-  i = 1107
-  for (i in 1100:length(stems)) {
+  i = 4
+  for (i in 1:length(stems)) {
     S = xmlValue(stems[[i]][["StemKey"]])
     SpeciesGroupKey = as.integer(xmlValue(stems[[i]][["SpeciesGroupKey"]]))
     if (SpeciesGroupKey==gran) {
@@ -36,13 +37,14 @@ predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
       if(length(l)<1){
         l = stems[[i]][["MultiTreeProcessedStem"]]
       }
+      SG=l[which(names(l)%in%"StemGrade")]
       l = l[which(names(l) == "Log")]
-      LogKey = ProductKeys = LogLength = Buttob = Midob = Topob = numeric(length(l))
-      j = 1
+      LogKey = ProductKey = LogLength = Buttob = Midob = Topob = Dm = numeric(length(l))
+      j = 2
       for (j in 1:length(l)) {
         Item = l[[j]] %>% xmlToList()
         LogKey[j] = Item$LogKey %>% as.integer()
-        ProductKeys[j] = Item$ProductKey %>% as.integer()
+        PK = Item$ProductKey %>% as.integer()
         LogLength[j] = Item$LogMeasurement$LogLength %>%
           as.integer()
         l[[j]] %>% class()
@@ -57,21 +59,19 @@ predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
           as.numeric()
         Topob[j] = m$text[m$.attrs == "Top ob"] %>%
           as.numeric()
+        if(j==1){
+          Hm=c(0,LogLength[j]/2,LogLength[j])
+          Dm=c(Buttob[j],Midob[j],Topob[j])
+          ProductKey=rep(PK,3)
+        }else{
+          Hm=c(Hm,Hm[length(Hm)],Hm[length(Hm)]+LogLength[j]/2,Hm[length(Hm)]+LogLength[j])
+          Dm=c(Dm,Buttob[j],Midob[j],Topob[j])
+          ProductKey=c(ProductKey,rep(PK,3))
+        }
       }
-      Dm = rbind(Buttob, Midob, Topob) %>% as.vector()/10
-      LogLengths = c(0 * LogLength, 0.5 * LogLength, 1 *
-                       LogLength)
-      seqs = ProductKey = c()
-      for (k in seq_len(j)) {
-        seqs = c(seqs, seq(k, j * 3, j))
-        ProductKey = c(ProductKey, rep(ProductKeys[k],
-                                       3))
-      }
-      LogLengths = LogLengths[seqs]
-      l = cbind(LogLengths, Dm, ProductKey)
-      Hm = Reduce("+", l[, 1], accumulate = T)/100
-      l = cbind(l, Hm) %>% data.table() %>% tibble()
-      l = tibble(l)
+      l = cbind(Hm, Dm, ProductKey)%>% data.table() %>% tibble()
+      l$Hm=l$Hm/100
+      l$Dm=l$Dm/10
       lm = l[!duplicated(Dm), ]
       lm = lm[lm$Hm >= 0.5, ]
       if (nrow(lm) > 2) {
@@ -88,29 +88,43 @@ predictStemprofile=function(XMLNode,ProductData,PermittedGrades){
                    ylab = "diameter (cm)"))
           cat(points(df$h, df$d, type = "l"))
           StemGrade = rep(NA, length(diameterPosition))
-          l
-          keys = c()
-          for (k in 1:nrow(l)) {
-            key = l$ProductKey[k]
-            if (!key %in% keys[length(keys)]) {
-              keys = c(keys, key)
+          if(GradeDetermination=="GradeValue"){
+            SG
+            s=2
+            for(s in 1:length(SG)){
+              GradeValue = SG[[s]] %>% xmlToList()
+              gradeStartPosition=as.numeric(GradeValue[[2]])/100
+              GradeValue=as.numeric(GradeValue[[1]])
+              idxmin = which(near(diameterPosition, round_any(gradeStartPosition,
+                                                              0.1, f = floor)))
+              StemGrade[idxmin:length(StemGrade)] = GradeValue
             }
           }
-          k = 1
-          for (k in 1:length(keys)) {
-            min = min(l$Hm[l$ProductKey == keys[k]])
-            max = max(l$Hm[l$ProductKey == keys[k]])
-            idxmin = which(near(diameterPosition, round_any(min,
-                                                            0.1)))
-            idxmax = which(near(diameterPosition, round_any(max,
-                                                            0.1, f = floor)))
-            if (!length(idxmin) == 0 & !length(idxmax) ==
-                0) {
-              grade = PermittedGrades[[as.character(keys[k])]] %>%
-                max()
-              StemGrade[idxmin:idxmax] = grade
+          if(GradeDetermination=="LogsProductKey"){
+            keys = c()
+            for (k in 1:nrow(l)) {
+              key = l$ProductKey[k]
+              if (!key %in% keys[length(keys)]) {
+                keys = c(keys, key)
+              }
+            }
+            k = 1
+            for (k in 1:length(keys)) {
+              min = min(l$Hm[l$ProductKey == keys[k]])
+              max = max(l$Hm[l$ProductKey == keys[k]])
+              idxmin = which(near(diameterPosition, round_any(min,
+                                                              0.1)))
+              idxmax = which(near(diameterPosition, round_any(max,
+                                                              0.1, f = floor)))
+              if (!length(idxmin) == 0 & !length(idxmax) ==
+                  0) {
+                GradeValue = PermittedGrades[[as.character(keys[k])]] %>%
+                  max()
+                StemGrade[idxmin:idxmax] = GradeValue
+              }
             }
           }
+
           stempr = cbind(S, SpeciesGroupKey, diameterPosition,
                          DiameterValue, StemGrade) %>% data.table()
           if (is.na(stempr$StemGrade[nrow(stempr)])) {
