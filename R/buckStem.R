@@ -22,8 +22,7 @@
 buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupKey,
                    ProductData, ProductKeys, LengthClassLowerLimit, LengthClassMAX,
                    DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
-                   PermittedGrades, PriceMatrices, LengthClasses)
-{
+                   PermittedGrades, PriceMatrices, LengthClasses){
   if (!requireNamespace("magrittr", quietly = TRUE)) {
     stop("magrittr package needed for this function to work. Please install it.",
          call. = FALSE)
