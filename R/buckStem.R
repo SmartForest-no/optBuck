@@ -111,7 +111,8 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       StartPos = sort(res$StopPos[!res$StopPos %in% res$StartPos])[1]
       if (StartPos == 0) {
         StopPos = StartPos + c(bult, SeqAsp)
-      }else{
+      }
+      else {
         StopPos = StartPos + SeqAsp
       }
       StopPos = StopPos[StopPos <= max(diameterPosition) &
@@ -124,7 +125,8 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
                                          StartPos))]
       idxstart = as.numeric(which(near(diameterPosition,
                                        StartPos)))
-      idxstop = as.numeric(match(as.character(StopPos), as.character(diameterPosition)))
+      idxstop = as.numeric(match(as.character(StopPos),
+                                 as.character(diameterPosition)))
       grd = lapply(idxstop, grdFinder)
       SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
                                       SpeciesGroupKey[1]]
@@ -155,7 +157,6 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
       tab = merge(m, tab, "idxstop", allow.cartesian = TRUE)
       tab$StopPosAdj = round((tab$StopPos - tab$DiameterTopPosition)/10) *
         10
-
       tab$Top_ob = DiameterValue[match(as.character(tab$StopPosAdj),
                                        as.character(diameterPosition))]
       tab$Top_ub = BarkFunction(tab$Top_ob, SpeciesGroupKey,
@@ -233,7 +234,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
         idx = tab$VolumeDiameterCategory == "All diameters (solid volume)"
         x = 2
         tab$Volume[idx] = sapply(1:length(RV), function(x) sum(pi *
-                                                                 (unlist(RV[x])^2) * 10)/1e+08)[idx]
+                                                                 (unlist(RV[x])^2) * 10)/100000000)[idx]
         idx = tab$VolumeDiameterCategory == "Calculated Norwegian mid"
         Dmid = tab$Top_ub + (tab$LogLength/2 * 0.1) +
           0.5
@@ -244,13 +245,13 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
         r1 = tab$Top_ub/2
         r2 = (tab$Top_ub + tab$LogLength * 0.01)/2
         tab$Volume[idx] = (((1/3) * pi * (r1^2 + r2^2 +
-                                            (r1 * r2)) * tab$LogLength)/1e+08)[idx]
+                                            (r1 * r2)) * tab$LogLength)/100000000)[idx]
         idx = tab$VolumeDiameterCategory == "Top" &
           tab$DiameterUnderBark == F
         r1 = tab$Top_ob/2
         r2 = (tab$Top_ob + tab$LogLength * 0.01)/2
         tab$Volume[idx] = (((1/3) * pi * (r1^2 + r2^2 +
-                                            (r1 * r2)) * tab$LogLength)/1e+08)[idx]
+                                            (r1 * r2)) * tab$LogLength)/100000000)[idx]
         tab$Value = tab$Volume * tab$Price
         head(tab)
         m = tab[, c("StartPos", "StopPos",
@@ -259,7 +260,8 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
         sub = res[res$StopPos == paste(tab$StartPos[1])]
         sub = sub[which.max(sub$CumulativeValue), ]
         m$CumulativeValue = m$Value + sub$CumulativeValue
-      }else{
+      }
+      else {
         m = data.table(StartPos = StartPos, StopPos = StopPos,
                        Top_ub = NA, LogLength = NA, ProductKey = NA,
                        Volume = NA, Value = NA, CumulativeValue = NA)
@@ -271,8 +273,7 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   tt = res[which.max(res$CumulativeValue)]
   if (nrow(tt) == 1) {
     res = trackTrace(res, tt)
-  }
-  else {
+  }else{
     res = data.table(StartPos = NA, StopPos = NA, Top_ub = NA,
                      LogLength = 1, ProductKey = NA, Volume = NA, Value = 0,
                      CumulativeValue = 0)
