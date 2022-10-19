@@ -19,15 +19,13 @@ buckHpr<-function(XMLNode,
                  ProductData,
                  StemProfile,
                  PermittedGrades,
-                 SpeciesGroupDefinition,
-                 ...){
+                 SpeciesGroupDefinition){
   require(XML);require(plyr);require(dplyr);require(data.table)
   stems <- XMLNode[["Machine"]][names(xmlSApply(XMLNode[["Machine"]],
                                                 xmlAttrs)) == "Stem"]
   pb <- txtProgressBar(min = 0, max = length(stems), style = 3,
                        width = 50, char = "=")
-  ProductData <- ProductData[!is.na(ProductData$ProductName),
-  ]
+  ProductData <- ProductData[!is.na(ProductData$ProductName),]
   res <- list()
   i <- 1
   for (i in 1:10) {#length(stems)
