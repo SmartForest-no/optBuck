@@ -105,7 +105,9 @@ buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroup
   res = data.table(StartPos = -1, StopPos = 0, Top_ub = NA,
                    LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
                    CumulativeValue = 0)
+
   print("Here 2")
+
   if (SeqStart < SeqStop) {
     SeqAsp = seq(SeqStart, SeqStop, 10)
     StartPos = 0
