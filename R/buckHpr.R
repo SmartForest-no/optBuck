@@ -210,7 +210,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           tab = tab[tab$rotdiam < tab$DiameterClassMAX,]
           print("Here 4.8")
           if (nrow(tab) > 0) {
-            commercial = tab[tab$ProductKey != "999999"]
+            commercial = tab[tab$ProductKey != "999999",]
             if (nrow(commercial) > 0) {
               lis = PriceMatrices[commercial$ProductKey]
               rownames = lapply(lis, rownames)
