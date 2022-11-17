@@ -198,14 +198,18 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           tab$Top_ub = BarkFunction(tab$Top_ob, SpeciesGroupKey,
                                     SpeciesGroupDefinition, Top_ob = Top_ob,
                                     DBH = DBH, LogLength = LogLength)
-          print("Here 4.7")
+          print("Here 4.71")
           tab$topdiam = ifelse(tab$DiameterUnderBark,
                                tab$Top_ub, tab$Top_ob)
           #check = tab[tab$ProductKey == "8019" & tab$LogLength ==
           #              440, ]
+          print("Here 4.72")
           tab = tab[tab$LogLength >= tab$LengthClassLowerLimit]
+          print("Here 4.73")
           tab = tab[tab$LogLength <= tab$LengthClassMAX]
+          print("Here 4.73")
           tab = tab[tab$topdiam > tab$DiameterClassLowerLimit]
+          print("Here 4.74")
           tab = tab[tab$rotdiam < tab$DiameterClassMAX]
           print("Here 4.8")
           if (nrow(tab) > 0) {
