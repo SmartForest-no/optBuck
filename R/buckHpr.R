@@ -14,6 +14,7 @@
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
+
 buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGrades,
                   SpeciesGroupDefinition)
 {
@@ -46,14 +47,6 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
       DiameterTopPositions <- ProductData$DiameterTopPosition
       DBH <- xmlValue(stems[[i]][["SingleTreeProcessedStem"]][["DBH"]]) %>%
         as.numeric()
-
-      #out <- buckStem(diameterPosition, DiameterValue,
-      #                StemGrade, DBH, SpeciesGroupKey, ProductData,
-      #                ProductKeys, LengthClassLowerLimit, LengthClassMAX,
-      #                DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
-      #                PermittedGrades, PriceMatrices, LengthClasses)
-      #
-
       if (!requireNamespace("magrittr", quietly = TRUE)) {
         stop("magrittr package needed for this function to work. Please install it.",
              call. = FALSE)
@@ -73,12 +66,14 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
         names(SGKG)[which(SGKG %in% grd[[x]])]
       }
       asoFinder = function(x) {
-        names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN = function(X) grd[[x]] %in%
-                                                  X), ncol = length(SGKG))) > 0)]
+        names(SGKG)[which(colSums(matrix(sapply(SGKG,
+                                                FUN = function(X) grd[[x]] %in% X), ncol = length(SGKG))) >
+                            0)]
       }
       asoFinder = function(x) {
-        names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN = function(X) all(grd[[x]] %in%
-                                                                              X)), ncol = length(SGKG))) > 0)]
+        names(SGKG)[which(colSums(matrix(sapply(SGKG,
+                                                FUN = function(X) all(grd[[x]] %in% X)), ncol = length(SGKG))) >
+                            0)]
       }
       DiameterValueFinder = function(x) {
         DiameterValue[vec[[x]]]
@@ -97,10 +92,10 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                      Top_ob = tab[idx, ][x]$Top_ob, DBH = DBH, LogLength = tab[idx,
                      ][x]$LogLength)
       }
-      rowFinder = function(x) sum(commercial$LogLength[x] >= rownames[[x]] %>%
-                                    as.numeric())
-      colFinder = function(x) sum(commercial$topdiam[x] >= colnames[[x]] %>%
-                                    as.numeric())
+      rowFinder = function(x) sum(commercial$LogLength[x] >=
+                                    rownames[[x]] %>% as.numeric())
+      colFinder = function(x) sum(commercial$topdiam[x] >=
+                                    colnames[[x]] %>% as.numeric())
       priceFinder = function(x) lis[[x]][row[x], col[x]]
       seqVectozied = Vectorize(seq.default, vectorize.args = c("from",
                                                                "to"))
@@ -110,8 +105,8 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           id_previous = tt$CumulativeValue[order(tt$StartPos)[1]] -
             tt$Value[order(tt$StartPos)[1]]
           sub = res[res$StopPos == low, ]
-          prev = sub[which(near(sub$CumulativeValue, id_previous)),
-          ]
+          prev = sub[which(near(sub$CumulativeValue,
+                                id_previous)), ]
           if (!is.vector(prev)) {
             prev = prev[1, ]
           }
@@ -132,15 +127,18 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
       bult = seq(10, 100, 10)
       print("Here 1")
       res = data.table(StartPos = -1, StopPos = 0, Top_ub = NA,
-                       LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
-                       CumulativeValue = 0)
+                       LogLength = NA, ProductKey = NA, Volume = 0,
+                       Value = 0, CumulativeValue = 0)
       print("Here 2")
       if (SeqStart < SeqStop) {
         SeqAsp = seq(SeqStart, SeqStop, 10)
         StartPos = 0
         while (StartPos < max(diameterPosition) - min(LengthClassLowerLimit[LengthClassLowerLimit >
                                                                             0])) {
-          StartPos = sort(res$StopPos[!res$StopPos %in% res$StartPos])[1]
+          print("Here 3")
+          StartPos = sort(res$StopPos[!res$StopPos %in%
+                                        res$StartPos])[1]
+          print("Here 4")
           if (StartPos == 0) {
             StopPos = StartPos + c(bult, SeqAsp)
           }
@@ -162,15 +160,15 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           grd = lapply(idxstop, grdFinder)
           SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
                                           SpeciesGroupKey[1]]
-          m = data.table(idxstart, idxstop, StartPos, StopPos,
-                         LogLength, rotdiam)
+          m = data.table(idxstart, idxstop, StartPos,
+                         StopPos, LogLength, rotdiam)
           m = m[m$StopPos <= max(diameterPosition), ]
           SGKG = PermittedGrades[as.character(SGPK)]
           asos = lapply(1:length(grd), asoFinder)
           lapply(1:length(grd), function(x) {
             names(SGKG)[which(colSums(matrix(sapply(SGKG,
-                                                    FUN = function(X) all(grd[[x]] %in% X)), ncol = length(SGKG))) >
-                                0)]
+                                                    FUN = function(X) all(grd[[x]] %in% X)),
+                                             ncol = length(SGKG))) > 0)]
           })
           m$Price = 0
           r = rep(idxstop, len = sum(lengths(asos)))
@@ -192,10 +190,10 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           tab$Top_ob = DiameterValue[match(as.character(tab$StopPosAdj),
                                            as.character(diameterPosition))]
           tab$Top_ub = BarkFunction(tab$Top_ob, SpeciesGroupKey,
-                                    SpeciesGroupDefinition, Top_ob = Top_ob, DBH = DBH,
-                                    LogLength = LogLength)
-          tab$topdiam = ifelse(tab$DiameterUnderBark, tab$Top_ub,
-                               tab$Top_ob)
+                                    SpeciesGroupDefinition, Top_ob = Top_ob,
+                                    DBH = DBH, LogLength = LogLength)
+          tab$topdiam = ifelse(tab$DiameterUnderBark,
+                               tab$Top_ub, tab$Top_ob)
           check = tab[tab$ProductKey == "8019" & tab$LogLength ==
                         440, ]
           tab = tab[tab$LogLength >= tab$LengthClassLowerLimit]
@@ -220,8 +218,8 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                                                                                                                                             "Rounded downwards to nearest dm-module"]),
                                                                                                                              10, f = floor)), as.character(diameterPosition))
             WithLengthClass = tab[tab$VolumeLengthCategory ==
-                                    "Length as defined in LengthClasses" & tab$ProductKey !=
-                                    "999999", ]
+                                    "Length as defined in LengthClasses" &
+                                    tab$ProductKey != "999999", ]
             lis = LengthClasses[WithLengthClass$ProductKey]
             if (nrow(WithLengthClass) > 0) {
               l = 1
@@ -235,9 +233,12 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                                                      paste(round_any(WithLengthClass$StopPos[l],
                                                                      10, f = ceiling)))
               }
-              tab$LogLength[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$LogLength
-              tab$StopPos[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$StopPos
-              tab$idxstop[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$idxstop
+              tab$LogLength[tab$VolumeLengthCategory ==
+                              "Length as defined in LengthClasses"] = WithLengthClass$LogLength
+              tab$StopPos[tab$VolumeLengthCategory ==
+                            "Length as defined in LengthClasses"] = WithLengthClass$StopPos
+              tab$idxstop[tab$VolumeLengthCategory ==
+                            "Length as defined in LengthClasses"] = WithLengthClass$idxstop
             }
             vec = seqVectozied(from = tab$idxstart, to = tab$idxstop,
                                by = 1)
@@ -245,10 +246,11 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             idx = tab$VolumeDiameterAdjustment == "Measured diameter rounded downwards to cm"
             if (sum(idx) > 0) {
               if (sum(idx) > 1) {
-                DV[which(idx > 0)] = lapply(1:sum(idx), function(x) {
-                  as.vector(sapply(1:length(DV[which(idx >
-                                                       0)[x]]), Rounder))
-                })
+                DV[which(idx > 0)] = lapply(1:sum(idx),
+                                            function(x) {
+                                              as.vector(sapply(1:length(DV[which(idx >
+                                                                                   0)[x]]), Rounder))
+                                            })
               }
               else {
                 DV[idx] = sapply(1:length(DV[idx]), Rounder)
@@ -272,24 +274,27 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
               0.5
             tab$Volume[idx] = ((((Dmid/100) * (Dmid/100)) *
                                   pi/4 * (tab$LogLength/10)) * 0.001)[idx]
-            idx = tab$VolumeDiameterCategory == "Top" & tab$DiameterUnderBark ==
-              T
+            idx = tab$VolumeDiameterCategory == "Top" &
+              tab$DiameterUnderBark == T
             r1 = tab$Top_ub/2
             r2 = (tab$Top_ub + tab$LogLength * 0.01)/2
-            tab$Volume[idx] = (((1/3) * pi * (r1^2 + r2^2 +
-                                                (r1 * r2)) * tab$LogLength)/1e+08)[idx]
-            idx = tab$VolumeDiameterCategory == "Top" & tab$DiameterUnderBark ==
-              F
+            tab$Volume[idx] = (((1/3) * pi * (r1^2 +
+                                                r2^2 + (r1 * r2)) * tab$LogLength)/1e+08)[idx]
+            idx = tab$VolumeDiameterCategory == "Top" &
+              tab$DiameterUnderBark == F
             r1 = tab$Top_ob/2
             r2 = (tab$Top_ob + tab$LogLength * 0.01)/2
-            tab$Volume[idx] = (((1/3) * pi * (r1^2 + r2^2 +
-                                                (r1 * r2)) * tab$LogLength)/1e+08)[idx]
+            tab$Volume[idx] = (((1/3) * pi * (r1^2 +
+                                                r2^2 + (r1 * r2)) * tab$LogLength)/1e+08)[idx]
             tab$Value = tab$Volume * tab$Price
             head(tab)
             m = tab[, c("StartPos", "StopPos", "Top_ub",
                         "LogLength", "ProductKey", "Volume", "Value")]
+            print("Here 5")
             sub = res[res$StopPos == paste(tab$StartPos[1])]
-            sub = sub[which.max(sub$CumulativeValue), ]
+            print("Here 6")
+            sub = sub[which.max(sub$CumulativeValue),
+            ]
             m$CumulativeValue = m$Value + sub$CumulativeValue
           }
           else {
@@ -297,30 +302,32 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                            Top_ub = NA, LogLength = NA, ProductKey = NA,
                            Volume = NA, Value = NA, CumulativeValue = NA)
           }
+          print("Here 7")
           res = rbindlist(list(res, m))
+          print("Here 8")
         }
       }
       res = res[!is.na(res$LogLength)]
       tt = res[which.max(res$CumulativeValue)]
+      print("Here 9")
       if (nrow(tt) == 1) {
         res = trackTrace(res, tt)
       }
       else {
-        res = data.table(StartPos = NA, StopPos = NA, Top_ub = NA,
-                         LogLength = 1, ProductKey = NA, Volume = NA, Value = 0,
-                         CumulativeValue = 0)
+        print("Here 10")
+        res = data.table(StartPos = NA, StopPos = NA,
+                         Top_ub = NA, LogLength = 1, ProductKey = NA,
+                         Volume = NA, Value = 0, CumulativeValue = 0)
       }
+      print("Here 11")
       res = cbind(1:nrow(res), res)
+      print("Here 12")
       colnames(res)[1] = "LogKey"
-
-
-
-
-
-
       out <- cbind(rep(StemKey, nrow(res)), res)
       colnames(out)[1] <- c("StemKey")
+      print("Here 13")
       result[[i]] <- out
+      print("Here 14")
     }
     setTxtProgressBar(pb, i)
     print(i)
