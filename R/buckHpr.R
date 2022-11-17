@@ -26,8 +26,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                                                 xmlAttrs)) == "Stem"]
   pb <- txtProgressBar(min = 0, max = length(stems), style = 3,
                        width = 50, char = "=")
-  ProductData <- ProductData[!is.na(ProductData$ProductName),
-  ]
+  ProductData <- ProductData[!is.na(ProductData$ProductName),]
   result <- list()
   i <- 1
   for (i in 1:length(stems)) {
@@ -326,8 +325,8 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 8")
         }
       }
-      res = res[!is.na(res$LogLength)]
-      tt = res[which.max(res$CumulativeValue)]
+      res = res[!is.na(res$LogLength),]
+      tt = res[which.max(res$CumulativeValue),]
       print("Here 9")
       if (nrow(tt) == 1) {
         res = trackTrace(res, tt)
