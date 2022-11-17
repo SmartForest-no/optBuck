@@ -150,6 +150,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           if (length(StopPos) < 1) {
             break
           }
+          print("Here 4.1")
           LogLength = StopPos - StartPos
           rotdiam = DiameterValue[which(near(diameterPosition,
                                              StartPos))]
@@ -158,6 +159,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           idxstop = as.numeric(match(as.character(StopPos),
                                      as.character(diameterPosition)))
           grd = lapply(idxstop, grdFinder)
+          print("Here 4.2")
           SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
                                           SpeciesGroupKey[1]]
           m = data.table(idxstart, idxstop, StartPos,
@@ -165,16 +167,19 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           m = m[m$StopPos <= max(diameterPosition), ]
           SGKG = PermittedGrades[as.character(SGPK)]
           asos = lapply(1:length(grd), asoFinder)
+          print("Here 4.3")
           lapply(1:length(grd), function(x) {
             names(SGKG)[which(colSums(matrix(sapply(SGKG,
                                                     FUN = function(X) all(grd[[x]] %in% X)),
                                              ncol = length(SGKG))) > 0)]
           })
           m$Price = 0
+          print("Here 4.4")
           r = rep(idxstop, len = sum(lengths(asos)))
           r = r[order(r)]
           tab = data.table(idxstop = r, ProductKey = unlist(asos))
           idx = match(as.character(tab$ProductKey), as.character(ProductData$ProductKey))
+          print("Here 4.5")
           tab = cbind(tab, data.table(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
                                       LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
                                       LengthClassMAX = ProductData$LengthClassMAX[idx],
@@ -184,6 +189,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                                       VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
                                       VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
                                       DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx])))
+          print("Here 4.6")
           tab = merge(m, tab, "idxstop", allow.cartesian = TRUE)
           tab$StopPosAdj = round((tab$StopPos - tab$DiameterTopPosition)/10) *
             10
@@ -192,6 +198,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           tab$Top_ub = BarkFunction(tab$Top_ob, SpeciesGroupKey,
                                     SpeciesGroupDefinition, Top_ob = Top_ob,
                                     DBH = DBH, LogLength = LogLength)
+          print("Here 4.7")
           tab$topdiam = ifelse(tab$DiameterUnderBark,
                                tab$Top_ub, tab$Top_ob)
           check = tab[tab$ProductKey == "8019" & tab$LogLength ==
@@ -200,6 +207,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           tab = tab[tab$LogLength <= tab$LengthClassMAX]
           tab = tab[tab$topdiam > tab$DiameterClassLowerLimit]
           tab = tab[tab$rotdiam < tab$DiameterClassMAX]
+          print("Here 4.8")
           if (nrow(tab) > 0) {
             commercial = tab[tab$ProductKey != "999999"]
             if (nrow(commercial) > 0) {
@@ -213,6 +221,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
               tab$Price[tab$ProductKey != "999999"] = sapply(1:length(lis),
                                                              priceFinder)
             }
+            print("Here 4.9")
             head(tab)
             tab$idxstop[tab$VolumeLengthCategory == "Rounded downwards to nearest dm-module"] = match(as.character(round_any((tab$StopPos[tab$VolumeLengthCategory ==
                                                                                                                                             "Rounded downwards to nearest dm-module"]),
@@ -221,6 +230,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                                     "Length as defined in LengthClasses" &
                                     tab$ProductKey != "999999", ]
             lis = LengthClasses[WithLengthClass$ProductKey]
+            print("Here 4.10")
             if (nrow(WithLengthClass) > 0) {
               l = 1
               for (l in 1:nrow(WithLengthClass)) {
@@ -240,6 +250,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
               tab$idxstop[tab$VolumeLengthCategory ==
                             "Length as defined in LengthClasses"] = WithLengthClass$idxstop
             }
+            print("Here 4.11")
             vec = seqVectozied(from = tab$idxstart, to = tab$idxstop,
                                by = 1)
             DV = sapply(1:length(vec), DiameterValueFinder)
@@ -256,6 +267,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                 DV[idx] = sapply(1:length(DV[idx]), Rounder)
               }
             }
+            print("Here 4.12")
             idx = tab$DiameterUnderBark == T
             if (sum(idx) > 0) {
               DV[idx] = sapply(1:length(DV[idx]), BarkFinder)
@@ -264,6 +276,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             if (!is.list(RV)) {
               RV = list(RV)
             }
+            print("Here 4.13")
             tab$Volume = -1
             idx = tab$VolumeDiameterCategory == "All diameters (solid volume)"
             x = 2
@@ -276,6 +289,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                                   pi/4 * (tab$LogLength/10)) * 0.001)[idx]
             idx = tab$VolumeDiameterCategory == "Top" &
               tab$DiameterUnderBark == T
+            print("Here 4.14")
             r1 = tab$Top_ub/2
             r2 = (tab$Top_ub + tab$LogLength * 0.01)/2
             tab$Volume[idx] = (((1/3) * pi * (r1^2 +
@@ -283,6 +297,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             idx = tab$VolumeDiameterCategory == "Top" &
               tab$DiameterUnderBark == F
             r1 = tab$Top_ob/2
+            print("Here 4.15")
             r2 = (tab$Top_ob + tab$LogLength * 0.01)/2
             tab$Volume[idx] = (((1/3) * pi * (r1^2 +
                                                 r2^2 + (r1 * r2)) * tab$LogLength)/1e+08)[idx]
@@ -295,6 +310,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             print("Here 6")
             sub = sub[which.max(sub$CumulativeValue),
             ]
+            print("Here 4.16")
             m$CumulativeValue = m$Value + sub$CumulativeValue
           }
           else {
