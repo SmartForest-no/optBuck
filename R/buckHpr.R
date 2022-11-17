@@ -27,9 +27,9 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                        width = 50, char = "=")
   ProductData <- ProductData[!is.na(ProductData$ProductName),
   ]
-  res <- list()
+  result <- list()
   i <- 1
-  for (i in 1:10) {
+  for (i in 1:length(stems)) {
     StemKey <- SK <- as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem <- StemProfile[StemProfile$StemKey == SK, ]
     if (nrow(stem) > 0) {
@@ -318,14 +318,14 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
 
 
 
-      out <- cbind(rep(StemKey, nrow(out)), res)
+      out <- cbind(rep(StemKey, nrow(res)), res)
       colnames(out)[1] <- c("StemKey")
-      res[[i]] <- out
+      result[[i]] <- out
     }
     setTxtProgressBar(pb, i)
     print(i)
   }
-  res <- do.call(rbind.data.frame, res)
+  result <- do.call(rbind.data.frame, result)
   close(pb)
-  return(res)
+  return(result)
 }
