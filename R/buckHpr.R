@@ -141,8 +141,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 4")
           if (StartPos == 0) {
             StopPos = StartPos + c(bult, SeqAsp)
-          }
-          else {
+          } else {
             StopPos = StartPos + SeqAsp
           }
           StopPos = StopPos[StopPos <= max(diameterPosition) &
@@ -201,16 +200,14 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 4.71")
           tab$topdiam = ifelse(tab$DiameterUnderBark,
                                tab$Top_ub, tab$Top_ob)
-          #check = tab[tab$ProductKey == "8019" & tab$LogLength ==
-          #              440, ]
           print("Here 4.72")
-          tab = tab[tab$LogLength >= tab$LengthClassLowerLimit]
+          tab = tab[tab$LogLength >= tab$LengthClassLowerLimit,]
           print("Here 4.73")
-          tab = tab[tab$LogLength <= tab$LengthClassMAX]
-          print("Here 4.73")
-          tab = tab[tab$topdiam > tab$DiameterClassLowerLimit]
+          tab = tab[tab$LogLength <= tab$LengthClassMAX,]
+          print("Here 4.732")
+          tab = tab[tab$topdiam > tab$DiameterClassLowerLimit,]
           print("Here 4.74")
-          tab = tab[tab$rotdiam < tab$DiameterClassMAX]
+          tab = tab[tab$rotdiam < tab$DiameterClassMAX,]
           print("Here 4.8")
           if (nrow(tab) > 0) {
             commercial = tab[tab$ProductKey != "999999"]
