@@ -312,13 +312,27 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             print("Here 6")
             sub = sub[which.max(sub$CumulativeValue),
             ]
-            print("Here 4.16")
+            print("Here 6.1")
+            print(StemKey)
+            print(StartPos)
+            print(StopPos)
             m$CumulativeValue = m$Value + sub$CumulativeValue
-          }
-          else {
+            print("Here 6.2")
+            print(StemKey)
+            print(StartPos)
+            print(StopPos)
+          }else {
+            print("Here 6.3")
+            print(StemKey)
+            print(StartPos)
+            print(StopPos)
             m = data.table(StartPos = StartPos, StopPos = StopPos,
                            Top_ub = NA, LogLength = NA, ProductKey = NA,
                            Volume = NA, Value = NA, CumulativeValue = NA)
+            print("Here 6.4")
+            print(StemKey)
+            print(StartPos)
+            print(StopPos)
           }
           print("Here 7")
           res = rbindlist(list(res, m))
