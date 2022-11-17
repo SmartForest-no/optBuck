@@ -201,8 +201,8 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 4.7")
           tab$topdiam = ifelse(tab$DiameterUnderBark,
                                tab$Top_ub, tab$Top_ob)
-          check = tab[tab$ProductKey == "8019" & tab$LogLength ==
-                        440, ]
+          #check = tab[tab$ProductKey == "8019" & tab$LogLength ==
+          #              440, ]
           tab = tab[tab$LogLength >= tab$LengthClassLowerLimit]
           tab = tab[tab$LogLength <= tab$LengthClassMAX]
           tab = tab[tab$topdiam > tab$DiameterClassLowerLimit]
