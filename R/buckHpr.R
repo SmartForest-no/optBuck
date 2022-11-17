@@ -140,7 +140,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
 
 
           #############
-          #if(StartPos==310){break}
+         #if(StartPos==1700){break}
 
 
 
@@ -211,13 +211,23 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 4.72")
           tab = tab[tab$LogLength >= tab$LengthClassLowerLimit,]
           print("Here 4.73")
+
+
+
+
           tab = tab[tab$LogLength <= tab$LengthClassMAX,]
           print("Here 4.732")
           tab = tab[tab$topdiam > tab$DiameterClassLowerLimit,]
           print("Here 4.74")
           tab = tab[tab$rotdiam < tab$DiameterClassMAX,]
           print("Here 4.8")
+
+
+
+
+
           if (nrow(tab) > 0){
+
             commercial = tab[tab$ProductKey != "999999",]
             #
             if (nrow(commercial) > 0) {
@@ -316,22 +326,30 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             m = tab[, c("StartPos", "StopPos", "Top_ub",
                         "LogLength", "ProductKey", "Volume", "Value")]
             print("Here 5")
-            sub = res[res$StopPos == paste(tab$StartPos[1]),]
-            #
+
+
+
+            idx=paste(res$StopPos)==paste(StartPos)
+            sub = res[idx,]
             print("Here 6")
-            sub = sub[which.max(sub$CumulativeValue),
-            ]
+
+            CumulativeValue = ifelse(nrow(sub)>0&any(!is.na(sub$CumulativeValue)),
+                                                max(sub$CumulativeValue,na.rm = T),
+                                                0)
+
             print("Here 6.1")
             print(StemKey)
             print(StartPos)
             print(StopPos)
-            m$CumulativeValue = m$Value + sub$CumulativeValue
+
+            # add something like: if(sub$CumulativeValue does not exist) sub$CumulativeValue <- 0 or somethin
+            # but first find out what happened with 10-310
+            m$CumulativeValue = m$Value + CumulativeValue
             print("Here 6.2")
             print(StemKey)
             print(StartPos)
             print(StopPos)
             print("Here 7")
-
           }else {
             print("Here 6.3")
             print(StemKey)
@@ -377,3 +395,4 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
   close(pb)
   return(result)
 }
+
