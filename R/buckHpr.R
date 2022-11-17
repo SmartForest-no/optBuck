@@ -28,7 +28,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                        width = 50, char = "=")
   ProductData <- ProductData[!is.na(ProductData$ProductName),]
   result <- list()
-  i <- 1
+  i <- 2
   for (i in 1:length(stems)) {
     StemKey <- SK <- as.integer(xmlValue(stems[[i]][["StemKey"]]))
     stem <- StemProfile[StemProfile$StemKey == SK, ]
@@ -137,6 +137,15 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 3")
           StartPos = sort(res$StopPos[!res$StopPos %in%
                                         res$StartPos])[1]
+
+
+          #############
+          #if(StartPos==310){break}
+
+
+
+
+
           print("Here 4")
           if (StartPos == 0) {
             StopPos = StartPos + c(bult, SeqAsp)
@@ -208,7 +217,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
           print("Here 4.74")
           tab = tab[tab$rotdiam < tab$DiameterClassMAX,]
           print("Here 4.8")
-          if (nrow(tab) > 0) {
+          if (nrow(tab) > 0){
             commercial = tab[tab$ProductKey != "999999",]
             #
             if (nrow(commercial) > 0) {
@@ -321,6 +330,8 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             print(StemKey)
             print(StartPos)
             print(StopPos)
+            print("Here 7")
+
           }else {
             print("Here 6.3")
             print(StemKey)
@@ -334,7 +345,6 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
             print(StartPos)
             print(StopPos)
           }
-          print("Here 7")
           res = rbindlist(list(res, m))
           print("Here 8")
         }
@@ -342,10 +352,9 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
       res = res[!is.na(res$LogLength),]
       tt = res[which.max(res$CumulativeValue),]
       print("Here 9")
-      if (nrow(tt) == 1) {
+      if (nrow(tt) == 1){
         res = trackTrace(res, tt)
-      }
-      else {
+      }else{
         print("Here 10")
         res = data.table(StartPos = NA, StopPos = NA,
                          Top_ub = NA, LogLength = 1, ProductKey = NA,
