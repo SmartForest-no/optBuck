@@ -309,6 +309,7 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
                         "LogLength", "ProductKey", "Volume", "Value")]
             print("Here 5")
             sub = res[res$StopPos == paste(tab$StartPos[1]),]
+            #
             print("Here 6")
             sub = sub[which.max(sub$CumulativeValue),
             ]
