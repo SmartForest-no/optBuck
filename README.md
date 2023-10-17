@@ -18,11 +18,10 @@ Although machine manufacturers provide software solutions for handling productio
 # Example optBuck
 ```r
 # installation
-devtools::install_github("https://github.com/SmartForest-no/optBuck", force = T)
+devtools::install_github("https://github.com/SmartForest-no/optBuck")
 library(optBuck)
 
 # Example data
-hprfile = "C:/Users/lnoorder/OneDrive - Norwegian University of Life Sciences/Documents/Postdoc/SFI/Task6.5_OptBuck/optBuck/data/Ringsaker_example/9313032728_20230619_110200.hpr"
 hprfile = system.file("extdata",
                     "example.hpr",
                     package = "optBuck")
