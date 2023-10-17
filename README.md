@@ -23,27 +23,27 @@ devtools::install_github("https://github.com/SmartForest-no/optBuck")
 library(optBuck)
 
 # Example data
-hprfile = system.file("extdata",
+hprfile <- system.file("extdata",
                     "example.hpr",
                     package = "optBuck")
 
 # Extract data from HPR file
-XMLNode = getXMLNode(hprfile)
-PriceMatrices = getPriceMatrices(XMLNode)
-LengthClasses = getLengthClasses(XMLNode)
-SpeciesGroupDefinition=getSpeciesGroupDefinition(XMLNode)
-ProductData=getProductData(XMLNode,SpeciesGroupDefinition)
-PermittedGrades = getPermittedGrades(XMLNode)
-Stems = getStems(XMLNode)
-Logs = getLogs(XMLNode)
-SortimentOverview = getSortimentOverview(Logs,ProductData)
-StemProfile = getStemprofile(XMLNode,Logs)
+XMLNode <- getXMLNode(hprfile)
+PriceMatrices <- getPriceMatrices(XMLNode)
+LengthClasses <- getLengthClasses(XMLNode)
+SpeciesGroupDefinition <- getSpeciesGroupDefinition(XMLNode)
+ProductData <- getProductData(XMLNode,SpeciesGroupDefinition)
+PermittedGrades <- getPermittedGrades(XMLNode)
+Stems <- getStems(XMLNode)
+Logs <- getLogs(XMLNode)
+SortimentOverview <- getSortimentOverview(Logs,ProductData)
+StemProfile <- getStemprofile(XMLNode,Logs)
 
 # Actual bucking
-Bucking = getBucking(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
+Bucking <- getBucking(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
 
 # Optimal bucking
-OptimalBucking = buckHpr(XMLNode,
+OptimalBucking <- buckHpr(XMLNode,
                        PriceMatrices,
                        ProductData,
                        StemProfile,
@@ -53,7 +53,7 @@ OptimalBucking = buckHpr(XMLNode,
 # Plot and compare bucking outcomes
 library(ggplot2)
 library(ggpubr)
-StemID = 337463
+StemID <- 337463
 ggarrange(plotBucking(Bucking, StemProfile,
                       StemID, ProductData),
           plotBucking(OptimalBucking, StemProfile,
