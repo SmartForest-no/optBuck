@@ -1,5 +1,6 @@
 # optBuck – An R package for handling single-grip forest harvester data and bucking optimization
 Lennart Noordermeer 
+
 Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
 
 # Summary
