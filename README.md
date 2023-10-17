@@ -17,7 +17,7 @@ Although machine manufacturers provide software solutions for handling productio
 
 # Example optBuck
 
-...
+...r
 # installation
 devtools::install_github("https://github.com/SmartForest-no/optBuck", force = T)
 library(optBuck)
@@ -64,7 +64,7 @@ ggarrange(plotBucking(Bucking, StemProfile,
           labels = c("Actual bucking outcome",
                      "Optimal bucking outcome"),
           font.label=list(face="plain"))
-...
+...r
 # Funding details
 
 The optBuck package was developed as part of the project SmartForest, funded by the Research council of Norway (project no. 309671). 
