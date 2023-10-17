@@ -14,6 +14,56 @@ Bucking, i.e., cutting felled trees into logs, is a primary task in timber harve
 
 Although machine manufacturers provide software solutions for handling production data obtained from forest harvesters, few other tools currently provide the functionality to read and process hpr files, or to perform bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can be used to evaluate bucking outcomes and provides a range of potential research applications.
 
+
+# Example optBuck
+
+# installation
+devtools::install_github("https://github.com/SmartForest-no/optBuck", force = T)
+library(optBuck)
+
+# Example data
+hprfile = "C:/Users/lnoorder/OneDrive - Norwegian University of Life Sciences/Documents/Postdoc/SFI/Task6.5_OptBuck/optBuck/data/Ringsaker_example/9313032728_20230619_110200.hpr"
+hprfile = system.file("extdata",
+                    "example.hpr",
+                    package = "optBuck")
+
+# Extract data from HPR file
+XMLNode = getXMLNode(hprfile)
+PriceMatrices = getPriceMatrices(XMLNode)
+LengthClasses = getLengthClasses(XMLNode)
+SpeciesGroupDefinition=getSpeciesGroupDefinition(XMLNode)
+ProductData=getProductData(XMLNode,SpeciesGroupDefinition)
+PermittedGrades = getPermittedGrades(XMLNode)
+Stems = getStems(XMLNode)
+Logs = getLogs(XMLNode)
+SortimentOverview = getSortimentOverview(Logs,ProductData)
+StemProfile = getStemprofile(XMLNode,Logs)
+
+# Actual bucking
+Bucking = getBucking(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
+
+# Optimal bucking
+OptimalBucking = buckHpr(XMLNode,
+                       PriceMatrices,
+                       ProductData,
+                       StemProfile,
+                       PermittedGrades,
+                       SpeciesGroupDefinition)
+
+# Plot and compare bucking outcomes
+library(ggplot2)
+library(ggpubr)
+StemID = 337463
+ggarrange(plotBucking(Bucking, StemProfile,
+                      StemID, ProductData),
+          plotBucking(OptimalBucking, StemProfile,
+                      StemID, ProductData),
+          nrow=2,align="v",
+          common.legend = T,legend="bottom",
+          labels = c("Actual bucking outcome",
+                     "Optimal bucking outcome"),
+          font.label=list(face="plain"))
+
 # Funding details
 
 The optBuck package was developed as part of the project SmartForest, funded by the Research council of Norway (project no. 309671). 
