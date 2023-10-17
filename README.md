@@ -1,4 +1,3 @@
----
 title: optBuck – An R package for handling single-grip forest harvester data and bucking optimization
 tags:
 - R
@@ -12,7 +11,6 @@ affiliations:
 
 date: 12 May 2022
 
----
 
 # Summary
 
