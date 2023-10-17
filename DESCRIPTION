@@ -1,6 +1,6 @@
 Package: optBuck
 Type: Package
-Title: Optimal bucking
+Title: Handling production files from forest harvesters and optimal bucking
 Version: 0.1.0
 Author: Lennart Noordermeer
 Maintainer: Lennart Noordermeer <lennart.noordermeer@nmbu.no>
