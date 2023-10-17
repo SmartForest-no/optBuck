@@ -15,7 +15,7 @@ Bucking, i.e., cutting felled trees into logs, is a primary task in timber harve
 Although machine manufacturers provide software solutions for handling production data obtained from forest harvesters, few other tools currently provide the functionality to read and process hpr files, or to perform bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can be used to evaluate bucking outcomes and provides a range of potential research applications.
 
 
-# Example optBuck
+# Example use
 ```r
 # installation
 devtools::install_github("https://github.com/SmartForest-no/optBuck")
