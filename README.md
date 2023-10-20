@@ -40,15 +40,19 @@ SortimentOverview <- getSortimentOverview(Logs,ProductData)
 StemProfile <- getStemprofile(XMLNode,Logs)
 
 # Actual bucking
-Bucking <- getBucking(XMLNode,PriceMatrices,ProductData,StemProfile,LengthClasses)
+Bucking <- getBucking(XMLNode,
+                      PriceMatrices,
+                      ProductData,
+                      StemProfile,
+                      LengthClasses)
 
 # Optimal bucking
 OptimalBucking <- buckHpr(XMLNode,
-                       PriceMatrices,
-                       ProductData,
-                       StemProfile,
-                       PermittedGrades,
-                       SpeciesGroupDefinition)
+                          PriceMatrices,
+                          ProductData,
+                          StemProfile,
+                          PermittedGrades,
+                          SpeciesGroupDefinition)
 
 # Plot and compare bucking outcomes
 library(ggplot2)
