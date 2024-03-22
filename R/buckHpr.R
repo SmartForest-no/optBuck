@@ -8,7 +8,6 @@
 #' @param StemProfile Stem profiles for all stems in hprfile (getStemProfile())
 #' @param PermittedGrades list with the same lenght of assortments, each element containing the stemgrades allowed in each assortment (getPermittedGrades())
 #' @param SpeciesGroupDefinition getSpeciesGroupDefinition()
-#' @param ... others
 #' @return result structure with optimum bucking solution for the stems in the input .hpr file
 #' @seealso getPermittedGrades, getPriceMatrices, getProductData
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
