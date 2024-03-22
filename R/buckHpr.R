@@ -27,18 +27,6 @@ buckHpr=function (XMLNode, PriceMatrices, ProductData, StemProfile, PermittedGra
     unique(StemGrade[idxstart:x])
   }
   asoFinder = function(x) {
-    names(SGKG)[sapply(SGKG, function(y) all(grd[[x]] %in%
-                                               y))]
-  }
-  asoFinder = function(x) {
-    names(SGKG)[which(SGKG %in% grd[[x]])]
-  }
-  asoFinder = function(x) {
-    names(SGKG)[which(colSums(matrix(sapply(SGKG,
-                                            FUN = function(X) grd[[x]] %in% X), ncol = length(SGKG))) >
-                        0)]
-  }
-  asoFinder = function(x) {
     names(SGKG)[which(colSums(matrix(sapply(SGKG,
                                             FUN = function(X) all(grd[[x]] %in% X)), ncol = length(SGKG))) >
                         0)]
