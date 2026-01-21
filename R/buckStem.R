@@ -20,6 +20,8 @@
 #'   \code{LogLength} (cm), \code{ProductKey}, \code{Volume}, \code{Value}, and \code{CumulativeValue}.
 #'   Returns an empty \code{data.table} if no feasible solution is found.
 #'
+#' @import data.table
+#'
 #' @details
 #' The algorithm evaluates all feasible transitions between diameter positions on a 10 cm grid.
 #' For each candidate log segment, feasibility is determined by length and diameter class limits from \code{ProductData}
