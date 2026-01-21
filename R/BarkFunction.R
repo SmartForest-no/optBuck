@@ -5,7 +5,7 @@
 #' @param DiameterValue Numeric vector of diameters (mm)
 #' @param SpeciesGroupKey Species ID (getProductData())
 #' @param SpeciesGroupDefinition List of species group information, with speciesgroupkey as the name of the elements (getSpeciesGroupDefinition())
-#' @param Top_ob Top diameter ober bark
+#' @param Top_ob Top diameter over bark
 #' @param DBH in mm, for  Skogforsk 2004 barkFunction categories
 #' @param LogLength in cm
 #' @return Log volume in m3
