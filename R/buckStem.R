@@ -1,279 +1,268 @@
 #' buckStem
 #'
-#' Optimal bucking of a tree stem
+#' Optimal bucking of a single tree stem using dynamic programming.
 #'
-#' @param diameterPosition numeric vector of diameter positions (cm) of a stem profile; 0,10,20,...
-#' @param DiameterValue numeric vector of corresponding diameters (mm)
-#' @param StemGrade vector of corresponding stem grades
-#' @param SpeciesGroupKey Species group key for the stem
-#' @param PermittedGrades list with the same length of assortments, each element containing the stemgrades allowed in each assortment (getPermittedGrades())
-#' @param ProductKeys Vector of assortment keys (Integer)
-#' @param LengthClassLowerLimit numeric vector of minimum log lengths corresponding to the assortments
-#' @param LengthClassMAX numeric vector of maximum log lengths corresponding to the assortments
-#' @param DiameterClassLowerLimit numeric vector of minimum log diameters corresponding to the assortments
-#' @param DiameterClassMAX numeric vector of maximum log diameters corresponding to the assortments
-#' @param VolumeDiameterCategory vector (character) of Stanford 2010 volume measurement methods corresponding to the assortments. Alternatives are "All diameters (solid volume)", "Calculated Norwegian mid" and "Top".
-#' @param PriceMatrices list of prices matrices for all ProductKeys (getPriceMatrices())
-#' @param LengthClasses list of log length classes for all ProductKeys (getLengthClasses())
-#' @return result structure with optimum bucking solution
+#' @param stem data.frame or data.table containing a stem profile on a 10 cm grid. Must include
+#'   columns \code{diameterPosition} (cm), \code{DiameterValue} (mm), \code{StemGrade},
+#'   and \code{SpeciesGroupKey}. If \code{StemKey} is present it is ignored unless passed via \code{StemKey}.
+#' @param ProductData data.frame or data.table with product definitions. Must include
+#'   \code{ProductKey}, \code{SpeciesGroupKey}, \code{LengthClassLowerLimit}, \code{LengthClassMAX},
+#'   \code{DiameterClassLowerLimit}, and \code{DiameterClassMAX}.
+#' @param PriceMatrices named list of price matrices indexed by \code{ProductKey} (character). Each matrix must have
+#'   row names as length classes (cm) and column names as diameter classes (mm). Values are prices per volume unit.
+#' @param PermittedGrades named list indexed by \code{ProductKey} (character). Each element is an integer vector of
+#'   stem grades permitted for that product. A candidate segment is feasible for a product if all stem grades observed
+#'   within the segment are contained in the product's permitted grade set.
+#' @param StemKey optional integer stem identifier included in the returned table.
+#'
+#' @return A \code{data.table} with the optimal bucking solution, one row per log, containing
+#'   \code{StemKey}, \code{LogKey}, \code{StartPos} (cm), \code{StopPos} (cm), \code{Top_ub} (mm),
+#'   \code{LogLength} (cm), \code{ProductKey}, \code{Volume}, \code{Value}, and \code{CumulativeValue}.
+#'   Returns an empty \code{data.table} if no feasible solution is found.
+#'
+#' @details
+#' The algorithm evaluates all feasible transitions between diameter positions on a 10 cm grid.
+#' For each candidate log segment, feasibility is determined by length and diameter class limits from \code{ProductData}
+#' and by the requirement that all stem grades encountered in the segment are permitted by the product.
+#' Prices are looked up in \code{PriceMatrices} by flooring length and diameter to the nearest lower class boundary.
+#' Volume is computed with a frustum approximation based on rotation diameter at the segment start and top diameter at the segment end.
+#'
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
-#' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
+#'
+#' @references
+#' Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk.
+#' https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
+#'
 #' @export
-buckStem=function (diameterPosition, DiameterValue, StemGrade, DBH, SpeciesGroupKey,
-                   ProductData, ProductKeys, LengthClassLowerLimit, LengthClassMAX,
-                   DiameterClassLowerLimit, DiameterClassMAX, VolumeDiameterCategory,
-                   PermittedGrades, PriceMatrices, LengthClasses){
-  if (!requireNamespace("magrittr", quietly = TRUE)) {
-    stop("magrittr package needed for this function to work. Please install it.",
-         call. = FALSE)
-  }
-  if (!requireNamespace("data.table", quietly = TRUE)) {
-    stop("data.table package needed for this function to work. Please install it.",
-         call. = FALSE)
-  }
-  grdFinder = function(x) {
-    unique(StemGrade[idxstart:x])
-  }
-  asoFinder = function(x) {
-    names(SGKG)[which(colSums(matrix(sapply(SGKG, FUN = function(X) all(grd[[x]] %in%
-                                                                          X)), ncol = length(SGKG))) > 0)]
-  }
-  DiameterValueFinder = function(x) {
-    DiameterValue[vec[[x]]]
-  }
-  Rounder = function(x) {
-    res = round_any(DV[idx][[x]], 10, floor)
-    if (sum(idx) > 1) {
-      res
-    }
-    else {
-      list(res)
-    }
-  }
-  BarkFinder = function(x) {
-    BarkFunction(DV[idx][[x]], SpeciesGroupKey, SpeciesGroupDefinition,
-                 Top_ob = tab[idx, ][x]$Top_ob, DBH = DBH, LogLength = tab[idx,
-                 ][x]$LogLength)
-  }
-  rowFinder = function(x) sum(commercial$LogLength[x] >= rownames[[x]] %>%
-                                as.numeric())
-  colFinder = function(x) sum(commercial$topdiam[x] >= colnames[[x]] %>%
-                                as.numeric())
-  priceFinder = function(x) lis[[x]][row[x], col[x]]
-  seqVectozied = Vectorize(seq.default, vectorize.args = c("from",
-                                                           "to"))
-  trackTrace = function(res, tt) {
-    low = min(tt[, "StartPos"])
-    while (low > 0) {
-      id_previous = tt$CumulativeValue[order(tt$StartPos)[1]] -
-        tt$Value[order(tt$StartPos)[1]]
-      sub = res[res$StopPos == low, ]
-      prev = sub[which(near(sub$CumulativeValue, id_previous)),
-      ]
-      if (!is.vector(prev)) {
-        prev = prev[1, ]
-      }
-      tt = rbind(tt, prev)
-      low = min(tt$StartPos)
-    }
-    tt = tt[nrow(tt):1, ]
-    if (is.vector(tt)) {
-      tt[5] = ifelse(tt[5] == 0, 999999, tt[5])
-    }
-    return(tt)
-  }
-  SeqStart = round_any(min(LengthClassLowerLimit[LengthClassLowerLimit >
-                                                   0]), 10)
-  SeqStop = ifelse(max(LengthClassMAX) < max(diameterPosition),
-                   max(LengthClassMAX), max(diameterPosition))
-  DiameterTopPositions = ProductData$DiameterTopPositions
-  bult = seq(10, 100, 10)
+buckStem <- function(stem,
+                            ProductData,
+                            PriceMatrices,
+                            PermittedGrades,
+                            StemKey = NA_integer_) {
+  stopifnot(requireNamespace("data.table", quietly = TRUE))
+  DT <- data.table::data.table
+  asDT <- data.table::as.data.table
 
-  print("Here 1")
+  stem <- asDT(stem)
+  diameterPosition <- as.integer(stem$diameterPosition)
+  DiameterValue <- as.numeric(stem$DiameterValue)
+  StemGrade <- as.integer(stem$StemGrade)
+  SpeciesGroupKey <- unique(stem$SpeciesGroupKey)
 
-  res = data.table(StartPos = -1, StopPos = 0, Top_ub = NA,
-                   LogLength = NA, ProductKey = NA, Volume = 0, Value = 0,
-                   CumulativeValue = 0)
+  if (length(diameterPosition) < 2L) return(DT())
+  if (length(SpeciesGroupKey) != 1L) SpeciesGroupKey <- SpeciesGroupKey[1]
 
-  print("Here 2")
+  ## pure helpers
+  grdFinder2 <- function(idxstop, idxstart, StemGrade) {
+    if (is.na(idxstop) || is.na(idxstart)) return(integer(0))
+    if (idxstop < idxstart) return(integer(0))
+    unique(as.integer(StemGrade[idxstart:idxstop]))
+  }
 
-  if (SeqStart < SeqStop) {
-    SeqAsp = seq(SeqStart, SeqStop, 10)
-    StartPos = 0
-    while (StartPos < max(diameterPosition) - min(LengthClassLowerLimit[LengthClassLowerLimit >
-                                                                        0])) {
-      StartPos = sort(res$StopPos[!res$StopPos %in% res$StartPos])[1]
-      if (StartPos == 0) {
-        StopPos = StartPos + c(bult, SeqAsp)
+  ## SGKG_list: list keyed by ProductKey, values are permitted grades for that product
+  asoFinder2 <- function(grd, SGKG_list) {
+    if (!length(grd) || !length(SGKG_list)) return(integer(0))
+
+    grd <- unique(as.integer(grd))
+    grd <- grd[!is.na(grd)]
+
+    keep <- vapply(SGKG_list, function(g) {
+      g <- unique(as.integer(g))
+      g <- g[!is.na(g)]
+      all(grd %in% g)
+    }, logical(1))
+
+    as.integer(names(SGKG_list)[keep])
+  }
+
+  ## price lookup: floor to class boundaries in matrix dimnames
+  price_lookup <- function(pk, top_mm, len_cm) {
+    pm <- PriceMatrices[[as.character(pk)]]
+    if (is.null(pm)) return(0.0)
+
+    rn <- suppressWarnings(as.integer(rownames(pm)))
+    cn <- suppressWarnings(as.integer(colnames(pm)))
+    if (!length(rn) || !length(cn)) return(0.0)
+
+    r <- max(rn[rn <= len_cm], na.rm = TRUE)
+    c <- max(cn[cn <= top_mm], na.rm = TRUE)
+    if (!is.finite(r) || !is.finite(c)) return(0.0)
+
+    as.numeric(pm[as.character(r), as.character(c)])
+  }
+
+  ## positions (10 cm grid)
+  pos <- sort(unique(diameterPosition[diameterPosition >= 0L]))
+  npos <- length(pos)
+  if (npos < 2L) return(DT())
+
+  pos_to_i <- setNames(seq_len(npos), as.character(pos))
+  if (!("0" %in% names(pos_to_i))) return(DT())
+
+  dp <- rep(-Inf, npos)
+  prev_i <- rep(NA_integer_, npos)
+  prev_pk <- rep(NA_integer_, npos)
+  prev_topub <- rep(NA_real_, npos)
+  prev_vol <- rep(NA_real_, npos)
+  prev_len <- rep(NA_integer_, npos)
+
+  dp[pos_to_i[["0"]]] <- 0
+
+  ## products for this species group
+  SGPK <- ProductData$ProductKey[ProductData$SpeciesGroupKey == SpeciesGroupKey]
+  if (!length(SGPK)) return(DT())
+
+  ## pruning by minimum length across products
+  Lmin_all <- as.numeric(ProductData$LengthClassLowerLimit)
+  Lmin_all <- Lmin_all[is.finite(Lmin_all) & Lmin_all > 0]
+  if (!length(Lmin_all)) return(DT())
+
+  maxPos <- max(diameterPosition, na.rm = TRUE)
+  bult <- seq(10L, 100L, 10L)
+
+  ## permitted grades object (ProductKey -> grades)
+  SGKG_list <- PermittedGrades[as.character(SGPK)]
+
+  for (si in seq_len(npos)) {
+    sp <- pos[si]
+    if (!is.finite(dp[si])) next
+    if (sp >= (maxPos - min(Lmin_all))) next
+
+    stopPos <- if (sp == 0L) sort(unique(c(sp + bult, sp + pos[pos > 0L]))) else (sp + pos[pos > 0L])
+    stopPos <- stopPos[stopPos <= maxPos & stopPos > sp]
+    if (!length(stopPos)) next
+
+    idxstart <- which(diameterPosition == sp)
+    if (!length(idxstart)) next
+    idxstart <- idxstart[1]
+    rotdiam <- DiameterValue[idxstart]
+
+    idxstop <- match(stopPos, diameterPosition)
+    ok <- !is.na(idxstop)
+    if (!any(ok)) next
+    idxstop <- idxstop[ok]
+
+    ## grades encountered from start to stop
+    grd <- lapply(idxstop, grdFinder2, idxstart = idxstart, StemGrade = StemGrade)
+
+    ## permitted productkeys per stop position
+    asos <- lapply(grd, asoFinder2, SGKG_list = SGKG_list)
+    if (!length(asos) || all(lengths(asos) == 0L)) next
+
+    ## build transitions
+    tab_list <- vector("list", length(idxstop))
+    kk <- 1L
+    for (j in seq_along(idxstop)) {
+      pk <- asos[[j]]
+      if (!length(pk)) next
+      tab_list[[kk]] <- DT(idxstop = rep.int(idxstop[j], length(pk)),
+                           ProductKey = as.integer(pk))
+      kk <- kk + 1L
+    }
+    tab <- data.table::rbindlist(tab_list, use.names = TRUE, fill = TRUE)
+    if (!nrow(tab)) next
+
+    idxp <- match(tab$ProductKey, ProductData$ProductKey)
+    tab[, `:=`(
+      LengthClassLowerLimit = as.integer(ProductData$LengthClassLowerLimit[idxp]),
+      LengthClassMAX = as.integer(ProductData$LengthClassMAX[idxp]),
+      DiameterClassLowerLimit = as.integer(ProductData$DiameterClassLowerLimit[idxp]),
+      DiameterClassMAX = as.integer(ProductData$DiameterClassMAX[idxp])
+    )]
+
+    tab[, StartPos := sp]
+    tab[, StopPos := diameterPosition[idxstop][match(tab$idxstop, idxstop)]]
+    tab[, StopPos := diameterPosition[tab$idxstop]]
+    tab[, LogLength := as.integer(StopPos - StartPos)]
+
+    tab <- tab[is.finite(LogLength) &
+                 LogLength >= LengthClassLowerLimit &
+                 LogLength <= LengthClassMAX]
+    if (!nrow(tab)) next
+
+    tab[, Top_ub := as.integer(round(DiameterValue[tab$idxstop]))]
+    tab <- tab[is.finite(Top_ub) &
+                 Top_ub >= DiameterClassLowerLimit &
+                 Top_ub <= DiameterClassMAX]
+    if (!nrow(tab)) next
+
+    ## price by matrix classing
+    tab[, Price := {
+      out <- numeric(.N)
+      for (i in seq_len(.N)) {
+        out[i] <- price_lookup(ProductKey[i], Top_ub[i], LogLength[i])
       }
-      else {
-        StopPos = StartPos + SeqAsp
-      }
-      StopPos = StopPos[StopPos <= max(diameterPosition) &
-                          StopPos > 0]
-      if (length(StopPos) < 1) {
-        break
-      }
-      LogLength = StopPos - StartPos
-      rotdiam = DiameterValue[which(near(diameterPosition,
-                                         StartPos))]
-      idxstart = as.numeric(which(near(diameterPosition,
-                                       StartPos)))
-      idxstop = as.numeric(match(as.character(StopPos),
-                                 as.character(diameterPosition)))
-      grd = lapply(idxstop, grdFinder)
-      SGPK = ProductData$ProductKey[ProductData$SpeciesGroupKey ==
-                                      SpeciesGroupKey[1]]
-      m = data.table(idxstart, idxstop, StartPos, StopPos,
-                     LogLength, rotdiam)
-      m = m[m$StopPos <= max(diameterPosition), ]
-      SGKG = PermittedGrades[as.character(SGPK)]
-      asos = lapply(1:length(grd), asoFinder)
-      lapply(1:length(grd), function(x) {
-        names(SGKG)[which(colSums(matrix(sapply(SGKG,
-                                                FUN = function(X) all(grd[[x]] %in% X)), ncol = length(SGKG))) >
-                            0)]
-      })
-      m$Price = 0
-      r = rep(idxstop, len = sum(lengths(asos)))
-      r = r[order(r)]
-      tab = data.table(idxstop = r, ProductKey = unlist(asos))
-      idx = match(as.character(tab$ProductKey), as.character(ProductData$ProductKey))
-      tab = cbind(tab, data.table(DiameterUnderBark = ProductData$DiameterUnderBark[idx],
-                                  LengthClassLowerLimit = ProductData$LengthClassLowerLimit[idx],
-                                  LengthClassMAX = ProductData$LengthClassMAX[idx],
-                                  DiameterClassLowerLimit = ProductData$DiameterClassLowerLimit[idx],
-                                  DiameterClassMAX = ProductData$DiameterClassMAX[idx],
-                                  VolumeDiameterAdjustment = ProductData$VolumeDiameterAdjustment[idx],
-                                  VolumeDiameterCategory = ProductData$VolumeDiameterCategory[idx],
-                                  VolumeLengthCategory = ProductData$VolumeLengthCategory[idx],
-                                  DiameterTopPosition = as.numeric(ProductData$DiameterTopPositions[idx])))
-      tab = merge(m, tab, "idxstop", allow.cartesian = TRUE)
-      tab$StopPosAdj = round((tab$StopPos - tab$DiameterTopPosition)/10) *
-        10
-      tab$Top_ob = DiameterValue[match(as.character(tab$StopPosAdj),
-                                       as.character(diameterPosition))]
-      tab$Top_ub = BarkFunction(tab$Top_ob, SpeciesGroupKey,
-                                SpeciesGroupDefinition, Top_ob = Top_ob, DBH = DBH,
-                                LogLength = LogLength)
-      tab$topdiam = ifelse(tab$DiameterUnderBark, tab$Top_ub,
-                           tab$Top_ob)
-      check = tab[tab$ProductKey == "8019" & tab$LogLength ==
-                    440, ]
-      tab = tab[tab$LogLength >= tab$LengthClassLowerLimit]
-      tab = tab[tab$LogLength <= tab$LengthClassMAX]
-      tab = tab[tab$topdiam > tab$DiameterClassLowerLimit]
-      tab = tab[tab$rotdiam < tab$DiameterClassMAX]
-      if (nrow(tab) > 0) {
-        commercial = tab[tab$ProductKey != "999999"]
-        if (nrow(commercial) > 0) {
-          lis = PriceMatrices[commercial$ProductKey]
-          rownames = lapply(lis, rownames)
-          colnames = lapply(lis, colnames)
-          row = sapply(1:length(commercial$LogLength),
-                       rowFinder)
-          col = sapply(1:length(commercial$topdiam),
-                       colFinder)
-          tab$Price[tab$ProductKey != "999999"] = sapply(1:length(lis),
-                                                         priceFinder)
-        }
-        head(tab)
-        tab$idxstop[tab$VolumeLengthCategory == "Rounded downwards to nearest dm-module"] = match(as.character(round_any((tab$StopPos[tab$VolumeLengthCategory ==
-                                                                                                                                        "Rounded downwards to nearest dm-module"]),
-                                                                                                                         10, f = floor)), as.character(diameterPosition))
-        WithLengthClass = tab[tab$VolumeLengthCategory ==
-                                "Length as defined in LengthClasses" &
-                                tab$ProductKey != "999999", ]
-        lis = LengthClasses[WithLengthClass$ProductKey]
-        if (nrow(WithLengthClass) > 0) {
-          l = 1
-          for (l in 1:nrow(WithLengthClass)) {
-            LengthClass = LengthClasses[[WithLengthClass$ProductKey[l]]]
-            WithLengthClass$LogLength[l] = round_any(LengthClass[max(which(WithLengthClass$LogLength[l] >=
-                                                                             LengthClass))], 10, f = ceiling)
-            WithLengthClass$StopPos[l] = WithLengthClass$StartPos[l] +
-              WithLengthClass$LogLength[l]
-            WithLengthClass$idxstop[l] = which(diameterPosition ==
-                                                 paste(round_any(WithLengthClass$StopPos[l],
-                                                                 10, f = ceiling)))
-          }
-          tab$LogLength[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$LogLength
-          tab$StopPos[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$StopPos
-          tab$idxstop[tab$VolumeLengthCategory == "Length as defined in LengthClasses"] = WithLengthClass$idxstop
-        }
-        vec = seqVectozied(from = tab$idxstart, to = tab$idxstop,
-                           by = 1)
-        DV = sapply(1:length(vec), DiameterValueFinder)
-        idx = tab$VolumeDiameterAdjustment == "Measured diameter rounded downwards to cm"
-        if (sum(idx) > 0) {
-          if (sum(idx) > 1) {
-            DV[which(idx > 0)] = lapply(1:sum(idx), function(x) {
-              as.vector(sapply(1:length(DV[which(idx >
-                                                   0)[x]]), Rounder))
-            })
-          }
-          else {
-            DV[idx] = sapply(1:length(DV[idx]), Rounder)
-          }
-        }
-        idx = tab$DiameterUnderBark == T
-        if (sum(idx) > 0) {
-          DV[idx] = sapply(1:length(DV[idx]), BarkFinder)
-        }
-        RV = relist(unlist(DV)/2, skeleton = as.relistable(DV))
-        if (!is.list(RV)) {
-          RV = list(RV)
-        }
-        tab$Volume = -1
-        idx = tab$VolumeDiameterCategory == "All diameters (solid volume)"
-        x = 2
-        tab$Volume[idx] = sapply(1:length(RV), function(x) sum(pi *
-                                                                 (unlist(RV[x])^2) * 10)/100000000)[idx]
-        idx = tab$VolumeDiameterCategory == "Calculated Norwegian mid"
-        Dmid = tab$Top_ub + (tab$LogLength/2 * 0.1) +
-          0.5
-        tab$Volume[idx] = ((((Dmid/100) * (Dmid/100)) *
-                              pi/4 * (tab$LogLength/10)) * 0.001)[idx]
-        idx = tab$VolumeDiameterCategory == "Top" &
-          tab$DiameterUnderBark == T
-        r1 = tab$Top_ub/2
-        r2 = (tab$Top_ub + tab$LogLength * 0.01)/2
-        tab$Volume[idx] = (((1/3) * pi * (r1^2 + r2^2 +
-                                            (r1 * r2)) * tab$LogLength)/100000000)[idx]
-        idx = tab$VolumeDiameterCategory == "Top" &
-          tab$DiameterUnderBark == F
-        r1 = tab$Top_ob/2
-        r2 = (tab$Top_ob + tab$LogLength * 0.01)/2
-        tab$Volume[idx] = (((1/3) * pi * (r1^2 + r2^2 +
-                                            (r1 * r2)) * tab$LogLength)/100000000)[idx]
-        tab$Value = tab$Volume * tab$Price
-        head(tab)
-        m = tab[, c("StartPos", "StopPos",
-                    "Top_ub", "LogLength", "ProductKey",
-                    "Volume", "Value")]
-        sub = res[res$StopPos == paste(tab$StartPos[1])]
-        sub = sub[which.max(sub$CumulativeValue), ]
-        m$CumulativeValue = m$Value + sub$CumulativeValue
-      }
-      else {
-        m = data.table(StartPos = StartPos, StopPos = StopPos,
-                       Top_ub = NA, LogLength = NA, ProductKey = NA,
-                       Volume = NA, Value = NA, CumulativeValue = NA)
-      }
-      res = rbindlist(list(res, m))
+      out
+    }]
+    tab[!is.finite(Price), Price := 0.0]
+
+    ## volume
+    tab[, Volume := {
+      r1 <- rotdiam / 2
+      r2 <- (Top_ub + LogLength * 0.01) / 2
+      ((1 / 3) * pi * (r1^2 + r2^2 + (r1 * r2)) * LogLength) / 1e8
+    }]
+    tab[!is.finite(Volume), Volume := 0.0]
+
+    tab[, Value := Volume * Price]
+    tab[!is.finite(Value), Value := 0.0]
+
+    tab[, ti := pos_to_i[as.character(StopPos)]]
+    tab <- tab[!is.na(ti)]
+    if (!nrow(tab)) next
+
+    cand <- dp[si] + tab$Value
+    better <- cand > dp[tab$ti]
+
+    if (any(better)) {
+      upd <- tab[better, .(
+        ti,
+        cand = dp[si] + Value,             # compute per-row after filtering
+        pk = as.integer(ProductKey),
+        topub = as.numeric(Top_ub),
+        vol = as.numeric(Volume),
+        len = as.integer(LogLength)
+      )]
+
+      data.table::setorder(upd, ti, -cand)
+      upd <- upd[!duplicated(ti)]
+
+      dp[upd$ti] <- upd$cand
+      prev_i[upd$ti] <- si
+      prev_pk[upd$ti] <- upd$pk
+      prev_topub[upd$ti] <- upd$topub
+      prev_vol[upd$ti] <- upd$vol
+      prev_len[upd$ti] <- upd$len
     }
   }
-  res = res[!is.na(res$LogLength)]
-  tt = res[which.max(res$CumulativeValue)]
-  if (nrow(tt) == 1) {
-    res = trackTrace(res, tt)
-  }else{
-    res = data.table(StartPos = NA, StopPos = NA, Top_ub = NA,
-                     LogLength = 1, ProductKey = NA, Volume = NA, Value = 0,
-                     CumulativeValue = 0)
+
+  ## best reachable end position
+  end_i <- which.max(ifelse(is.na(prev_i), -Inf, dp))
+  if (!is.finite(dp[end_i]) || dp[end_i] <= 0) return(DT())
+
+  ## backtrack
+  out <- list()
+  ci <- end_i
+  while (!is.na(prev_i[ci])) {
+    pi <- prev_i[ci]
+    out[[length(out) + 1L]] <- DT(
+      StemKey = as.integer(StemKey),
+      StartPos = pos[pi],
+      StopPos = pos[ci],
+      Top_ub = prev_topub[ci],
+      LogLength = prev_len[ci],
+      ProductKey = prev_pk[ci],
+      Volume = prev_vol[ci],
+      Value = dp[ci] - dp[pi],
+      CumulativeValue = dp[ci]
+    )
+    ci <- pi
   }
-  res = cbind(1:nrow(res), res)
-  colnames(res)[1] = "LogKey"
-  return(res)
+
+  out <- data.table::rbindlist(rev(out))
+  out[, LogKey := seq_len(.N)]
+  data.table::setcolorder(out, c("StemKey", "LogKey", "StartPos", "StopPos",
+                                 "Top_ub", "LogLength", "ProductKey",
+                                 "Volume", "Value", "CumulativeValue"))
+  out
 }
-
