@@ -2,17 +2,17 @@
 #'
 #' Optimal bucking for all stems in an HPR file using \code{buckStem()}.
 #'
-#' @param XMLNode Output from \code{getXMLNode()}.
-#' @param PriceMatrices List of price matrices for all ProductKeys (from \code{getPriceMatrices()}).
-#' @param ProductData Data frame or data.table with product definitions (from \code{getProductData()}).
-#' @param StemProfile Stem profiles for all stems (from \code{getStemprofile()} / \code{getStemProfile()}).
+#' @param XMLNode Output from getXMLNode().
+#' @param PriceMatrices List of price matrices for all ProductKeys (from getPriceMatrices()).
+#' @param ProductData Data frame or data.table with product definitions (from getProductData()).
+#' @param StemProfile Stem profiles for all stems (from getStemprofile() / getStemProfile()).
 #' @param PermittedGrades Named list where names are ProductKeys and each element defines permitted stem grades
-#'   (from \code{getPermittedGrades()}).
-#' @param SpeciesGroupDefinition Species group definitions (from \code{getSpeciesGroupDefinition()}).
+#'   (from getPermittedGrades()).
+#' @param SpeciesGroupDefinition Species group definitions (from getSpeciesGroupDefinition()).
 #'
 #' @return A \code{data.table} with the bucking solution for all processed stems, row-bound across stems.
 #'
-#' @seealso \code{\link{buckStem}}, \code{\link{getPermittedGrades}}, \code{\link{getPriceMatrices}}, \code{\link{getProductData}}
+#' @seealso buckStem, getPermittedGrades, getPriceMatrices, getProductData
 #' @author Lennart Noordermeer \email{lennart.noordermeer@nmbu.no}
 #' @references Skogforsk 2011. Introduction to StanForD 2010. URL: Skogforsk. https://www.skogforsk.se/contentassets/1a68cdce4af1462ead048b7a5ef1cc06/stanford-2010-introduction-150826.pdf
 #' @export
