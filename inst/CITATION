@@ -1,0 +1,10 @@
+citHeader("To cite optBuck in publications, please use:")
+
+citEntry(
+  entry = "Manual",
+  title = "optBuck: An R package for handling single-grip forest harvester data and bucking optimization",
+  author = person("Lennart", "Noordermeer"),
+  year = "2026",
+  note = "R package",
+  url = "https://github.com/SmartForest-no/optBuck"
+)
