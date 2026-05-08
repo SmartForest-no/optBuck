@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use optBuck in scientific work, please cite it as follows."
+title: "optBuck"
+type: software
+authors:
+  - family-names: "Noordermeer"
+    given-names: "Lennart"
+affiliation: "Norwegian University of Life Sciences"
+repository-code: "https://github.com/SmartForest-no/optBuck"
+url: "https://github.com/SmartForest-no/optBuck"
+license: "LGPL-3.0"
