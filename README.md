@@ -86,12 +86,6 @@ If you use `optBuck` in scientific work, please cite:
 
 > Noordermeer L (2026). *optBuck: An R package for handling single-grip forest harvester data and bucking optimization*. R package. https://github.com/SmartForest-no/optBuck
 
-In R:
-
-```r
-citation("optBuck")
-```
-
 ## Funding
 
 The package was developed as part of the SmartForest project, funded by the Research Council of Norway (project no. 309671).
