@@ -71,3 +71,14 @@ ggarrange(plotBucking(Bucking, StemProfile,
 # Funding details
 
 The optBuck package was developed as part of the project SmartForest, funded by the Research council of Norway (project no. 309671). 
+
+## Citation
+
+If you use `optBuck` in scientific work, please cite the package:
+
+Noordermeer L (2026). *optBuck: An R package for handling single-grip forest harvester data and bucking optimization*. R package. https://github.com/SmartForest-no/optBuck
+
+In R, the citation can be obtained with:
+
+```r
+citation("optBuck")
