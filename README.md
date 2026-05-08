@@ -4,6 +4,12 @@
 
 The package was developed for research applications related to harvester data analysis, bucking optimization, productivity assessment, and economic simulation.
 
+## Background
+
+Single-grip harvesters generate large amounts of standardized production data during operation. These data contain detailed information on harvested stems, produced logs, dimensions, volumes, assortments, and harvesting operations. Such data are increasingly used in forest inventory, harvesting research, operational planning, and economic analyses.
+
+Bucking has major influence on timber value and value recovery. A stem can often be processed into multiple alternative log combinations with different dimensions, assortments, and values. `optBuck` provides tools for evaluating such bucking outcomes and computing value-maximizing alternatives.
+
 ## Features
 
 The package includes functionality for:
@@ -73,12 +79,6 @@ OptimalBucking <- buckHpr(
   SpeciesGroupDefinition
 )
 ```
-
-## Background
-
-Single-grip harvesters generate large amounts of standardized production data during operation. These data contain detailed information on harvested stems, produced logs, dimensions, volumes, assortments, and harvesting operations. Such data are increasingly used in forest inventory, harvesting research, operational planning, and economic analyses.
-
-Bucking has major influence on timber value and value recovery. A stem can often be processed into multiple alternative log combinations with different dimensions, assortments, and values. `optBuck` provides tools for evaluating such bucking outcomes and computing value-maximizing alternatives.
 
 ## Citation
 
