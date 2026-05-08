@@ -1,80 +1,97 @@
-# optBuck – An R package for handling single-grip forest harvester data and bucking optimization
-Lennart Noordermeer 
+# optBuck
 
-Faculty of Environmental Sciences and Natural Resource Management, Norwegian University of Life Sciences
+`optBuck` is an R package for processing production data from single-grip forest harvesters and evaluating bucking outcomes. The package reads StanForD 2010 (`.hpr`) files and provides tools for extracting production data, handling assortments and price matrices, and computing optimal bucking solutions using dynamic programming.
 
-# Summary
+The package was developed for research applications related to harvester data analysis, bucking optimization, productivity assessment, and economic simulation.
 
-The R package optBuck provides functions for reading and handling production files from forest harvesters and computing the optimum bucking outcome for harvested stems. The package is based on harvested production report (hpr) files in the StanFord 2010 data format, retrieved from single-grip harvesters. Functionality includes the extraction of production data on harvested stems, produced logs, and the bucking outcome for each harvested stem. Additionally, information on assortments, such as the species, dimension and quality requirements, and price matrices can be extracted from the hpr files. These data can then be used as input parameters in a bucking algorithm, which maximizes the total stem value using dynamic programming. Thus, apart from providing tools to extract and process data from single-grip harvesters, optBuck can be used to evaluate bucking outcomes and perform sensitivity analyses and economic simulations based on harvester data.
+## Features
 
-# Statement of need
+The package includes functionality for:
 
-Single-grip harvesters record large amounts of standardized production data during operation. Sensors mounted on the harvester head record log dimensions and volumes, and each cut is allocated a time stamp and stored on an on-board computer. The operator selects and records tree species and timber grades, providing information on the characteristics and quality of the harvested logs. Additionally, most operating systems can be coupled with Global Navigation Satellite Systems, providing spatial data on the machine’s operation path and harvested trees. Harvester data are a key source of information in the fields of harvester productivity assessment, forest inventory, operation management and bucking optimization.   
+- reading and parsing StanForD 2010 (`.hpr`) files
+- extracting stem- and log-level production data
+- extracting assortment definitions and price matrices
+- evaluating observed bucking outcomes
+- computing optimal bucking solutions
+- visualizing and comparing bucking outcomes
 
-Bucking, i.e., cutting felled trees into logs, is a primary task in timber harvesting and has great impact on the value of the produced logs. A given stem can be bucked into different numbers of logs with different dimensions, assortments, and values. Many such potential outcomes typically exist, whereby suboptimal bucking results in reduced timber quality and volume utilization, and can reduce the economic value of a stem substantially. Besides being used in harvester on-board computers to aid machine operators in the bucking, bucking algorithms have found widespread application in research. For example, studies have used bucking algorithms for timber market assessments and economic simulations.   
+## Installation
 
-Although machine manufacturers provide software solutions for handling production data obtained from forest harvesters, few other tools currently provide the functionality to read and process hpr files, or to perform bucking optimization. Apart from reading and managing information obtained from hpr files, optBuck can be used to evaluate bucking outcomes and provides a range of potential research applications.
-
-
-# Example use
 ```r
-# installation
-devtools::install_github("https://github.com/SmartForest-no/optBuck")
+devtools::install_github("SmartForest-no/optBuck")
+```
+
+## Example
+
+```r
 library(optBuck)
 
 # Example data
-hprfile <- system.file("extdata",
-                    "example.hpr",
-                    package = "optBuck")
+hprfile <- system.file(
+  "extdata",
+  "example.hpr",
+  package = "optBuck"
+)
 
-# Extract data from HPR file
+# Read HPR file
 XMLNode <- getXMLNode(hprfile)
+
+# Extract information
 PriceMatrices <- getPriceMatrices(XMLNode)
 LengthClasses <- getLengthClasses(XMLNode)
 SpeciesGroupDefinition <- getSpeciesGroupDefinition(XMLNode)
-ProductData <- getProductData(XMLNode,SpeciesGroupDefinition)
+ProductData <- getProductData(
+  XMLNode,
+  SpeciesGroupDefinition
+)
+
 PermittedGrades <- getPermittedGrades(XMLNode)
 Stems <- getStems(XMLNode)
 Logs <- getLogs(XMLNode)
-SortimentOverview <- getSortimentOverview(Logs,ProductData)
-StemProfile <- getStemprofile(XMLNode,Logs)
 
-# Actual bucking
-Bucking <- getBucking(XMLNode,
-                      PriceMatrices,
-                      ProductData,
-                      StemProfile,
-                      LengthClasses)
+StemProfile <- getStemprofile(
+  XMLNode,
+  Logs
+)
+
+# Observed bucking
+Bucking <- getBucking(
+  XMLNode,
+  PriceMatrices,
+  ProductData,
+  StemProfile,
+  LengthClasses
+)
 
 # Optimal bucking
-OptimalBucking <- buckHpr(XMLNode,
-                          PriceMatrices,
-                          ProductData,
-                          StemProfile,
-                          PermittedGrades,
-                          SpeciesGroupDefinition)
-
-# Plot and compare bucking outcomes
-library(ggplot2)
-library(ggpubr)
-StemID <- 337463
-ggarrange(plotBucking(Bucking, StemProfile,
-                      StemID, ProductData),
-          plotBucking(OptimalBucking, StemProfile,
-                      StemID, ProductData),
-          nrow=2,align="v",
-          common.legend = T,legend="bottom",
-          labels = c("Actual bucking outcome",
-                     "Optimal bucking outcome"),
-          font.label=list(face="plain"))
+OptimalBucking <- buckHpr(
+  XMLNode,
+  PriceMatrices,
+  ProductData,
+  StemProfile,
+  PermittedGrades,
+  SpeciesGroupDefinition
+)
 ```
-# Funding details
 
-The optBuck package was developed as part of the project SmartForest, funded by the Research council of Norway (project no. 309671). 
+## Background
+
+Single-grip harvesters generate large amounts of standardized production data during operation. These data contain detailed information on harvested stems, produced logs, dimensions, volumes, assortments, and harvesting operations. Such data are increasingly used in forest inventory, harvesting research, operational planning, and economic analyses.
+
+Bucking has major influence on timber value and value recovery. A stem can often be processed into multiple alternative log combinations with different dimensions, assortments, and values. `optBuck` provides tools for evaluating such bucking outcomes and computing value-maximizing alternatives.
 
 ## Citation
 
-If you use `optBuck` in scientific work, please cite the package:
+If you use `optBuck` in scientific work, please cite:
 
-Noordermeer L (2026). *optBuck: An R package for handling single-grip forest harvester data and bucking optimization*. R package. https://github.com/SmartForest-no/optBuck
+> Noordermeer L (2026). *optBuck: An R package for handling single-grip forest harvester data and bucking optimization*. R package. https://github.com/SmartForest-no/optBuck
 
+In R:
+
+```r
+citation("optBuck")
+```
+
+## Funding
+
+The package was developed as part of the SmartForest project, funded by the Research Council of Norway (project no. 309671).
