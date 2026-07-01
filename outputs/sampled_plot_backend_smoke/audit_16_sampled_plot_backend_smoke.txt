@@ -1,0 +1,53 @@
+============================================================= 
+  Audit: sampled-plot backend smoke
+  Run: 2026-07-01 15:03:54.80261
+============================================================= 
+
+--- 01. Backend script exists ---
+  [PASS  ] Check 01: Backend script exists | found: S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/scripts/app_backend/01_run_sampled_plot_bucking.R
+
+--- 02. Backend sources without error ---
+  [PASS  ] Check 02: Backend sources without error | source() completed without error
+
+--- 03. Smoke call completes ---
+  [PASS  ] Check 03: Smoke call completes without error | completed in 6.8 s
+
+--- 04. Return object structure ---
+  [PASS  ] Check 04: Return object has all required names | all 17 required names present
+
+--- 05. n_plots_sampled ---
+  [PASS  ] Check 05: n_plots_sampled | n_eligible=224  n_sampled=5  expected=5
+
+--- 06. No plot_id leakage ---
+  [PASS  ] Check 06: No 'plot_id' column in any returned data.frame | no plot_id leakage detected
+
+--- 07. plot_id_github present ---
+  [PASS  ] Check 07: plot_id_github present in tree/plot-level data.frames | plot_id_github found in all 5 checked data.frames
+
+--- 08. No overlapping logs ---
+  [PASS  ] Check 08: No overlapping logs in selected_logs_all | overlapping pairs: 0  (total selected logs: 318)
+
+--- 09. value_per_ha_nok non-negative ---
+  [PASS  ] Check 09: value_per_ha_nok is non-negative | 0 negative value(s) out of 5 non-NA rows
+
+--- 10. Label contains 'Not ha-expanded' ---
+  [PASS  ] Check 10: label contains 'Not ha-expanded' | label: 'Sampled-plot estimate. Not ha-expanded. No NFI factors applied.'
+
+--- 11. Price validation no FAIL rows ---
+  [PASS  ] Check 11: Price validation contains no FAIL rows | 0 FAIL, 2 REVIEW in price validation checks
+
+--- 12. Profile failures ---
+  [PASS  ] Check 12: No taper profile failures | 0 profile failure(s) in smoke run
+
+--- 13. Runtime ---
+  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 6.8 s (threshold: 120 s)
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 13
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/outputs/sampled_plot_backend_smoke/audit_16_sampled_plot_backend_smoke.csv

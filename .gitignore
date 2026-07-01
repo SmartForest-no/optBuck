@@ -55,6 +55,8 @@ inputs/*.rds
 cleanup_run_out.txt
 cleanup_run_err.txt
 inspect_cols_tmp.R
+smoke_test_tmp.R
+inspect_strata_tmp.R
 
 # ── General temporary / build artefacts ───────────────────────────────────────
 *.tmp
