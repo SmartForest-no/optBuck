@@ -1,0 +1,71 @@
+============================================================= 
+  Audit: R/14_validate_first_helpers.R
+  Run: 2026-06-19 11:02:30.103778
+============================================================= 
+
+--- 1. Helper files ---
+  [PASS  ] Helper exists: R/helpers_paths.R | found
+  [PASS  ] Helper exists: R/helpers_products.R | found
+  [PASS  ] Helper exists: R/helpers_valuation.R | found
+  [PASS  ] Helper exists: R/helpers_audit.R | found
+
+--- 2. Script 14 output files ---
+  [PASS  ] Output exists: helper_product_check.csv | found
+  [PASS  ] Output exists: helper_price_support_by_product.csv | found
+  [PASS  ] Output exists: helper_unsupported_sawlog_lengths.csv | found
+  [PASS  ] Output exists: helper_price_matrix_validation_summary.txt | found
+
+--- 3-5. Data loading ---
+  [PASS  ] ProductData loads (non-empty) | 6 rows
+  [PASS  ] LengthClasses loads (non-empty) | 190 rows
+  [PASS  ] PriceMatrix_long loads (non-empty) | 628 rows
+
+--- 6. Active ProductKeys ---
+  [PASS  ] All 6 ACTIVE_PRODUCT_KEYS in ProductData | present: spruce_sawlog, spruce_pulpwood, spruce_waste, pine_sawlog, pine_pulpwood, pine_waste
+
+--- 7. DiameterUnderBark ---
+  [PASS  ] DiameterUnderBark == FALSE for all active products | Values: FALSE
+
+--- 8. DiameterSource ---
+  [PASS  ] DiameterSource == 'taperNOR_over_bark' for all active products | Values: taperNOR_over_bark
+
+--- 9-10. Supported sawlog lengths ---
+  [PASS  ] Supported lengths for spruce_sawlog match expected {34, 37, 40, 43, 46, 49, 52, 55} dm | actual: {34, 37, 40, 43, 46, 49, 52, 55} dm
+  [PASS  ] Supported lengths for pine_sawlog match expected {34, 37, 40, 43, 46, 49, 52, 55} dm | actual: {34, 37, 40, 43, 46, 49, 52, 55} dm
+
+--- 11-12. Unsupported sawlog lengths ---
+  [REVIEW] Unsupported lengths for spruce_sawlog include 31 dm | 31 dm present; flagged as known gap (REVIEW)
+  [REVIEW] Unsupported lengths for pine_sawlog include 31 dm | 31 dm present; flagged as known gap (REVIEW)
+
+--- 13-14. cap_price_diameter_class ---
+  [PASS  ] cap_price_diameter_class(): values > 50 mapped to 50 | 4 input(s) > 50; all mapped to 50: TRUE
+  [PASS  ] cap_price_diameter_class(): values <= 50 preserved unchanged | 3 input(s) <= 50; all preserved: TRUE
+
+--- 15-16. prepare_price_join_keys ---
+  [PASS  ] prepare_price_join_keys() adds _uncapped column | column present
+  [PASS  ] prepare_price_join_keys() adds _used column | column present
+  [PASS  ] _uncapped stores original PriceDiameterClass_cm unchanged | original match: TRUE
+  [PASS  ] _used == min(original, 50) for all rows | cap correct: TRUE
+
+--- 17-18. Full price matrix validation ---
+  [PASS  ] validate_price_matrix_against_products(): no FAIL items | 0 FAIL item(s) in validation
+  [REVIEW] validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices | 2 REVIEW item(s); all expected: TRUE
+
+--- 19-20. Accepted scripts integrity ---
+  [PASS  ] All accepted scripts 00-12 exist | 13 present, 0 missing
+  [PASS  ] Accepted scripts 00-12 not modified after script 14 was created | none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 25
+2 REVIEW  3
+
+  Verdict: ACCEPTED WITH REVIEW 
+============================================================= 
+
+  [REVIEW] Unsupported lengths for spruce_sawlog include 31 dm | 31 dm present; flagged as known gap (REVIEW) 
+  [REVIEW] Unsupported lengths for pine_sawlog include 31 dm | 31 dm present; flagged as known gap (REVIEW) 
+  [REVIEW] validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices | 2 REVIEW item(s); all expected: TRUE 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/outputs/helper_validation/audit_14_validate_first_helpers.csv

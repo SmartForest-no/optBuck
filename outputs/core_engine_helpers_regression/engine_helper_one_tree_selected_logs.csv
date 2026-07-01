@@ -1,0 +1,6 @@
+ProductKey,LengthClass_dm,PriceDiameterClass_cm_used,treid,plot_id,species_group,ProductType,StartPos,StopPos,LogLength,TopDiameter,ButtDiameter,eligible,price_volume_m3,PriceDiameterClass_cm,PriceDiameterClass_cm_uncapped,PriceNOKperM3,value_nok
+spruce_sawlog,43,47,242251,C64024,spruce,sawlog,10,440,430,473.2,901.4,TRUE,0.74603,47,47,471,351.38013
+spruce_sawlog,52,38,242251,C64024,spruce,sawlog,440,960,520,381.7,473.2,TRUE,0.58974,38,38,607,357.97218000000004
+spruce_sawlog,52,27,242251,C64024,spruce,sawlog,960,1480,520,270.3,381.7,TRUE,0.29773,27,27,607,180.72211
+spruce_sawlog,34,18,242251,C64024,spruce,sawlog,1480,1820,340,187,270.3,TRUE,0.08652,18,18,451,39.02052
+spruce_pulpwood,53,5,242251,C64024,spruce,pulpwood,1820,2350,530,52.5,187,TRUE,0.06609,5,5,260,17.1834

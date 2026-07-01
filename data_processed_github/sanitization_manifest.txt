@@ -1,0 +1,61 @@
+nfiBuck -- data_processed_github/ sanitization manifest
+Run time    : 2026-07-01 14:08:21
+Source      : S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/data_processed
+Destination : S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/data_processed_github
+
+=== Privacy policy applied ===
+  This data was sanitized for inclusion in the private GitHub repository.
+  All estimates derived from this data are SAMPLED ESTIMATES only.
+  No NFI expansion factors have been applied.
+  No exact plot locations are included.
+
+=== Coordinate column inspection ===
+  Result: NO explicit spatial coordinate columns were found in any source
+  parquet file (no x, y, lat, lon, easting, northing, UTM, etc.).
+
+=== Original plot identifier handling ===
+  Original plot_id (e.g. 'E25159') is an NFI plot code that could be
+  reverse-looked-up to an exact sample-plot location in the NFI database.
+  Action taken: original plot_id REPLACED by synthetic plot_id_github.
+  Synthetic format: P000001, P000002, ... (sorted alphabetically by original).
+  The mapping between original and synthetic IDs was created in-memory only
+  and was NOT written to disk or committed to the repository.
+  Number of unique original plot_ids replaced: 6348
+
+=== Column disposition summary ===
+  REPLACED: plot_id       -> plot_id_github (synthetic sequential ID)
+  DROPPED:  flateid       (same value as original plot_id; indirect locator)
+  DROPPED:  flatenr       (all values = 1; no informational content)
+  DROPPED:  hel_delt_flate (all values = 0; no informational content)
+  DROPPED:  komnr         (municipality code; finer resolution than needed)
+  KEPT:     fylnr         (county code; coarse administrative unit)
+  KEPT:     hoh           (elevation metres integer; coarse; not a coordinate)
+
+=== File 1: nfi_tree_plot_stratum_ready_github.parquet ===
+  Source   : nfi_tree_plot_2024_spruce_pine_stratum_ready.parquet
+  Rows     : 104280
+  Unique plots (plot_id_github): 6348
+  Cols kept ( 15 ): plot_id_github, treid, sesong, species_group, dbh_cm, trehoyde, beregnet_hoyde, tilstand, volm, volu, hogstkl, abonitet, fylnr, hoh, plot_area_m2
+  Cols dropped ( 17 , including original plot_id): plot_id, hel_delt_flate, treslag, brysth_dia, tslgr, tilv5, flateid, flatenr, komnr, arealtype, areal_anv, abonitet_tre, best_tresl, gran_pr, furu_pr, bjork_pr, lsk_dato
+
+=== File 2: nfi_plots_github.parquet ===
+  Source   : nfi_plots_2024.parquet
+  Rows     : 6348
+  Unique plots (plot_id_github): 6348
+  Cols kept ( 7 ): plot_id_github, sesong, hogstkl, abonitet, fylnr, hoh, plot_area_m2
+  Cols dropped ( 13 , including original plot_id): plot_id, flateid, flatenr, hel_delt_flate, komnr, arealtype, areal_anv, abonitet_tre, best_tresl, gran_pr, furu_pr, bjork_pr, lsk_dato
+
+=== Files intentionally NOT included ===
+  nfi_trees_2024_spruce_pine.parquet/.rds  (subset of stratum_ready; skip)
+  nfi_tree_plot_2024_spruce_pine.parquet/.rds  (superseded by stratum_ready)
+  All .rds variants  (parquet versions sufficient)
+  plot_id <-> plot_id_github mapping  (NEVER written; in-memory only)
+
+=== Safety verification ===
+  'plot_id' absent from tree_plot output  : TRUE
+  'plot_id' absent from plots output      : TRUE
+  'flateid' absent from tree_plot output  : TRUE
+  'flateid' absent from plots output      : TRUE
+  'komnr' absent from tree_plot output    : TRUE
+  'komnr' absent from plots output        : TRUE
+  'plot_id_github' present in both outputs: TRUE

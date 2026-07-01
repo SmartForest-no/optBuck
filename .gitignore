@@ -1,0 +1,61 @@
+# ==============================================================================
+# .gitignore — nfiBuck
+# Private GitHub repository
+# ==============================================================================
+
+# ── R session artefacts (matched in any subdirectory) ────────────────────────
+.Rhistory
+.RData
+**/.Rhistory
+**/.RData
+.Rproj.user/
+
+# ── Credentials / secrets ──────────────────────────────────────────────────────
+.Renviron
+.Rprofile
+wallet/
+*wallet*/
+*.key
+*.pem
+
+# ── Raw NFI input data (private, accessed from Oracle — not stored here) ───────
+data_raw/*
+!data_raw/README.md
+
+# ── Processed NFI data (private, ~15 MB, local-only — see README) ──────────────
+data_processed/
+
+# ── Sanitized NFI data safe for private GitHub (NO exact coordinates) ─────────
+# data_processed_github/ is intentionally NOT ignored — these files may be
+# committed once sanitization has been verified (see scripts/98_create_github_safe_processed_data.R).
+# Uncomment the line below ONLY if you need to temporarily block the folder.
+# data_processed_github/
+
+# ── Log files ──────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Archived prototype outputs (large, redundant after cleanup) ────────────────
+outputs/_archive/
+_archive/
+
+# ── Prototype-phase large outputs (scripts 00-12 run artefacts) ────────────────
+# These are too large or derived from private NFI data.
+# Re-generate by running the corresponding prototype_reference scripts locally.
+outputs/mixed_species_example_bucking/
+outputs/optimizer_tests/
+outputs/selected_stratum_summary/
+outputs/stratum_tests/
+outputs/stem_profiles/
+
+# ── Binary RDS cache files under inputs/ (regeneratable from CSV sources) ──────
+inputs/*.rds
+
+# ── Root-level cleanup run logs and inspection artefacts (temporary) ──────────
+cleanup_run_out.txt
+cleanup_run_err.txt
+inspect_cols_tmp.R
+
+# ── General temporary / build artefacts ───────────────────────────────────────
+*.tmp
+*.bak

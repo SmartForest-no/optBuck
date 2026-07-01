@@ -1,0 +1,39 @@
+  Reading stratum file:
+nfi_tree_plot_2024_spruce_pine_stratum_ready.parquet
+  Rows: 104280  Columns: 31
+  Columns: plot_id, hel_delt_flate, sesong, treid, treslag, species_group, brysth_dia, dbh_cm, trehoyde, beregnet_hoyde, tilstand, tslgr, volm, volu, tilv5, flateid, flatenr, komnr, fylnr, hoh, arealtype, areal_anv, abonitet_tre, abonitet, best_tresl, gran_pr, furu_pr, bjork_pr, hogstkl, lsk_dato, plot_area_m2
+  fylnr column present: TRUE
+
+  -- 3a. By species_group x hogstkl x abonitet --
+  Total species x hogstkl x abonitet combinations : 139
+  Combinations with >= 10 plots                    : 89 (64%)
+  Combinations with >= 25 plots                    : 62 (45%)
+  Combinations with >= 50 plots                    : 43 (31%)
+  Saved: stratum_availability_by_species_hogstkl_abonitet.csv (139 rows)
+
+  Top 10 combinations by n_plots:
+  species_group  hogstkl  abonitet  n_plots n_trees
+  pine           51       8             557    4431
+  spruce         51       8             532    5982
+  spruce         51       11            366    4993
+  pine           51       11            357    2525
+  spruce         31       14            331    7597
+  spruce         31       17            289    7315
+  spruce         41       14            248    4734
+  spruce         31       11            239    4422
+  pine           51       6             230    2024
+  spruce         41       17            224    4770
+
+  -- 3b. By species_group x hogstkl x abonitet x fylnr --
+  Total species x hogstkl x abonitet x fylnr combinations : 1006
+  Combinations with >= 10 plots                             : 235 (23%)
+  Combinations with >= 25 plots                             : 80 (8%)
+  Combinations with >= 50 plots                             : 29 (3%)
+  Saved: stratum_availability_by_species_hogstkl_abonitet_fylnr.csv (1006 rows)
+
+  -- 3c. Overall dataset totals --
+  Distinct species_group : 2 (pine, spruce)
+  Distinct hogstkl       : 10 (11, 12, 21, 22, 31, 32, 41, 42, 51, 52)
+  Distinct abonitet      : 8 (6, 8, 11, 14, 17, 20, 23, 26)
+  Total plots            : 6348
+  Total trees            : 104280

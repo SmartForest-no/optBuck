@@ -1,0 +1,60 @@
+=============================================================
+  nfiBuck helper validation run
+  Run : 2026-06-19 10:16:29.907945
+=============================================================
+
+--- Loading inputs via helpers ---
+  ProductData   : 6 rows, 21 cols
+  LengthClasses : 190 rows, 3 cols
+  PriceMatrix   : 628 rows, 15 cols
+
+--- Product assumption checks ---
+  [PASS  ] All ACTIVE_PRODUCT_KEYS present in ProductData | 6 of 6 present
+  [PASS  ] No unexpected ProductKey values in ProductData | none
+  [PASS  ] DiameterUnderBark == FALSE for all active products | all FALSE
+  [PASS  ] DiameterSource == 'taperNOR_over_bark' for all active products | all 'taperNOR_over_bark'
+  Saved: helper_product_check.csv (4 checks)
+
+--- Supported sawlog lengths ---
+  pine_sawlog : 34, 37, 40, 43, 46, 49, 52, 55 dm
+  spruce_sawlog : 34, 37, 40, 43, 46, 49, 52, 55 dm
+  Saved: helper_price_support_by_product.csv (16 rows)
+
+--- Unsupported sawlog lengths (in LengthClasses but not priced) ---
+  [KNOWN GAP]  spruce_sawlog  31 dm
+  [KNOWN GAP]  pine_sawlog  31 dm
+  Saved: helper_unsupported_sawlog_lengths.csv (18 rows)
+
+--- Full price matrix validation ---
+  [PASS  ] spruce_sawlog has priced length classes | 8 priced lengths: 34, 37, 40, 43, 46, 49, 52, 55 dm
+  [PASS  ] pine_sawlog has priced length classes | 8 priced lengths: 34, 37, 40, 43, 46, 49, 52, 55 dm
+  [PASS  ] spruce_pulpwood has a price entry | price present
+  [PASS  ] pine_pulpwood has a price entry | price present
+  [PASS  ] spruce_waste has a price entry | price present
+  [PASS  ] pine_waste has a price entry | price present
+  [PASS  ] No negative PriceNOKperM3 values | 0 negative price row(s)
+  [REVIEW] No zero PriceNOKperM3 values | 2 zero-price row(s) — check if intentional
+  [REVIEW] 31 dm sawlog gap in price matrix | KNOWN: spruce_sawlog, pine_sawlog: 31 dm in LengthClasses but absent from PriceMatrix_long (matrix starts at 34 dm)
+  [PASS  ] No unexpected unpriced sawlog lengths | 0 unexpected unpriced sawlog length(s)
+
+--- Price-diameter cap demonstration ---
+  Input PriceDiameterClass_cm → uncapped → used (cap=50):
+    12 → uncapped=12  used=12
+    24 → uncapped=24  used=24
+    36 → uncapped=36  used=36
+    48 → uncapped=48  used=48
+    50 → uncapped=50  used=50
+    52 → uncapped=52  used=50
+    60 → uncapped=60  used=50
+    70 → uncapped=70  used=50
+  Values capped: 3 / 8
+  Cap applied correctly (used == min(uncapped, 50)): 8 / 8
+
+--- Accepted-script integrity ---
+  Scripts 00-12 were not modified by this script.
+  Audit 14 verifies file modification times against expected dates.
+
+=============================================================
+  Script 14 complete.
+  Outputs: S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/outputs/helper_validation
+=============================================================

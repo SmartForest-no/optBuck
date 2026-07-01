@@ -1,0 +1,5 @@
+PriceScenario,ProductKey,ProductName,ProductType,species_group,VolumeDiameterCategory,PriceType,LengthClass_dm,LengthClass_cm,PriceDiameterClass_cm,PriceDiameterClass_mm,PriceNOKperM3,PriceSource,PriceSourceFile,Notes
+default_2021,spruce_pulpwood,Spruce pulpwood,pulpwood,spruce,All diameters (solid volume),flat,NA,NA,NA,NA,260,Manual temporary default,NA,Temporary flat price. Replace with documented pulpwood price later.
+default_2021,pine_pulpwood,Pine pulpwood,pulpwood,pine,All diameters (solid volume),flat,NA,NA,NA,NA,250,Manual temporary default,NA,Temporary flat price. Replace with documented pulpwood price later.
+default_2021,spruce_waste,Spruce waste,waste,spruce,All diameters (solid volume),flat,NA,NA,NA,NA,0,Manual temporary default,NA,Waste assigned zero price. Replace with documented disposal cost if relevant.
+default_2021,pine_waste,Pine waste,waste,pine,All diameters (solid volume),flat,NA,NA,NA,NA,0,Manual temporary default,NA,Waste assigned zero price. Replace with documented disposal cost if relevant.

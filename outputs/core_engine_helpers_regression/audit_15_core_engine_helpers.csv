@@ -1,0 +1,24 @@
+check,result,detail
+Check 01: All 7 helper files exist,PASS,All present
+Check 02: All 4 script-15 output files exist,PASS,All present
+Check 03: Accepted scripts 00-12 unmodified since script 15,PASS,All 21 accepted files have mtime <= script 15 mtime
+Check 04: taperNOR package available,PASS,taperNOR found
+Check 05: generate_taper_profile_one_tree() returns non-empty df,PASS,253 rows
+Check 06: Taper profile has required columns,PASS,"All present: treid, z_m, diameter_cm, diameterPosition, DiameterValue, DBH"
+Check 07: profiles_to_profile_vectors() fields complete,PASS,all 7 fields present; DBH=566.0 mm height=25.30 m
+Check 08: products_for_species() returns correct keys,PASS,"spruce=spruce_pulpwood,spruce_sawlog,spruce_waste  pine=pine_pulpwood,pine_sawlog,pine_waste"
+Check 09: generate_candidate_logs_one_tree() returns non-empty df,PASS,20713 candidate rows
+Check 10: Candidates have required columns,PASS,"All present: StartPos, StopPos, ProductKey, ProductType, eligible, price_volume_m3, LengthClass_dm, PriceDiameterClass_cm"
+Check 11: One-tree n_selected_logs matches reference,PASS,ref=5  got=5
+Check 12: One-tree StartPos/StopPos set matches reference,PASS,Exact position match
+Check 13: One-tree total value within 0.01 NOK,PASS,ref=946.2783  got=946.2783  diff=0.000000
+Check 14: One-tree total volume within 1e-4 m3,PASS,ref=1.786110  got=1.786110  diff=0.00000000
+Check 15: Mixed: all reference trees with logs appear in output,PASS,ref trees with logs=458  got=458  missing=
+Check 16: Mixed: per-tree StartPos/StopPos match reference,PASS,458/458 trees have exact position match
+Check 17: Mixed total value within 0.05 NOK,PASS,ref=42210.6668  got=42210.6668  diff=0.000000
+Check 18: 31 dm sawlog confirmed unpriced,PASS,2 unpriced 31 dm entries found
+"Check 19: No overlapping logs (Test A, one-tree)",PASS,overlapping pairs: 0
+"Check 20: No overlapping logs (Test B, mixed-species)",PASS,overlapping pairs: 0
+Check 21: PriceDiameterClass_cm_uncapped present in mixed output,PASS,column present
+Check 22: PriceDiameterClass_cm_used <= 50 for all selected (Test B),PASS,max used = 50 cm
+Check 23: Zero-price rows are REVIEW (not FAIL) in price validation,PASS,zero-price check result(s): REVIEW

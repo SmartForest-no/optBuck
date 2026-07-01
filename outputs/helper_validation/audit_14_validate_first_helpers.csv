@@ -1,0 +1,29 @@
+check,result,detail
+Helper exists: R/helpers_paths.R,PASS,found
+Helper exists: R/helpers_products.R,PASS,found
+Helper exists: R/helpers_valuation.R,PASS,found
+Helper exists: R/helpers_audit.R,PASS,found
+Output exists: helper_product_check.csv,PASS,found
+Output exists: helper_price_support_by_product.csv,PASS,found
+Output exists: helper_unsupported_sawlog_lengths.csv,PASS,found
+Output exists: helper_price_matrix_validation_summary.txt,PASS,found
+ProductData loads (non-empty),PASS,6 rows
+LengthClasses loads (non-empty),PASS,190 rows
+PriceMatrix_long loads (non-empty),PASS,628 rows
+All 6 ACTIVE_PRODUCT_KEYS in ProductData,PASS,"present: spruce_sawlog, spruce_pulpwood, spruce_waste, pine_sawlog, pine_pulpwood, pine_waste"
+DiameterUnderBark == FALSE for all active products,PASS,Values: FALSE
+DiameterSource == 'taperNOR_over_bark' for all active products,PASS,Values: taperNOR_over_bark
+"Supported lengths for spruce_sawlog match expected {34, 37, 40, 43, 46, 49, 52, 55} dm",PASS,"actual: {34, 37, 40, 43, 46, 49, 52, 55} dm"
+"Supported lengths for pine_sawlog match expected {34, 37, 40, 43, 46, 49, 52, 55} dm",PASS,"actual: {34, 37, 40, 43, 46, 49, 52, 55} dm"
+Unsupported lengths for spruce_sawlog include 31 dm,REVIEW,31 dm present; flagged as known gap (REVIEW)
+Unsupported lengths for pine_sawlog include 31 dm,REVIEW,31 dm present; flagged as known gap (REVIEW)
+cap_price_diameter_class(): values > 50 mapped to 50,PASS,4 input(s) > 50; all mapped to 50: TRUE
+cap_price_diameter_class(): values <= 50 preserved unchanged,PASS,3 input(s) <= 50; all preserved: TRUE
+prepare_price_join_keys() adds _uncapped column,PASS,column present
+prepare_price_join_keys() adds _used column,PASS,column present
+_uncapped stores original PriceDiameterClass_cm unchanged,PASS,original match: TRUE
+"_used == min(original, 50) for all rows",PASS,cap correct: TRUE
+validate_price_matrix_against_products(): no FAIL items,PASS,0 FAIL item(s) in validation
+validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices,REVIEW,2 REVIEW item(s); all expected: TRUE
+All accepted scripts 00-12 exist,PASS,"13 present, 0 missing"
+Accepted scripts 00-12 not modified after script 14 was created,PASS,none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)

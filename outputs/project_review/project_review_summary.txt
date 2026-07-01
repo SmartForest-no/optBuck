@@ -1,0 +1,139 @@
+=============================================================
+  nfiBuck -- Project cleanup and app-readiness review
+  Generated    : 2026-06-19 09:57:00.828215
+  Root         : S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck
+=============================================================
+
+=== PART 1: FILE INVENTORY ===
+  Building full project file inventory...
+  Total files found: 182
+  By category:
+    output       : 117
+    plot         : 40
+    unknown      : 25
+  Saved: project_file_inventory.csv (182 files)
+  Saved: output_file_inventory.csv (136 files)
+
+  Output folder sizes (MB):
+    selected_stratum_bucking                    12 files     7.779 MB
+    optimizer_tests                              9 files     5.602 MB
+    selected_stratum_summary                    17 files     5.039 MB
+    mixed_species_example_bucking               12 files     1.847 MB
+    stem_profiles                               13 files     1.652 MB
+    stratum_tests                               16 files     1.125 MB
+    price_matrix_tests                          11 files     0.398 MB
+    example_sample_bucking                      10 files     0.347 MB
+    pine_smoke_bucking                          11 files     0.324 MB
+    product_volume_tests                         8 files     0.176 MB
+    valuation_tests                              8 files     0.115 MB
+    batch_optimizer_tests                        8 files     0.083 MB
+    project_review                               1 files     0.000 MB
+
+=== PART 2: SCRIPT DEPENDENCY OVERVIEW ===
+  Saved: script_dependency_overview.csv (22 scripts/audits)
+
+=== PART 3: STRATUM AVAILABILITY OVERVIEW ===
+  Reading stratum file:
+nfi_tree_plot_2024_spruce_pine_stratum_ready.parquet
+  Rows: 104280  Columns: 31
+  Columns: plot_id, hel_delt_flate, sesong, treid, treslag, species_group, brysth_dia, dbh_cm, trehoyde, beregnet_hoyde, tilstand, tslgr, volm, volu, tilv5, flateid, flatenr, komnr, fylnr, hoh, arealtype, areal_anv, abonitet_tre, abonitet, best_tresl, gran_pr, furu_pr, bjork_pr, hogstkl, lsk_dato, plot_area_m2
+  fylnr column present: TRUE
+
+  -- 3a. By species_group x hogstkl x abonitet --
+  Total species x hogstkl x abonitet combinations : 139
+  Combinations with >= 10 plots                    : 89 (64%)
+  Combinations with >= 25 plots                    : 62 (45%)
+  Combinations with >= 50 plots                    : 43 (31%)
+  Saved: stratum_availability_by_species_hogstkl_abonitet.csv (139 rows)
+
+  Top 10 combinations by n_plots:
+  species_group  hogstkl  abonitet  n_plots n_trees
+  pine           51       8             557    4431
+  spruce         51       8             532    5982
+  spruce         51       11            366    4993
+  pine           51       11            357    2525
+  spruce         31       14            331    7597
+  spruce         31       17            289    7315
+  spruce         41       14            248    4734
+  spruce         31       11            239    4422
+  pine           51       6             230    2024
+  spruce         41       17            224    4770
+
+  -- 3b. By species_group x hogstkl x abonitet x fylnr --
+  Total species x hogstkl x abonitet x fylnr combinations : 1006
+  Combinations with >= 10 plots                             : 235 (23%)
+  Combinations with >= 25 plots                             : 80 (8%)
+  Combinations with >= 50 plots                             : 29 (3%)
+  Saved: stratum_availability_by_species_hogstkl_abonitet_fylnr.csv (1006 rows)
+
+  -- 3c. Overall dataset totals --
+  Distinct species_group : 2 (pine, spruce)
+  Distinct hogstkl       : 10 (11, 12, 21, 22, 31, 32, 41, 42, 51, 52)
+  Distinct abonitet      : 8 (6, 8, 11, 14, 17, 20, 23, 26)
+  Total plots            : 6348
+  Total trees            : 104280
+
+=== PART 4: RECOMMENDATIONS ===
+
+--- Cleanup recommendations ---
+  1. Extract shared functions into R/helpers_*.R (8 helper files proposed).
+     Priority: helpers_dp_optimizer.R, helpers_candidate_generation.R,
+     helpers_valuation.R — these are the largest blocks of duplicated code.
+  2. Extract audit utilities (record, alog, diag_val, %||%) into
+     R/helpers_audit.R and source from all audit scripts.
+  3. Move outputs/_archive/ candidate folders after confirmed no longer needed:
+     batch_optimizer_tests, optimizer_tests, valuation_tests,
+     price_matrix_tests, product_volume_tests.
+  4. scripts 08-12 should remain as accepted reference runs.
+     Do not refactor them until helpers are tested independently.
+
+--- App design recommendations ---
+  1. Build v1 as sampled-plot mode only (default 10 plots).
+     Full-stratum runs offline only.
+  2. Implement price-matrix validation as a standalone function in
+     helpers_valuation.R before building the Shiny module.
+  3. v1: spruce and pine only; uploaded CSV/Excel matrices.
+  4. All estimates clearly labelled as sampled-plot approximations.
+  5. Do not apply NFI expansion factors in v1.
+
+=== DECISIONS NEEDED ===
+
+The following questions require user decisions before app development begins:
+
+  1. DEFAULT PLOT SAMPLE SIZE
+     Should the app default to 10 plots per stratum sample?
+     (Current prototype used 21,238 trees across 1,239 plots for the full run.)
+
+  2. ALLOWED SAMPLE SIZES
+     Should users be allowed to choose 25 or 50 plots in addition to 10?
+     Should a minimum plot count be enforced (e.g., refuse if < 5 plots available)?
+
+  3. MISSING PRICE CLASSES — DEFAULT BEHAVIOUR
+     Should missing price classes be excluded by default
+     (candidates remain unpriced, not selected)?
+     Or should missing prices default to zero (treated as waste)?
+
+  4. ZERO-PRICE OVERRIDE
+     Should users be allowed to check a box to treat missing prices as zero?
+     If yes, all outputs must be clearly flagged as 'zero-price override active'.
+
+  5. SPECIES SCOPE
+     Should the first app version be spruce and pine only?
+     (No other species in the current prototype.)
+
+  6. PRICE MATRIX INPUT
+     Should the first app allow only uploaded Excel/CSV matrices?
+     Or also allow manual editing of a price table in the browser UI?
+     (Manual editing is harder to validate.)
+
+  7. FULL-STRATUM RUNS
+     Should full-stratum runs (all plots in a stratum) be offline only,
+     or should the app optionally support them with a time warning?
+
+  8. COUNTY FILTER
+     Should the app support fylnr (county) as a stratum filter in v1?
+
+=============================================================
+  Script 13 complete.
+  Outputs written to: S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/outputs/project_review
+=============================================================

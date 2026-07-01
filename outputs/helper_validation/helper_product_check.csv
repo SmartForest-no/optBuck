@@ -1,0 +1,5 @@
+check,result,detail
+All ACTIVE_PRODUCT_KEYS present in ProductData,PASS,6 of 6 present
+No unexpected ProductKey values in ProductData,PASS,none
+DiameterUnderBark == FALSE for all active products,PASS,all FALSE
+DiameterSource == 'taperNOR_over_bark' for all active products,PASS,all 'taperNOR_over_bark'

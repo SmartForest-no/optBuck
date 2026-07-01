@@ -1,0 +1,24 @@
+=== Script 15: Core Engine Helpers Regression Test Summary ===
+Run time: 2026-06-19 10:42:46.745674
+
+--- Test A: one-tree (treid 242251) ---
+  n_logs:    ref=5  got=5  match=TRUE
+  value_nok: ref=946.2783  got=946.2783  diff=0.000000
+  vol_m3:    ref=1.786110  got=1.786110  diff=0.00000000
+  n_overlap: 0
+
+--- Test B: mixed-species (25 trees) ---
+  n_logs: ref=1123  got=1123  match=TRUE
+  value_diff: 0.0000 NOK  vol_diff: 0.000000 m3
+  n_overlap: 0
+  tree_summary_rows: 500
+
+--- Test C: price support ---
+  31 dm unpriced entries: 2 (expected > 0)
+
+--- Overall ---
+  Test A: PASS
+  Test B: PASS
+  Test C: PASS
+  Overlap A: PASS
+  Overlap B: PASS
