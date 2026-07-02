@@ -48,6 +48,9 @@ outputs/selected_stratum_summary/
 outputs/stratum_tests/
 outputs/stem_profiles/
 
+# ── App backend cache (derived, local-only until size/content verified) ────────
+outputs/app_cache/
+
 # ── Binary RDS cache files under inputs/ (regeneratable from CSV sources) ──────
 inputs/*.rds
 
@@ -57,6 +60,9 @@ cleanup_run_err.txt
 inspect_cols_tmp.R
 smoke_test_tmp.R
 inspect_strata_tmp.R
+verify_app_tmp.R
+cache_run_out.txt
+cache_run_err.txt
 
 # ── General temporary / build artefacts ───────────────────────────────────────
 *.tmp

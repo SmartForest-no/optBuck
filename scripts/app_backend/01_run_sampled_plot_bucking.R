@@ -8,6 +8,11 @@
 # Design principles (from interface inspection 2026-07-01):
 #   - Tree filtering matches script 11 exactly: dbh_cm >= 5.0 AND
 #     height_m >= 4.5. No tilstand filter (matching prototype convention).
+#   - Taper profiles are loaded from the precomputed cache:
+#       outputs/app_cache/taper_profiles_github/taper_profiles_github.parquet
+#     Generate this file by running:
+#       Rscript scripts/app_backend/00_precompute_taper_profiles_github.R
+#     taperNOR is NOT called during normal backend runs.
 #   - plot_id_github is renamed to plot_id before all helper calls, and
 #     renamed back before any data is returned. No returned object contains
 #     a column named plot_id.
@@ -23,17 +28,11 @@
 #                   n_plots = 10L, seed = 42L),
 #     price_matrix_path = "default_2021"
 #   )
-#
-# Smoke test (run interactively):
-#   result <- run_sampled_plot_bucking(
-#     params = list(species_group = "spruce", hogstkl = 41L, abonitet = 17L,
-#                   n_plots = 5L, seed = 42L),
-#     price_matrix_path = "default_2021"
-#   )
 # ==============================================================================
 
 suppressPackageStartupMessages({
   library(arrow)
+  library(dplyr)
   library(readr)
 })
 
@@ -255,39 +254,88 @@ run_sampled_plot_bucking <- function(
   # one price per ProductKey (first row wins if duplicates exist)
   pm_fl_join <- pm_fl_raw[!duplicated(pm_fl_raw$ProductKey), , drop = FALSE]
 
-  # ---- 7. Build tree_data for taper helpers ----------------------------------
-  # Rename plot_id_github -> plot_id so helpers receive the expected column name.
+  # ---- 7. Build tree_data metadata lookup -----------------------------------
+  # plot_area_m2 for later plot_summary.
+  plot_area_lookup <- unique(
+    trees_valid[, c("plot_id_github", "plot_area_m2"), drop = FALSE])
+
+  # tree_data: needed for metadata lookups inside the per-tree loop.
+  # Rename plot_id_github -> plot_id for helper compatibility.
   tree_data <- trees_valid[, c("plot_id_github", "treid", "sesong",
                                 "species_group", "dbh_cm", "height_m"),
                            drop = FALSE]
   names(tree_data)[names(tree_data) == "plot_id_github"] <- "plot_id"
 
-  # Also keep plot_area_m2 for later plot_summary (keyed by original order).
-  plot_area_lookup <- unique(
-    trees_valid[, c("plot_id_github", "plot_area_m2"), drop = FALSE])
+  # ---- 8. Load precomputed taper profiles from partitioned cache -------------
+  taper_cache_dir <- file.path(root, "outputs", "app_cache",
+                                "taper_profiles_by_plot_block_github")
 
-  # ---- 8. Generate taper profiles --------------------------------------------
-  profiles    <- generate_taper_profiles_for_trees(tree_data, quiet = TRUE)
-  profile_ok  <- attr(profiles, "profile_ok")  %||% rep(TRUE, nrow(tree_data))
-  profile_err <- attr(profiles, "profile_errors") %||% rep("", nrow(tree_data))
+  if (!dir.exists(taper_cache_dir))
+    stop("Partitioned taper profile cache not found:\n  ", taper_cache_dir,
+         "\nRun this script first:\n  ",
+         "Rscript scripts/app_backend/00_precompute_taper_profiles_github.R")
 
-  n_profile_fail <- sum(!profile_ok)
+  # Safety check on schema before reading.
+  cache_ds      <- arrow::open_dataset(taper_cache_dir)
+  cache_schema  <- names(cache_ds)
+  if ("plot_id" %in% cache_schema)
+    stop("SAFETY: cached taper profiles contain 'plot_id'. ",
+         "Regenerate the cache with 00_precompute_taper_profiles_github.R")
+  if (!"plot_id_github" %in% cache_schema)
+    stop("SAFETY: cached taper profiles missing 'plot_id_github'. ",
+         "Regenerate the cache with 00_precompute_taper_profiles_github.R")
+  if (!"plot_block" %in% cache_schema)
+    stop("SAFETY: cached taper profiles missing 'plot_block' partition column. ",
+         "Regenerate the cache with 00_precompute_taper_profiles_github.R")
 
-  profile_failures <- if (n_profile_fail > 0L) {
-    fd <- tree_data[!profile_ok, c("plot_id", "treid", "species_group",
-                                   "dbh_cm", "height_m"), drop = FALSE]
-    fd$error_message <- profile_err[!profile_ok]
-    .rename_to_github(fd)
-  } else {
-    data.frame(plot_id_github = character(0), treid = character(0),
-               species_group = character(0), dbh_cm = numeric(0),
-               height_m = numeric(0), error_message = character(0),
-               stringsAsFactors = FALSE)
-  }
+  # Compute the plot_block values that cover the sampled plots.
+  # Mirrors the formula used in 00_precompute: B = floor((numeric_id-1)/500).
+  sampled_treids <- as.character(trees_valid$treid)
+  numeric_ids    <- as.integer(substr(sampled_plots, 2L, nchar(sampled_plots)))
+  needed_blocks  <- unique(sprintf("B%03d", floor((numeric_ids - 1L) / 500L)))
 
-  pvs              <- profiles_to_profile_vectors(profiles)
+  # Read only the needed blocks, then filter to sampled plots and valid trees.
+  profiles_raw <- as.data.frame(
+    cache_ds |>
+      dplyr::filter(plot_block %in% needed_blocks,
+                    plot_id_github %in% sampled_plots) |>
+      dplyr::select(-plot_block) |>
+      dplyr::collect())
+
+  # Keep only profiles for valid (filtered) trees to exclude other species/strata
+  # that share the same plots.
+  profiles_raw <- profiles_raw[
+    profiles_raw$treid %in% sampled_treids, , drop = FALSE]
+
+  n_profiles_loaded <- nrow(profiles_raw)
+
+  # Verify: every valid tree must have a precomputed profile.
+  profiles_treids      <- as.character(unique(profiles_raw$treid))
+  missing_treids       <- setdiff(sampled_treids, profiles_treids)
+  n_trees_with_profile <- length(intersect(sampled_treids, profiles_treids))
+  n_trees_missing      <- length(missing_treids)
+
+  if (n_trees_missing > 0L)
+    stop("Precomputed taper profiles missing for ", n_trees_missing,
+         " sampled valid tree(s). ",
+         "Regenerate the full cache:\n  ",
+         "Rscript scripts/app_backend/00_precompute_taper_profiles_github.R")
+
+  # Rename plot_id_github -> plot_id for profiles_to_profile_vectors().
+  profiles_for_helpers <- profiles_raw
+  names(profiles_for_helpers)[
+    names(profiles_for_helpers) == "plot_id_github"] <- "plot_id"
+
+  pvs              <- profiles_to_profile_vectors(profiles_for_helpers)
   tree_ids_valid   <- names(pvs)
   n_trees_in_optim <- length(tree_ids_valid)
+
+  # profile_failures is empty (we do not run taperNOR; missing = hard error above).
+  profile_failures <- data.frame(
+    plot_id_github = character(0), treid = character(0),
+    species_group = character(0), dbh_cm = numeric(0),
+    height_m = numeric(0), error_message = character(0),
+    stringsAsFactors = FALSE)
 
   # Fast tree-metadata lookup by treid.
   td_list <- setNames(
@@ -572,18 +620,22 @@ run_sampled_plot_bucking <- function(
   elapsed_secs <- as.numeric((proc.time() - t_start)["elapsed"])
 
   diagnostics <- list(
-    n_eligible_plots               = n_eligible_plots,
-    n_requested_plots              = n_plots_req,
-    n_plots_sampled                = n_plots_sampled,
-    n_trees_before_filter          = n_trees_before_filter,
-    n_trees_after_filter           = n_trees_after_filter,
-    n_trees_dropped_low_dbh_or_height = n_trees_dropped,
-    n_profile_failures             = n_profile_fail,
-    n_trees_entering_optimizer     = n_trees_in_optim,
-    n_zero_log_trees               = n_zero_log,
-    n_unpriced_candidates          = n_unpriced_total,
-    price_review_items             = price_review_items,
-    elapsed_seconds                = elapsed_secs
+    n_eligible_plots                        = n_eligible_plots,
+    n_requested_plots                       = n_plots_req,
+    n_plots_sampled                         = n_plots_sampled,
+    n_trees_before_filter                   = n_trees_before_filter,
+    n_trees_after_filter                    = n_trees_after_filter,
+    n_trees_dropped_low_dbh_or_height       = n_trees_dropped,
+    taper_source                            = "precomputed",
+    taper_profile_file                      = basename(taper_cache_dir),
+    n_profiles_loaded                       = n_profiles_loaded,
+    n_trees_with_precomputed_profiles       = n_trees_with_profile,
+    n_valid_trees_missing_precomputed_profiles = n_trees_missing,
+    n_trees_entering_optimizer              = n_trees_in_optim,
+    n_zero_log_trees                        = n_zero_log,
+    n_unpriced_candidates                   = n_unpriced_total,
+    price_review_items                      = price_review_items,
+    elapsed_seconds                         = elapsed_secs
   )
 
   # ---- 17. Final safety assertions -------------------------------------------
