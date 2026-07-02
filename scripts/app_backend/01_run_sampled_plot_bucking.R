@@ -105,6 +105,9 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
              n_candidates = integer(0), stringsAsFactors = FALSE)
 }
 
+# Lightweight proc.time helper: elapsed seconds since t0.
+.pt <- function(t0) as.numeric((proc.time() - t0)["elapsed"])
+
 # ==============================================================================
 # Main exported function
 # ==============================================================================
@@ -147,6 +150,7 @@ run_sampled_plot_bucking <- function(
   step_cm  <- as.integer(params$start_pos_step_cm %||% 10L)
 
   # ---- 2. Load sanitized data ------------------------------------------------
+  t0_load_data <- proc.time()
   gh_dir <- file.path(root, "data_processed_github")
   if (!dir.exists(gh_dir))
     stop("data_processed_github/ not found at: ", gh_dir)
@@ -155,8 +159,10 @@ run_sampled_plot_bucking <- function(
     file.path(gh_dir, "nfi_tree_plot_stratum_ready_github.parquet"))
   plots_all <- arrow::read_parquet(
     file.path(gh_dir, "nfi_plots_github.parquet"))
+  t_load_data <- .pt(t0_load_data)
 
   # ---- 3. Filter to requested stratum ----------------------------------------
+  t0_filter_sample <- proc.time()
   sg_filter <- if (sg == "both") c("spruce", "pine") else sg
 
   trees_filt <- trees_all[
@@ -191,8 +197,10 @@ run_sampled_plot_bucking <- function(
   sampled_plots   <- sort(sample(eligible_plots, n_plots_sampled, replace = FALSE))
   trees_sampled   <- trees_filt[
     trees_filt$plot_id_github %in% sampled_plots, , drop = FALSE]
+  t_filter_sample <- .pt(t0_filter_sample)
 
   # ---- 5. Compute height_m and apply taperNOR validity filter ----------------
+  t0_tree_filter <- proc.time()
   # Use beregnet_hoyde (dm) / 10 -- identical to script 11 convention.
   # No tilstand filter -- matches script 11 exactly.
   if ("beregnet_hoyde" %in% names(trees_sampled)) {
@@ -216,8 +224,10 @@ run_sampled_plot_bucking <- function(
   if (n_trees_after_filter == 0L)
     stop("All trees were filtered out (DBH < ", BACKEND_MIN_DBH_CM, " cm or ",
          "height < ", BACKEND_MIN_HEIGHT_M, " m). Check your stratum selection.")
+  t_tree_filter <- .pt(t0_tree_filter)
 
   # ---- 6. Load products and price matrix -------------------------------------
+  t0_products_prices <- proc.time()
   pd <- load_products(root)
   lc <- load_length_classes(root)
 
@@ -253,6 +263,19 @@ run_sampled_plot_bucking <- function(
                    drop = FALSE]
   # one price per ProductKey (first row wins if duplicates exist)
   pm_fl_join <- pm_fl_raw[!duplicated(pm_fl_raw$ProductKey), , drop = FALSE]
+  t_products_prices <- .pt(t0_products_prices)
+
+  # Build precomputed price lookup vectors (built once; replaces per-tree merge()).
+  # Sawlog: key = "ProductKey|LengthClass_dm|PriceDiameterClass_cm"
+  # The candidate's PriceDiameterClass_cm_used maps to PriceDiameterClass_cm in pm.
+  pm_saw_lookup <- setNames(
+    as.numeric(pm_mat_join$PriceNOKperM3),
+    paste(pm_mat_join$ProductKey, pm_mat_join$LengthClass_dm,
+          pm_mat_join$PriceDiameterClass_cm, sep = "|"))
+  # Flat: key = ProductKey
+  pm_flat_lookup <- setNames(
+    as.numeric(pm_fl_join$PriceNOKperM3),
+    as.character(pm_fl_join$ProductKey))
 
   # ---- 7. Build tree_data metadata lookup -----------------------------------
   # plot_area_m2 for later plot_summary.
@@ -267,6 +290,7 @@ run_sampled_plot_bucking <- function(
   names(tree_data)[names(tree_data) == "plot_id_github"] <- "plot_id"
 
   # ---- 8. Load precomputed taper profiles from partitioned cache -------------
+  t0_taper_profiles <- proc.time()
   taper_cache_dir <- file.path(root, "outputs", "app_cache",
                                 "taper_profiles_by_plot_block_github")
 
@@ -320,13 +344,16 @@ run_sampled_plot_bucking <- function(
          " sampled valid tree(s). ",
          "Regenerate the full cache:\n  ",
          "Rscript scripts/app_backend/00_precompute_taper_profiles_github.R")
+  t_taper_profiles <- .pt(t0_taper_profiles)
 
   # Rename plot_id_github -> plot_id for profiles_to_profile_vectors().
   profiles_for_helpers <- profiles_raw
   names(profiles_for_helpers)[
     names(profiles_for_helpers) == "plot_id_github"] <- "plot_id"
 
+  t0_profile_convert <- proc.time()
   pvs              <- profiles_to_profile_vectors(profiles_for_helpers)
+  t_profile_convert <- .pt(t0_profile_convert)
   tree_ids_valid   <- names(pvs)
   n_trees_in_optim <- length(tree_ids_valid)
 
@@ -347,6 +374,10 @@ run_sampled_plot_bucking <- function(
   all_tree_rows <- vector("list", n_trees_in_optim)
   all_unpriced  <- vector("list", n_trees_in_optim)
   n_unpriced_total <- 0L
+  # Per-stage accumulators (seconds, summed across all trees).
+  acc_cand_gen   <- 0
+  acc_price_join <- 0
+  acc_dp_optim   <- 0
 
   for (i in seq_len(n_trees_in_optim)) {
 
@@ -374,6 +405,7 @@ run_sampled_plot_bucking <- function(
     }
 
     # Generate all candidate log combinations.
+    t0_cand <- proc.time()
     cands_raw <- tryCatch(
       generate_candidate_logs_one_tree(pv, pd, lc, stump_cm, step_cm),
       error = function(e) {
@@ -382,6 +414,7 @@ run_sampled_plot_bucking <- function(
         NULL
       }
     )
+    acc_cand_gen <- acc_cand_gen + .pt(t0_cand)
 
     if (is.null(cands_raw) || nrow(cands_raw) == 0L) {
       all_tree_rows[[i]] <- make_tree_row(
@@ -400,34 +433,25 @@ run_sampled_plot_bucking <- function(
     }
 
     # Add PriceDiameterClass_cm_uncapped and PriceDiameterClass_cm_used.
+    t0_join <- proc.time()
     elig <- prepare_price_join_keys(elig, BACKEND_MAX_PRICE_DIAMETER_CLASS_CM)
 
-    # Split by product type for the price join.
-    is_saw  <- grepl("sawlog", elig$ProductKey, ignore.case = TRUE)
-    saw_c   <- elig[ is_saw, , drop = FALSE]
-    flat_c  <- elig[!is_saw, , drop = FALSE]
-
-    # Sawlog price join: ProductKey + LengthClass_dm + PriceDiameterClass_cm_used
-    # matches pm_mat_join's ProductKey + LengthClass_dm + PriceDiameterClass_cm.
-    if (nrow(saw_c) > 0L) {
-      saw_c <- merge(
-        saw_c, pm_mat_join,
-        by.x = c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm_used"),
-        by.y = c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm"),
-        all.x = TRUE)
-    } else {
-      saw_c$PriceNOKperM3 <- numeric(0)
+    # Look up prices using precomputed named-vector lookups.
+    # This replaces per-tree merge() calls with O(n) vectorised hash lookup.
+    is_saw <- grepl("sawlog", elig$ProductKey, ignore.case = TRUE)
+    elig$PriceNOKperM3 <- NA_real_
+    if (any(is_saw)) {
+      saw_keys <- paste(elig$ProductKey[is_saw],
+                        elig$LengthClass_dm[is_saw],
+                        elig$PriceDiameterClass_cm_used[is_saw], sep = "|")
+      elig$PriceNOKperM3[is_saw] <- pm_saw_lookup[saw_keys]
     }
-
-    # Flat price join: ProductKey only.
-    if (nrow(flat_c) > 0L) {
-      flat_c <- merge(flat_c, pm_fl_join, by = "ProductKey", all.x = TRUE)
-    } else {
-      flat_c$PriceNOKperM3 <- numeric(0)
+    if (any(!is_saw)) {
+      elig$PriceNOKperM3[!is_saw] <- pm_flat_lookup[elig$ProductKey[!is_saw]]
     }
-
-    priced           <- rbind(saw_c, flat_c)
+    priced           <- elig
     priced$value_nok <- priced$price_volume_m3 * priced$PriceNOKperM3
+    acc_price_join <- acc_price_join + .pt(t0_join)
 
     # Track unpriced candidates compactly (ProductKey x LengthClass_dm counts).
     unpriced_rows <- priced[is.na(priced$PriceNOKperM3), , drop = FALSE]
@@ -453,6 +477,7 @@ run_sampled_plot_bucking <- function(
       next
     }
 
+    t0_dp <- proc.time()
     res <- tryCatch(
       optimize_one_tree_dp(dp_in),
       error = function(e) {
@@ -462,6 +487,7 @@ run_sampled_plot_bucking <- function(
              optimizer_message = conditionMessage(e))
       }
     )
+    acc_dp_optim <- acc_dp_optim + .pt(t0_dp)
 
     sel_vol <- if (res$n_selected > 0L)
       sum(res$selected_logs$price_volume_m3, na.rm = TRUE) else 0
@@ -488,6 +514,7 @@ run_sampled_plot_bucking <- function(
   }   # end per-tree loop
 
   # ---- 10. Assemble tree_summary ---------------------------------------------
+  t0_summary <- proc.time()
   tree_summary_raw <- do.call(
     rbind, Filter(Negate(is.null), all_tree_rows)) %||% .empty_tree_summary()
 
@@ -617,25 +644,40 @@ run_sampled_plot_bucking <- function(
   n_zero_log <- if (nrow(tree_summary) > 0L)
     sum(tree_summary$n_logs_selected == 0L) else 0L
 
-  elapsed_secs <- as.numeric((proc.time() - t_start)["elapsed"])
+  t_summary      <- .pt(t0_summary)
+  elapsed_secs   <- as.numeric((proc.time() - t_start)["elapsed"])
+
+  # Assemble stage timings data.frame.
+  stage_names <- c("load_data", "filter_stratum_and_sample_plots",
+                   "tree_filtering", "load_products_and_prices",
+                   "load_precomputed_taper_profiles", "profile_vector_conversion",
+                   "candidate_generation", "price_joining", "dp_optimization",
+                   "summary_assembly", "total")
+  stage_secs  <- round(c(t_load_data, t_filter_sample, t_tree_filter,
+                          t_products_prices, t_taper_profiles, t_profile_convert,
+                          acc_cand_gen, acc_price_join, acc_dp_optim,
+                          t_summary, elapsed_secs), 3)
+  stage_timings <- data.frame(stage = stage_names, elapsed_seconds = stage_secs,
+                               stringsAsFactors = FALSE)
 
   diagnostics <- list(
-    n_eligible_plots                        = n_eligible_plots,
-    n_requested_plots                       = n_plots_req,
-    n_plots_sampled                         = n_plots_sampled,
-    n_trees_before_filter                   = n_trees_before_filter,
-    n_trees_after_filter                    = n_trees_after_filter,
-    n_trees_dropped_low_dbh_or_height       = n_trees_dropped,
-    taper_source                            = "precomputed",
-    taper_profile_file                      = basename(taper_cache_dir),
-    n_profiles_loaded                       = n_profiles_loaded,
-    n_trees_with_precomputed_profiles       = n_trees_with_profile,
+    n_eligible_plots                           = n_eligible_plots,
+    n_requested_plots                          = n_plots_req,
+    n_plots_sampled                            = n_plots_sampled,
+    n_trees_before_filter                      = n_trees_before_filter,
+    n_trees_after_filter                       = n_trees_after_filter,
+    n_trees_dropped_low_dbh_or_height          = n_trees_dropped,
+    taper_source                               = "precomputed",
+    taper_profile_file                         = basename(taper_cache_dir),
+    n_profiles_loaded                          = n_profiles_loaded,
+    n_trees_with_precomputed_profiles          = n_trees_with_profile,
     n_valid_trees_missing_precomputed_profiles = n_trees_missing,
-    n_trees_entering_optimizer              = n_trees_in_optim,
-    n_zero_log_trees                        = n_zero_log,
-    n_unpriced_candidates                   = n_unpriced_total,
-    price_review_items                      = price_review_items,
-    elapsed_seconds                         = elapsed_secs
+    n_trees_entering_optimizer                 = n_trees_in_optim,
+    n_zero_log_trees                           = n_zero_log,
+    n_unpriced_candidates                      = n_unpriced_total,
+    price_review_items                         = price_review_items,
+    elapsed_seconds                            = elapsed_secs,
+    stage_timings                              = stage_timings
   )
 
   # ---- 17. Final safety assertions -------------------------------------------
