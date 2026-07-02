@@ -63,6 +63,7 @@ inspect_strata_tmp.R
 verify_app_tmp.R
 cache_run_out.txt
 cache_run_err.txt
+verify_hkl_tmp.R
 
 # ── General temporary / build artefacts ───────────────────────────────────────
 *.tmp
