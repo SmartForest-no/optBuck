@@ -30,8 +30,17 @@ APP_PRODUCTS   <- load_products(ROOT)
 APP_LC         <- load_length_classes(ROOT)
 APP_PRICE_LONG <- load_price_matrix_long(ROOT)
 
-ALL_HOGSTKL  <- as.character(sort(unique(plots_all$hogstkl)))
-ALL_ABONITET <- as.character(sort(unique(plots_all$abonitet)))
+# ---- HKL group mapping (user-facing -> raw hogstkl codes) -----------------
+HKL_CHOICES <- c(
+  "HKL 3 - younger production forest" = "3",
+  "HKL 4 - older production forest"   = "4",
+  "HKL 5 - mature / old-growth forest" = "5"
+)
+HKL_MAP <- list("3" = c(31L, 32L), "4" = c(41L, 42L), "5" = c(51L, 52L))
+BONITET_LABELS <- c("6"="6 (very low)","8"="8","11"="11","14"="14",
+                    "17"="17","20"="20","23"="23","26"="26")
+# Productive-forest plots only (raw HKL 3-5, codes 31-52)
+plots_prod <- plots_all[plots_all$hogstkl %in% unlist(HKL_MAP), , drop = FALSE]
 
 ESTIMATE_LABEL <- "Sampled-plot estimate. Not ha-expanded. No NFI factors applied."
 
