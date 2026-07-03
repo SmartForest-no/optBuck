@@ -692,7 +692,6 @@ server <- function(input, output, session) {
       return(data.frame(Message = "No selected logs.", stringsAsFactors = FALSE))
     head(sl, 100L)
   }, striped = TRUE, hover = TRUE, digits = 3)
-}
 
   # ---- Prices and assortments tab ------------------------------------------
   output$tbl_ref_products <- renderTable({
@@ -727,6 +726,8 @@ server <- function(input, output, session) {
                       names(pm))
     head(pm[, keep, drop = FALSE], 200L)
   }, striped = TRUE, hover = TRUE, digits = 2)
+
+}  # end server
 
 # ---- launch -----------------------------------------------------------------
 shinyApp(ui, server)
