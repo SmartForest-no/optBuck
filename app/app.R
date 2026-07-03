@@ -42,6 +42,34 @@ BONITET_LABELS <- c("6"="6 (very low)","8"="8","11"="11","14"="14",
 # Productive-forest plots only (raw HKL 3-5, codes 31-52)
 plots_prod <- plots_all[plots_all$hogstkl %in% unlist(HKL_MAP), , drop = FALSE]
 
+# ---- County label mapping (current 2024 codes + historical fallback) --------
+.FYLNR_NAMES <- c(
+  "03"="Oslo", "11"="Rogaland", "15"="M\u00f8re og Romsdal",
+  "18"="Nordland", "31"="\u00d8stfold", "32"="Akershus",
+  "33"="Buskerud", "34"="Innlandet", "39"="Vestfold",
+  "40"="Telemark", "42"="Agder", "46"="Vestland",
+  "50"="Tr\u00f8ndelag", "55"="Troms", "56"="Finnmark",
+  # Historical codes (kept for robustness)
+  "01"="\u00d8stfold (old)", "02"="Akershus (old)",
+  "04"="Hedmark (old)", "05"="Oppland (old)",
+  "06"="Buskerud (old)", "07"="Vestfold (old)",
+  "08"="Telemark (old)", "09"="Aust-Agder (old)",
+  "10"="Vest-Agder (old)", "12"="Hordaland (old)",
+  "14"="Sogn og Fjordane (old)", "16"="S\u00f8r-Tr\u00f8ndelag (old)",
+  "17"="Nord-Tr\u00f8ndelag (old)", "19"="Troms (old)", "20"="Finnmark (old)"
+)
+# Build county choices from codes actually in the data
+.DATA_FYLNR <- sort(unique(as.character(plots_prod$fylnr)))
+.fylnr_lbl <- function(code) {
+  nm <- .FYLNR_NAMES[code]
+  if (is.na(nm)) sprintf("%s - unknown county", code)
+  else sprintf("%s - %s", code, nm)
+}
+FYLNR_CHOICES <- c(
+  "All counties" = "__all__",
+  setNames(.DATA_FYLNR, vapply(.DATA_FYLNR, .fylnr_lbl, character(1)))
+)
+
 ESTIMATE_LABEL <- "Sampled-plot estimate. Not ha-expanded. No NFI factors applied."
 
 # ---- shared CSS -------------------------------------------------------------
@@ -108,6 +136,10 @@ ui <- fluidPage(
 
       uiOutput("abonitet_ui"),
 
+      selectInput("fylnr_sel", "County",
+                  choices  = FYLNR_CHOICES,
+                  selected = "__all__"),
+
       selectInput("n_plots", "Plots to sample",
                   choices = c("5", "10", "25", "50"), selected = "10"),
 
@@ -142,7 +174,11 @@ ui <- fluidPage(
           uiOutput("stratum_preview"),
           br(),
           div(style = "color:#888; font-size:0.9em;",
-              "HKL 1\u20132 (young/establishment) are excluded from this prototype."))
+              "HKL 1\u20132 (young/establishment) are excluded from this prototype."),
+          br(),
+          div(style = "color:#888; font-size:0.85em;",
+              "County filtering uses fylnr from the sanitized NFI-derived data.",
+              " Codes use current and historical names where possible."))
     ),
 
     mainPanel(
@@ -261,23 +297,48 @@ ui <- fluidPage(
 # ---- server -----------------------------------------------------------------
 server <- function(input, output, session) {
 
+  # Dynamic bonitet selector — filtered to available values for selected HKL group and county
+  output$abonitet_ui <- renderUI({
+    hkl_raw    <- unlist(HKL_MAP[input$hkl_group])
+    fyl        <- if (!is.null(input$fylnr_sel) && input$fylnr_sel != "__all__")
+                    input$fylnr_sel else NULL
+    sub <- plots_prod[plots_prod$hogstkl %in% hkl_raw, , drop = FALSE]
+    if (!is.null(fyl)) sub <- sub[sub$fylnr %in% fyl, , drop = FALSE]
+    abon_avail <- as.character(sort(unique(as.integer(sub$abonitet))))
+    if (length(abon_avail) == 0L)
+      abon_avail <- as.character(sort(unique(as.integer(plots_prod$abonitet))))
+    lbl <- BONITET_LABELS[abon_avail]
+    lbl[is.na(lbl)] <- abon_avail[is.na(lbl)]
+    choices_named <- setNames(abon_avail, lbl)
+    pref <- intersect(c("14", "11", "17"), abon_avail)
+    sel  <- if (length(pref) > 0L) pref else abon_avail[1L]
+    checkboxGroupInput("abonitet", "Site class (bonitet)",
+                       choiceNames  = unname(choices_named),
+                       choiceValues = abon_avail,
+                       selected     = sel)
+  })
+
   # Stratum availability preview
   output$stratum_preview <- renderUI({
-    hkl  <- as.integer(input$hogstkl)
-    abon <- as.integer(input$abonitet)
-    if (length(hkl) == 0L || length(abon) == 0L)
+    hkl_raw <- unlist(HKL_MAP[input$hkl_group])
+    abon    <- as.integer(input$abonitet)
+    fyl     <- if (!is.null(input$fylnr_sel) && input$fylnr_sel != "__all__")
+                 input$fylnr_sel else NULL
+    if (length(hkl_raw) == 0L || length(abon) == 0L)
       return(div(style = "color:#cc0000;",
-                 "Select at least one hogstkl and one abonitet."))
-    n_elig <- nrow(plots_all[
-      plots_all$hogstkl %in% hkl & plots_all$abonitet %in% abon, ])
+                 "Select at least one maturity class and one bonitet."))
+    sub <- plots_prod[
+      plots_prod$hogstkl  %in% hkl_raw &
+      plots_prod$abonitet %in% abon, ]
+    if (!is.null(fyl)) sub <- sub[sub$fylnr %in% fyl, , drop = FALSE]
+    n_elig <- nrow(sub)
     div(
       sprintf("%d eligible plot(s) available.", n_elig), br(),
       if (n_elig == 0L)
-        span(style = "color:#cc0000;", "No matching plots ??? adjust selection.")
+        span(style = "color:#cc0000;", "No matching plots \u2014 adjust selection.")
       else if (n_elig < as.integer(input$n_plots))
         span(style = "color:#e07000;",
-             sprintf("Fewer than %s plots exist; all will be used.",
-                     input$n_plots))
+             sprintf("Fewer than %s plots exist; all will be used.", input$n_plots))
       else
         span(style = "color:#28a745;", "Stratum OK.")
     )
@@ -309,6 +370,8 @@ server <- function(input, output, session) {
       species_group = input$species_group,
       hogstkl       = raw_hogstkl,
       abonitet      = as.integer(input$abonitet),
+      fylnr         = if (!is.null(input$fylnr_sel) && input$fylnr_sel != "__all__")
+                        input$fylnr_sel else NULL,
       n_plots       = as.integer(input$n_plots),
       seed          = as.integer(input$seed)
     )
@@ -358,6 +421,9 @@ server <- function(input, output, session) {
       species_group = isolate(input$species_group),
       hogstkl       = unlist(HKL_MAP[isolate(input$hkl_group)]),
       abonitet      = as.integer(isolate(input$abonitet)),
+      fylnr         = if (!is.null(isolate(input$fylnr_sel)) &&
+                          isolate(input$fylnr_sel) != "__all__")
+                        isolate(input$fylnr_sel) else NULL,
       n_plots       = as.integer(isolate(input$n_plots)),
       seed          = as.integer(isolate(input$seed))
     )
