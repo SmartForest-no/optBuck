@@ -105,6 +105,24 @@ ui <- fluidPage(
       numericInput("seed", "Random seed", value = 42L, min = 1L, step = 1L),
 
       hr(),
+      checkboxInput("compare_on", "Run scenario comparison", value = FALSE),
+      conditionalPanel("input.compare_on == true",
+        selectInput("s2_mode", "Scenario 2 prices",
+                    choices = c("Same as Scenario 1" = "same",
+                                "Apply multipliers"   = "multiplier",
+                                "Upload matrix (CSV/RDS)" = "upload"),
+                    selected = "same"),
+        conditionalPanel("input.s2_mode == 'multiplier'",
+          numericInput("mult_saw",  "Sawlog multiplier",   1.00, 0, 5, step = 0.05),
+          numericInput("mult_pulp", "Pulpwood multiplier", 1.00, 0, 5, step = 0.05),
+          numericInput("mult_wst",  "Waste multiplier",    1.00, 0, 5, step = 0.05)
+        ),
+        conditionalPanel("input.s2_mode == 'upload'",
+          fileInput("s2_file", "Upload price matrix", accept = c(".csv", ".rds"))
+        )
+      ),
+
+      hr(),
 
       actionButton("run_btn", "Run optimizer",
                    class = "btn-primary", width = "100%"),
@@ -187,37 +205,6 @@ ui <- fluidPage(
           div(class = "stat-strip",
               "Note: sawlog length 31 dm is defined here but absent from the",
               " default 2021 price matrix (matrix starts at 34 dm).",
-              " 31 dm sawlog candidates are generated but remain unpriced."),
-          tableOutput("tbl_ref_lc"),
-          br(),
-          div(class = "section-hdr", "Default 2021 price matrix"),
-          uiOutput("price_matrix_header"),
-          tableOutput("tbl_ref_price"),
-          br(),
-          div(class = "section-hdr", "Notes and limitations"),
-          tags$ul(
-            tags$li("The current app uses the default 2021 price matrix."),
-            tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
-            tags$li("The known 31 dm sawlog price gap is treated as a data gap, not as zero price."),
-            tags$li("Diameter classes above 50 cm are capped to 50 cm for price lookup only; physical diameters are preserved."),
-            tags$li("Volumes and diameters use taperNOR over-bark values. No bark correction is applied."),
-            tags$li("Estimates are sampled-plot only. No NFI expansion factors or plot weights are applied.")
-          )
-        ),
-
-        tabPanel("Prices and assortments",
-          br(),
-          div(class = "section-hdr", "Product definitions"),
-          div(class = "stat-strip",
-              "These are the product specifications used by the optimizer.",
-              " DiameterUnderBark = FALSE: all diameters are over-bark",
-              " (taperNOR, with_bark = TRUE)."),
-          tableOutput("tbl_ref_products"),
-          br(),
-          div(class = "section-hdr", "Length and diameter classes"),
-          div(class = "stat-strip",
-              "Note: sawlog length 31 dm is defined here but absent from the",
-              " default 2021 price matrix (matrix starts at 34 dm).",
               " 31 dm sawlog candidates are generated but remain unpriced and",
               " cannot be selected by the optimizer."),
           uiOutput("lc_filter_note"),
@@ -236,12 +223,32 @@ ui <- fluidPage(
             tags$li("Volumes and diameters use taperNOR over-bark values. No bark correction is applied."),
             tags$li("Estimates are sampled-plot only. No NFI expansion factors or plot weights are applied.")
           )
+        ),
+        tabPanel("Scenario comparison",
+          br(),
+          uiOutput("cmp_status"),
+          br(),
+          div(class = "section-hdr", "High-level comparison"),
+          tableOutput("tbl_cmp_overview"),
+          br(),
+          div(class = "section-hdr", "Difference summary"),
+          tableOutput("tbl_cmp_delta"),
+          br(),
+          div(class = "section-hdr", "Product-level comparison"),
+          tableOutput("tbl_cmp_products"),
+          br(),
+          fluidRow(
+            column(6, plotOutput("bar_cmp_value", height = "240px")),
+            column(6, plotOutput("bar_cmp_delta", height = "240px"))
+          ),
+          br(),
+          div(class = "section-hdr", "Comparison diagnostics"),
+          tableOutput("tbl_cmp_diag")
         )
       )
     )
   )
 )
-
 # ---- server -----------------------------------------------------------------
 server <- function(input, output, session) {
 
@@ -321,6 +328,190 @@ server <- function(input, output, session) {
       r
     })
   })
+
+
+  # ---- Comparison: helper, S2 reactive, renders ----------------------------
+
+  .make_s2_pm <- function(base_pm, mult_saw, mult_pulp, mult_wst) {
+    pm2 <- base_pm
+    pk  <- pm2$ProductKey
+    pm2$PriceNOKperM3 <- ifelse(
+      grepl("sawlog",  pk, ignore.case = TRUE), pm2$PriceNOKperM3 * mult_saw,
+      ifelse(grepl("pulp",  pk, ignore.case = TRUE), pm2$PriceNOKperM3 * mult_pulp,
+      ifelse(grepl("waste", pk, ignore.case = TRUE), pm2$PriceNOKperM3 * mult_wst,
+             pm2$PriceNOKperM3)))
+    pm2
+  }
+
+  result_s2 <- reactive({
+    req(isTRUE(input$compare_on), !is.null(result()))
+    params <- list(
+      species_group = isolate(input$species_group),
+      hogstkl       = unlist(HKL_MAP[isolate(input$hkl_group)]),
+      abonitet      = as.integer(isolate(input$abonitet)),
+      n_plots       = as.integer(isolate(input$n_plots)),
+      seed          = as.integer(isolate(input$seed))
+    )
+    s2_mode <- isolate(input$s2_mode)
+    s2_pm <- switch(s2_mode,
+      "same"       = "default_2021",
+      "multiplier" = {
+        pm2 <- .make_s2_pm(APP_PRICE_LONG,
+                            as.numeric(isolate(input$mult_saw)),
+                            as.numeric(isolate(input$mult_pulp)),
+                            as.numeric(isolate(input$mult_wst)))
+        tmp <- tempfile(fileext = ".csv")
+        readr::write_csv(pm2, tmp)
+        on.exit(tryCatch(file.remove(tmp), error = function(e) NULL), add = TRUE)
+        tmp
+      },
+      "upload" = {
+        req(!is.null(isolate(input$s2_file)))
+        isolate(input$s2_file)$datapath
+      },
+      "default_2021"
+    )
+    withProgress(message = "Running Scenario 2...", value = 0.5, {
+      tryCatch(
+        run_sampled_plot_bucking(params = params, price_matrix_path = s2_pm,
+                                 root = ROOT),
+        error = function(e) {
+          showNotification(paste0("Scenario 2 error: ", conditionMessage(e)),
+                           type = "error", duration = NULL)
+          NULL
+        }
+      )
+    })
+  })
+
+  output$cmp_status <- renderUI({
+    if (!isTRUE(input$compare_on))
+      return(div(class = "stat-strip",
+                 "Enable 'Run scenario comparison' in the sidebar and click Run optimizer."))
+    r1 <- result(); r2 <- result_s2()
+    if (is.null(r1)) return(div(class = "status-error", "Scenario 1 failed."))
+    if (is.null(r2)) return(div(class = "status-error", "Scenario 2 failed."))
+    pm <- identical(sort(as.character(r1$plot_summary$plot_id_github)),
+                    sort(as.character(r2$plot_summary$plot_id_github)))
+    div(class = if (pm) "status-done" else "status-error",
+        if (pm) "Comparison complete. Same plots sampled in both scenarios."
+        else "WARNING: sampled plots differ between scenarios.")
+  })
+
+  output$tbl_cmp_overview <- renderTable({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    r1 <- result(); r2 <- result_s2()
+    s2_lbl <- switch(isolate(input$s2_mode),
+      "same" = "default_2021 (same)", "multiplier" = "multipliers applied",
+      "upload" = "uploaded matrix", "default_2021")
+    mk <- function(r, nm, src) {
+      v <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
+      m <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
+      h <- mean(r$plot_summary$value_per_ha_nok, na.rm = TRUE)
+      data.frame(Scenario = nm, Price_source = src,
+                 Plots = r$n_plots_sampled, Trees = r$n_trees_total,
+                 Trees_w_logs = r$n_trees_with_logs,
+                 Value_NOK = round(v, 2), Volume_m3 = round(m, 4),
+                 Mean_val_ha = round(h, 0), Runtime_s = round(r$elapsed_seconds, 1),
+                 stringsAsFactors = FALSE)
+    }
+    rbind(mk(r1, "Scenario 1", "default_2021"), mk(r2, "Scenario 2", s2_lbl))
+  }, striped = TRUE, hover = TRUE)
+
+  output$tbl_cmp_delta <- renderTable({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    r1 <- result(); r2 <- result_s2()
+    req(identical(sort(as.character(r1$plot_summary$plot_id_github)),
+                  sort(as.character(r2$plot_summary$plot_id_github))))
+    v1 <- sum(r1$selected_logs_all$value_nok, na.rm = TRUE)
+    v2 <- sum(r2$selected_logs_all$value_nok, na.rm = TRUE)
+    m1 <- sum(r1$selected_logs_all$price_volume_m3, na.rm = TRUE)
+    m2 <- sum(r2$selected_logs_all$price_volume_m3, na.rm = TRUE)
+    h1 <- mean(r1$plot_summary$value_per_ha_nok, na.rm = TRUE)
+    h2 <- mean(r2$plot_summary$value_per_ha_nok, na.rm = TRUE)
+    pct <- function(a, b) if (abs(b) > 1e-9) round((a - b) / abs(b) * 100, 2) else 0
+    data.frame(
+      Delta_value_NOK      = round(v2 - v1, 2),
+      Delta_value_pct      = pct(v2, v1),
+      Delta_volume_m3      = round(m2 - m1, 4),
+      Delta_volume_pct     = pct(m2, m1),
+      Delta_mean_val_ha    = round(h2 - h1, 0),
+      Delta_mean_val_ha_pct = pct(h2, h1),
+      stringsAsFactors = FALSE
+    )
+  }, striped = TRUE, hover = TRUE)
+
+  output$tbl_cmp_products <- renderTable({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    r1 <- result(); r2 <- result_s2()
+    ps1 <- r1$product_summary[, c("ProductKey", "ProductType",
+                                   "total_value_nok", "total_volume_m3")]
+    ps2 <- r2$product_summary[, c("ProductKey", "total_value_nok", "total_volume_m3")]
+    names(ps2)[2:3] <- c("S2_val", "S2_vol")
+    m <- merge(ps1, ps2, by = "ProductKey", all = TRUE)
+    m[is.na(m)] <- 0
+    pct <- function(a, b) ifelse(abs(b) > 1e-9, round((a - b) / abs(b) * 100, 2), 0)
+    data.frame(
+      ProductKey   = m$ProductKey,
+      ProductType  = m$ProductType,
+      S1_value     = round(m$total_value_nok, 2),
+      S2_value     = round(m$S2_val, 2),
+      Delta_value  = round(m$S2_val - m$total_value_nok, 2),
+      Delta_val_pct = pct(m$S2_val, m$total_value_nok),
+      S1_volume    = round(m$total_volume_m3, 4),
+      S2_volume    = round(m$S2_vol, 4),
+      Delta_volume = round(m$S2_vol - m$total_volume_m3, 4),
+      Delta_vol_pct = pct(m$S2_vol, m$total_volume_m3),
+      stringsAsFactors = FALSE
+    )
+  }, striped = TRUE, hover = TRUE)
+
+  output$bar_cmp_value <- renderPlot({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    ps1 <- result()$product_summary
+    ps2 <- result_s2()$product_summary
+    keys <- union(ps1$ProductKey, ps2$ProductKey)
+    v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
+    v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
+    par(mar = c(5, 5, 3, 1))
+    barplot(rbind(S1 = v1, S2 = v2), beside = TRUE,
+            col = c("#2c7be5", "#e07000"), border = NA,
+            main = "Value by product: S1 vs S2", ylab = "NOK", las = 2, cex.names = 0.8)
+    legend("topright", c("S1", "S2"), fill = c("#2c7be5", "#e07000"), bty = "n")
+  })
+
+  output$bar_cmp_delta <- renderPlot({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    ps1 <- result()$product_summary
+    ps2 <- result_s2()$product_summary
+    keys <- union(ps1$ProductKey, ps2$ProductKey)
+    v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
+    v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
+    delta <- setNames(v2 - v1, keys)
+    par(mar = c(5, 5, 3, 1))
+    barplot(delta, col = ifelse(delta >= 0, "#28a745", "#dc3545"), border = NA,
+            main = "Delta value (S2 - S1) by product", ylab = "NOK",
+            las = 2, cex.names = 0.8)
+    abline(h = 0, col = "#555", lty = 2)
+  })
+
+  output$tbl_cmp_diag <- renderTable({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    r1 <- result(); r2 <- result_s2()
+    pm <- identical(sort(as.character(r1$plot_summary$plot_id_github)),
+                    sort(as.character(r2$plot_summary$plot_id_github)))
+    data.frame(
+      Item  = c("Same sampled plots", "S1 price FAILs", "S2 price FAILs",
+                "S1 unpriced groups", "S2 unpriced groups",
+                "S1 runtime s", "S2 runtime s"),
+      Value = c(as.character(pm),
+                sum(r1$price_validation_checks$result == "FAIL"),
+                sum(r2$price_validation_checks$result == "FAIL"),
+                nrow(r1$unpriced_summary), nrow(r2$unpriced_summary),
+                round(r1$elapsed_seconds, 1), round(r2$elapsed_seconds, 1)),
+      stringsAsFactors = FALSE
+    )
+  }, striped = TRUE, hover = TRUE)
 
   # ---- Tab 1: Summary -------------------------------------------------------
   output$summary_cards <- renderUI({
