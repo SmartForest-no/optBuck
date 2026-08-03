@@ -48,7 +48,9 @@ DEFAULT_PRICE_SCENARIO <- "default_2021"
 
 #' Sawlog length classes supported in the default_2021 price matrix (dm).
 #' Used as a reference for validation checks.
-EXPECTED_SUPPORTED_SAWLOG_DM <- c(34L, 37L, 40L, 43L, 46L, 49L, 52L, 55L)
+#' 31 dm was filled by interpolation (scripts/97_fill_31dm_sawlog_price_gap.R,
+#' 2026-08-03) — rows are marked PriceSource == "Interpolated".
+EXPECTED_SUPPORTED_SAWLOG_DM <- c(31L, 34L, 37L, 40L, 43L, 46L, 49L, 52L, 55L)
 
 
 # ------------------------------------------------------------------------------
@@ -136,9 +138,10 @@ get_supported_sawlog_lengths <- function(pm) {
 #' PriceMatrix_long stores lengths in **decimetres** (LengthClass_dm column).
 #' This function converts LengthClasses to dm before comparing.
 #'
-#' The 31 dm gap is expected: sawlog price matrices start at 34 dm under
-#' default_2021. This function identifies and labels it so callers can
-#' report it as a known issue rather than an error.
+#' The 31 dm gap was resolved by interpolation on 2026-08-03 (see
+#' scripts/97_fill_31dm_sawlog_price_gap.R) — it is kept here as a
+#' defensive check in case a future price scenario reintroduces the gap,
+#' in which case it will again be labelled and reported rather than erroring.
 #'
 #' @param lc data.frame from load_length_classes().
 #' @param pm data.frame from load_price_matrix_long().
@@ -201,7 +204,8 @@ get_unsupported_sawlog_lengths <- function(lc, pm) {
 #' Validation rules (from docs/APP_DESIGN_NOTES.md):
 #'   - Technically eligible and priced  → OK
 #'   - Technically eligible but unpriced → reported, not an error unless whole product missing
-#'   - 31 dm sawlog gap                  → REVIEW (known issue)
+#'   - 31 dm sawlog gap                  → PASS as of 2026-08-03 (filled by interpolation);
+#'                                          would report REVIEW again if ever reintroduced
 #'   - Whole product missing from pm     → FAIL
 #'   - Negative PriceNOKperM3           → FAIL
 #'   - PriceNOKperM3 == 0               → REVIEW (warn; might be intentional)

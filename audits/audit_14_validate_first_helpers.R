@@ -16,8 +16,8 @@
 #  8.  DiameterSource is taperNOR_over_bark for all active products
 #  9.  Supported sawlog lengths for spruce_sawlog match expected 34-55 dm set
 # 10.  Supported sawlog lengths for pine_sawlog match expected 34-55 dm set
-# 11.  Unsupported sawlog lengths include 31 dm for spruce_sawlog
-# 12.  Unsupported sawlog lengths include 31 dm for pine_sawlog
+# 11.  31 dm sawlog length is supported (interpolated) for spruce_sawlog
+# 12.  31 dm sawlog length is supported (interpolated) for pine_sawlog
 # 13.  cap_price_diameter_class() maps values > 50 to 50
 # 14.  cap_price_diameter_class() preserves values <= 50
 # 15.  prepare_price_join_keys() adds _uncapped and _used columns
@@ -29,9 +29,14 @@
 #
 # Verdict :
 #   PASS                   -- all checks pass
-#   ACCEPTED WITH REVIEW   -- only REVIEW item is the known 31 dm gap
+#   ACCEPTED WITH REVIEW   -- only REVIEW item is a zero-priced product (see check 4)
 #   FAIL                   -- any helper function produces wrong results,
 #                             required files missing, or accepted scripts changed
+#
+# Note (2026-08-03): the 31 dm sawlog gap was resolved by interpolation
+# (scripts/97_fill_31dm_sawlog_price_gap.R). Checks 11-12 now assert that
+# 31 dm is supported and flagged PriceSource == "Interpolated", rather than
+# asserting it is unsupported.
 #
 # Outputs :
 #   outputs/helper_validation/audit_14_validate_first_helpers.csv
@@ -221,33 +226,34 @@ if (!is.null(pm)) {
 }
 
 
-# ---- 11-12. Unsupported lengths include 31 dm ----
+# ---- 11-12. 31 dm sawlog length is supported (interpolated) ----
 
-cat("\n--- 11-12. Unsupported sawlog lengths ---\n", file = audit_txt, append = TRUE)
-cat("\n--- 11-12. Unsupported sawlog lengths ---\n")
+cat("\n--- 11-12. 31 dm sawlog length support ---\n", file = audit_txt, append = TRUE)
+cat("\n--- 11-12. 31 dm sawlog length support ---\n")
 
-if (!is.null(lc) && !is.null(pm)) {
-  unsup_all   <- get_unsupported_sawlog_lengths(lc, pm)
-  unsupported <- unsup_all[unsup_all$in_length_classes & !unsup_all$in_price_matrix, ]
-
+if (!is.null(pm)) {
   for (pk in c("spruce_sawlog", "pine_sawlog")) {
-    has_31 <- any(unsupported$ProductKey == pk & unsupported$LogLength_dm == 31L,
-                  na.rm = TRUE)
-    is_known_gap <- any(unsupported$ProductKey == pk &
-                          unsupported$LogLength_dm == 31L &
-                          unsupported$is_known_31dm_gap, na.rm = TRUE)
+    rows_31 <- pm[pm$ProductKey == pk & pm$LengthClass_dm == 31L &
+                    !is.na(pm$PriceNOKperM3), ]
+    is_supported <- nrow(rows_31) > 0L
+    is_interpolated <- is_supported &&
+      all(rows_31$PriceSource == "Interpolated", na.rm = TRUE)
     rec(
-      sprintf("Unsupported lengths for %s include 31 dm", pk),
-      if (has_31) REVIEW else FAIL,
-      if (has_31 && is_known_gap) "31 dm present; flagged as known gap (REVIEW)"
-      else if (has_31) "31 dm present; is_known_31dm_gap flag missing"
-      else "31 dm NOT found in unsupported lengths — unexpected"
+      sprintf("31 dm sawlog length is priced for %s", pk),
+      if (is_supported && is_interpolated) PASS
+      else if (is_supported) REVIEW
+      else FAIL,
+      if (is_supported && is_interpolated)
+        sprintf("%d priced 31dm row(s); all PriceSource == 'Interpolated'", nrow(rows_31))
+      else if (is_supported)
+        sprintf("%d priced 31dm row(s); NOT all flagged PriceSource == 'Interpolated' — check provenance", nrow(rows_31))
+      else "31 dm has no priced rows — gap has returned"
     )
   }
 } else {
   for (pk in c("spruce_sawlog", "pine_sawlog")) {
-    rec(sprintf("Unsupported lengths for %s", pk), FAIL,
-        "LengthClasses or PriceMatrix not loaded")
+    rec(sprintf("31 dm sawlog length is priced for %s", pk), FAIL,
+        "PriceMatrix not loaded")
   }
 }
 

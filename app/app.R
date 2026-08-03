@@ -248,10 +248,11 @@ ui <- fluidPage(
           br(),
           div(class = "section-hdr", "Length and diameter classes"),
           div(class = "stat-strip",
-              "Note: sawlog length 31 dm is defined here but absent from the",
-              " default 2021 price matrix (matrix starts at 34 dm).",
-              " 31 dm sawlog candidates are generated but remain unpriced and",
-              " cannot be selected by the optimizer."),
+              "Note: sawlog length 31 dm is priced by interpolation",
+              " (2×34dm price − 37dm price), not from the original",
+              " PriceMatrixGran/PriceMatrixFuru source spreadsheet.",
+              " See the Notes column below for flagged rows",
+              " (PriceSource = \"Interpolated\")."),
           uiOutput("lc_filter_note"),
           tableOutput("tbl_ref_lc"),
           br(),
@@ -263,7 +264,7 @@ ui <- fluidPage(
           tags$ul(
             tags$li("The current app uses the default 2021 price matrix."),
             tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
-            tags$li("The known 31 dm sawlog price gap is treated as a data gap, not as zero price."),
+            tags$li("31 dm sawlog prices are interpolated (2×34dm − 37dm), flagged PriceSource = \"Interpolated\" in the price table."),
             tags$li("Diameter classes above 50 cm are capped to 50 cm for price lookup only; physical diameters are preserved."),
             tags$li("Volumes and diameters use taperNOR over-bark values. No bark correction is applied."),
             tags$li("Estimates are sampled-plot only. No NFI expansion factors or plot weights are applied.")
@@ -788,7 +789,8 @@ server <- function(input, output, session) {
   output$tbl_ref_price <- renderTable({
     pm <- APP_PRICE_LONG
     keep <- intersect(c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
-                        "PriceNOKperM3", "PriceScenario", "PriceType"),
+                        "PriceNOKperM3", "PriceScenario", "PriceType",
+                        "PriceSource", "Notes"),
                       names(pm))
     head(pm[, keep, drop = FALSE], 200L)
   }, striped = TRUE, hover = TRUE, digits = 2)

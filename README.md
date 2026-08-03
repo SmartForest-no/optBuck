@@ -30,12 +30,13 @@ The prototype covers:
 |-------|--------|
 | Prototype scripts 00–12 | **Accepted** (archived in `scripts/prototype_reference/`) |
 | Core engine helpers | **Regression-tested — PASS** (audit 15: 23/23) |
-| First-helper validation | **ACCEPTED WITH REVIEW** (audit 14: 25 PASS, 3 REVIEW) |
+| First-helper validation | **ACCEPTED WITH REVIEW** (audit 14: 27 PASS, 1 REVIEW) |
 | Sampled-plot Shiny app (v1) | **Built and running** — sampling, DP bucking optimizer, county selector, price-scenario comparison (base / multiplier / uploaded matrix), read-only price/product reference tabs |
 
-The three REVIEW items in audit 14 are all the expected 31 dm sawlog length
-gap (no price entry in the 2021 matrix for 3.1 m logs). This is a known data
-limitation, not a code defect.
+The 31 dm sawlog price gap (see below) was resolved by interpolation on
+2026-08-03. The one remaining REVIEW item in audit 14 is a zero-priced waste
+product, which may be intentional (waste has no market value) — see
+`outputs/helper_validation/audit_14_validate_first_helpers.txt` for detail.
 
 ---
 
@@ -189,9 +190,10 @@ machine.
 
 ## Recommended next steps
 
-- **31 dm sawlog price gap** — the default 2021 price matrix starts at 34 dm;
-  31 dm sawlog candidates are generated but remain unpriced (known data gap,
-  see `docs/PROJECT_STATUS.md`).
+- **31 dm sawlog price** — currently filled by interpolation
+  (`scripts/97_fill_31dm_sawlog_price_gap.R`, PriceSource = "Interpolated");
+  replace with real source data if/when NIBIO provides a 2021 price for 3.1 m
+  logs.
 - **Full-stratum / ha-expanded mode** — the app currently only supports
   sampled-plot estimates (no NFI expansion factors or plot weights applied).
 - **NFI expansion factors** — not yet applied anywhere in the pipeline.

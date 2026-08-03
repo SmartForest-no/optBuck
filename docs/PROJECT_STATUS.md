@@ -60,7 +60,7 @@
 | No bark correction | Not implemented. Pricing uses over-bark volume and diameter. |
 | No HPR / StanForD import | Not implemented. All trees come from NFI data. |
 | No NFI expansion factors | Not applied. Plot-level per-ha values are simple unexpanded plot-scaling only. |
-| 31 dm sawlog gap | Sawlog price matrices start at 34 dm. Candidates generated at 31 dm remain unpriced. This is a known data gap, not a bug. |
+| 31 dm sawlog price | Resolved 2026-08-03 by interpolation (`scripts/97_fill_31dm_sawlog_price_gap.R`, Price = 2×34dm − 37dm). Rows flagged `PriceSource = "Interpolated"`, not from the original source spreadsheet. |
 | No exact timber-measurement rules | Precise production harvesting measurement conventions (e.g., measurement at log mid-point with exact bark reduction) are not yet modelled. |
 | User-defined price matrices | External matrices must conform to the `PriceMatrix_long` format validated in script 04. No automatic format conversion is provided. |
 | Single-stem model | Optimization is per-stem. No stand-level volume-to-market routing. |
