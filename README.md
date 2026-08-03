@@ -24,14 +24,14 @@ The prototype covers:
 
 ---
 
-## Current status (2026-06-19)
+## Current status (2026-08-03)
 
 | Phase | Status |
 |-------|--------|
 | Prototype scripts 00–12 | **Accepted** (archived in `scripts/prototype_reference/`) |
 | Core engine helpers | **Regression-tested — PASS** (audit 15: 23/23) |
 | First-helper validation | **ACCEPTED WITH REVIEW** (audit 14: 25 PASS, 3 REVIEW) |
-| Sampled-plot Shiny app backend | **Planned — next step** |
+| Sampled-plot Shiny app (v1) | **Built and running** — sampling, DP bucking optimizer, county selector, price-scenario comparison (base / multiplier / uploaded matrix), read-only price/product reference tabs |
 
 The three REVIEW items in audit 14 are all the expected 31 dm sawlog length
 gap (no price entry in the 2021 matrix for 3.1 m logs). This is a known data
@@ -42,6 +42,9 @@ limitation, not a code defect.
 ## Repository contents
 
 ```
+app/
+  app.R                      Shiny app entry point (sampled-plot bucking estimator, v1)
+
 R/                          Core engine helpers (7 files)
   helpers_paths.R           Path resolution utilities
   helpers_products.R        Product definitions and assumptions checks
@@ -54,10 +57,16 @@ R/                          Core engine helpers (7 files)
 audits/
   audit_14_validate_first_helpers.R   Validation audit for first four helpers
   audit_15_core_engine_helpers_regression.R  Regression audit for all 7 helpers
+  audit_16_sampled_plot_backend_smoke.R      Smoke test for the app backend
   prototype_reference/      Archived audits 05–12 (read-only reference)
 
 scripts/
+  98_create_github_safe_processed_data.R  Sanitizes data_processed/ into data_processed_github/
   99_cleanup_project_structure.R      Cleanup/archival script
+  app_backend/
+    00_precompute_taper_profiles_github.R      Precomputes/caches taper profiles for the app
+    01_run_sampled_plot_bucking.R              Backend: sampling + bucking pipeline used by app/app.R
+    02_benchmark_dp_optimizer_alternatives.R   DP optimizer performance benchmarking
   prototype_reference/                Prototype scripts 00–15 (read-only reference)
 
 inputs/
@@ -65,6 +74,11 @@ inputs/
   LengthClasses_spruce_pine_default.csv
   price_matrices/           Price matrix CSV files (default 2021 scenario)
   price_matrix_sources/     Source XLSX files for price matrices
+
+data_processed_github/
+  nfi_plots_github.parquet                    Sanitized plot metadata (no exact locations, no original plot IDs)
+  nfi_tree_plot_stratum_ready_github.parquet   Sanitized tree/plot data used by the app
+  sanitization_manifest.txt                    Record of what was removed/replaced during sanitization
 
 outputs/
   helper_validation/        Audit 14 results
@@ -145,13 +159,42 @@ source("audits/audit_15_core_engine_helpers_regression.R")
 
 ---
 
-## Planned next step
+## Running the app
 
-Implement the sampled-plot Shiny app backend:
-`scripts/app_backend/01_run_sampled_plot_bucking_backend.R`
+The Shiny app only needs the sanitized `data_processed_github/` files, which
+are already committed to the repo — no Oracle connection or credentials are
+required to run it.
 
-This will use the seven core engine helpers to run the full bucking pipeline
-on a user-selected NFI stratum and return structured output for the app UI.
+**Prerequisites**
+
+```r
+install.packages(c("shiny", "arrow", "dplyr", "readr"))
+
+# taperNOR is not on CRAN:
+devtools::install_git("https://github.com/SmartForest-no/taperNOR")
+```
+
+**Launch**
+
+```r
+shiny::runApp("app")   # from the project root
+```
+
+`app/app.R` resolves the project root via the `NFIBUCK_ROOT` environment
+variable if set (see `R/helpers_paths.R`), otherwise it falls back to a
+hardcoded path — check the top of `app/app.R` if running from a different
+machine.
+
+---
+
+## Recommended next steps
+
+- **31 dm sawlog price gap** — the default 2021 price matrix starts at 34 dm;
+  31 dm sawlog candidates are generated but remain unpriced (known data gap,
+  see `docs/PROJECT_STATUS.md`).
+- **Full-stratum / ha-expanded mode** — the app currently only supports
+  sampled-plot estimates (no NFI expansion factors or plot weights applied).
+- **NFI expansion factors** — not yet applied anywhere in the pipeline.
 
 ---
 
