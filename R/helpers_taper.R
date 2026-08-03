@@ -4,7 +4,7 @@
 # Purpose : Taper profile generation using taperNOR (over-bark, Norwegian
 #           equations) for the nfiBuck bucking simulation.
 #
-# Accepted conventions (docs/PROJECT_STATUS.md):
+# Accepted conventions (see CLAUDE.md):
 #   - taperNOR over-bark  (with_bark = TRUE)
 #   - DiameterSource = "taperNOR_over_bark"
 #   - Positions in cm above terrain

@@ -62,6 +62,7 @@ audits/
   prototype_reference/      Archived audits 05–12 (read-only reference)
 
 scripts/
+  97_fill_31dm_sawlog_price_gap.R      Fills the 31 dm sawlog price gap via interpolation
   98_create_github_safe_processed_data.R  Sanitizes data_processed/ into data_processed_github/
   99_cleanup_project_structure.R      Cleanup/archival script
   app_backend/
@@ -84,16 +85,13 @@ data_processed_github/
 outputs/
   helper_validation/        Audit 14 results
   core_engine_helpers_regression/  Audit 15 results + regression reference data
-  project_review/           Cleanup manifest and file inventories
-
-docs/
-  PROJECT_STATUS.md
-  CLEANUP_MANIFEST.md
-  CLEANUP_PLAN.md
-  APP_DESIGN_NOTES.md
-  GITHUB_REPO_PREP.md
+  sampled_plot_backend_smoke/  Audit 16 results
+  stratum_availability/     Which species/hogstkl/abonitet/fylnr combinations have enough plots for sampled-plot estimates
 
 data_raw/README.md          Placeholder — raw data is not stored in the repo
+
+CLAUDE.md                   Context for AI assistants: domain terms, accepted
+                             assumptions, data-privacy invariants
 ```
 
 ---
@@ -190,10 +188,6 @@ machine.
 
 ## Recommended next steps
 
-- **31 dm sawlog price** — currently filled by interpolation
-  (`scripts/97_fill_31dm_sawlog_price_gap.R`, PriceSource = "Interpolated");
-  replace with real source data if/when NIBIO provides a 2021 price for 3.1 m
-  logs.
 - **Full-stratum / ha-expanded mode** — the app currently only supports
   sampled-plot estimates (no NFI expansion factors or plot weights applied).
 - **NFI expansion factors** — not yet applied anywhere in the pipeline.

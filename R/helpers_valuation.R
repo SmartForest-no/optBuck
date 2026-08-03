@@ -18,7 +18,7 @@
 #   - Does NOT modify PriceMatrix_long or LengthClasses.
 #   - Missing prices are NEVER silently treated as zero.
 #
-# Accepted assumptions (from docs/PROJECT_STATUS.md):
+# Accepted assumptions (see CLAUDE.md):
 #   MAX_PRICE_DIAMETER_CLASS_CM = 50
 #   PriceDiameterClass_cm_uncapped stores the original (unmodified) value.
 #   PriceDiameterClass_cm_used   stores the capped value used for price lookup.
@@ -201,7 +201,7 @@ get_unsupported_sawlog_lengths <- function(lc, pm) {
 #'   $unsupported  output of get_unsupported_sawlog_lengths()  (in lc but not pm)
 #'   $missing_products  ProductKey values in ProductData but absent from pm
 #'
-#' Validation rules (from docs/APP_DESIGN_NOTES.md):
+#' Validation rules:
 #'   - Technically eligible and priced  → OK
 #'   - Technically eligible but unpriced → reported, not an error unless whole product missing
 #'   - 31 dm sawlog gap                  → PASS as of 2026-08-03 (filled by interpolation);

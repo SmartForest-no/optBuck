@@ -124,7 +124,7 @@ safe_max <- function(x) {
 
 #' Compute the final audit verdict from a results data.frame.
 #'
-#' Rules (from docs/PROJECT_STATUS.md):
+#' Rules:
 #'   PASS                 -- all checks PASS
 #'   ACCEPTED WITH REVIEW -- only PASS and REVIEW; REVIEW items are known issues
 #'   FAIL                 -- at least one FAIL

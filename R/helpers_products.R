@@ -4,7 +4,7 @@
 # Purpose : Load and validate ProductData and LengthClasses for the nfiBuck
 #           bucking simulation.
 #
-# Accepted assumptions (from docs/PROJECT_STATUS.md):
+# Accepted assumptions (see CLAUDE.md):
 #   DiameterUnderBark = FALSE for all active products
 #   DiameterSource    = taperNOR_over_bark for all active products
 #   Six active ProductKey values (ACTIVE_PRODUCT_KEYS constant below)
