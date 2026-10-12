@@ -26,7 +26,9 @@
 # 15.  Mixed-species test: all trees with reference logs appear in output
 # 16.  Mixed-species test: per-tree StartPos/StopPos match reference (per tree)
 # 17.  Mixed-species test: total value within 0.05 NOK of reference
-# 18.  Mixed-species test: 31 dm unpriced candidates confirmed
+# 18.  31 dm sawlog length is priced (no unpriced 31 dm gap). Inverted
+#      2026-10-12: the gap was filled by interpolation on 2026-08-03
+#      (scripts/97_fill_31dm_sawlog_price_gap.R), matching audit 14 checks 11-12.
 # 19.  No overlapping logs (Test A)
 # 20.  No overlapping logs (Test B)
 # 21.  PriceDiameterClass_cm_uncapped present in mixed selected logs
@@ -411,14 +413,14 @@ if (!is.null(sel_mixed) && !is.null(ref_mixed)) {
 
 
 # ==========================================================================
-# Check 18: 31 dm unpriced confirmed
+# Check 18: 31 dm sawlog priced (gap filled by interpolation 2026-08-03)
 # ==========================================================================
 lc_audit <- load_length_classes()
 pm_audit <- load_price_matrix_long()
 unsup_a  <- get_unsupported_sawlog_lengths(lc_audit, pm_audit)
 n_31_unpriced <- nrow(unsup_a[unsup_a$is_known_31dm_gap & !unsup_a$in_price_matrix, ])
-rec("Check 18: 31 dm sawlog confirmed unpriced",
-    if (n_31_unpriced > 0L) "PASS" else "FAIL",
+rec("Check 18: 31 dm sawlog priced (no unpriced 31 dm gap)",
+    if (n_31_unpriced == 0L) "PASS" else "FAIL",
     sprintf("%d unpriced 31 dm entries found", n_31_unpriced))
 
 

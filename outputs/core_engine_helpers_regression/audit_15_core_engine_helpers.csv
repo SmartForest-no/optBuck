@@ -16,7 +16,7 @@ Check 14: One-tree total volume within 1e-4 m3,PASS,ref=1.786110  got=1.786110  
 Check 15: Mixed: all reference trees with logs appear in output,PASS,ref trees with logs=458  got=458  missing=
 Check 16: Mixed: per-tree StartPos/StopPos match reference,PASS,458/458 trees have exact position match
 Check 17: Mixed total value within 0.05 NOK,PASS,ref=42210.6668  got=42210.6668  diff=0.000000
-Check 18: 31 dm sawlog confirmed unpriced,PASS,2 unpriced 31 dm entries found
+Check 18: 31 dm sawlog priced (no unpriced 31 dm gap),PASS,0 unpriced 31 dm entries found
 "Check 19: No overlapping logs (Test A, one-tree)",PASS,overlapping pairs: 0
 "Check 20: No overlapping logs (Test B, mixed-species)",PASS,overlapping pairs: 0
 Check 21: PriceDiameterClass_cm_uncapped present in mixed output,PASS,column present
