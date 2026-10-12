@@ -2,7 +2,7 @@
 #
 # Purpose : App-wide data and constants: plot metadata, product/price
 #           reference tables, HKL/bonitet/county choice mappings, the
-#           estimate label and release version. Styling is in theme.R and
+#           results label and release version. Styling is in theme.R and
 #           www/apter.css.
 #           Sourced by app.R after ROOT is resolved and the backend is loaded.
 
@@ -55,7 +55,10 @@ FYLNR_CHOICES <- c(
   setNames(.DATA_FYLNR, vapply(.DATA_FYLNR, .fylnr_lbl, character(1)))
 )
 
-ESTIMATE_LABEL <- "Sampled-plot estimate. Not ha-expanded. No NFI factors applied."
+# Shown above results: what the numbers describe (Phase 3, 2026-10-12).
+RESULTS_LABEL <- paste(
+  "Results describe the selected trees only. Values are NOK per m\u00b3 of",
+  "commercial volume under bark (bark: taperNOR::barkNOR, floored at 0, provisional).")
 
 # ---- release version (repo-root VERSION file; shown in the footer) ------------
 APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))

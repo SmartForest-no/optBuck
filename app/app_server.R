@@ -28,7 +28,7 @@ server <- function(input, output, session) {
                        selected     = sel)
   })
 
-  # Stratum availability preview
+  # Selection availability preview
   output$stratum_preview <- renderUI({
     hkl_raw <- unlist(HKL_MAP[input$hkl_group])
     abon    <- as.integer(input$abonitet)
@@ -45,7 +45,7 @@ server <- function(input, output, session) {
         span(class = "note-warn",
              sprintf("Fewer than %s plots exist; all will be used.", input$n_plots))
       else
-        span(class = "note-ok", "Stratum OK.")
+        span(class = "note-ok", "Selection OK.")
     )
   })
 
@@ -96,12 +96,14 @@ server <- function(input, output, session) {
       return(div(class = "note-muted",
                  "No run yet. Open the simulator, choose trees and click Run optimizer."))
     total_val <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
+    tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
     div(class = "status-tiles",
         status_tile(r$run_id, "Done",
                     c(sprintf("%s \u00b7 %d plot(s) \u00b7 %d trees",
                               r$params$species_group, r$n_plots_sampled,
                               r$n_trees_total),
-                      sprintf("Total value %s NOK \u00b7 %d selected logs",
+                      sprintf("%s NOK per m\u00b3 \u00b7 total value %s NOK \u00b7 %d logs",
+                              format(round(tot$nok_per_m3, 1), nsmall = 1),
                               format(round(total_val), big.mark = ",",
                                      scientific = FALSE),
                               nrow(r$selected_logs_all)))))
@@ -181,8 +183,7 @@ server <- function(input, output, session) {
     r1 <- result(); r2 <- result_s2()
     if (is.null(r1)) return(div(class = "status-error", "Scenario 1 failed."))
     if (is.null(r2)) return(div(class = "status-error", "Scenario 2 failed."))
-    pm <- identical(sort(as.character(r1$plot_summary$plot_id_github)),
-                    sort(as.character(r2$plot_summary$plot_id_github)))
+    pm <- identical(r1$sampled_plot_ids, r2$sampled_plot_ids)
     div(class = if (pm) "status-done" else "status-error",
         if (pm) "Comparison complete. Same plots sampled in both scenarios."
         else "WARNING: sampled plots differ between scenarios.")
@@ -197,12 +198,14 @@ server <- function(input, output, session) {
     mk <- function(r, nm, src) {
       v <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
       m <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
-      h <- mean(r$plot_summary$value_per_ha_nok, na.rm = TRUE)
+      tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
       data.frame(Scenario = nm, Price_source = src,
                  Plots = r$n_plots_sampled, Trees = r$n_trees_total,
                  Trees_w_logs = r$n_trees_with_logs,
-                 Value_NOK = round(v, 2), Volume_m3 = round(m, 4),
-                 Mean_val_ha = round(h, 0), Runtime_s = round(r$elapsed_seconds, 1),
+                 Value_NOK = round(v, 2), Price_volume_m3 = round(m, 4),
+                 Commercial_m3_ub = round(tot$commercial_volume_m3, 4),
+                 NOK_per_m3 = round(tot$nok_per_m3, 1),
+                 Runtime_s = round(r$elapsed_seconds, 1),
                  stringsAsFactors = FALSE)
     }
     rbind(mk(r1, "Scenario 1", "default_2021"), mk(r2, "Scenario 2", s2_lbl))
@@ -211,22 +214,24 @@ server <- function(input, output, session) {
   output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
-    req(identical(sort(as.character(r1$plot_summary$plot_id_github)),
-                  sort(as.character(r2$plot_summary$plot_id_github))))
+    req(identical(r1$sampled_plot_ids, r2$sampled_plot_ids))
     v1 <- sum(r1$selected_logs_all$value_nok, na.rm = TRUE)
     v2 <- sum(r2$selected_logs_all$value_nok, na.rm = TRUE)
     m1 <- sum(r1$selected_logs_all$price_volume_m3, na.rm = TRUE)
     m2 <- sum(r2$selected_logs_all$price_volume_m3, na.rm = TRUE)
-    h1 <- mean(r1$plot_summary$value_per_ha_nok, na.rm = TRUE)
-    h2 <- mean(r2$plot_summary$value_per_ha_nok, na.rm = TRUE)
+    t1 <- r1$per_m3_summary[r1$per_m3_summary$scope == "Total", ]
+    t2 <- r2$per_m3_summary[r2$per_m3_summary$scope == "Total", ]
+    h1 <- t1$nok_per_m3; h2 <- t2$nok_per_m3
+    c1 <- t1$commercial_volume_m3; c2 <- t2$commercial_volume_m3
     pct <- function(a, b) if (abs(b) > 1e-9) round((a - b) / abs(b) * 100, 2) else 0
     data.frame(
       Delta_value_NOK      = round(v2 - v1, 2),
       Delta_value_pct      = pct(v2, v1),
       Delta_volume_m3      = round(m2 - m1, 4),
       Delta_volume_pct     = pct(m2, m1),
-      Delta_mean_val_ha    = round(h2 - h1, 0),
-      Delta_mean_val_ha_pct = pct(h2, h1),
+      Delta_commercial_m3  = round(c2 - c1, 4),
+      Delta_NOK_per_m3     = round(h2 - h1, 1),
+      Delta_NOK_per_m3_pct = pct(h2, h1),
       stringsAsFactors = FALSE
     )
   })))
@@ -241,6 +246,14 @@ server <- function(input, output, session) {
     m <- merge(ps1, ps2, by = "ProductKey", all = TRUE)
     m[is.na(m)] <- 0
     pct <- function(a, b) ifelse(abs(b) > 1e-9, round((a - b) / abs(b) * 100, 2), 0)
+    # Share of the scenario's total commercial volume under bark, per product.
+    share <- function(r, keys) {
+      sl  <- r$selected_logs_all
+      tot <- sum(sl$commercial_volume_m3, na.rm = TRUE)
+      vapply(keys, function(k)
+        if (tot > 0) sum(sl$commercial_volume_m3[sl$ProductKey == k]) / tot else 0,
+        numeric(1), USE.NAMES = FALSE)
+    }
     data.frame(
       ProductKey   = m$ProductKey,
       ProductType  = m$ProductType,
@@ -252,6 +265,8 @@ server <- function(input, output, session) {
       S2_volume    = round(m$S2_vol, 4),
       Delta_volume = round(m$S2_vol - m$total_volume_m3, 4),
       Delta_vol_pct = pct(m$S2_vol, m$total_volume_m3),
+      S1_vol_share_pct = round(100 * share(r1, m$ProductKey), 1),
+      S2_vol_share_pct = round(100 * share(r2, m$ProductKey), 1),
       stringsAsFactors = FALSE
     )
   })))
@@ -302,8 +317,7 @@ server <- function(input, output, session) {
   output$tbl_cmp_diag <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
-    pm <- identical(sort(as.character(r1$plot_summary$plot_id_github)),
-                    sort(as.character(r2$plot_summary$plot_id_github)))
+    pm <- identical(r1$sampled_plot_ids, r2$sampled_plot_ids)
     data.frame(
       Item  = c("Same sampled plots", "S1 price FAILs", "S2 price FAILs",
                 "S1 unpriced groups", "S2 unpriced groups",
@@ -324,15 +338,20 @@ server <- function(input, output, session) {
     total_vol <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
     pct_logs  <- if (r$n_trees_total > 0)
       round(100 * r$n_trees_with_logs / r$n_trees_total) else 0L
+    tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
 
     ro_field_row(
       ro_field("Plots sampled",     r$n_plots_sampled),
       ro_field("Trees (filtered)",  r$n_trees_total),
       ro_field("Trees with logs",   sprintf("%d (%d%%)", r$n_trees_with_logs, pct_logs)),
       ro_field("Selected logs",     nrow(r$selected_logs_all)),
+      ro_field("NOK per m\u00b3 (commercial, under bark)",
+               if (is.na(tot$nok_per_m3)) "\u2013" else
+                 format(round(tot$nok_per_m3, 1), nsmall = 1)),
       ro_field("Total value (NOK)", format(round(total_val, 0), big.mark = ",",
                                            scientific = FALSE)),
-      ro_field("Total volume (m\u00b3)", round(total_vol, 2)),
+      ro_field("Commercial volume u.b. (m\u00b3)", round(tot$commercial_volume_m3, 2)),
+      ro_field("Price volume (m\u00b3)", round(total_vol, 2)),
       ro_field("Runtime",           sprintf("%.1f s", r$elapsed_seconds))
     )
   })
@@ -343,9 +362,9 @@ server <- function(input, output, session) {
     n_unpr <- nrow(r$unpriced_summary)
     tagList(
       div(class = "stat-strip",
-          sprintf("Eligible plots in stratum: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
+          sprintf("Plots matching the selection: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
                   r$n_eligible_plots, n_zero, n_unpr)),
-      div(class = "stat-strip", ESTIMATE_LABEL)
+      div(class = "stat-strip", RESULTS_LABEL)
     )
   })
 
@@ -376,46 +395,77 @@ server <- function(input, output, session) {
                   fmt = function(v) format(round(v, 2), nsmall = 2, trim = TRUE))
   })
 
-  # ---- Tab 3: Plots ---------------------------------------------------------
-  output$plot_stats_text <- renderUI({
+  # ---- Per m3 tab --------------------------------------------------------------
+  output$tbl_per_m3 <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
-    ps   <- r$plot_summary
-    vals <- ps$value_per_ha_nok[!is.na(ps$value_per_ha_nok)]
-    if (length(vals) == 0L) return(NULL)
-    div(class = "stat-strip",
-        sprintf(
-          "Value per ha (NOK):  min = %s  |  mean = %s  |  median = %s  |  max = %s",
-          format(round(min(vals)),    big.mark = ","),
-          format(round(mean(vals)),   big.mark = ","),
-          format(round(median(vals)), big.mark = ","),
-          format(round(max(vals)),    big.mark = ",")))
+    s <- r$per_m3_summary
+    data.frame(Scope = s$scope, Trees = s$n_trees,
+               Value_NOK = round(s$value_nok, 2),
+               Commercial_volume_ub_m3 = round(s$commercial_volume_m3, 4),
+               NOK_per_m3 = round(s$nok_per_m3, 1),
+               check.names = FALSE, stringsAsFactors = FALSE)
+  })))
+
+  output$tbl_per_m3_assortment <- renderReactable(apter_reactable(local({
+    r <- result(); req(!is.null(r))
+    a <- r$per_m3_by_assortment
+    data.frame(Scope = a$scope, Assortment = a$assortment,
+               Value_NOK = round(a$value_nok, 2),
+               Commercial_volume_ub_m3 = round(a$commercial_volume_m3, 4),
+               NOK_per_m3_contribution = round(a$nok_per_m3_contribution, 1),
+               Volume_share_pct = round(100 * a$volume_share, 1),
+               check.names = FALSE, stringsAsFactors = FALSE)
+  })))
+
+  output$bar_per_m3_contribution <- renderPlot(res = 96, {
+    r <- result(); req(!is.null(r))
+    a <- r$per_m3_by_assortment
+    a <- a[a$scope == "Total", , drop = FALSE]
+    req(nrow(a) > 0L)
+    apter_barplot(setNames(a$nok_per_m3_contribution, a$assortment),
+                  col = APTER_CHART$series1,
+                  main = "NOK per m\u00b3 by assortment (contribution)",
+                  ylab = "NOK / m\u00b3",
+                  fmt = function(v) format(round(v, 1), nsmall = 1, trim = TRUE))
   })
 
-  output$tbl_plots <- renderReactable(apter_reactable(local({
+  output$bar_volume_share <- renderPlot(res = 96, {
     r <- result(); req(!is.null(r))
-    r$plot_summary
-  }), digits = 2))
+    a <- r$per_m3_by_assortment
+    a <- a[a$scope == "Total", , drop = FALSE]
+    req(nrow(a) > 0L)
+    apter_barplot(setNames(100 * a$volume_share, a$assortment),
+                  col = APTER_CHART$series1,
+                  main = "Share of commercial volume by assortment",
+                  ylab = "%",
+                  fmt = function(v) sprintf("%.1f %%", v))
+  })
 
-  output$hist_value_ha <- renderPlot(res = 96, {
+  # Tree detail on demand: one row per tree, its logs in the row details.
+  output$tbl_trees <- renderReactable({
     r <- result(); req(!is.null(r))
-    ps   <- r$plot_summary
-    vals <- ps$value_per_ha_nok[!is.na(ps$value_per_ha_nok)]
-    req(length(vals) > 0L)
-    ch  <- APTER_CHART
-    old <- apter_par(mar = c(4.5, 5, 3, 1)); on.exit(par(old))
-    h <- hist(vals, breaks = max(3L, min(15L, length(vals))), plot = FALSE)
-    plot(h, col = NA, border = NA, axes = FALSE,
-         main = "Value per ha (NOK) \u2014 sampled plots",
-         xlab = "NOK / ha", ylab = "Number of plots")
-    abline(h = axTicks(2), col = ch$grid, lwd = 0.7)
-    plot(h, col = ch$series1, border = ch$surface, add = TRUE)
-    axis(1, col = NA, col.ticks = NA); axis(2, col = NA, col.ticks = NA)
-    abline(h = 0, col = ch$baseline)
-    abline(v = mean(vals), col = ch$ink, lwd = 1.5, lty = 2)
-    legend("topright",
-           legend = sprintf("mean = %s", format(round(mean(vals)), big.mark = ",")),
-           col = ch$ink, lty = 2, lwd = 1.5, bty = "n", cex = 0.85,
-           text.col = ch$ink)
+    ts <- r$tree_summary
+    tr <- data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
+                     Species = ts$species_group, DBH_cm = ts$dbh_cm,
+                     Height_m = ts$height_m, Logs = ts$n_logs_selected,
+                     Value_NOK = round(ts$total_value_nok, 2),
+                     Commercial_volume_ub_m3 = round(ts$commercial_volume_m3, 4),
+                     NOK_per_m3 = round(ts$nok_per_m3, 1),
+                     Status = ts$optimizer_status,
+                     check.names = FALSE, stringsAsFactors = FALSE)
+    sl <- r$selected_logs_all
+    log_cols <- intersect(c("ProductKey", "StartPos", "StopPos", "LogLength",
+                            "TopDiameter_ob", "TopDiameter_ub",
+                            "PriceDiameterClass_cm_used", "price_volume_m3",
+                            "commercial_volume_m3", "PriceNOKperM3", "value_nok"),
+                          names(sl))
+    apter_reactable(tr, page_size = 10L, details = function(i) {
+      logs <- sl[sl$plot_id_github == tr$Plot[i] & sl$treid == tr$Tree[i],
+                 log_cols, drop = FALSE]
+      if (nrow(logs) == 0L)
+        return(div(class = "note-muted", "No selected logs for this tree."))
+      div(class = "tree-logs", apter_reactable(logs, digits = 3, page_size = 20L))
+    })
   })
 
   # ---- Tab 4: Diagnostics ---------------------------------------------------

@@ -114,17 +114,19 @@ step_list <- function(steps) {
 RUN_STAGE_LABELS <- data.frame(
   stage = c("load_data", "filter_stratum_and_sample_plots", "tree_filtering",
             "load_products_and_prices", "load_precomputed_taper_profiles",
-            "profile_vector_conversion", "candidate_generation",
+            "profile_vector_conversion", "under_bark_profiles",
+            "candidate_generation",
             "price_joining", "dp_optimization", "summary_assembly"),
   title = c("Load data", "Sample plots", "Filter trees",
             "Products and prices", "Taper profiles", "Profile grid",
-            "Candidate logs", "Pricing", "Optimal bucking", "Summaries"),
+            "Bark", "Candidate logs", "Pricing", "Optimal bucking", "Summaries"),
   subtitle = c("Sanitized NFI plots and trees",
-               "Stratum filter and random plot sample",
+               "Selection filter and random plot sample",
                "DBH ≥ 5 cm and height ≥ 4.5 m",
                "Load and validate the price matrix",
                "Precomputed taperNOR profiles",
                "Profiles on the 10 cm grid",
+               "Under-bark diameters (barkNOR)",
                "All eligible logs per stem",
                "Join candidates to the price matrix",
                "Dynamic programming per stem",
@@ -165,7 +167,11 @@ run_step_table <- function(stage_timings = NULL, started_at = NULL) {
 #'
 #' @param digits Round numeric columns to this many decimals (as the former
 #'   renderTable(digits = ...)); NULL leaves them as they are.
-apter_reactable <- function(df, digits = NULL, page_size = 10L) {
+#' @param details Optional reactable row-details function (index -> tag),
+#'   for detail on demand (e.g. a tree's logs under its row).
+#' @param columns Optional named list of reactable::colDef().
+apter_reactable <- function(df, digits = NULL, page_size = 10L,
+                            details = NULL, columns = NULL) {
   df <- as.data.frame(df, stringsAsFactors = FALSE)
   if (!is.null(digits)) {
     num <- vapply(df, function(x) is.double(x), logical(1))
@@ -175,6 +181,8 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L) {
   reactable::reactable(
     df,
     class           = if (nrow(df) <= page_size) "apter-single-page",
+    details         = details,
+    columns         = columns,
     sortable        = TRUE,
     pagination      = TRUE,
     showPagination  = TRUE,

@@ -35,12 +35,16 @@
 #      footer "Release <VERSION>"
 # 12.  Theme: Bootstrap 5 loaded, self-hosted Inter font loaded, no Google
 #      Fonts request
-# 13.  Run step list: all 10 backend stages shown as done after a run
+# 13.  Run step list: all backend stages (RUN_STAGE_LABELS, 11 since the
+#      Phase 3 bark stage) shown as done after a run
 # 14.  Selected logs table is paginated ("1 - 10 of N", N = selected logs)
-# 15.  Screenshots of Home, Simulator, Products, Scenario comparison and
-#      Prices saved to outputs/app_smoke/screenshots/ (for visual review
-#      against docs/design_reference/)
-# 16.  Total browser runtime under 180 s (REVIEW if above)
+# 15.  Screenshots of Home, Simulator, Products, Scenario comparison,
+#      Prices and Per m3 saved to outputs/app_smoke/screenshots/ (for visual
+#      review against docs/design_reference/)
+# 16.  Per m3 tab (Phase 3): NOK/m3 tables render, the collapsed Trees card
+#      expands to tree rows and a tree's logs; no "per ha" / "ha-expanded"
+#      text anywhere in the page
+# 17.  Total browser runtime under 180 s (REVIEW if above)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -215,7 +219,8 @@ helpers_err <- tryCatch({
   suppressPackageStartupMessages(library(shiny))
   source(file.path(root_dir, "scripts", "app_backend",
                    "01_run_sampled_plot_bucking.R"), local = FALSE)
-  for (f in c("setup.R", "helpers_validation.R", "helpers_upload.R"))
+  for (f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
+             "helpers_upload.R"))
     source(file.path(app_dir, f), local = H)
   ""
 }, error = function(e) conditionMessage(e))
@@ -314,7 +319,8 @@ browser_checks <- c(
   "Check 13: Run step list shows all stages done",
   "Check 14: Selected logs table is paginated",
   "Check 15: Screenshots saved for visual review",
-  "Check 16: Browser runtime under 180 s")
+  "Check 16: Per m3 tab renders; Trees card expands; no per-ha text",
+  "Check 17: Browser runtime under 180 s")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -470,27 +476,65 @@ if (!browser_ok) {
     det14 <- sprintf("page info: '%s' | selected logs in run: %s",
                      trimws(page_info), n_sel_logs)
 
+    # 16. Per m3 tab and tree detail on demand
+    per_m3_err <- tryCatch({
+      app$set_inputs(result_tabs = "Per m\u00b3")
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    n_pm3   <- n_tbl_rows(app, "tbl_per_m3")
+    n_asort <- n_tbl_rows(app, "tbl_per_m3_assortment")
+    trees_card_js <- paste0(
+      "Array.from(document.querySelectorAll('details.apter-card'))",
+      ".find(function(e){ return e.querySelector('summary').textContent.trim() === 'Trees'; })")
+    trees_closed <- isTRUE(app$get_js(paste0("!", trees_card_js, ".open")))
+    app$run_js(paste0(
+      "var d = Array.from(document.querySelectorAll('details.apter-card'))",
+      ".find(function(e){ return e.querySelector('summary').textContent.trim() === 'Trees'; });",
+      "if (d) { d.open = true; d.dispatchEvent(new Event('toggle')); }"))
+    app$wait_for_idle()
+    n_trees_rows <- n_tbl_rows(app, "tbl_trees")
+    app$run_js(paste0(
+      "var b = document.querySelector('#tbl_trees .rt-expander-button');",
+      "if (b) b.click();"))
+    app$wait_for_idle()
+    n_detail <- app$get_js(
+      "document.querySelectorAll('#tbl_trees .tree-logs, #tbl_trees .note-muted').length")
+    page_text <- app$get_js("document.body.textContent")
+    per_ha_hits <- regmatches(page_text, gregexpr("(?i)per ha\\b|ha-expanded",
+                                                  page_text, perl = TRUE))[[1]]
+    shoot(app, "06_per_m3")
+    ok16 <- !nzchar(per_m3_err) && n_pm3 >= 2L && n_asort >= 1L &&
+      trees_closed && n_trees_rows >= 1L && n_detail >= 1L &&
+      length(per_ha_hits) == 0L
+    det16 <- sprintf("per-m3 rows: %d | assortment rows: %d | Trees card starts closed: %s | tree rows: %d | log detail shown: %s | per-ha text hits: %d%s",
+                     n_pm3, n_asort, trees_closed, n_trees_rows, n_detail >= 1L,
+                     length(per_ha_hits),
+                     if (nzchar(per_m3_err)) paste(" | driver error:", per_m3_err) else "")
+
     app$set_inputs(main_nav = "Prices and assortments")
     shoot(app, "05_prices")
 
     rec(browser_checks[7], if (ok11) PASS else FAIL, det11)
     rec(browser_checks[8], if (ok12) PASS else FAIL, det12)
+    n_expected <- if (is.data.frame(H$RUN_STAGE_LABELS)) nrow(H$RUN_STAGE_LABELS) else NA_integer_
     rec(browser_checks[9],
-        if (n_steps == 10L && n_steps_done == 10L) PASS else FAIL,
-        sprintf("%d of %d steps done", n_steps_done, n_steps))
+        if (isTRUE(n_steps == n_expected) && n_steps_done == n_steps) PASS else FAIL,
+        sprintf("%d of %d steps done (expected %s)", n_steps_done, n_steps, n_expected))
     rec(browser_checks[10], if (ok14) PASS else FAIL, det14)
-    rec(browser_checks[11], if (length(shots) == 5L) PASS else REVIEW,
-        sprintf("%d of 5 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[11], if (length(shots) == 6L) PASS else REVIEW,
+        sprintf("%d of 6 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[12], if (ok16) PASS else FAIL, det16)
 
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[2:11])
+    for (ck in browser_checks[2:12])
       rec(ck, FAIL, "skipped: app did not start")
   }
 
-  # 16. runtime
+  # 17. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
-  rec(browser_checks[12], if (t_el < 180) PASS else REVIEW,
+  rec(browser_checks[13], if (t_el < 180) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 180 s)", t_el))
 }
 

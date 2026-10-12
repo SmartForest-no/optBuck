@@ -86,7 +86,7 @@ simulator_page <- nav_panel(
     sidebar = simulator_sidebar,
     fillable = FALSE,
 
-    div(class = "estimate-label", ESTIMATE_LABEL),
+    div(class = "results-label", RESULTS_LABEL),
 
     # Details left, steps right, as in the reference's batch details page.
     layout_columns(col_widths = c(7, 5),
@@ -106,6 +106,31 @@ simulator_page <- nav_panel(
         uiOutput("summary_detail")
       ),
 
+      nav_panel("Per m\u00b3",
+        div(class = "section-hdr",
+            "NOK per m\u00b3 of commercial volume under bark"),
+        div(class = "stat-strip",
+            "Commercial volume: the 10 cm sections of all non-waste logs, each",
+            " using the under-bark diameter at the top of its section. Bark,",
+            " stump, waste and the top above the last merchantable log are",
+            " excluded. Each species uses its own commercial volume."),
+        reactableOutput("tbl_per_m3"),
+        div(class = "section-hdr", "By assortment"),
+        div(class = "stat-strip",
+            "Contribution = assortment value \u00f7 the scope's commercial volume,",
+            " so contributions add up to the scope's NOK/m\u00b3."),
+        reactableOutput("tbl_per_m3_assortment"),
+        layout_columns(col_widths = c(6, 6),
+          plotOutput("bar_per_m3_contribution", height = "260px"),
+          plotOutput("bar_volume_share",        height = "260px")
+        ),
+        apter_card("Trees", collapsible = TRUE, open = FALSE,
+          div(class = "stat-strip",
+              "One row per tree. Expand a row to see its logs."),
+          reactableOutput("tbl_trees")
+        )
+      ),
+
       nav_panel("Products",
         div(class = "section-hdr", "Product summary"),
         reactableOutput("tbl_products"),
@@ -115,12 +140,6 @@ simulator_page <- nav_panel(
         )
       ),
 
-      nav_panel("Plots",
-        div(class = "section-hdr", "Plot-level results"),
-        uiOutput("plot_stats_text"),
-        reactableOutput("tbl_plots"),
-        plotOutput("hist_value_ha", height = "260px")
-      ),
 
       nav_panel("Diagnostics",
         div(class = "section-hdr", "Stage timings (slowest first)"),
@@ -163,8 +182,9 @@ prices_page <- nav_panel(
     apter_card("Product definitions",
       div(class = "stat-strip",
           "These are the product specifications used by the optimizer.",
-          " DiameterUnderBark = FALSE: all diameters are over-bark",
-          " (taperNOR, with_bark = TRUE)."),
+          " DiameterUnderBark = TRUE: product limits, price-diameter classes",
+          " and price volumes use under-bark diameters (taperNOR over-bark",
+          " profile minus taperNOR::barkNOR double bark, floored at 0)."),
       reactableOutput("tbl_ref_products")
     ),
     apter_card("Length and diameter classes",
@@ -186,8 +206,9 @@ prices_page <- nav_panel(
         tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
         tags$li("31 dm sawlog prices are interpolated (2×34dm − 37dm), flagged PriceSource = \"Interpolated\" in the price table."),
         tags$li("Diameter classes above 50 cm are capped to 50 cm for price lookup only; physical diameters are preserved."),
-        tags$li("Volumes and diameters use taperNOR over-bark values. No bark correction is applied."),
-        tags$li("Estimates are sampled-plot only. No NFI expansion factors or plot weights are applied.")
+        tags$li("Stem profiles are taperNOR over bark. Under-bark diameters subtract taperNOR::barkNOR double bark thickness, floored at 0 so the under-bark diameter never exceeds the over-bark diameter (provisional, pending the taperNOR authors)."),
+        tags$li("Sawlog price volume: cylinder at the under-bark top diameter, rounded down to whole cm. Pulpwood and waste: solid volume of the stem section under bark."),
+        tags$li("Results describe the selected trees only. Values are NOK per m\u00b3 of commercial volume under bark (10 cm sections of non-waste logs, each using the under-bark diameter at its top).")
       )
     )
   )
