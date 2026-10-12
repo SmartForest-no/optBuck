@@ -61,16 +61,23 @@ Model the look on NIBIO's ForestSens (Oracle APEX Redwood style). Screenshots ar
 
 ## Phase 4: price matrices and assortments
 
-Replace the current price-scenario options (base / multiplier / uploaded). Remove the multiplier if it is not needed by the new design.
+Split into two parts (decided 2026-10-12): 4a first, 4b later.
 
-- **Comparison view.** For each species × assortment, show the default matrix (read-only) and the scenario matrix side by side. The scenario matrix can be edited in place (`rhandsontable`).
-  - Cells that differ from the default are highlighted.
-  - "Reset to default" works per matrix.
-  - Drag-and-drop upload replaces the scenario matrix. Uploads are validated against the `PriceMatrix_long` schema, and an import template can be downloaded.
-  - Scenarios can be downloaded as CSV.
-- **Results.** Show default vs. scenario: NOK/m³ total and by assortment, volume shares by assortment, and the change in cutting patterns. Example stems show the bucking under both matrices.
-  - **Cutting-pattern changes count only differences that change value or volume**, so equal-value ties are not shown as changes. Phase 3's audit 18 found 34 of 137 spruce trees switching between equal-value patterns when all prices were scaled ×1.5 (e.g. different splits of the same flat-priced pulpwood stretch; exact ties since pulpwood volume is the unrounded solid-volume rule).
-  - Consider deterministic tie-breaking in the optimizer: treat values within a tolerance as equal and apply a documented rule, such as preferring fewer cuts. Any rule must keep the fast and reference optimizers identical (audit 16 checks 14–15).
+## Phase 4a: matrix comparison
+
+Replace the current price-scenario options (base / multiplier / uploaded). The multiplier inputs are removed; the side-by-side comparison replaces them.
+
+1. **Deterministic tie-breaking in the optimizer (first).** Treat totals within a tolerance as equal and apply a documented rule, such as preferring fewer cuts. The fast and reference optimizers must stay identical (audit 16 checks 14–15). Phase 3's audit 18 found 34 of 137 spruce trees switching between equal-value patterns when all prices were scaled ×1.5 (e.g. different splits of the same flat-priced pulpwood stretch; exact ties since pulpwood volume is the unrounded solid-volume rule).
+2. **Side-by-side price matrix comparison.** For each species × assortment, show the default matrix (read-only) and the scenario matrix side by side. The scenario matrix can be edited in place (`rhandsontable`).
+   - Cells that differ from the default are highlighted.
+   - "Reset to default" works per matrix.
+   - Drag-and-drop upload replaces the scenario matrix. Uploads are validated against the `PriceMatrix_long` schema, and an import template can be downloaded.
+   - Scenarios can be downloaded as CSV.
+3. **Default vs. scenario results.** NOK/m³ total and by assortment, volume shares by assortment, and the change in cutting patterns. Example stems show the bucking under both matrices.
+   - **Cutting-pattern changes count only differences that change value or volume**, so equal-value ties are not shown as changes.
+
+## Phase 4b: assortments and volume methods (later)
+
 - **Custom assortments.** Users can add assortments (e.g. poles, large-diameter sawlogs, small sawlogs, special timber) with:
   - Species
   - Minimum and maximum top diameter
@@ -122,4 +129,4 @@ After each phase, update the README and CLAUDE.md, including the accepted assump
 1. **Bark (decided 2026-10-12, implemented in Phase 3).** All stem profiles are assumed over bark: taperNOR output, uploaded tree lists, and imported stem profiles (e.g. from harvester data). Default bark model: `taperNOR::barkNOR()` along the whole stem, as a swappable helper (`R/helpers_bark.R`). Price lookup uses the top diameter under bark; product limits and price volume are under bark too (`DiameterUnderBark = TRUE`, as optBuck's `buckStem`).
 2. **barkNOR negative pine bark (open; ask the taperNOR authors).** barkNOR's pine coefficients give negative double bark near the top of larger pines (d below about 0.33·dbh − 2.4 cm). Apter floors B at 0 as a provisional fix. Ask the authors whether this is intended or whether the 2023 paper's coefficients differ.
 3. **Height imputation.** References and code for the Norwegian height models, and the function from Lennart's package for partial heights.
-4. **Sensitivity tool.** Is the price sensitivity tool in phase 4 wanted? If a matrix optimiser is wanted instead, what should it optimise towards?
+4. **Sensitivity tool.** Is the price sensitivity tool in phase 4b wanted? If a matrix optimiser is wanted instead, what should it optimise towards?
