@@ -39,21 +39,35 @@ pipeline.
 |-----------|-------|-------|
 | Stump height | 10 cm | first cut position above terrain |
 | DP grid step | 10 cm | position resolution in `helpers_dp_optimizer.R` |
-| Taper function | `taperNOR::taperNOR()`, over-bark (`with_bark = TRUE`) | `helpers_taper.R` |
-| `DiameterUnderBark` | `FALSE` | all pricing uses over-bark diameter |
+| Taper function | `taperNOR::taperNOR()`, over-bark (`with_bark = TRUE`) profiles | `helpers_taper.R`; the precomputed cache stays over bark |
+| Bark model | `taperNOR::barkNOR()` along the whole stem, all tree sources; dbh = measured dbh, or read from the profile at 1.3 m for imported profiles. Double bark floored at B ≥ 0 so under bark ≤ over bark — **provisional (2026-10-12), pending the taperNOR authors** (barkNOR gives negative pine bark near the top) | `R/helpers_bark.R` (swappable: `BARK_MODELS`, `options(apter.bark_model = …)`); audit 18 |
+| `DiameterUnderBark` | `TRUE` for all six products: product limits, price-diameter class and price volume all use the under-bark diameter (one diameter drives all three, as in optBuck `buckStem`) | `inputs/ProductData_spruce_pine_default.csv`; `helpers_candidate_generation.R`; audit 14 check 7 |
+| Price lookup | top diameter **under bark**, floored to cm (class cap 50 cm) | `helpers_candidate_generation.R`, `helpers_valuation.R`; audit 18 check 8 |
+| Sawlog price volume | cylinder at the under-bark top diameter rounded down to whole cm × log length (kept 2026-10-12; per-product volume methods planned for Phase 4) | `helpers_candidate_generation.R` |
+| NOK/m³ denominator | commercial volume under bark: 10 cm cylinders over non-waste logs, each using the under-bark diameter at the top of its section; excludes bark, stump, waste and the top above the last merchantable log; independent of prices and product volume rules. Assortment contribution = assortment value ÷ the scope's commercial volume; each species uses its own denominator | `R/helpers_commercial_volume.R`; audit 18 |
 | Max price-diameter class | 50 cm | `DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM` in `helpers_valuation.R`; logs above this are capped for price lookup only — physical diameter is never changed |
 | Waste price | 0 NOK/m³, intentional (accepted 2026-10-12) | price matrix; audit 14 check 18 |
 
 ## Known out-of-scope items (don't assume these are bugs)
 
-- No bark correction (pricing uses over-bark volume/diameter throughout)
-- No HPR/StanForD import — all trees come from NFI data
-- No NFI expansion factors applied — plot-level values are simple unexpanded
-  plot-scaling, never treat app output as ha-expanded/representative
+- No HPR/StanForD import — all trees come from NFI data (tree lists and
+  stem profiles are planned, phases 5–6)
+- No per-ha, plot-level, stratum or NFI-expansion outputs: results describe
+  the selected trees only (plots are only how NFI trees are sampled). Never
+  reintroduce per-ha values; audits 16 (check 10) and 17 (check 16) fail on them
 - No stand-level routing — optimization is strictly per-stem
 - Uploaded price matrices must conform to the `PriceMatrix_long` schema
   validated by `validate_price_matrix_against_products()` in
   `helpers_valuation.R` — no format auto-conversion
+
+## Conventions: follow optBuck when undecided
+
+When a modelling or measurement convention is not decided (product limits,
+price-class lookup, volume methods, length rounding, bark handling, …),
+follow Lennart's optBuck package (`https://github.com/SmartForest-no/optBuck`,
+read it, don't vendor it), **unless** it conflicts with a decision recorded
+in [docs/plans/PLAN.md](docs/plans/PLAN.md) or in this file. Report what
+optBuck does before relying on it, and record the decision here.
 
 ## Data privacy — read before touching plot/coordinate data
 

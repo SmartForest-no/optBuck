@@ -82,29 +82,46 @@ example.
 
 ## Results
 
-For the selected trees, the app reports:
+All results describe the selected trees only. The headline figure is
+**NOK per m³ of commercial volume under bark**:
 
-- Value (NOK) and volume (m³) by product
-- The selected logs for each stem: position, length, product, price-diameter
-  class, volume and value
+- **Commercial volume** is the part of the stem allocated to saleable
+  (non-waste) products, measured as 10 cm sections, each using the
+  under-bark diameter at its top. Bark, the stump, waste sections and the
+  top above the last saleable log are excluded. It does not depend on
+  prices or on how a product's sale volume is measured.
+- NOK/m³ is reported in total and per species (each species over its own
+  commercial volume), with each assortment's contribution and its share of
+  the commercial volume.
+
+The app also shows:
+
+- Value (NOK) and sale (price) volume by product
+- Per-tree results on demand, with each tree's logs: position, length,
+  product, top diameter over and under bark, price-diameter class, volumes
+  and value
 - Diagnostics: price-matrix checks, candidates without a price, and stems
   with no saleable logs
-- For a price-matrix comparison: value and volume by product under both
-  matrices, and the difference
+- For a price-matrix comparison: NOK/m³, value and volume under both
+  matrices, and the differences
 
 ---
 
 ## Assumptions
 
-- **Diameters are over bark.** Stem profiles, price-diameter classes and
-  volumes currently use over-bark diameters from taperNOR.
-- **Planned:** under-bark diameters from published bark functions (as a
-  replaceable component), and values reported per m³ of commercial solid
-  volume under bark.
+- **Under bark.** Stem profiles from taperNOR are over bark; under-bark
+  diameters subtract the double bark thickness from taperNOR's bark model
+  (`barkNOR`) along the whole stem. Product limits, price-diameter classes
+  and sale volumes all use the under-bark diameter. Bark thickness is
+  floored at zero, so the under-bark diameter never exceeds the over-bark
+  diameter; this is provisional while the bark model's behaviour near the
+  top of large pines is clarified. The bark model is a replaceable
+  component.
 - Stump height 10 cm; candidate logs on a 10 cm grid.
-- Sawlog volume is a cylinder at the top diameter (rounded down to whole cm)
-  over the log length. Pulpwood and waste volume is the solid volume of the
-  stem section.
+- Sawlog sale volume is a cylinder at the under-bark top diameter (rounded
+  down to whole cm) over the log length. Pulpwood and waste sale volume is
+  the solid volume of the stem section under bark. A choice of volume
+  method per product is planned.
 - Sawlog top-diameter classes above 50 cm are priced as 50 cm. The physical
   diameter is not changed.
 - Each stem is bucked independently.

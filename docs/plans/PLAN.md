@@ -21,7 +21,7 @@ All values are reported per m³ of commercial solid volume under bark:
 - The denominator is independent of how individual products are priced or measured. For example, a sawlog volume based on its top diameter does not change the denominator.
 - Report NOK/m³ in total and by assortment (assortment value divided by the same total commercial volume), plus the volume share by assortment.
 
-This requires under-bark diameters. Currently everything is over-bark (`with_bark = TRUE`, `DiameterUnderBark = FALSE`). See open questions.
+Implemented in Phase 3 (2026-10-12): under-bark diameters from `taperNOR::barkNOR()` (`R/helpers_bark.R`), the denominator in `R/helpers_commercial_volume.R`. Each species uses its own denominator.
 
 ## Phase 0: housekeeping
 
@@ -77,6 +77,7 @@ Replace the current price-scenario options (base / multiplier / uploaded). Remov
   - A price matrix
 
   These are added to the product definitions and validated with `validate_price_matrix_against_products()`.
+- **Volume calculation method per product.** Make the price-volume method selectable per product, following the StanForD volume categories as implemented in optBuck (`PriceVolumeCalc()`): e.g. top cylinder (current default for sawlogs), frustum, all diameters (solid volume), calculated Norwegian mid, with the matching volume-diameter and volume-length rules. **Frustum taper is 1 cm per metre** (decided 2026-10-12). optBuck's `PriceVolumeCalc.R` currently uses `LogLength * 0.01`, which is a bug (should be `0.1`, since diameters are in mm and LogLength in cm); Lennart is fixing it in optBuck. Use 1 cm/m here regardless. The commercial-volume denominator does not depend on this choice.
 - **Proposed extension (confirm with Lennart before building).** A sensitivity tool that shows how cutting patterns and NOK/m³ respond to changing a price cell or assortment by ±x %. It would also show which cells actually affect the bucking. Building a full price-matrix optimiser would need an explicit objective (e.g. target volume shares per assortment), which Lennart must define first.
 
 ## Phase 5: tree list import
@@ -115,7 +116,7 @@ After each phase, update the README and CLAUDE.md, including the accepted assump
 
 ## Open questions for Lennart
 
-1. **Bark (decided 2026-10-12).** All stem profiles are assumed over bark: taperNOR output, uploaded tree lists, and imported stem profiles (e.g. from harvester data). Under-bark diameters are derived with bark functions, which Lennart will supply from published sources. Implement bark functions as a separate, swappable helper. Open: should price lookup use top diameter under bark?
-2. **Bark function source.** Lennart to provide the bark functions and references.
+1. **Bark (decided 2026-10-12, implemented in Phase 3).** All stem profiles are assumed over bark: taperNOR output, uploaded tree lists, and imported stem profiles (e.g. from harvester data). Default bark model: `taperNOR::barkNOR()` along the whole stem, as a swappable helper (`R/helpers_bark.R`). Price lookup uses the top diameter under bark; product limits and price volume are under bark too (`DiameterUnderBark = TRUE`, as optBuck's `buckStem`).
+2. **barkNOR negative pine bark (open; ask the taperNOR authors).** barkNOR's pine coefficients give negative double bark near the top of larger pines (d below about 0.33·dbh − 2.4 cm). Apter floors B at 0 as a provisional fix. Ask the authors whether this is intended or whether the 2023 paper's coefficients differ.
 3. **Height imputation.** References and code for the Norwegian height models, and the function from Lennart's package for partial heights.
 4. **Sensitivity tool.** Is the price sensitivity tool in phase 4 wanted? If a matrix optimiser is wanted instead, what should it optimise towards?
