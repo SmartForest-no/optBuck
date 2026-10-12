@@ -18,7 +18,7 @@
 #                                 reactable and plot styling
 #           www/                  apter.css, icon, self-hosted fonts (OFL)
 #           helpers_validation.R  inputs -> backend params, stratum counts
-#           helpers_upload.R      Scenario 2 price matrix (multipliers/upload)
+#           helpers_upload.R      writes the scenario price matrix for the run
 #           app_ui.R / app_server.R  `ui` and `server` (not ui.R/server.R,
 #                                    which Shiny treats as a separate app format)
 #
@@ -29,6 +29,7 @@ library(shiny)
 suppressPackageStartupMessages({
   library(bslib)
   library(reactable)
+  library(rhandsontable)
   library(arrow)
 })
 

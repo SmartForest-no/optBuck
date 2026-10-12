@@ -34,7 +34,11 @@ APTER_CHART <- list(
   muted    = "#6F6A66",   # axis text
   grid     = "#E1E0D9",
   baseline = "#C3C2B7",
-  surface  = "#FFFFFF"
+  surface  = "#FFFFFF",
+  # Assortments in the stem diagram (categorical slots 1-3; validated on the
+  # white surface: CVD and normal-vision pass; waste aqua is below 3:1, so
+  # every log carries a text label and the legend names each colour).
+  assortment = c(sawlog = "#2a78d6", pulpwood = "#eb6834", waste = "#1baf7a")
 )
 
 

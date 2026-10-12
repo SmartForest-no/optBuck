@@ -252,3 +252,74 @@ apter_barplot <- function(vals, col, main, ylab, fmt = format) {
                  col = ch$ink2, cex = 0.75, xpd = TRUE)
   invisible(bp)
 }
+
+
+#' Stem diagram: default vs. scenario bucking of one tree, along the stem.
+#'
+#' Two horizontal bars (default above, scenario below); each log is a block
+#' from StartPos to StopPos coloured by assortment, with a 2 px surface gap
+#' and a text label (length in dm) so colour is never the only cue.
+#'
+#' @param logs_default,logs_scenario Selected logs of one tree
+#'   (StartPos, StopPos in cm; ProductType; LengthClass_dm).
+#' @param height_m Tree height (m), for the x-axis extent.
+#' @param title    Plot title.
+apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
+  ch  <- APTER_CHART
+  old <- apter_par(mar = c(3.5, 6.5, 3, 1)); on.exit(graphics::par(old))
+  x_max <- max(c(height_m, logs_default$StopPos / 100, logs_scenario$StopPos / 100), na.rm = TRUE)
+  graphics::plot(NA, xlim = c(0, x_max), ylim = c(0.4, 2.9), axes = FALSE,
+                 xlab = "", ylab = "", main = title)
+  graphics::abline(v = graphics::axTicks(1), col = ch$grid, lwd = 0.7)
+  graphics::axis(1, col = NA, col.ticks = NA)
+  graphics::mtext("Height along the stem (m)", side = 1, line = 2.2,
+                  col = ch$muted, cex = 0.8)
+  graphics::axis(2, at = c(2, 1), labels = c("Default", "Scenario"),
+                 col = NA, col.ticks = NA, col.axis = ch$ink)
+  draw <- function(l, y) {
+    graphics::rect(0, y - 0.32, height_m, y + 0.32, col = "#F1EFED", border = NA)
+    if (nrow(l) == 0L) return(invisible())
+    fill <- ch$assortment[as.character(l$ProductType)]
+    fill[is.na(fill)] <- ch$neutral
+    graphics::rect(l$StartPos / 100, y - 0.32, l$StopPos / 100, y + 0.32,
+                   col = fill, border = ch$surface, lwd = 2)
+    lab <- ifelse(is.na(l$LengthClass_dm), "", paste0(l$LengthClass_dm))
+    wide <- (l$StopPos - l$StartPos) / 100 > x_max / 25
+    graphics::text(((l$StartPos + l$StopPos) / 200)[wide], y, lab[wide],
+                   col = "#FFFFFF", cex = 0.75, font = 2)
+  }
+  draw(logs_default, 2); draw(logs_scenario, 1)
+  graphics::legend("top", horiz = TRUE, bty = "n", inset = c(0, -0.02),
+                   legend = names(ch$assortment), fill = ch$assortment,
+                   border = NA, text.col = ch$ink, cex = 0.8, xpd = TRUE)
+  graphics::mtext("Labels: log length (dm)", side = 3, line = 0.1, adj = 1,
+                  col = ch$muted, cex = 0.7)
+}
+
+#' rhandsontable renderer: highlight scenario cells that differ from the
+#' default grid passed as params$def (row-major), class "pm-diff".
+PM_DIFF_RENDERER <- "
+function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.NumericRenderer.apply(this, arguments);
+  td.classList.remove('pm-diff');
+  var d = instance.params && instance.params.def;
+  if (d && d[row] !== undefined) {
+    var dv = d[row][col];
+    var empty = (value === null || value === '' || value === undefined);
+    var same = (dv === null && empty) ||
+               (dv !== null && !empty && Math.abs(Number(value) - dv) <= 1e-9);
+    if (!same) td.classList.add('pm-diff');
+  }
+  return td;
+}"
+
+#' rhandsontable renderer for the read-only default: mark interpolated cells
+#' (params$interp, row-major logicals), class "pm-interp".
+PM_INTERP_RENDERER <- "
+function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.NumericRenderer.apply(this, arguments);
+  td.classList.remove('pm-interp');
+  var m = instance.params && instance.params.interp;
+  if (m && m[row] !== undefined && m[row][col]) td.classList.add('pm-interp');
+  return td;
+}"

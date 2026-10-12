@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-12 14:59:37.093823
+  Run: 2026-10-12 15:43:25.842756
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,34 +11,38 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/Rtmp6TTAMQ/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpgdqcBE/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
-  [PASS  ] Check 04a: .make_s2_pm() applies sawlog/pulp/waste multipliers | got 120, 25, 20, 7 (expected 120, 25, 20, 7)
+  [PASS  ] Check 04a: write_scenario_pm() writes a scenario that uploads back unchanged | upload ok: TRUE | identical: TRUE | cells differing from default: 702
   [PASS  ] Check 04b: build_run_params() maps HKL groups and county | HKL '4' -> 41,42; '__all__' -> NULL; HKL '3','5' -> 31,32,51,52; fylnr '03' -> 03
   [PASS  ] Check 04c: count_eligible_plots() matches direct filter | HKL4/ab17/all: 248 vs 248; HKL4/ab14,17/fylnr 03: 8 vs 8
-  [PASS  ] Check 04d: resolve_s2_price_path() same/multiplier | same -> 'default_2021'; multiplier -> tempfile with sawlog x1.2: TRUE
+  [PASS  ] Check 04d: Editor matrices and interpolated 31 dm cells | matrices: spruce_sawlog, pine_sawlog, flat_prices | interpolated cells: 78 (all 31 dm: TRUE)
 
 --- 05-16. Browser checks ---
   [PASS  ] Check 05: AppDriver starts the app | app started
   [PASS  ] Check 06: Simulator run_status idle and title contains 'Apter' | run_status: 'Select parameters and click Run optimizer.' | title: 'Apter — Bucking simulator (v1)'
-  [PASS  ] Check 07: Main run completes without error notification | run_status: 'Run complete in 6.2 s  |  5 plot(s)  |  113 trees  |  348 selected logs  |  ID: sampled_20261012_145954' | error notifications: 0
+  [PASS  ] Check 07: Main run completes without error notification | run_status: 'Run complete in 7.7 s  |  5 plot(s)  |  113 trees  |  334 selected logs  |  ID: sampled_20261012_154345' | error notifications: 0
   [PASS  ] Check 08: summary_cards non-empty and tbl_products has rows | summary_cards chars: 335 | tbl_products rows: 2
   [PASS  ] Check 09: Scenario comparison 'same' samples the same plots | cmp_status: 'Comparison complete. Same plots sampled in both scenarios.'
-  [PASS  ] Check 10: Multiplier mode renders tbl_cmp_delta | tbl_cmp_delta rows: 1 | error notifications: 0
+  [PASS  ] Check 10: Uploaded scenario runs; comparison, pattern line and stem diagram render | status after upload: '351 cell(s) differ from the default
+   (351 in this matrix).' | delta rows 1 | per-m3 rows 6 | patterns: '4 of 113 trees changed their cutting pattern
+   (the change alters value or volume).' | stem diagram: TRUE | error notifications: 0
   [PASS  ] Check 11: Home view shows Apter title, source tiles and release footer | title: 'Apter' | status tiles: 3 | footer: 'Release 0.2.0'
   [PASS  ] Check 12: Bootstrap 5 and self-hosted Inter font loaded | Bootstrap 5.3.1 | Inter loaded: TRUE | Google Fonts links: 0
   [PASS  ] Check 13: Run step list shows all stages done | 11 of 11 steps done (expected 11)
-  [PASS  ] Check 14: Selected logs table is paginated | page info: '1 - 10 of 348' | selected logs in run: 348
+  [PASS  ] Check 14: Selected logs table is paginated | page info: '1 - 10 of 334' | selected logs in run: 334
   [PASS  ] Check 15: Screenshots saved for visual review | 6 of 6 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
   [PASS  ] Check 16: Per m3 tab renders; Trees card expands; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 10 | log detail shown: TRUE | per-ha text hits: 0
-  [PASS  ] Check 17: Browser runtime under 180 s | browser checks took 54.8 s (threshold: 180 s)
+  [PASS  ] Check 17: Price-matrix editor: grids side by side, highlights, reset | grids side by side: TRUE | highlighted cells after upload: 270 | after reset: '0 cell(s) differ from the default
+   (0 in this matrix).', highlighted 0 | upload message: 'Loaded file1ba0428701d.csv (wide layout): replaced Spruce sawlog.'
+  [PASS  ] Check 18: Browser runtime under 180 s | browser checks took 65.8 s (threshold: 180 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 22
+1   PASS 23
 
   Verdict: PASS 
 ============================================================= 

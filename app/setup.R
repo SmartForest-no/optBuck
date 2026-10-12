@@ -14,6 +14,15 @@ plots_all <- as.data.frame(arrow::read_parquet(
 APP_PRODUCTS   <- load_products(ROOT)
 APP_LC         <- load_length_classes(ROOT)
 APP_PRICE_LONG <- load_price_matrix_long(ROOT)
+# Price-matrix editor (Phase 4a): default in Apter's minimal long form,
+# matrix choices, and which default cells are interpolated (31 dm).
+APP_PM_DEFAULT <- pm_minimal(APP_PRICE_LONG)
+PM_CHOICES <- setNames(pm_matrix_ids(APP_PM_DEFAULT),
+                       vapply(pm_matrix_ids(APP_PM_DEFAULT), pm_matrix_label, character(1)))
+.interp <- APP_PRICE_LONG[APP_PRICE_LONG$PriceSource %in% "Interpolated", ]
+APP_PM_INTERP_KEYS <- paste(.interp$ProductKey, .interp$LengthClass_dm,
+                            .interp$PriceDiameterClass_cm)
+rm(.interp)
 
 # ---- HKL group mapping (user-facing -> raw hogstkl codes) -----------------
 HKL_CHOICES <- c(

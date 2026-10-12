@@ -17,20 +17,22 @@
 #        b. APTER_ROOT = empty temp dir   -> clear error
 #        c. APTER_ROOT = project root     -> project root
 #  4.  Pure helpers (no browser):
-#        a. .make_s2_pm() applies sawlog / pulp / waste multipliers
+#        a. write_scenario_pm() writes a scenario that uploads back unchanged
 #        b. build_run_params(): HKL "4" -> c(41L, 42L), "__all__" -> NULL
 #        c. count_eligible_plots() matches a direct filter of plots_prod
-#        d. resolve_s2_price_path(): "same" -> default_2021, "multiplier"
-#           -> readable CSV with multiplied prices
+#        d. price-matrix editor setup: three matrices (spruce sawlog, pine
+#           sawlog, flat prices) and the interpolated 31 dm cells marked
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
 #  6.  After switching to the Simulator page: run_status shows the idle
 #      text; window title contains "Apter"
 #  7.  Main run (spruce, HKL 4, abonitet 17, 5 plots, seed 42):
 #      run_status contains "Run complete", no error notification
 #  8.  summary_cards is non-empty; tbl_products has >= 1 row
-#  9.  Scenario comparison, mode "same": cmp_status says
+#  9.  Scenario comparison with an unchanged scenario: cmp_status says
 #      "Same plots sampled"
-# 10.  Multiplier mode (sawlog x1.2): tbl_cmp_delta renders
+# 10.  Scenario upload (Phase 4a): a wide CSV with spruce sawlog x1.2 on the
+#      Prices page -> 351 cells differ; Run -> difference table, the
+#      cutting-pattern line and the stem diagram render, no error
 # 11.  Home view (Phase 2): serif "Apter" title, three tree-source tiles,
 #      footer "Release <VERSION>"
 # 12.  Theme: Bootstrap 5 loaded, self-hosted Inter font loaded, no Google
@@ -44,7 +46,9 @@
 # 16.  Per m3 tab (Phase 3): NOK/m3 tables render, the collapsed Trees card
 #      expands to tree rows and a tree's logs; no "per ha" / "ha-expanded"
 #      text anywhere in the page
-# 17.  Total browser runtime under 180 s (REVIEW if above)
+# 17.  Price-matrix editor: default and scenario grids render side by side,
+#      uploaded changes are highlighted, Reset brings the count back to 0
+# 18.  Total browser runtime under 180 s (REVIEW if above)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -226,18 +230,19 @@ helpers_err <- tryCatch({
 }, error = function(e) conditionMessage(e))
 
 if (!nzchar(helpers_err)) {
-  # a. .make_s2_pm
-  pm_test <- data.frame(
-    ProductKey    = c("spruce_sawlog", "spruce_pulpwood", "spruce_waste",
-                      "other_product"),
-    PriceNOKperM3 = c(100, 50, 10, 7), stringsAsFactors = FALSE)
-  pm_out <- H$.make_s2_pm(pm_test, 1.2, 0.5, 2)
-  exp_a  <- c(120, 25, 20, 7)
-  rec("Check 04a: .make_s2_pm() applies sawlog/pulp/waste multipliers",
-      if (isTRUE(all.equal(pm_out$PriceNOKperM3, exp_a))) PASS else FAIL,
-      sprintf("got %s (expected %s)",
-              paste(pm_out$PriceNOKperM3, collapse = ", "),
-              paste(exp_a, collapse = ", ")))
+  # a. write_scenario_pm round trip
+  pm_a <- H$APP_PM_DEFAULT
+  pm_a$PriceNOKperM3[grepl("sawlog", pm_a$ProductKey)] <-
+    pm_a$PriceNOKperM3[grepl("sawlog", pm_a$ProductKey)] * 1.2
+  f_a  <- H$write_scenario_pm(pm_a)
+  up_a <- apply_price_upload(f_a, f_a, H$APP_PM_DEFAULT, H$APP_PM_DEFAULT,
+                             H$APP_PRODUCTS, H$APP_LC)
+  file.remove(f_a)
+  ok_a <- isTRUE(up_a$ok) && identical(up_a$pm, pm_minimal(pm_a))
+  rec("Check 04a: write_scenario_pm() writes a scenario that uploads back unchanged",
+      if (ok_a) PASS else FAIL,
+      sprintf("upload ok: %s | identical: %s | cells differing from default: %d",
+              isTRUE(up_a$ok), ok_a, pm_n_diff(H$APP_PM_DEFAULT, pm_a)))
 
   # b. build_run_params
   p_all <- H$build_run_params(list(species_group = "spruce", hkl_group = "4",
@@ -277,27 +282,16 @@ if (!nzchar(helpers_err)) {
       sprintf("HKL4/ab17/all: %d vs %d; HKL4/ab14,17/fylnr %s: %d vs %d",
               n_helper_all, n_direct_all, some_fyl, n_helper_fyl, n_direct_fyl))
 
-  # d. resolve_s2_price_path
-  base_pm <- H$APP_PRICE_LONG
-  p_same  <- H$resolve_s2_price_path("same", NULL,
-                                     c(saw = 1, pulp = 1, wst = 1), base_pm)
-  p_mult  <- H$resolve_s2_price_path("multiplier", NULL,
-                                     c(saw = 1.2, pulp = 1, wst = 1), base_pm)
-  ok_d <- identical(p_same, "default_2021") && file.exists(p_mult)
-  if (ok_d) {
-    pm_read <- readr::read_csv(p_mult, show_col_types = FALSE)
-    saw <- grepl("sawlog", base_pm$ProductKey, ignore.case = TRUE)
-    ok_d <- nrow(pm_read) == nrow(base_pm) &&
-      isTRUE(all.equal(pm_read$PriceNOKperM3[saw],
-                       base_pm$PriceNOKperM3[saw] * 1.2)) &&
-      isTRUE(all.equal(pm_read$PriceNOKperM3[!saw],
-                       base_pm$PriceNOKperM3[!saw]))
-    file.remove(p_mult)
-  }
-  rec("Check 04d: resolve_s2_price_path() same/multiplier",
+  # d. editor setup
+  ch_d  <- unname(H$PM_CHOICES)
+  ik    <- H$APP_PM_INTERP_KEYS
+  ok_d  <- identical(ch_d, c("spruce_sawlog", "pine_sawlog", "flat_prices")) &&
+    length(ik) > 0L && all(grepl(" 31 ", ik, fixed = TRUE))
+  rec("Check 04d: Editor matrices and interpolated 31 dm cells",
       if (ok_d) PASS else FAIL,
-      sprintf("same -> '%s'; multiplier -> tempfile with sawlog x1.2: %s",
-              p_same, ok_d))
+      sprintf("matrices: %s | interpolated cells: %d (all 31 dm: %s)",
+              paste(ch_d, collapse = ", "), length(ik),
+              all(grepl(" 31 ", ik, fixed = TRUE))))
 } else {
   rec("Check 04: Pure app helpers", FAIL,
       paste("sourcing backend/app files failed:", helpers_err))
@@ -313,14 +307,15 @@ browser_checks <- c(
   "Check 07: Main run completes without error notification",
   "Check 08: summary_cards non-empty and tbl_products has rows",
   "Check 09: Scenario comparison 'same' samples the same plots",
-  "Check 10: Multiplier mode renders tbl_cmp_delta",
+  "Check 10: Uploaded scenario runs; comparison, pattern line and stem diagram render",
   "Check 11: Home view shows Apter title, source tiles and release footer",
   "Check 12: Bootstrap 5 and self-hosted Inter font loaded",
   "Check 13: Run step list shows all stages done",
   "Check 14: Selected logs table is paginated",
   "Check 15: Screenshots saved for visual review",
   "Check 16: Per m3 tab renders; Trees card expands; no per-ha text",
-  "Check 17: Browser runtime under 180 s")
+  "Check 17: Price-matrix editor: grids side by side, highlights, reset",
+  "Check 18: Browser runtime under 180 s")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -437,35 +432,63 @@ if (!browser_ok) {
     cmp_err <- tryCatch({
       # These inputs only feed isolate()d code or client-side panels, so no
       # output updates; waiting for one would block until the driver timeout.
-      app$set_inputs(compare_on = TRUE, s2_mode = "same", wait_ = FALSE)
+      app$set_inputs(compare_on = TRUE, wait_ = FALSE)
       app$set_inputs(result_tabs = "Scenario comparison")
       app$click("run_btn")
       app$wait_for_idle(timeout = 120 * 1000)
       ""
     }, error = function(e) conditionMessage(e))
     cmp <- txt(app, "#cmp_status")
-    shoot(app, "04_scenario_comparison")
     rec(browser_checks[5],
         if (!nzchar(cmp_err) && grepl("Same plots sampled", cmp, fixed = TRUE))
           PASS else FAIL,
         sprintf("cmp_status: '%s'%s", cmp,
                 if (nzchar(cmp_err)) paste(" | driver error:", cmp_err) else ""))
 
-    # 10. multiplier mode
-    mult_err <- tryCatch({
-      app$set_inputs(s2_mode = "multiplier", wait_ = FALSE)
-      app$set_inputs(mult_saw = 1.2, wait_ = FALSE)
+    # 10. scenario upload on the Prices page, then a comparison run
+    wide_csv <- tempfile(fileext = ".csv")
+    g10 <- pm_to_grid(H$APP_PM_DEFAULT, "spruce_sawlog") * 1.2
+    utils::write.csv(cbind(spruce_sawlog = rownames(g10), g10), wide_csv,
+                     row.names = FALSE)
+    up_err <- tryCatch({
+      app$set_inputs(main_nav = "Prices and assortments")
+      app$upload_file(pm_upload = wide_csv)
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    pm_status_up <- txt(app, "#pm_status")
+    upload_msg   <- txt(app, "#pm_upload_msg")
+    n_hl <- app$get_js("document.querySelectorAll('#pm_scenario td.pm-diff').length")
+    grids_side <- app$get_js(paste0(
+      "(function(){ var a = document.querySelector('#pm_default .handsontable'),",
+      " b = document.querySelector('#pm_scenario .handsontable');",
+      " if (!a || !b) return false;",
+      " var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();",
+      " return rb.left > ra.right - 5 && Math.abs(ra.top - rb.top) < 40; })()"))
+    shoot(app, "05_prices")
+    run10_err <- tryCatch({
+      app$set_inputs(main_nav = "Simulator")
       app$click("run_btn")
       app$wait_for_idle(timeout = 120 * 1000)
       ""
     }, error = function(e) conditionMessage(e))
-    n_delta <- n_tbl_rows(app, "tbl_cmp_delta")
-    nerr2   <- n_err_notif(app)
-    rec(browser_checks[6],
-        if (!nzchar(mult_err) && n_delta >= 1L && nerr2 == 0L) PASS else FAIL,
-        sprintf("tbl_cmp_delta rows: %d | error notifications: %d%s",
-                n_delta, nerr2,
-                if (nzchar(mult_err)) paste(" | driver error:", mult_err) else ""))
+    n_delta   <- n_tbl_rows(app, "tbl_cmp_delta")
+    n_per_m3c <- n_tbl_rows(app, "tbl_cmp_per_m3")
+    pat_txt   <- txt(app, "#cmp_patterns")
+    stem_img  <- app$get_js("document.querySelectorAll('#stem_compare img').length")
+    nerr2     <- n_err_notif(app)
+    shoot(app, "04_scenario_comparison")
+    ok10 <- !nzchar(up_err) && !nzchar(run10_err) &&
+      grepl("351 cell(s) differ", pm_status_up, fixed = TRUE) &&
+      n_delta >= 1L && n_per_m3c >= 1L &&
+      grepl("trees changed their cutting pattern", pat_txt, fixed = TRUE) &&
+      stem_img >= 1L && nerr2 == 0L
+    rec(browser_checks[6], if (ok10) PASS else FAIL,
+        sprintf("status after upload: '%s' | delta rows %d | per-m3 rows %d | patterns: '%s' | stem diagram: %s | error notifications: %d%s",
+                trimws(pm_status_up), n_delta, n_per_m3c, trimws(pat_txt),
+                stem_img >= 1L, nerr2,
+                paste0(if (nzchar(up_err)) paste(" | upload error:", up_err) else "",
+                       if (nzchar(run10_err)) paste(" | run error:", run10_err) else "")))
 
     # 14. Selected logs pagination
     app$set_inputs(result_tabs = "Selected logs")
@@ -512,8 +535,21 @@ if (!browser_ok) {
                      length(per_ha_hits),
                      if (nzchar(per_m3_err)) paste(" | driver error:", per_m3_err) else "")
 
-    app$set_inputs(main_nav = "Prices and assortments")
-    shoot(app, "05_prices")
+    # 17. editor: reset the uploaded matrix
+    reset_err <- tryCatch({
+      app$set_inputs(main_nav = "Prices and assortments")
+      app$click("pm_reset")
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    pm_status_reset <- txt(app, "#pm_status")
+    n_hl_reset <- app$get_js("document.querySelectorAll('#pm_scenario td.pm-diff').length")
+    ok17 <- isTRUE(grids_side) && n_hl > 0L && !nzchar(reset_err) &&
+      grepl("^0 cell\\(s\\) differ", trimws(pm_status_reset)) && n_hl_reset == 0L
+    det17 <- sprintf("grids side by side: %s | highlighted cells after upload: %d | after reset: '%s', highlighted %d | upload message: '%s'%s",
+                     isTRUE(grids_side), n_hl, trimws(pm_status_reset), n_hl_reset,
+                     substr(trimws(upload_msg), 1, 120),
+                     if (nzchar(reset_err)) paste(" | driver error:", reset_err) else "")
 
     rec(browser_checks[7], if (ok11) PASS else FAIL, det11)
     rec(browser_checks[8], if (ok12) PASS else FAIL, det12)
@@ -525,16 +561,17 @@ if (!browser_ok) {
     rec(browser_checks[11], if (length(shots) == 6L) PASS else REVIEW,
         sprintf("%d of 6 screenshots in %s", length(shots), shot_dir))
     rec(browser_checks[12], if (ok16) PASS else FAIL, det16)
+    rec(browser_checks[13], if (ok17) PASS else FAIL, det17)
 
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[2:12])
+    for (ck in browser_checks[2:13])
       rec(ck, FAIL, "skipped: app did not start")
   }
 
-  # 17. runtime
+  # 18. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
-  rec(browser_checks[13], if (t_el < 180) PASS else REVIEW,
+  rec(browser_checks[14], if (t_el < 180) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 180 s)", t_el))
 }
 

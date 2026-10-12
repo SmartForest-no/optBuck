@@ -133,7 +133,8 @@ server <- function(input, output, session) {
         incProgress(0.45, detail = "Summarising results")
         Sys.sleep(0)
         incProgress(0.10, detail = "Rendering outputs")
-        res$started_at <- started_at
+        res$started_at   <- started_at
+        res$price_matrix <- APP_PM_DEFAULT
         res
       }, error = function(e) {
         showNotification(
@@ -148,38 +149,40 @@ server <- function(input, output, session) {
 
   # ---- Comparison: S2 reactive, renders ------------------------------------
 
+  # Scenario run: same trees, the scenario matrix from the Prices page.
+  # Edits after a run take effect at the next Run optimizer.
   result_s2 <- reactive({
     req(isTRUE(input$compare_on), !is.null(result()))
-    params  <- isolate(build_run_params(input))
-    s2_mode <- isolate(input$s2_mode)
-    s2_pm <- resolve_s2_price_path(
-      mode    = s2_mode,
-      upload  = isolate(input$s2_file),
-      mults   = c(saw  = as.numeric(isolate(input$mult_saw)),
-                  pulp = as.numeric(isolate(input$mult_pulp)),
-                  wst  = as.numeric(isolate(input$mult_wst))),
-      base_pm = APP_PRICE_LONG
-    )
-    # The multiplier matrix is a tempfile; remove it once Scenario 2 has run.
-    if (identical(s2_mode, "multiplier"))
-      on.exit(tryCatch(file.remove(s2_pm), error = function(e) NULL), add = TRUE)
-    withProgress(message = "Running Scenario 2...", value = 0.5, {
-      tryCatch(
-        run_sampled_plot_bucking(params = params, price_matrix_path = s2_pm,
-                                 root = ROOT),
-        error = function(e) {
-          showNotification(paste0("Scenario 2 error: ", conditionMessage(e)),
-                           type = "error", duration = NULL)
-          NULL
-        }
-      )
+    params <- isolate(build_run_params(input))
+    pm     <- isolate(scenario_pm())
+    path   <- write_scenario_pm(pm)
+    on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
+    withProgress(message = "Running scenario prices...", value = 0.5, {
+      tryCatch({
+        r <- run_sampled_plot_bucking(params = params, price_matrix_path = path,
+                                      root = ROOT)
+        r$price_matrix    <- pm
+        r$n_cells_changed <- pm_n_diff(APP_PM_DEFAULT, pm)
+        r
+      }, error = function(e) {
+        showNotification(paste0("Scenario error: ", conditionMessage(e)),
+                         type = "error", duration = NULL)
+        NULL
+      })
     })
+  })
+
+  # Per-tree pattern comparison (R/helpers_comparison.R).
+  cmp_trees <- reactive({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    compare_cutting_patterns(result(), result_s2(),
+                             result()$price_matrix, result_s2()$price_matrix)
   })
 
   output$cmp_status <- renderUI({
     if (!isTRUE(input$compare_on))
       return(div(class = "stat-strip",
-                 "Enable 'Run scenario comparison' in the sidebar and click Run optimizer."))
+                 "Tick 'Compare with scenario prices' in the sidebar and click Run optimizer."))
     r1 <- result(); r2 <- result_s2()
     if (is.null(r1)) return(div(class = "status-error", "Scenario 1 failed."))
     if (is.null(r2)) return(div(class = "status-error", "Scenario 2 failed."))
@@ -192,9 +195,7 @@ server <- function(input, output, session) {
   output$tbl_cmp_overview <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
-    s2_lbl <- switch(isolate(input$s2_mode),
-      "same" = "default_2021 (same)", "multiplier" = "multipliers applied",
-      "upload" = "uploaded matrix", "default_2021")
+    s2_lbl <- sprintf("scenario (%d cells changed)", r2$n_cells_changed %||% NA_integer_)
     mk <- function(r, nm, src) {
       v <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
       m <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
@@ -208,7 +209,7 @@ server <- function(input, output, session) {
                  Runtime_s = round(r$elapsed_seconds, 1),
                  stringsAsFactors = FALSE)
     }
-    rbind(mk(r1, "Scenario 1", "default_2021"), mk(r2, "Scenario 2", s2_lbl))
+    rbind(mk(r1, "Default", "default_2021"), mk(r2, "Scenario", s2_lbl))
   })))
 
   output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
@@ -232,9 +233,81 @@ server <- function(input, output, session) {
       Delta_commercial_m3  = round(c2 - c1, 4),
       Delta_NOK_per_m3     = round(h2 - h1, 1),
       Delta_NOK_per_m3_pct = pct(h2, h1),
+      Trees_changed        = sum(cmp_trees()$changed),
       stringsAsFactors = FALSE
     )
   })))
+
+  output$tbl_cmp_per_m3 <- renderReactable(apter_reactable(local({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    x <- compare_per_m3(result(), result_s2())
+    data.frame(Scope = x$scope, Assortment = x$assortment,
+               NOK_per_m3_default  = round(x$nok_per_m3_default, 1),
+               NOK_per_m3_scenario = round(x$nok_per_m3_scenario, 1),
+               Delta_NOK_per_m3    = round(x$delta_nok_per_m3, 1),
+               Share_pct_default   = round(100 * x$volume_share_default, 1),
+               Share_pct_scenario  = round(100 * x$volume_share_scenario, 1),
+               Delta_share_pp      = round(100 * x$delta_volume_share, 1),
+               stringsAsFactors = FALSE)
+  }), page_size = 12L))
+
+  output$cmp_patterns <- renderUI({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    x <- cmp_trees()
+    tagList(
+      div(class = "stat-strip",
+          tags$strong(sprintf("%d of %d trees changed their cutting pattern",
+                              sum(x$changed), nrow(x))),
+          " (the change alters value or volume)."),
+      if (sum(x$tie_only) > 0L)
+        div(class = "note-muted",
+            sprintf("%d tree(s) differ only by equal-value ties; not counted as changes.",
+                    sum(x$tie_only)))
+    )
+  })
+
+  output$tbl_cmp_trees <- renderReactable({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
+    if (nrow(x) == 0L)
+      return(apter_reactable(data.frame(Message = "No tree changed its cutting pattern.")))
+    x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
+    apter_reactable(data.frame(
+      Plot = x$plot_id_github, Tree = x$treid, Species = x$species_group,
+      Logs_default = x$n_logs_default, Logs_scenario = x$n_logs_scenario,
+      Value_default_NOK = round(x$value_default, 2),
+      Value_scenario_NOK = round(x$value_scenario, 2),
+      Gain_at_scenario_prices = round(x$gain_at_scenario, 2),
+      Gain_at_default_prices  = round(x$gain_at_default, 2),
+      Max_volume_diff_m3 = round(x$max_volume_diff_m3, 4),
+      stringsAsFactors = FALSE))
+  })
+
+  output$cmp_tree_ui <- renderUI({
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
+    x <- cmp_trees()
+    x <- x[order(!x$changed, -abs(x$value_scenario - x$value_default)), , drop = FALSE]
+    lbl <- sprintf("%s / %s (%s%s)", x$plot_id_github, x$treid, x$species_group,
+                   ifelse(x$changed, sprintf(", %+.1f NOK", x$value_scenario - x$value_default),
+                          ", unchanged"))
+    selectInput("cmp_tree", "Tree (changed trees first, largest value change first)",
+                choices = setNames(paste(x$plot_id_github, x$treid, sep = "|"), lbl),
+                width = "100%")
+  })
+
+  output$stem_compare <- renderPlot(res = 96, {
+    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()),
+        !is.null(input$cmp_tree))
+    k  <- input$cmp_tree
+    tk <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
+    l1 <- result()$selected_logs_all;   l1 <- l1[tk(l1) == k, , drop = FALSE]
+    l2 <- result_s2()$selected_logs_all; l2 <- l2[tk(l2) == k, , drop = FALSE]
+    ts <- result()$tree_summary; tr <- ts[tk(ts) == k, , drop = FALSE]
+    req(nrow(tr) == 1L)
+    apter_stem_compare(l1, l2, tr$height_m,
+                       sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
+                               tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
+  })
 
   output$tbl_cmp_products <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
@@ -284,7 +357,7 @@ server <- function(input, output, session) {
     bp  <- barplot(m, beside = TRUE, col = NA, border = NA, axes = FALSE,
                    ylim = c(0, max(m, 0) * 1.15), las = 1, cex.names = 0.8,
                    padj = 0.6, space = c(0, 0.9),
-                   main = "Value by product: S1 vs S2", ylab = "NOK")
+                   main = "Value by product: default vs scenario", ylab = "NOK")
     abline(h = axTicks(2), col = ch$grid, lwd = 0.7)
     barplot(m, beside = TRUE, col = c(ch$series1, ch$series2),
             border = ch$surface, lwd = 2, axes = FALSE, add = TRUE,
@@ -292,7 +365,7 @@ server <- function(input, output, session) {
     axis(2, at = axTicks(2), col = NA, col.ticks = NA,
          labels = format(axTicks(2), big.mark = ",", scientific = FALSE, trim = TRUE))
     abline(h = 0, col = ch$baseline)
-    legend("topright", c("S1", "S2"), fill = c(ch$series1, ch$series2),
+    legend("topright", c("Default", "Scenario"), fill = c(ch$series1, ch$series2),
            border = NA, bty = "n", text.col = ch$ink, cex = 0.85)
   })
 
@@ -307,7 +380,7 @@ server <- function(input, output, session) {
     # Sign is carried by bar direction from the zero baseline and the signed
     # label, so one neutral colour is used (no colour-only meaning).
     apter_barplot(delta, col = APTER_CHART$neutral,
-                  main = "Delta value (S2 - S1) by product", ylab = "NOK",
+                  main = "Value change (scenario \u2212 default) by product", ylab = "NOK",
                   fmt = function(v) {
                     s <- format(round(v), big.mark = ",", scientific = FALSE, trim = TRUE)
                     ifelse(v > 0, paste0("+", s), s)
@@ -542,18 +615,111 @@ server <- function(input, output, session) {
     lc
   })))
 
-  output$price_matrix_header <- renderUI({
-    div(class = "stat-strip",
-        sprintf("Total rows: %d.", nrow(APP_PRICE_LONG)))
+  # ---- Price-matrix editor (R/helpers_price_matrix.R) ---------------------------
+  scenario_pm <- reactiveVal(APP_PM_DEFAULT)
+  pm_tick     <- reactiveVal(0L)     # re-render the scenario grid
+  pm_msg      <- reactiveVal(NULL)   # last upload / reset / edit message
+
+  pm_widget <- function(grid, id, read_only, renderer, def = NULL, interp = NULL) {
+    w <- rhandsontable(grid, rowHeaders = rownames(grid), readOnly = read_only,
+                       height = 560, stretchH = "all", matrix_id = id,
+                       def = def, interp = interp)
+    w <- hot_cols(w, renderer = renderer, columnSorting = FALSE)
+    w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
+    if (!read_only) w <- hot_validate_numeric(w, cols = seq_len(ncol(grid)), min = 0)
+    w
+  }
+
+  output$pm_default <- renderRHandsontable({
+    id <- input$pm_id; req(id)
+    g  <- pm_to_grid(APP_PM_DEFAULT, id)
+    interp <- if (identical(id, PM_FLAT_ID))
+      matrix(FALSE, nrow(g), ncol(g)) else
+      outer(rownames(g), colnames(g), function(d, l)
+        paste(id, l, d) %in% APP_PM_INTERP_KEYS)
+    pm_widget(g, id, TRUE, PM_INTERP_RENDERER, interp = unname(interp))
   })
 
-  output$tbl_ref_price <- renderReactable(apter_reactable(local({
-    pm <- APP_PRICE_LONG
-    keep <- intersect(c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
-                        "PriceNOKperM3", "PriceScenario", "PriceType",
-                        "PriceSource", "Notes"),
-                      names(pm))
-    pm[, keep, drop = FALSE]
-  }), digits = 2))
+  output$pm_scenario <- renderRHandsontable({
+    pm_tick(); id <- input$pm_id; req(id)
+    pm_widget(pm_to_grid(isolate(scenario_pm()), id), id, FALSE, PM_DIFF_RENDERER,
+              def = unname(as.matrix(pm_to_grid(APP_PM_DEFAULT, id))))
+  })
+
+  # Edits in the scenario grid. The matrix id travels with the widget, so a
+  # stale grid from the previously shown matrix is never written elsewhere.
+  observeEvent(input$pm_scenario, {
+    x  <- input$pm_scenario
+    if (is.null(x$changes$changes)) return()            # load, not an edit
+    id <- x$params$matrix_id %||% isolate(input$pm_id)
+    g  <- hot_to_r(x)
+    ref <- pm_to_grid(isolate(scenario_pm()), id)
+    if (!identical(dim(g), dim(ref))) return()
+    rownames(g) <- rownames(ref); colnames(g) <- colnames(ref)
+    if (any(as.matrix(g) < 0, na.rm = TRUE)) {
+      pm_msg(list(type = "error", text = "Negative prices are not allowed; the edit was undone."))
+      pm_tick(pm_tick() + 1L)
+      return()
+    }
+    scenario_pm(pm_from_grid(g, id, isolate(scenario_pm())))
+  })
+
+  observeEvent(input$pm_reset, {
+    id <- input$pm_id
+    scenario_pm(pm_reset(scenario_pm(), APP_PM_DEFAULT, id))
+    pm_tick(pm_tick() + 1L)
+    pm_msg(list(type = "ok", text = sprintf("%s reset to the default.", pm_matrix_label(id))))
+  })
+
+  observeEvent(input$pm_upload, {
+    f <- input$pm_upload; req(f)
+    res <- apply_price_upload(f$datapath, f$name, scenario_pm(), APP_PM_DEFAULT,
+                              APP_PRODUCTS, APP_LC)
+    if (isTRUE(res$ok)) {
+      scenario_pm(res$pm)
+      pm_tick(pm_tick() + 1L)
+      pm_msg(list(type = "ok", warnings = res$warnings, text = sprintf(
+        "Loaded %s (%s layout): replaced %s.", f$name, res$layout,
+        paste(vapply(res$ids, pm_matrix_label, character(1)), collapse = ", "))))
+    } else {
+      pm_msg(list(type = "error", text = paste(
+        c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
+    }
+  })
+
+  output$pm_status <- renderUI({
+    req(input$pm_id)
+    n_all <- pm_n_diff(APP_PM_DEFAULT, scenario_pm())
+    n_now <- sum(pm_diff_mask(APP_PM_DEFAULT, scenario_pm(), input$pm_id))
+    div(class = "pm-status",
+        tags$strong(sprintf("%d cell(s) differ from the default", n_all)),
+        sprintf(" (%d in this matrix).", n_now))
+  })
+
+  output$pm_upload_msg <- renderUI({
+    m <- pm_msg(); if (is.null(m)) return(NULL)
+    tagList(
+      div(class = if (identical(m$type, "error")) "pm-msg-error" else "pm-msg-ok", m$text),
+      if (length(m$warnings) > 0L)
+        div(class = "pm-msg-warn", paste("Warning:", m$warnings, collapse = "\n")))
+  })
+
+  output$dl_template_wide <- downloadHandler(
+    filename = function() "apter_price_template_wide.xlsx",
+    content  = function(file) pm_template_wide(APP_PM_DEFAULT, file))
+  output$dl_template_long <- downloadHandler(
+    filename = function() "apter_price_template_long.csv",
+    content  = function(file) pm_template_long(APP_PM_DEFAULT, file))
+  output$dl_scenario <- downloadHandler(
+    filename = function() "apter_scenario_prices.csv",
+    content  = function(file) pm_export(scenario_pm(), file))
+
+  output$scenario_sidebar <- renderUI({
+    n <- pm_n_diff(APP_PM_DEFAULT, scenario_pm())
+    div(class = "note-muted",
+        sprintf("Scenario: %d price cell(s) differ from the default.", n), br(),
+        actionLink("go_prices", "Edit scenario prices"))
+  })
+  observeEvent(input$go_prices, nav_select("main_nav", "Prices and assortments"))
 
 }  # end server

@@ -256,3 +256,19 @@ details.apter-card { margin-bottom: 16px; }
 
 /* ---- tree detail (Per m3 tab) ---- */
 .tree-logs { padding: 8px 12px 12px 28px; background: #F6F5F3; }
+
+/* ---- price-matrix editor (Prices page) ---- */
+.pm-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
+.pm-toolbar .shiny-input-container { margin-bottom: 0; min-width: 240px; }
+.pm-status { color: var(--apter-muted); font-size: 0.88rem; padding-bottom: 6px; }
+.pm-status strong { color: var(--apter-ink); }
+.pm-grid .handsontable td.pm-diff { background: #FCE7C8 !important; font-weight: 600; }
+.pm-grid .handsontable td.pm-interp { font-style: italic; color: var(--apter-muted); background: #F6F5F3; }
+.pm-grid .handsontable th { background: var(--apter-topbar); color: var(--apter-ink); font-weight: 500; }
+.pm-legend span { display: inline-block; padding: 0 6px; margin-right: 10px; border-radius: 3px; }
+.pm-legend .sw-diff { background: #FCE7C8; font-weight: 600; }
+.pm-legend .sw-interp { background: #F6F5F3; font-style: italic; }
+.pm-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pm-msg-error { color: var(--apter-danger); white-space: pre-wrap; }
+.pm-msg-ok { color: var(--apter-success); }
+.pm-msg-warn { color: var(--apter-warning); }
