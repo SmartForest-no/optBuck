@@ -95,11 +95,11 @@ PriceVolumeCalc=function(
                           DBH=DBH,
                           LogLength=LogLength)
       r1=Top_ub/2
-      r2=(Top_ub+LogLength*.01)/2
+      r2=(Top_ub+LogLength*.1)/2
       v=((1/3)*pi*(r1^2+r2^2+(r1*r2))*LogLength)/1e+08
     }else{
       S1=pi*((Top_ob/2)^2)
-      S2=pi*(((Top_ob+LogLength*.01)/2)^2)
+      S2=pi*(((Top_ob+LogLength*.1)/2)^2)
       v=(LogLength/3)*(S1+S2+sqrt(S1*S2))/1e+08
     }
   }
