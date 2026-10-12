@@ -72,7 +72,7 @@ if (!dir.exists(OUT_DIR)) dir.create(OUT_DIR, recursive = TRUE)
 # These columns are direct or indirect NFI plot locators, or carry no analytic
 # value. They must never appear in data_processed_github/.
 ALWAYS_DROP <- c(
-  "plot_id",        # original NFI plot ID ??? REPLACED by plot_id_github
+  "plot_id",        # original NFI plot ID -- REPLACED by plot_id_github
   "flateid",        # same as plot_id; indirect locator
   "flatenr",        # plot sub-number (all = 1; no utility)
   "hel_delt_flate", # full/partial flag (all = 0; no utility)
@@ -93,8 +93,8 @@ KEEP_TREE_PLOT <- c(
   "volu",           # stem volume without bark m3 (reference comparison)
   "hogstkl",        # maturity class (stratum filter)
   "abonitet",       # site quality class (stratum filter)
-  "fylnr",          # county code ??? coarse location (optional filter; KEPT)
-  "hoh",            # elevation m ??? coarse (optional filter; KEPT)
+  "fylnr",          # county code -- coarse location (optional filter; KEPT)
+  "hoh",            # elevation m -- coarse (optional filter; KEPT)
   "plot_area_m2"    # plot area (per-ha scaling in app)
 )
 
@@ -152,7 +152,7 @@ id_map <- data.frame(
 )
 
 cat("  Synthetic IDs: P000001 to", tail(synthetic_ids, 1), "\n")
-cat("  IMPORTANT: mapping is in-memory only ??? not written to disk.\n\n")
+cat("  IMPORTANT: mapping is in-memory only -- not written to disk.\n\n")
 
 # ==============================================================================
 # Step 2: Sanitize nfi_tree_plot_2024_spruce_pine_stratum_ready.parquet

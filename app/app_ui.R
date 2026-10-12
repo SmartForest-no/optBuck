@@ -141,7 +141,6 @@ ui <- fluidPage(
               " PriceMatrixGran/PriceMatrixFuru source spreadsheet.",
               " See the Notes column below for flagged rows",
               " (PriceSource = \"Interpolated\")."),
-          uiOutput("lc_filter_note"),
           tableOutput("tbl_ref_lc"),
           br(),
           div(class = "section-hdr", "Default 2021 price matrix"),

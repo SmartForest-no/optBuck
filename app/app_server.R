@@ -358,7 +358,7 @@ server <- function(input, output, session) {
     on.exit(par(old_mar))
     hist(vals, col = "#4a9a6e", border = "white",
          breaks = max(3L, min(15L, length(vals))),
-         main = "Value per ha (NOK) ??? sampled plots",
+         main = "Value per ha (NOK) — sampled plots",
          xlab = "NOK / ha", ylab = "Number of plots")
     abline(v = mean(vals), col = "#e05a2b", lwd = 2, lty = 2)
     legend("topright",
