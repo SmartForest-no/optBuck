@@ -15,8 +15,12 @@
 #  6.  No returned data.frame contains a column named plot_id
 #  7.  Plot- and tree-level data.frames contain plot_id_github
 #  8.  No overlapping logs in selected_logs_all
-#  9.  plot_summary$value_per_ha_nok is non-negative for all rows
-# 10.  label contains "Not ha-expanded"
+#  9.  NOK per m3 outputs (Phase 3, 2026-10-12): per_m3_summary and
+#      per_m3_by_assortment present and non-negative; per scope, assortment
+#      contributions add up to the scope's NOK/m3 and volume shares to 1
+# 10.  No per-ha, plot-area or plot-level outputs (no plot_summary, no
+#      *per_ha* / plot_area names anywhere in the result); label says the
+#      results describe the selected trees only
 # 11.  Price validation contains no FAIL rows
 # 12.  profile_failures == 0 rows (or REVIEW if failures occurred)
 # 13.  Runtime is under 120 seconds (REVIEW if above but run completed)
@@ -189,7 +193,8 @@ cat("\n--- 04. Return object structure ---\n")
 
 required_names <- c("run_id", "params", "n_eligible_plots", "n_plots_sampled",
                      "n_trees_total", "n_trees_with_logs",
-                     "selected_logs_all", "tree_summary", "plot_summary",
+                     "selected_logs_all", "tree_summary", "per_m3_summary",
+                     "per_m3_by_assortment", "sampled_plot_ids",
                      "product_summary", "unpriced_summary", "zero_log_trees",
                      "price_validation_checks", "profile_failures",
                      "diagnostics", "label", "elapsed_seconds")
@@ -239,7 +244,8 @@ cat("\n--- 06. No plot_id leakage ---\n", file = audit_txt, append = TRUE)
 cat("\n--- 06. No plot_id leakage ---\n")
 
 if (!is.null(smoke_result)) {
-  df_names <- c("selected_logs_all", "tree_summary", "plot_summary",
+  df_names <- c("selected_logs_all", "tree_summary", "per_m3_summary",
+                "per_m3_by_assortment",
                 "product_summary", "unpriced_summary", "zero_log_trees",
                 "profile_failures")
   leaking <- character(0)
@@ -265,7 +271,7 @@ cat("\n--- 07. plot_id_github present ---\n", file = audit_txt, append = TRUE)
 cat("\n--- 07. plot_id_github present ---\n")
 
 if (!is.null(smoke_result)) {
-  github_id_dfs <- c("selected_logs_all", "tree_summary", "plot_summary",
+  github_id_dfs <- c("selected_logs_all", "tree_summary",
                      "zero_log_trees", "profile_failures")
   missing_gid <- character(0)
   for (dfn in github_id_dfs) {
@@ -318,44 +324,64 @@ if (!is.null(smoke_result)) {
 
 
 # ==============================================================================
-# Check 09: value_per_ha_nok is non-negative
+# Check 09: NOK per m3 outputs present and consistent
 # ==============================================================================
-cat("\n--- 09. value_per_ha_nok non-negative ---\n", file = audit_txt, append = TRUE)
-cat("\n--- 09. value_per_ha_nok non-negative ---\n")
+cat("\n--- 09. NOK per m3 outputs ---\n", file = audit_txt, append = TRUE)
+cat("\n--- 09. NOK per m3 outputs ---\n")
 
 if (!is.null(smoke_result)) {
-  ps <- smoke_result$plot_summary
-  if (is.data.frame(ps) && "value_per_ha_nok" %in% names(ps) && nrow(ps) > 0L) {
-    valid_vals <- ps$value_per_ha_nok[!is.na(ps$value_per_ha_nok)]
-    n_neg      <- sum(valid_vals < 0)
-    rec("Check 09: value_per_ha_nok is non-negative",
-        if (n_neg == 0L) PASS else FAIL,
-        sprintf("%d negative value(s) out of %d non-NA rows",
-                n_neg, length(valid_vals)))
+  s  <- smoke_result$per_m3_summary
+  ba <- smoke_result$per_m3_by_assortment
+  ok_shape <- is.data.frame(s) && is.data.frame(ba) &&
+    all(c("scope", "value_nok", "commercial_volume_m3", "nok_per_m3") %in% names(s)) &&
+    all(c("scope", "assortment", "nok_per_m3_contribution", "volume_share") %in% names(ba)) &&
+    "Total" %in% s$scope
+  if (ok_shape) {
+    nonneg <- all(c(s$value_nok, s$commercial_volume_m3, ba$value_nok,
+                    ba$commercial_volume_m3) >= 0, na.rm = TRUE)
+    sum_dev <- max(vapply(unique(ba$scope), function(sc) {
+      tot <- s$nok_per_m3[s$scope == sc]
+      if (is.na(tot)) return(0)
+      abs(sum(ba$nok_per_m3_contribution[ba$scope == sc]) - tot)
+    }, numeric(1)))
+    share_dev <- max(vapply(unique(ba$scope), function(sc)
+      abs(sum(ba$volume_share[ba$scope == sc]) - 1), numeric(1)))
+    tot <- s[s$scope == "Total", ]
+    rec("Check 09: NOK per m3 outputs present and consistent",
+        if (nonneg && sum_dev < 1e-6 && share_dev < 1e-9) PASS else FAIL,
+        sprintf("total %.1f NOK/m3 on %.3f m3 u.b. | max |sum(contrib) - total| = %.2e | max |sum(shares) - 1| = %.2e | non-negative: %s",
+                tot$nok_per_m3, tot$commercial_volume_m3, sum_dev, share_dev, nonneg))
   } else {
-    rec("Check 09: value_per_ha_nok is non-negative", PASS,
-        "plot_summary is empty or column absent -- not applicable")
+    rec("Check 09: NOK per m3 outputs present and consistent", FAIL,
+        "per_m3_summary / per_m3_by_assortment missing or malformed")
   }
 } else {
-  rec("Check 09: value_per_ha_nok is non-negative", FAIL,
+  rec("Check 09: NOK per m3 outputs present and consistent", FAIL,
       "smoke call did not complete")
 }
 
 
 # ==============================================================================
-# Check 10: label contains "Not ha-expanded"
+# Check 10: no per-ha or plot-level outputs; trees-only label
 # ==============================================================================
-cat("\n--- 10. Label contains 'Not ha-expanded' ---\n",
+cat("\n--- 10. No per-ha / plot-level outputs ---\n",
     file = audit_txt, append = TRUE)
-cat("\n--- 10. Label contains 'Not ha-expanded' ---\n")
+cat("\n--- 10. No per-ha / plot-level outputs ---\n")
 
 if (!is.null(smoke_result)) {
+  all_names <- c(names(smoke_result), unlist(lapply(smoke_result, function(x)
+    if (is.data.frame(x)) names(x) else NULL)), names(smoke_result$diagnostics))
+  bad <- grep("per_ha|plot_area|plot_summary|ha_expan", all_names,
+              value = TRUE, ignore.case = TRUE)
   lbl <- smoke_result$label %||% ""
-  rec("Check 10: label contains 'Not ha-expanded'",
-      if (grepl("Not ha-expanded", lbl, fixed = TRUE)) PASS else FAIL,
-      sprintf("label: '%s'", lbl))
+  ok_lbl <- grepl("selected trees only", lbl, fixed = TRUE)
+  rec("Check 10: No per-ha or plot-level outputs; trees-only label",
+      if (length(bad) == 0L && ok_lbl) PASS else FAIL,
+      sprintf("per-ha/plot names: %s | label: '%s'",
+              if (length(bad) == 0L) "none" else paste(unique(bad), collapse = ", "),
+              lbl))
 } else {
-  rec("Check 10: label contains 'Not ha-expanded'", FAIL,
+  rec("Check 10: No per-ha or plot-level outputs; trees-only label", FAIL,
       "smoke call did not complete")
 }
 

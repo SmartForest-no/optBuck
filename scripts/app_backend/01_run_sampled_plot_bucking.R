@@ -20,6 +20,14 @@
 #     because no single helper function covers the full join.
 #   - Data is loaded from data_processed_github/ by default.
 #   - This script never writes output files.
+#   - Bark (2026-10-12): profiles are over bark (taperNOR cache); an
+#     under-bark profile is added per tree with the bark model in
+#     R/helpers_bark.R (barkNOR, B >= 0, provisional). Products with
+#     DiameterUnderBark = TRUE use it for limits, price class and price volume.
+#   - Outputs (Phase 3): NOK per m3 of commercial volume under bark
+#     (R/helpers_commercial_volume.R), total, by species and by assortment.
+#     No per-ha or plot-level outputs: results describe the selected trees
+#     only. Plots are still how NFI trees are sampled.
 #
 # Usage:
 #   source("scripts/app_backend/01_run_sampled_plot_bucking.R")
@@ -59,8 +67,8 @@ suppressPackageStartupMessages({
 })
 
 for (.h in c("helpers_paths", "helpers_products", "helpers_valuation",
-             "helpers_taper", "helpers_candidate_generation",
-             "helpers_dp_optimizer")) {
+             "helpers_taper", "helpers_bark", "helpers_candidate_generation",
+             "helpers_commercial_volume", "helpers_dp_optimizer")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -100,6 +108,8 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
              PriceNOKperM3 = numeric(0), value_nok = numeric(0),
              PriceDiameterClass_cm_uncapped = integer(0),
              PriceDiameterClass_cm_used = integer(0),
+             TopDiameter_ob = numeric(0), TopDiameter_ub = numeric(0),
+             commercial_volume_m3 = numeric(0),
              stringsAsFactors = FALSE)
 }
 
@@ -108,6 +118,7 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
              species_group = character(0), dbh_cm = numeric(0),
              height_m = numeric(0), n_logs_selected = integer(0),
              total_value_nok = numeric(0), total_volume_m3 = numeric(0),
+             commercial_volume_m3 = numeric(0), nok_per_m3 = numeric(0),
              optimizer_status = character(0), optimizer_message = character(0),
              stringsAsFactors = FALSE)
 }
@@ -380,10 +391,6 @@ run_sampled_plot_bucking <- function(
     as.character(pm_fl_join$ProductKey))
 
   # ---- 7. Build tree_data metadata lookup -----------------------------------
-  # plot_area_m2 for later plot_summary.
-  plot_area_lookup <- unique(
-    trees_valid[, c("plot_id_github", "plot_area_m2"), drop = FALSE])
-
   # tree_data: needed for metadata lookups inside the per-tree loop.
   # Rename plot_id_github -> plot_id for helper compatibility.
   tree_data <- trees_valid[, c("plot_id_github", "treid", "sesong",
@@ -456,6 +463,12 @@ run_sampled_plot_bucking <- function(
   t0_profile_convert <- proc.time()
   pvs              <- profiles_to_profile_vectors(profiles_for_helpers)
   t_profile_convert <- .pt(t0_profile_convert)
+
+  # Under-bark profile per tree (bark model in R/helpers_bark.R).
+  t0_under_bark <- proc.time()
+  bark_model    <- get_bark_model()
+  pvs           <- lapply(pvs, add_under_bark_profile, model = bark_model)
+  t_under_bark  <- .pt(t0_under_bark)
   tree_ids_valid   <- names(pvs)
   n_trees_in_optim <- length(tree_ids_valid)
 
@@ -500,6 +513,8 @@ run_sampled_plot_bucking <- function(
         n_logs_selected  = 0L,
         total_value_nok  = 0,
         total_volume_m3  = 0,
+        commercial_volume_m3 = 0,
+        nok_per_m3       = NA_real_,
         optimizer_status  = status,
         optimizer_message = msg,
         stringsAsFactors = FALSE
@@ -593,6 +608,12 @@ run_sampled_plot_bucking <- function(
 
     sel_vol <- if (res$n_selected > 0L)
       sum(res$selected_logs$price_volume_m3, na.rm = TRUE) else 0
+    # Commercial volume under bark (the NOK/m3 denominator) per selected log.
+    if (res$n_selected > 0L)
+      res$selected_logs$commercial_volume_m3 <- commercial_volume_ub(
+        pv$diameterPosition, pv$DiameterValueUB, res$selected_logs)
+    com_vol <- if (res$n_selected > 0L)
+      sum(res$selected_logs$commercial_volume_m3) else 0
 
     all_tree_rows[[i]] <- data.frame(
       plot_id           = as.character(tmeta$plot_id),
@@ -603,6 +624,8 @@ run_sampled_plot_bucking <- function(
       n_logs_selected   = res$n_selected,
       total_value_nok   = res$dp_best_value,
       total_volume_m3   = sel_vol,
+      commercial_volume_m3 = com_vol,
+      nok_per_m3        = if (com_vol > 0) res$dp_best_value / com_vol else NA_real_,
       optimizer_status  = res$optimizer_status,
       optimizer_message = res$optimizer_message,
       stringsAsFactors  = FALSE
@@ -632,7 +655,9 @@ run_sampled_plot_bucking <- function(
                          "StartPos", "StopPos", "LogLength", "LengthClass_dm",
                          "price_volume_m3", "PriceNOKperM3", "value_nok",
                          "PriceDiameterClass_cm_uncapped",
-                         "PriceDiameterClass_cm_used")
+                         "PriceDiameterClass_cm_used",
+                         "TopDiameter_ob", "TopDiameter_ub",
+                         "commercial_volume_m3")
 
   if (length(sel_list) > 0L) {
     sel_all_raw <- do.call(rbind, sel_list)
@@ -646,41 +671,10 @@ run_sampled_plot_bucking <- function(
   }
   .assert_no_plot_id(selected_logs_all, "selected_logs_all")
 
-  # ---- 12. plot_summary -------------------------------------------------------
-  if (nrow(tree_summary) > 0L) {
-    ps_agg <- do.call(rbind, lapply(sampled_plots, function(pid) {
-      rows <- tree_summary[tree_summary$plot_id_github == pid, , drop = FALSE]
-      n_tr   <- nrow(rows)
-      n_logs <- sum(rows$n_logs_selected > 0L, na.rm = TRUE)
-      tot_v  <- sum(rows$total_value_nok,  na.rm = TRUE)
-      tot_m3 <- sum(rows$total_volume_m3,  na.rm = TRUE)
-      area_row <- plot_area_lookup[
-        plot_area_lookup$plot_id_github == pid, , drop = FALSE]
-      area <- if (nrow(area_row) > 0L) area_row$plot_area_m2[1L] else NA_real_
-      data.frame(
-        plot_id_github    = pid,
-        n_trees           = n_tr,
-        n_trees_with_logs = n_logs,
-        total_value_nok   = round(tot_v, 2),
-        total_volume_m3   = round(tot_m3, 5),
-        plot_area_m2      = area,
-        value_per_ha_nok  = if (!is.na(area) && area > 0)
-                              round(tot_v / area * 10000, 2) else NA_real_,
-        volume_per_ha_m3  = if (!is.na(area) && area > 0)
-                              round(tot_m3 / area * 10000, 5) else NA_real_,
-        stringsAsFactors  = FALSE
-      )
-    }))
-    plot_summary <- ps_agg
-  } else {
-    plot_summary <- data.frame(
-      plot_id_github = sampled_plots, n_trees = 0L,
-      n_trees_with_logs = 0L, total_value_nok = 0,
-      total_volume_m3 = 0, plot_area_m2 = NA_real_,
-      value_per_ha_nok = NA_real_, volume_per_ha_m3 = NA_real_,
-      stringsAsFactors = FALSE)
-  }
-  .assert_no_plot_id(plot_summary, "plot_summary")
+  # ---- 12. NOK per m3 of commercial volume under bark ----------------------
+  per_m3 <- summarise_per_m3(selected_logs_all, tree_summary)
+  per_m3_summary       <- per_m3$summary
+  per_m3_by_assortment <- per_m3$by_assortment
 
   # ---- 13. product_summary ----------------------------------------------------
   if (nrow(selected_logs_all) > 0L) {
@@ -753,10 +747,12 @@ run_sampled_plot_bucking <- function(
   stage_names <- c("load_data", "filter_stratum_and_sample_plots",
                    "tree_filtering", "load_products_and_prices",
                    "load_precomputed_taper_profiles", "profile_vector_conversion",
+                   "under_bark_profiles",
                    "candidate_generation", "price_joining", "dp_optimization",
                    "summary_assembly", "total")
   stage_secs  <- round(c(t_load_data, t_filter_sample, t_tree_filter,
                           t_products_prices, t_taper_profiles, t_profile_convert,
+                          t_under_bark,
                           acc_cand_gen, acc_price_join, acc_dp_optim,
                           t_summary, elapsed_secs), 3)
   stage_timings <- data.frame(stage = stage_names, elapsed_seconds = stage_secs,
@@ -770,6 +766,7 @@ run_sampled_plot_bucking <- function(
     n_trees_after_filter                       = n_trees_after_filter,
     n_trees_dropped_low_dbh_or_height          = n_trees_dropped,
     taper_source                               = "precomputed",
+    bark_model                                 = getOption("apter.bark_model", DEFAULT_BARK_MODEL),
     taper_profile_file                         = basename(taper_cache_dir),
     n_profiles_loaded                          = n_profiles_loaded,
     n_trees_with_precomputed_profiles          = n_trees_with_profile,
@@ -785,7 +782,8 @@ run_sampled_plot_bucking <- function(
   # ---- 17. Final safety assertions -------------------------------------------
   .assert_no_plot_id(tree_summary,      "tree_summary (final)")
   .assert_no_plot_id(selected_logs_all, "selected_logs_all (final)")
-  .assert_no_plot_id(plot_summary,      "plot_summary (final)")
+  .assert_no_plot_id(per_m3_summary,       "per_m3_summary (final)")
+  .assert_no_plot_id(per_m3_by_assortment, "per_m3_by_assortment (final)")
   .assert_no_plot_id(zero_log_trees,    "zero_log_trees (final)")
   .assert_no_plot_id(profile_failures,  "profile_failures (final)")
 
@@ -799,14 +797,17 @@ run_sampled_plot_bucking <- function(
     n_trees_with_logs       = n_trees_with_logs,
     selected_logs_all       = selected_logs_all,
     tree_summary            = tree_summary,
-    plot_summary            = plot_summary,
+    per_m3_summary          = per_m3_summary,
+    per_m3_by_assortment    = per_m3_by_assortment,
+    sampled_plot_ids        = sort(as.character(sampled_plots)),
     product_summary         = prod_summary,
     unpriced_summary        = unpriced_summary,
     zero_log_trees          = zero_log_trees,
     price_validation_checks = price_val_checks,
     profile_failures        = profile_failures,
     diagnostics             = diagnostics,
-    label                   = "Sampled-plot estimate. Not ha-expanded. No NFI factors applied.",
+    label                   = paste("Results describe the selected trees only.",
+                                    "Values are NOK per m\u00b3 of commercial volume under bark."),
     elapsed_seconds         = elapsed_secs
   )
 }

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: sampled-plot backend smoke
-  Run: 2026-10-12 12:39:44.194044
+  Run: 2026-10-12 14:28:47.103307
 ============================================================= 
 
 --- 01. Backend script exists ---
@@ -10,10 +10,10 @@
   [PASS  ] Check 02: Backend sources without error | source() completed without error
 
 --- 03. Smoke call completes ---
-  [PASS  ] Check 03: Smoke call completes without error | completed in 5.7 s
+  [PASS  ] Check 03: Smoke call completes without error | completed in 7.1 s
 
 --- 04. Return object structure ---
-  [PASS  ] Check 04: Return object has all required names | all 17 required names present
+  [PASS  ] Check 04: Return object has all required names | all 19 required names present
 
 --- 05. n_plots_sampled ---
   [PASS  ] Check 05: n_plots_sampled | n_eligible=224  n_sampled=5  expected=5
@@ -22,16 +22,16 @@
   [PASS  ] Check 06: No 'plot_id' column in any returned data.frame | no plot_id leakage detected
 
 --- 07. plot_id_github present ---
-  [PASS  ] Check 07: plot_id_github present in tree/plot-level data.frames | plot_id_github found in all 5 checked data.frames
+  [PASS  ] Check 07: plot_id_github present in tree/plot-level data.frames | plot_id_github found in all 4 checked data.frames
 
 --- 08. No overlapping logs ---
-  [PASS  ] Check 08: No overlapping logs in selected_logs_all | overlapping pairs: 0  (total selected logs: 319)
+  [PASS  ] Check 08: No overlapping logs in selected_logs_all | overlapping pairs: 0  (total selected logs: 318)
 
---- 09. value_per_ha_nok non-negative ---
-  [PASS  ] Check 09: value_per_ha_nok is non-negative | 0 negative value(s) out of 5 non-NA rows
+--- 09. NOK per m3 outputs ---
+  [PASS  ] Check 09: NOK per m3 outputs present and consistent | total 383.4 NOK/m3 on 23.429 m3 u.b. | max |sum(contrib) - total| = 0.00e+00 | max |sum(shares) - 1| = 0.00e+00 | non-negative: TRUE
 
---- 10. Label contains 'Not ha-expanded' ---
-  [PASS  ] Check 10: label contains 'Not ha-expanded' | label: 'Sampled-plot estimate. Not ha-expanded. No NFI factors applied.'
+--- 10. No per-ha / plot-level outputs ---
+  [PASS  ] Check 10: No per-ha or plot-level outputs; trees-only label | per-ha/plot names: none | label: 'Results describe the selected trees only. Values are NOK per m³ of commercial volume under bark.'
 
 --- 11. Price validation no FAIL rows ---
   [PASS  ] Check 11: Price validation contains no FAIL rows | 0 FAIL, 1 REVIEW in price validation checks
@@ -40,10 +40,10 @@
   [PASS  ] Check 12: No taper profile failures | 0 profile failure(s) in smoke run
 
 --- 13. Runtime ---
-  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 5.7 s (threshold: 120 s)
+  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 7.1 s (threshold: 120 s)
 
 --- 14-15. Fast vs reference optimizer ---
-  [PASS  ] Check 14: .optimize_dp_fast() value and n_selected match reference | 788 trees compared over 3 runs (57.8 s); 0 mismatch(es); max |value diff| = 0.00e+00
+  [PASS  ] Check 14: .optimize_dp_fast() value and n_selected match reference | 788 trees compared over 3 runs (62.2 s); 0 mismatch(es); max |value diff| = 0.00e+00
   [PASS  ] Check 15: .optimize_dp_fast() cutting pattern matches reference | 0 of 788 trees differ in pattern at equal value (ties)
 ============================================================= 
   AUDIT FINAL SUMMARY
