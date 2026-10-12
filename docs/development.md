@@ -3,7 +3,7 @@
 These notes are for developers working on Apter. The partner-facing overview
 is in [README.md](../README.md). AI-assistant context (domain terms,
 load-bearing assumptions, data-privacy rules) is in [CLAUDE.md](../CLAUDE.md).
-The development roadmap is in `PLAN.md` (local).
+The development roadmap is in [docs/plans/PLAN.md](plans/PLAN.md).
 
 Apter was called **nfiBuck** until the 2026-10 rename. The GitHub repository
 was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
@@ -64,7 +64,6 @@ scripts/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
     01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer)
     02_benchmark_dp_optimizer_alternatives.R  DP optimizer benchmark (v3 adopted)
-  local_only/               Oracle-dependent one-offs, never used by the app (not committed)
   prototype_reference/      Frozen prototype scripts 00–15
 
 inputs/
@@ -88,7 +87,7 @@ outputs/
 
 docs/
   development.md            This file
-  plans/                    Phase plans
+  plans/                    Roadmap (PLAN.md) and phase plans
 ```
 
 ### Not in the repository
@@ -207,6 +206,6 @@ These keep the old name on purpose:
 | `data_processed_github/sanitization_manifest.txt` | Record of the sanitization run; regenerating it rewrites the committed data |
 | `outputs/helper_validation/helper_price_matrix_validation_summary.txt` | Written by frozen prototype script 14 |
 | `outputs/_archive/`, `logs/_archive/`, prototype output folders, the taper cache manifest | Records of past runs |
-| `docs/plans/phase0.md` | Historical plan |
+| `docs/plans/phase0.md`, `docs/plans/PLAN.md` | Historical plan; "formerly nfiBuck" |
 | `scripts/99_cleanup_project_structure.R` header, `scripts/run_prototype_00_prepare_nfi_data.R` | Describe the old name and the old root that the wrapper replaces |
 | This file, CLAUDE.md | "formerly nfiBuck" notes |

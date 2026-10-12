@@ -69,7 +69,9 @@ the full sanitization record (original `plot_id` is replaced with a synthetic
 `plot_id_github`, and that mapping is never written to disk).
 
 **Authorised exception (presentation only).**
-`scripts/local_only/export_plot_coordinates_rounded.R` queries Oracle for
+`scripts/local_only/export_plot_coordinates_rounded.R` is a local-only script
+that is **not in the repository** (deliberately untracked; it exists only on
+the project owner's machines). It queries Oracle for
 plot coordinates and exports them rounded to 1 km to
 `C:/apter_private/plot_coords_km.csv`, outside the repo. The project owner
 authorised it for the 2026-10 status presentation only. It needs Oracle
@@ -110,4 +112,5 @@ still out of bounds.
   frozen, matched pair — the original validated prototype scripts (00–15)
   and their audits (05–12). `audit_14`'s checks 19–20 assert these scripts
   still exist and are unmodified; don't delete or edit them.
-- See [docs/development.md](docs/development.md) for the full file layout.
+- See [docs/development.md](docs/development.md) for the full file layout and
+  [docs/plans/PLAN.md](docs/plans/PLAN.md) for the development roadmap.
