@@ -30,12 +30,12 @@ The prototype covers:
 |-------|--------|
 | Prototype scripts 00–12 | **Accepted** (archived in `scripts/prototype_reference/`) |
 | Core engine helpers | **Regression-tested — PASS** (audit 15: 23/23) |
-| First-helper validation | **ACCEPTED WITH REVIEW** (audit 14: 27 PASS, 1 REVIEW) |
+| First-helper validation | **PASS** (audit 14: 28/28; zero-priced waste accepted 2026-10-12) |
 | Sampled-plot Shiny app (v1) | **Built and running** — sampling, DP bucking optimizer, county selector, price-scenario comparison (base / multiplier / uploaded matrix), read-only price/product reference tabs |
 
 The 31 dm sawlog price gap (see below) was resolved by interpolation on
-2026-08-03. The one remaining REVIEW item in audit 14 is a zero-priced waste
-product, which may be intentional (waste has no market value) — see
+2026-08-03. Zero-priced waste (0 NOK/m³) is an accepted scope decision
+(2026-10-12); audit 14 check 18 records it as PASS — see
 `outputs/helper_validation/audit_14_validate_first_helpers.txt` for detail.
 
 ---
@@ -43,8 +43,15 @@ product, which may be intentional (waste has no market value) — see
 ## Repository contents
 
 ```
-app/
-  app.R                      Shiny app entry point (sampled-plot bucking estimator, v1)
+app/                        Shiny app (sampled-plot bucking estimator, v1)
+  app.R                     Entry point: resolves the root, sources the backend
+                            and the files below, calls shinyApp(ui, server)
+  helpers_root.R            Project root resolution (APTER_ROOT / NFIBUCK_ROOT / parent of app/)
+  setup.R                   Data loading, HKL/bonitet/county choices, label, CSS
+  helpers_validation.R      Inputs -> backend params; stratum plot counts
+  helpers_upload.R          Scenario 2 price matrix (multipliers / upload)
+  app_ui.R                  `ui` (not ui.R: Shiny treats ui.R + app.R as two app formats)
+  app_server.R              `server`
 
 R/                          Core engine helpers (7 files)
   helpers_paths.R           Path resolution utilities
@@ -58,7 +65,8 @@ R/                          Core engine helpers (7 files)
 audits/
   audit_14_validate_first_helpers.R   Validation audit for first four helpers
   audit_15_core_engine_helpers_regression.R  Regression audit for all 7 helpers
-  audit_16_sampled_plot_backend_smoke.R      Smoke test for the app backend
+  audit_16_sampled_plot_backend_smoke.R      Smoke test for the app backend + fast/reference optimizer equivalence
+  audit_17_app_smoke.R                       Headless app smoke test (shinytest2)
   prototype_reference/      Archived audits 05–12 (read-only reference)
 
 scripts/
@@ -86,6 +94,7 @@ outputs/
   helper_validation/        Audit 14 results
   core_engine_helpers_regression/  Audit 15 results + regression reference data
   sampled_plot_backend_smoke/  Audit 16 results
+  app_smoke/                Audit 17 results
   stratum_availability/     Which species/hogstkl/abonitet/fylnr combinations have enough plots for sampled-plot estimates
 
 data_raw/README.md          Placeholder — raw data is not stored in the repo
@@ -116,7 +125,8 @@ CLAUDE.md                   Context for AI assistants: domain terms, accepted
 
 ## Running the audits
 
-Both audits are self-contained and write their results to `outputs/`.
+The audits are self-contained and write their results to `outputs/`. Run
+them from the project root (or set `APTER_ROOT`; see "Project root" below).
 
 **Prerequisites**
 
@@ -156,6 +166,29 @@ source("audits/audit_15_core_engine_helpers_regression.R")
 # Results: outputs/core_engine_helpers_regression/audit_15_core_engine_helpers.{csv,txt}
 ```
 
+**Audit 16 — sampled-plot backend smoke**
+
+Runs the app backend on `data_processed_github/` and checks that the app's
+fast DP optimizer gives the same results as the reference
+`optimize_one_tree_dp()`.
+
+```r
+source("audits/audit_16_sampled_plot_backend_smoke.R")
+# Results: outputs/sampled_plot_backend_smoke/audit_16_sampled_plot_backend_smoke.{csv,txt}
+```
+
+**Audit 17 — headless app smoke**
+
+Starts the app in headless Chrome and drives a run, a scenario comparison and
+a multiplier scenario. Needs `install.packages(c("shinytest2", "chromote"))`
+and Chrome (`chromote::find_chrome()` must return a path; otherwise set
+`CHROMOTE_CHROME`). Use `Rscript`, not `source()`, from an interactive session.
+
+```sh
+Rscript audits/audit_17_app_smoke.R
+# Results: outputs/app_smoke/audit_17_app_smoke.{csv,txt}
+```
+
 ---
 
 ## Running the app
@@ -176,13 +209,23 @@ devtools::install_git("https://github.com/SmartForest-no/taperNOR")
 **Launch**
 
 ```r
-shiny::runApp("app")   # from the project root
+shiny::runApp("app")   # from the project root (or runApp("app/app.R"))
 ```
 
-`app/app.R` resolves the project root via the `NFIBUCK_ROOT` environment
-variable if set (see `R/helpers_paths.R`), otherwise it falls back to a
-hardcoded path — check the top of `app/app.R` if running from a different
-machine.
+**Project root**
+
+No path is hardcoded. The app, backend and audits resolve the project root
+in this order:
+
+1. `APTER_ROOT` environment variable
+2. `NFIBUCK_ROOT` environment variable (legacy; still read until the rename)
+3. Fallback: the app uses the parent of `app/`; `get_root_dir()`
+   (`R/helpers_paths.R`), the backend and the audits walk up from the working
+   directory to the first folder containing `R/helpers_paths.R`
+   (`get_root_dir()` first checks the options `apter.root` / `nfibuck.root`)
+
+If the resolved folder does not contain `R/helpers_paths.R`, they stop with
+an error. To run from elsewhere, set `APTER_ROOT` (e.g. in `~/.Renviron`).
 
 ---
 
