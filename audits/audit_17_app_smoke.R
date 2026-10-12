@@ -1,0 +1,422 @@
+# ==============================================================================
+# audits/audit_17_app_smoke.R
+#
+# Purpose : Headless smoke audit for the Shiny app (app/). Checks the split
+#           file layout, root resolution and pure app helpers without a
+#           browser, then drives the running app through shinytest2.
+#           Assertions are explicit; no shinytest2 snapshot files are used.
+#
+# Checks  :
+#  1.  shinytest2 and chromote are installed and a Chrome is found
+#  2.  Split app files exist (app.R, app_ui.R, app_server.R, setup.R,
+#      helpers_*.R) and app/ has no ui.R/server.R (Shiny would treat those
+#      as a second app format; shinytest2 refuses to start)
+#  3.  Root resolution (no browser):
+#        a. APTER_ROOT/NFIBUCK_ROOT unset -> parent of app/ (project root)
+#        b. APTER_ROOT = empty temp dir   -> clear error
+#        c. APTER_ROOT = project root     -> project root
+#  4.  Pure helpers (no browser):
+#        a. .make_s2_pm() applies sawlog / pulp / waste multipliers
+#        b. build_run_params(): HKL "4" -> c(41L, 42L), "__all__" -> NULL
+#        c. count_eligible_plots() matches a direct filter of plots_prod
+#        d. resolve_s2_price_path(): "same" -> default_2021, "multiplier"
+#           -> readable CSV with multiplied prices
+#  5.  AppDriver$new("app") starts without error (load timeout 60 s)
+#  6.  Initial run_status shows the idle text; title contains "nfiBuck"
+#      (title check to be updated in the Phase 1 rename)
+#  7.  Main run (spruce, HKL 4, abonitet 17, 5 plots, seed 42):
+#      run_status contains "Run complete", no error notification
+#  8.  summary_cards is non-empty; tbl_products has >= 1 row
+#  9.  Scenario comparison, mode "same": cmp_status says
+#      "Same plots sampled"
+# 10.  Multiplier mode (sawlog x1.2): tbl_cmp_delta renders
+# 11.  Total browser runtime under 180 s (REVIEW if above)
+#
+# Verdict :
+#   PASS                   -- all checks pass
+#   ACCEPTED WITH REVIEW   -- only the runtime check is REVIEW
+#   FAIL                   -- missing dependencies, files, wrong helper
+#                             results, app start failure or a failed run
+#
+# Requires: install.packages(c("shinytest2", "chromote")) and Chrome
+#           (or CHROMOTE_CHROME set to a Chromium-based browser).
+#
+# Outputs :
+#   outputs/app_smoke/audit_17_app_smoke.csv
+#   outputs/app_smoke/audit_17_app_smoke.txt
+#
+# Usage   : Rscript audits/audit_17_app_smoke.R   (from the project root)
+# ==============================================================================
+
+suppressPackageStartupMessages(library(readr))
+
+root_dir <- local({
+  # APTER_ROOT -> NFIBUCK_ROOT (legacy) -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = "")
+  env <- env[nzchar(env)]
+  if (length(env) > 0L) {
+    d <- normalizePath(env[[1L]], winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from ", names(env)[1L],
+           ") does not contain R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
+
+source(file.path(root_dir, "R", "helpers_paths.R"))
+source(file.path(root_dir, "R", "helpers_audit.R"))
+
+app_dir <- file.path(root_dir, "app")
+out_dir <- path_output("app_smoke", root_dir = root_dir)
+ensure_dir(out_dir)
+
+audit_txt <- file.path(out_dir, "audit_17_app_smoke.txt")
+audit_csv <- file.path(out_dir, "audit_17_app_smoke.csv")
+init_audit_log(audit_txt)
+
+E <- new.env(parent = emptyenv())
+rec <- function(check, result, detail = "")
+  record_check(E, check, result, detail, log_path = audit_txt)
+
+PASS   <- "PASS"
+REVIEW <- "REVIEW"
+FAIL   <- "FAIL"
+
+section <- function(title) {
+  cat(sprintf("\n--- %s ---\n", title), file = audit_txt, append = TRUE)
+  cat(sprintf("\n--- %s ---\n", title))
+}
+
+cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
+cat("  Audit: Shiny app headless smoke\n",        file = audit_txt, append = TRUE)
+cat(sprintf("  Run: %s\n", Sys.time()),           file = audit_txt, append = TRUE)
+cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
+
+
+# ==============================================================================
+# Check 01: browser-test dependencies
+# ==============================================================================
+section("01. shinytest2 / chromote / Chrome")
+
+has_st2      <- requireNamespace("shinytest2", quietly = TRUE)
+has_chromote <- requireNamespace("chromote",   quietly = TRUE)
+chrome_path  <- if (has_chromote)
+  tryCatch(chromote::find_chrome(), error = function(e) NULL) else NULL
+has_chrome   <- !is.null(chrome_path) && nzchar(chrome_path)
+browser_ok   <- has_st2 && has_chromote && has_chrome
+
+rec("Check 01: shinytest2 + chromote installed and Chrome found",
+    if (browser_ok) PASS else FAIL,
+    if (browser_ok) sprintf("Chrome: %s", chrome_path)
+    else paste0(
+      "shinytest2=", has_st2, " chromote=", has_chromote,
+      " chrome=", has_chrome,
+      " -- install.packages(c(\"shinytest2\", \"chromote\")); install Chrome ",
+      "or set CHROMOTE_CHROME to the browser path"))
+
+
+# ==============================================================================
+# Check 02: split app files exist
+# ==============================================================================
+section("02. Split app files exist")
+
+app_files <- c("app.R", "app_ui.R", "app_server.R", "setup.R",
+               "helpers_root.R", "helpers_validation.R", "helpers_upload.R")
+missing_app  <- app_files[!file.exists(file.path(app_dir, app_files))]
+conflicting  <- c("ui.R", "server.R", "global.R")
+conflicting  <- conflicting[file.exists(file.path(app_dir, conflicting))]
+
+rec("Check 02: Split app files exist",
+    if (length(missing_app) == 0L && length(conflicting) == 0L) PASS else FAIL,
+    if (length(missing_app) == 0L && length(conflicting) == 0L)
+      sprintf("all %d present in app/; no ui.R/server.R/global.R", length(app_files))
+    else paste0("missing: ", paste(missing_app, collapse = ", "),
+                " | conflicting: ", paste(conflicting, collapse = ", ")))
+
+
+# ==============================================================================
+# Check 03: root resolution (no browser)
+# ==============================================================================
+section("03. Root resolution")
+
+root_env <- new.env()
+root_src_ok <- tryCatch({
+  source(file.path(app_dir, "helpers_root.R"), local = root_env)
+  TRUE
+}, error = function(e) FALSE)
+
+if (root_src_ok) {
+  saved_env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = NA)
+  restore_env <- function() {
+    for (v in names(saved_env)) {
+      if (is.na(saved_env[[v]])) Sys.unsetenv(v)
+      else do.call(Sys.setenv, setNames(list(saved_env[[v]]), v))
+    }
+  }
+
+  # a. unset -> parent of app/
+  Sys.unsetenv(c("APTER_ROOT", "NFIBUCK_ROOT"))
+  r_a <- tryCatch(root_env$resolve_app_root(app_dir),
+                  error = function(e) paste("ERROR:", conditionMessage(e)))
+  rec("Check 03a: Env unset -> resolves to project root",
+      if (identical(r_a, root_dir)) PASS else FAIL,
+      sprintf("resolved '%s' (expected '%s')", r_a, root_dir))
+
+  # b. APTER_ROOT = empty temp dir -> clear error
+  bad_dir <- file.path(tempdir(), "audit17_not_a_root")
+  dir.create(bad_dir, showWarnings = FALSE)
+  Sys.setenv(APTER_ROOT = bad_dir)
+  r_b <- tryCatch({ root_env$resolve_app_root(app_dir); NULL },
+                  error = function(e) conditionMessage(e))
+  rec("Check 03b: APTER_ROOT = temp dir -> clear error",
+      if (!is.null(r_b) && grepl("does not contain R/helpers_paths.R", r_b,
+                                 fixed = TRUE)) PASS else FAIL,
+      if (is.null(r_b)) "resolved without error (expected stop())"
+      else sprintf("error: %s", r_b))
+
+  # c. APTER_ROOT = real root -> resolves
+  Sys.setenv(APTER_ROOT = root_dir)
+  r_c <- tryCatch(root_env$resolve_app_root(app_dir),
+                  error = function(e) paste("ERROR:", conditionMessage(e)))
+  rec("Check 03c: APTER_ROOT = project root -> resolves",
+      if (identical(r_c, root_dir)) PASS else FAIL,
+      sprintf("resolved '%s'", r_c))
+
+  restore_env()
+} else {
+  rec("Check 03: Root resolution", FAIL, "app/helpers_root.R failed to source")
+}
+
+
+# ==============================================================================
+# Check 04: pure helpers (no browser)
+# ==============================================================================
+section("04. Pure app helpers")
+
+# Same load order as app.R: backend (global), then app files into one env.
+H <- new.env()
+H$ROOT <- root_dir
+helpers_err <- tryCatch({
+  suppressPackageStartupMessages(library(shiny))
+  source(file.path(root_dir, "scripts", "app_backend",
+                   "01_run_sampled_plot_bucking.R"), local = FALSE)
+  for (f in c("setup.R", "helpers_validation.R", "helpers_upload.R"))
+    source(file.path(app_dir, f), local = H)
+  ""
+}, error = function(e) conditionMessage(e))
+
+if (!nzchar(helpers_err)) {
+  # a. .make_s2_pm
+  pm_test <- data.frame(
+    ProductKey    = c("spruce_sawlog", "spruce_pulpwood", "spruce_waste",
+                      "other_product"),
+    PriceNOKperM3 = c(100, 50, 10, 7), stringsAsFactors = FALSE)
+  pm_out <- H$.make_s2_pm(pm_test, 1.2, 0.5, 2)
+  exp_a  <- c(120, 25, 20, 7)
+  rec("Check 04a: .make_s2_pm() applies sawlog/pulp/waste multipliers",
+      if (isTRUE(all.equal(pm_out$PriceNOKperM3, exp_a))) PASS else FAIL,
+      sprintf("got %s (expected %s)",
+              paste(pm_out$PriceNOKperM3, collapse = ", "),
+              paste(exp_a, collapse = ", ")))
+
+  # b. build_run_params
+  p_all <- H$build_run_params(list(species_group = "spruce", hkl_group = "4",
+                                   abonitet = c("14", "17"),
+                                   fylnr_sel = "__all__", n_plots = "5",
+                                   seed = 42))
+  some_fyl <- H$.DATA_FYLNR[1L]
+  p_fyl <- H$build_run_params(list(species_group = "pine",
+                                   hkl_group = c("3", "5"), abonitet = "11",
+                                   fylnr_sel = some_fyl, n_plots = "10",
+                                   seed = 7))
+  # hogstkl carries names from unlist(); only the codes matter.
+  ok_b <- identical(unname(p_all$hogstkl), c(41L, 42L)) &&
+          is.null(p_all$fylnr) &&
+          identical(p_all$abonitet, c(14L, 17L)) &&
+          identical(p_all$n_plots, 5L) && identical(p_all$seed, 42L) &&
+          identical(unname(p_fyl$hogstkl), c(31L, 32L, 51L, 52L)) &&
+          identical(p_fyl$fylnr, some_fyl)
+  rec("Check 04b: build_run_params() maps HKL groups and county",
+      if (ok_b) PASS else FAIL,
+      sprintf("HKL '4' -> %s; '__all__' -> %s; HKL '3','5' -> %s; fylnr '%s' -> %s",
+              paste(p_all$hogstkl, collapse = ","),
+              if (is.null(p_all$fylnr)) "NULL" else p_all$fylnr,
+              paste(p_fyl$hogstkl, collapse = ","), some_fyl,
+              if (is.null(p_fyl$fylnr)) "NULL" else p_fyl$fylnr))
+
+  # c. count_eligible_plots vs direct filter
+  pp <- H$plots_prod
+  n_helper_all <- H$count_eligible_plots(pp, c(41L, 42L), 17L, NULL)
+  n_direct_all <- sum(pp$hogstkl %in% c(41L, 42L) & pp$abonitet %in% 17L)
+  n_helper_fyl <- H$count_eligible_plots(pp, c(41L, 42L), c(14L, 17L), some_fyl)
+  n_direct_fyl <- sum(pp$hogstkl %in% c(41L, 42L) &
+                      pp$abonitet %in% c(14L, 17L) & pp$fylnr %in% some_fyl)
+  rec("Check 04c: count_eligible_plots() matches direct filter",
+      if (n_helper_all == n_direct_all && n_helper_fyl == n_direct_fyl &&
+          n_direct_all > 0L) PASS else FAIL,
+      sprintf("HKL4/ab17/all: %d vs %d; HKL4/ab14,17/fylnr %s: %d vs %d",
+              n_helper_all, n_direct_all, some_fyl, n_helper_fyl, n_direct_fyl))
+
+  # d. resolve_s2_price_path
+  base_pm <- H$APP_PRICE_LONG
+  p_same  <- H$resolve_s2_price_path("same", NULL,
+                                     c(saw = 1, pulp = 1, wst = 1), base_pm)
+  p_mult  <- H$resolve_s2_price_path("multiplier", NULL,
+                                     c(saw = 1.2, pulp = 1, wst = 1), base_pm)
+  ok_d <- identical(p_same, "default_2021") && file.exists(p_mult)
+  if (ok_d) {
+    pm_read <- readr::read_csv(p_mult, show_col_types = FALSE)
+    saw <- grepl("sawlog", base_pm$ProductKey, ignore.case = TRUE)
+    ok_d <- nrow(pm_read) == nrow(base_pm) &&
+      isTRUE(all.equal(pm_read$PriceNOKperM3[saw],
+                       base_pm$PriceNOKperM3[saw] * 1.2)) &&
+      isTRUE(all.equal(pm_read$PriceNOKperM3[!saw],
+                       base_pm$PriceNOKperM3[!saw]))
+    file.remove(p_mult)
+  }
+  rec("Check 04d: resolve_s2_price_path() same/multiplier",
+      if (ok_d) PASS else FAIL,
+      sprintf("same -> '%s'; multiplier -> tempfile with sawlog x1.2: %s",
+              p_same, ok_d))
+} else {
+  rec("Check 04: Pure app helpers", FAIL,
+      paste("sourcing backend/app files failed:", helpers_err))
+}
+
+
+# ==============================================================================
+# Checks 05-11: drive the app with shinytest2
+# ==============================================================================
+browser_checks <- c(
+  "Check 05: AppDriver starts the app",
+  "Check 06: Initial run_status idle and title contains 'nfiBuck'",
+  "Check 07: Main run completes without error notification",
+  "Check 08: summary_cards non-empty and tbl_products has rows",
+  "Check 09: Scenario comparison 'same' samples the same plots",
+  "Check 10: Multiplier mode renders tbl_cmp_delta",
+  "Check 11: Browser runtime under 180 s")
+
+if (!browser_ok) {
+  for (ck in browser_checks)
+    rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
+} else {
+  section("05-11. Browser checks")
+
+  txt <- function(app, sel)
+    tryCatch(paste(app$get_text(sel), collapse = " "), error = function(e) "")
+  n_err_notif <- function(app)
+    app$get_js("document.querySelectorAll('.shiny-notification-error').length")
+  n_tbl_rows <- function(app, id)
+    app$get_js(sprintf("document.querySelectorAll('#%s table tbody tr').length", id))
+
+  # AppDriver$new() skips (as "On CRAN") outside interactive sessions unless set.
+  Sys.setenv(NOT_CRAN = "true")
+  # chromote waits 10 s for Chrome by default; cold starts on the remote
+  # desktop can exceed that.
+  options(chromote.timeout = 60)
+  t_browser <- proc.time()
+  app <- tryCatch(
+    shinytest2::AppDriver$new(app_dir, name = "audit17",
+                              load_timeout = 60 * 1000,
+                              timeout = 120 * 1000),
+    error = function(e) conditionMessage(e))
+  app_ok <- inherits(app, "AppDriver")
+
+  rec(browser_checks[1], if (app_ok) PASS else FAIL,
+      if (app_ok) "app started" else paste("start error:", app))
+
+  if (app_ok) {
+
+    # 06. idle state and title
+    st0   <- txt(app, "#run_status")
+    title <- app$get_js("document.title")
+    ok6   <- grepl("Select parameters and click Run optimizer", st0, fixed = TRUE) &&
+             grepl("nfiBuck", title, fixed = TRUE)
+    rec(browser_checks[2], if (ok6) PASS else FAIL,
+        sprintf("run_status: '%s' | title: '%s'", st0, title))
+
+    # 07. main run
+    run_err <- tryCatch({
+      # spruce / HKL 4 are the defaults: no output changes, so don't wait.
+      app$set_inputs(species_group = "spruce", hkl_group = "4", wait_ = FALSE)
+      app$set_inputs(abonitet = "17", n_plots = "5", seed = 42)
+      app$click("run_btn")
+      app$wait_for_idle(timeout = 120 * 1000)
+      ""
+    }, error = function(e) conditionMessage(e))
+    st1  <- txt(app, "#run_status")
+    nerr <- n_err_notif(app)
+    ok7  <- !nzchar(run_err) && grepl("Run complete", st1, fixed = TRUE) &&
+            nerr == 0L
+    rec(browser_checks[3], if (ok7) PASS else FAIL,
+        sprintf("run_status: '%s' | error notifications: %d%s", st1, nerr,
+                if (nzchar(run_err)) paste(" | driver error:", run_err) else ""))
+
+    # 08. summary cards and product table (tabs render only when visible)
+    cards <- txt(app, "#summary_cards")
+    app$set_inputs(result_tabs = "Products")
+    app$wait_for_idle()
+    n_prod <- n_tbl_rows(app, "tbl_products")
+    rec(browser_checks[4], if (nzchar(trimws(cards)) && n_prod >= 1L) PASS else FAIL,
+        sprintf("summary_cards chars: %d | tbl_products rows: %d",
+                nchar(trimws(cards)), n_prod))
+
+    # 09. scenario comparison, same prices
+    cmp_err <- tryCatch({
+      # These inputs only feed isolate()d code or client-side panels, so no
+      # output updates; waiting for one would block until the driver timeout.
+      app$set_inputs(compare_on = TRUE, s2_mode = "same", wait_ = FALSE)
+      app$set_inputs(result_tabs = "Scenario comparison")
+      app$click("run_btn")
+      app$wait_for_idle(timeout = 120 * 1000)
+      ""
+    }, error = function(e) conditionMessage(e))
+    cmp <- txt(app, "#cmp_status")
+    rec(browser_checks[5],
+        if (!nzchar(cmp_err) && grepl("Same plots sampled", cmp, fixed = TRUE))
+          PASS else FAIL,
+        sprintf("cmp_status: '%s'%s", cmp,
+                if (nzchar(cmp_err)) paste(" | driver error:", cmp_err) else ""))
+
+    # 10. multiplier mode
+    mult_err <- tryCatch({
+      app$set_inputs(s2_mode = "multiplier", wait_ = FALSE)
+      app$set_inputs(mult_saw = 1.2, wait_ = FALSE)
+      app$click("run_btn")
+      app$wait_for_idle(timeout = 120 * 1000)
+      ""
+    }, error = function(e) conditionMessage(e))
+    n_delta <- n_tbl_rows(app, "tbl_cmp_delta")
+    nerr2   <- n_err_notif(app)
+    rec(browser_checks[6],
+        if (!nzchar(mult_err) && n_delta >= 1L && nerr2 == 0L) PASS else FAIL,
+        sprintf("tbl_cmp_delta rows: %d | error notifications: %d%s",
+                n_delta, nerr2,
+                if (nzchar(mult_err)) paste(" | driver error:", mult_err) else ""))
+
+    try(app$stop(), silent = TRUE)
+  } else {
+    for (ck in browser_checks[2:6])
+      rec(ck, FAIL, "skipped: app did not start")
+  }
+
+  # 11. runtime
+  t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
+  rec(browser_checks[7], if (t_el < 180) PASS else REVIEW,
+      sprintf("browser checks took %.1f s (threshold: 180 s)", t_el))
+}
+
+
+# ==============================================================================
+# Verdict and output
+# ==============================================================================
+write_audit_outputs(E$results, audit_csv, audit_txt)
+cat("Audit 17 complete.\n")
+cat("Results written to:", out_dir, "\n")
