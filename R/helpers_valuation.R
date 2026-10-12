@@ -362,3 +362,55 @@ prepare_price_join_keys <- function(candidates,
 
   candidates
 }
+
+
+#' Price lookup tables for one PriceMatrix_long (built once per matrix).
+#'
+#' Sawlog (matrix) rows have a LengthClass_dm and are keyed by
+#' "ProductKey|LengthClass_dm|PriceDiameterClass_cm"; flat rows (pulpwood,
+#' waste) have no LengthClass_dm and are keyed by ProductKey (first row wins
+#' if a key is duplicated).
+#'
+#' @param pm PriceMatrix_long data.frame.
+#' @return list(saw = named numeric, flat = named numeric).
+build_price_lookup <- function(pm) {
+  saw  <- pm[!is.na(pm$LengthClass_dm), , drop = FALSE]
+  flat <- pm[is.na(pm$LengthClass_dm), , drop = FALSE]
+  flat <- flat[!duplicated(flat$ProductKey), , drop = FALSE]
+  list(
+    saw  = setNames(as.numeric(saw$PriceNOKperM3),
+                    paste(saw$ProductKey, saw$LengthClass_dm,
+                          saw$PriceDiameterClass_cm, sep = "|")),
+    flat = setNames(as.numeric(flat$PriceNOKperM3),
+                    as.character(flat$ProductKey)))
+}
+
+#' Price (NOK/m3) for each log or candidate. NA where the matrix has no price.
+#'
+#' The single price lookup used by the backend run and by scenario re-pricing
+#' (helpers_comparison.R). Sawlogs use PriceDiameterClass_cm_used (the capped
+#' class from prepare_price_join_keys()).
+#'
+#' @param logs   data.frame with ProductKey, LengthClass_dm and
+#'               PriceDiameterClass_cm_used.
+#' @param lookup build_price_lookup() result, or a PriceMatrix_long.
+lookup_prices <- function(logs, lookup) {
+  if (is.data.frame(lookup)) lookup <- build_price_lookup(lookup)
+  price  <- rep(NA_real_, nrow(logs))
+  is_saw <- grepl("sawlog", logs$ProductKey, ignore.case = TRUE)
+  if (any(is_saw))
+    price[is_saw] <- lookup$saw[paste(logs$ProductKey[is_saw],
+                                      logs$LengthClass_dm[is_saw],
+                                      logs$PriceDiameterClass_cm_used[is_saw],
+                                      sep = "|")]
+  if (any(!is_saw))
+    price[!is_saw] <- lookup$flat[as.character(logs$ProductKey[!is_saw])]
+  unname(price)
+}
+
+#' Re-price logs under a price matrix: PriceNOKperM3 and value_nok replaced.
+price_logs <- function(logs, pm) {
+  logs$PriceNOKperM3 <- lookup_prices(logs, pm)
+  logs$value_nok     <- logs$price_volume_m3 * logs$PriceNOKperM3
+  logs
+}

@@ -1,0 +1,421 @@
+# ==============================================================================
+# R/helpers_price_matrix.R
+#
+# Purpose : Price-matrix scenarios (Phase 4a): editable grids, differences
+#           from the default, reset, upload (long or wide layout, detected
+#           automatically) with validation, templates and export.
+#
+# Layouts :
+#   - Long  : PriceMatrix_long rows; the four columns Apter needs are
+#             ProductKey, LengthClass_dm, PriceDiameterClass_cm (sawlogs),
+#             PriceNOKperM3. Flat products (pulpwood, waste) have empty
+#             LengthClass_dm / PriceDiameterClass_cm. A long upload replaces
+#             the whole scenario. Export of a full scenario is long CSV.
+#   - Wide  : the source layout of PriceMatrixGran.xlsx / PriceMatrixFuru.xlsx
+#             and of the editor: rows = top-diameter classes (cm), columns =
+#             length classes (dm), top-left cell = the matrix (ProductKey,
+#             e.g. spruce_sawlog). xlsx: one sheet per sawlog matrix (sheet
+#             name = ProductKey) plus an optional "flat_prices" sheet
+#             (ProductKey, PriceNOKperM3). CSV: one grid. A wide upload
+#             replaces only the matrices it contains.
+#   Both layouts go through validate_scenario_pm(). Units are never converted.
+#
+# Matrix ids: one per sawlog ProductKey, plus "flat_prices" (pulpwood and
+#             waste flat prices for all species).
+# ==============================================================================
+
+#' Matrix id of the flat-price table.
+PM_FLAT_ID <- "flat_prices"
+
+#' Required long-layout columns.
+PM_REQUIRED_COLS <- c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
+                      "PriceNOKperM3")
+
+#' Diameter classes (cm) the price lookup can use: below 12 never meets the
+#' sawlog minimum, above 50 is capped (DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM).
+PM_DIAMETER_RANGE_CM <- c(12L, 50L)
+
+
+#' The four columns Apter uses, typed, from any PriceMatrix_long.
+pm_minimal <- function(pm) {
+  out <- data.frame(
+    ProductKey            = as.character(pm$ProductKey),
+    LengthClass_dm        = suppressWarnings(as.integer(pm$LengthClass_dm)),
+    PriceDiameterClass_cm = suppressWarnings(as.integer(pm$PriceDiameterClass_cm)),
+    PriceNOKperM3         = suppressWarnings(as.numeric(pm$PriceNOKperM3)),
+    stringsAsFactors = FALSE)
+  out <- out[order(out$ProductKey, out$LengthClass_dm, out$PriceDiameterClass_cm,
+                   na.last = TRUE), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+.is_matrix_row <- function(pm) !is.na(pm$LengthClass_dm)
+
+#' Editable matrix ids: sawlog ProductKeys (spruce before pine) + flat.
+pm_matrix_ids <- function(pm) {
+  saw <- unique(as.character(pm$ProductKey[.is_matrix_row(pm)]))
+  sp  <- match(sub("_.*$", "", saw), c("spruce", "pine"))
+  c(saw[order(sp, saw, na.last = TRUE)], PM_FLAT_ID)
+}
+
+#' Human label for a matrix id ("spruce_sawlog" -> "Spruce sawlog").
+pm_matrix_label <- function(id) {
+  if (identical(id, PM_FLAT_ID)) return("Flat prices (pulpwood, waste)")
+  s <- gsub("_", " ", id)
+  paste0(toupper(substring(s, 1, 1)), substring(s, 2))
+}
+
+
+#' One matrix as a grid in the source layout.
+#'
+#' Sawlog: rows = PriceDiameterClass_cm (row names), columns = LengthClass_dm
+#' (column names), values = PriceNOKperM3 (NA where the matrix has no price).
+#' Flat: rows = ProductKey (row names), one column "PriceNOKperM3".
+pm_to_grid <- function(pm, id) {
+  if (identical(id, PM_FLAT_ID)) {
+    f <- pm[!.is_matrix_row(pm), , drop = FALSE]
+    f <- f[order(f$ProductKey), , drop = FALSE]
+    g <- data.frame(PriceNOKperM3 = as.numeric(f$PriceNOKperM3))
+    rownames(g) <- f$ProductKey
+    return(g)
+  }
+  s <- pm[pm$ProductKey == id & .is_matrix_row(pm), , drop = FALSE]
+  if (nrow(s) == 0L) stop("No sawlog matrix '", id, "' in the price matrix.")
+  lens  <- sort(unique(s$LengthClass_dm))
+  diams <- sort(unique(s$PriceDiameterClass_cm))
+  m <- matrix(NA_real_, length(diams), length(lens),
+              dimnames = list(as.character(diams), as.character(lens)))
+  m[cbind(match(s$PriceDiameterClass_cm, diams), match(s$LengthClass_dm, lens))] <-
+    as.numeric(s$PriceNOKperM3)
+  as.data.frame(m, check.names = FALSE)
+}
+
+#' Long rows for one grid (inverse of pm_to_grid()).
+.grid_to_long <- function(grid, id) {
+  if (identical(id, PM_FLAT_ID))
+    return(data.frame(ProductKey = rownames(grid), LengthClass_dm = NA_integer_,
+                      PriceDiameterClass_cm = NA_integer_,
+                      PriceNOKperM3 = as.numeric(grid[[1L]]),
+                      stringsAsFactors = FALSE))
+  m <- as.matrix(grid)
+  d <- expand.grid(PriceDiameterClass_cm = as.integer(rownames(grid)),
+                   LengthClass_dm = as.integer(colnames(grid)),
+                   KEEP.OUT.ATTRS = FALSE)
+  out <- data.frame(ProductKey = id, LengthClass_dm = d$LengthClass_dm,
+                    PriceDiameterClass_cm = d$PriceDiameterClass_cm,
+                    PriceNOKperM3 = as.numeric(m), stringsAsFactors = FALSE)
+  out[!is.na(out$PriceNOKperM3), , drop = FALSE]
+}
+
+#' Write a grid back into a (minimal) long price matrix, replacing that
+#' matrix's rows. For the flat table only the products in the grid change.
+pm_from_grid <- function(grid, id, pm) {
+  pm  <- pm_minimal(pm)
+  new <- .grid_to_long(grid, id)
+  drop <- if (identical(id, PM_FLAT_ID))
+    !.is_matrix_row(pm) & pm$ProductKey %in% new$ProductKey
+  else pm$ProductKey == id & .is_matrix_row(pm)
+  pm_minimal(rbind(pm[!drop, , drop = FALSE], new))
+}
+
+#' Logical matrix (grid shape): TRUE where scenario differs from default.
+pm_diff_mask <- function(default, scenario, id) {
+  a <- as.matrix(pm_to_grid(default, id)); b <- as.matrix(pm_to_grid(scenario, id))
+  if (!identical(dim(a), dim(b)) || !identical(dimnames(a), dimnames(b))) {
+    # Different classes: compare on the scenario's grid.
+    a <- a[rownames(b)[rownames(b) %in% rownames(a)],
+           colnames(b)[colnames(b) %in% colnames(a)], drop = FALSE]
+    out <- matrix(TRUE, nrow(b), ncol(b), dimnames = dimnames(b))
+    out[rownames(a), colnames(a)] <- !mapply(.same_price, a, b[rownames(a), colnames(a)])
+    return(out)
+  }
+  matrix(!mapply(.same_price, a, b), nrow(a), ncol(a), dimnames = dimnames(a))
+}
+
+.same_price <- function(x, y) (is.na(x) && is.na(y)) ||
+  (!is.na(x) && !is.na(y) && abs(x - y) <= 1e-9)
+
+#' Number of cells that differ between scenario and default, all matrices.
+pm_n_diff <- function(default, scenario) {
+  sum(vapply(pm_matrix_ids(default), function(id)
+    sum(pm_diff_mask(default, scenario, id)), numeric(1)))
+}
+
+#' Reset one matrix of the scenario to the default.
+pm_reset <- function(scenario, default, id) {
+  pm_from_grid(pm_to_grid(default, id), id, scenario)
+}
+
+
+# ---- validation -----------------------------------------------------------------
+
+#' Validate a scenario price matrix (long layout).
+#'
+#' Errors block use; warnings do not. Uses the same product checks as the
+#' backend (validate_price_matrix_against_products()).
+#'
+#' @param pm Long price matrix (any columns; the required four are checked).
+#' @param pd ProductData; lc LengthClasses (with LogLength_dm).
+#' @param default Optional default matrix: missing cells relative to it are
+#'   reported as a warning.
+#' @return list(ok, errors, warnings, pm = pm_minimal(pm) or NULL).
+validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
+  errors <- character(0); warnings <- character(0)
+  miss <- setdiff(PM_REQUIRED_COLS, names(pm))
+  if (length(miss) > 0L)
+    return(list(ok = FALSE, warnings = warnings, pm = NULL,
+                errors = paste("Missing column(s):", paste(miss, collapse = ", "))))
+
+  raw_price <- pm$PriceNOKperM3
+  num_price <- suppressWarnings(as.numeric(as.character(raw_price)))
+  bad_num   <- is.na(num_price) & !is.na(raw_price) & nzchar(trimws(as.character(raw_price)))
+  if (any(bad_num))
+    errors <- c(errors, sprintf("Non-numeric PriceNOKperM3 in %d row(s), e.g. '%s'.",
+                                sum(bad_num), as.character(raw_price[bad_num][1L])))
+  for (col in c("LengthClass_dm", "PriceDiameterClass_cm")) {
+    raw <- pm[[col]]
+    num <- suppressWarnings(as.numeric(as.character(raw)))
+    bad <- is.na(num) & !is.na(raw) & nzchar(trimws(as.character(raw)))
+    if (any(bad))
+      errors <- c(errors, sprintf("Non-numeric %s in %d row(s), e.g. '%s'.",
+                                  col, sum(bad), as.character(raw[bad][1L])))
+  }
+  m <- pm_minimal(pm)
+  if (any(m$PriceNOKperM3 < 0, na.rm = TRUE))
+    errors <- c(errors, sprintf("Negative price in %d row(s).",
+                                sum(m$PriceNOKperM3 < 0, na.rm = TRUE)))
+  unknown <- setdiff(unique(m$ProductKey), pd$ProductKey)
+  if (length(unknown) > 0L)
+    errors <- c(errors, paste("Unknown ProductKey:", paste(unknown, collapse = ", ")))
+
+  saw <- m[.is_matrix_row(m), , drop = FALSE]
+  if (nrow(saw) > 0L) {
+    if (any(is.na(saw$PriceDiameterClass_cm)))
+      errors <- c(errors, "Sawlog row(s) without PriceDiameterClass_cm.")
+    ok_len <- paste(lc$ProductKey, lc$LogLength_dm)
+    bad_len <- unique(saw[!paste(saw$ProductKey, saw$LengthClass_dm) %in% ok_len &
+                            saw$ProductKey %in% pd$ProductKey,
+                          c("ProductKey", "LengthClass_dm")])
+    if (nrow(bad_len) > 0L)
+      errors <- c(errors, paste("Length class(es) not in LengthClasses:",
+                                paste(paste0(bad_len$ProductKey, " ", bad_len$LengthClass_dm, " dm"),
+                                      collapse = ", ")))
+    out_rng <- saw$PriceDiameterClass_cm < PM_DIAMETER_RANGE_CM[1] |
+               saw$PriceDiameterClass_cm > PM_DIAMETER_RANGE_CM[2]
+    if (any(out_rng, na.rm = TRUE))
+      warnings <- c(warnings, sprintf(
+        "%d sawlog row(s) with diameter classes outside %d-%d cm; they are never used in pricing.",
+        sum(out_rng, na.rm = TRUE), PM_DIAMETER_RANGE_CM[1], PM_DIAMETER_RANGE_CM[2]))
+  }
+  key <- paste(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm)
+  if (any(duplicated(key)))
+    errors <- c(errors, sprintf("Duplicated price key(s): %d, e.g. %s.",
+                                sum(duplicated(key)), key[duplicated(key)][1L]))
+
+  if (length(errors) == 0L) {
+    v <- validate_price_matrix_against_products(pd, lc, m)$checks
+    fails <- v[v$result == "FAIL", , drop = FALSE]
+    if (nrow(fails) > 0L)
+      errors <- c(errors, paste0(fails$check, ": ", fails$detail))
+    rev <- v[v$result == "REVIEW", , drop = FALSE]
+    # Zero-priced waste is an accepted assumption (CLAUDE.md); not a warning.
+    zero_rows <- m[!is.na(m$PriceNOKperM3) & m$PriceNOKperM3 == 0, , drop = FALSE]
+    waste_keys <- pd$ProductKey[pd$ProductType == "waste"]
+    if (nrow(zero_rows) > 0L && all(zero_rows$ProductKey %in% waste_keys))
+      rev <- rev[!grepl("zero", rev$check, ignore.case = TRUE), , drop = FALSE]
+    if (nrow(rev) > 0L) warnings <- c(warnings, paste0(rev$check, ": ", rev$detail))
+    if (!is.null(default)) {
+      d <- pm_minimal(default)
+      dk <- paste(d$ProductKey, d$LengthClass_dm, d$PriceDiameterClass_cm)
+      n_missing <- sum(!dk %in% key)
+      if (n_missing > 0L)
+        warnings <- c(warnings, sprintf(
+          "%d price cell(s) of the default are missing; candidates there stay unpriced.",
+          n_missing))
+    }
+  }
+  list(ok = length(errors) == 0L, errors = errors, warnings = warnings,
+       pm = if (length(errors) == 0L) m else NULL)
+}
+
+
+# ---- upload -----------------------------------------------------------------------
+
+#' Parse one wide grid (raw character table incl. header row) to long rows.
+#'
+#' @param raw   data.frame/matrix of character, header row included.
+#' @param id    Matrix id (ProductKey); if NULL, read from the top-left cell.
+#' @param valid_ids Allowed sawlog ProductKeys.
+#' @return list(long = data.frame or NULL, id, errors).
+.parse_wide_grid <- function(raw, id = NULL, valid_ids) {
+  raw <- as.matrix(raw)
+  raw[is.na(raw)] <- ""
+  errs <- character(0)
+  corner <- unname(trimws(as.character(raw[1L, 1L])))
+  if (is.null(id)) id <- corner
+  id <- unname(as.character(id))
+  if (!id %in% valid_ids)
+    return(list(long = NULL, id = id, errors = sprintf(
+      "Unknown matrix '%s' (expected one of: %s).", id, paste(valid_ids, collapse = ", "))))
+  if (nzchar(corner) && corner != id)
+    errs <- c(errs, sprintf("Top-left cell '%s' does not match sheet '%s'.", corner, id))
+  hdr  <- unname(trimws(as.character(raw[1L, -1L])))
+  keep <- nzchar(hdr)
+  lens <- suppressWarnings(as.numeric(hdr[keep]))
+  if (any(is.na(lens) | lens != round(lens)))
+    errs <- c(errs, sprintf("%s: header must be numeric length classes (dm); found '%s'.",
+                            id, paste(hdr[keep][is.na(lens) | lens != round(lens)], collapse = "', '")))
+  rows <- raw[-1L, , drop = FALSE]
+  rows <- rows[nzchar(trimws(rows[, 1L])), , drop = FALSE]
+  diams <- suppressWarnings(as.numeric(trimws(rows[, 1L])))
+  if (any(is.na(diams) | diams != round(diams)))
+    errs <- c(errs, sprintf("%s: row labels must be numeric diameter classes (cm); found '%s'.",
+                            id, paste(rows[is.na(diams) | diams != round(diams), 1L], collapse = "', '")))
+  if (any(duplicated(lens)))  errs <- c(errs, sprintf("%s: duplicated length column(s).", id))
+  if (any(duplicated(diams))) errs <- c(errs, sprintf("%s: duplicated diameter row(s).", id))
+  if (length(errs) > 0L) return(list(long = NULL, id = id, errors = errs))
+
+  cells <- rows[, -1L, drop = FALSE][, keep, drop = FALSE]
+  vals  <- suppressWarnings(matrix(as.numeric(trimws(cells)), nrow(cells)))
+  bad   <- is.na(vals) & nzchar(trimws(cells))
+  if (any(bad)) {
+    i <- which(bad, arr.ind = TRUE)[1L, ]
+    return(list(long = NULL, id = id, errors = sprintf(
+      "%s: non-numeric price in %d cell(s), e.g. '%s' at %s cm / %s dm.",
+      id, sum(bad), trimws(cells[i[1], i[2]]), diams[i[1]], lens[i[2]])))
+  }
+  d <- expand.grid(r = seq_along(diams), c = seq_along(lens))
+  long <- data.frame(ProductKey = id, LengthClass_dm = as.integer(lens[d$c]),
+                     PriceDiameterClass_cm = as.integer(diams[d$r]),
+                     PriceNOKperM3 = vals[cbind(d$r, d$c)], stringsAsFactors = FALSE)
+  list(long = long[!is.na(long$PriceNOKperM3), , drop = FALSE], id = id, errors = character(0))
+}
+
+#' Read an uploaded price file; detect long or wide layout.
+#'
+#' @param path     File on disk (e.g. fileInput datapath).
+#' @param filename Original name (for the extension); defaults to path.
+#' @param default  Default/current price matrix (gives the sawlog ids).
+#' @return list(layout = "long"|"wide", long = data.frame (raw long rows, for
+#'   validation), ids = matrices contained (wide) or all ids (long), errors).
+read_price_matrix_upload <- function(path, filename = path, default) {
+  ext <- tolower(tools::file_ext(filename))
+  saw_ids <- setdiff(pm_matrix_ids(default), PM_FLAT_ID)
+  fail <- function(msg) list(layout = NA_character_, long = NULL, ids = character(0),
+                             errors = msg)
+
+  if (ext == "rds") {
+    x <- tryCatch(readRDS(path), error = function(e) NULL)
+    if (!is.data.frame(x)) return(fail("RDS file does not contain a data frame."))
+    return(list(layout = "long", long = as.data.frame(x), ids = pm_matrix_ids(default),
+                errors = character(0)))
+  }
+
+  if (ext == "xlsx") {
+    sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
+    if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
+    longs <- list(); ids <- character(0); errs <- character(0)
+    for (sh in sheets) {
+      raw <- as.data.frame(readxl::read_excel(path, sheet = sh, col_names = FALSE,
+                                              col_types = "text", .name_repair = "minimal"))
+      if (identical(sh, PM_FLAT_ID)) {
+        hdr <- trimws(as.character(unlist(raw[1L, ])))
+        if (!all(c("ProductKey", "PriceNOKperM3") %in% hdr)) {
+          errs <- c(errs, "flat_prices: needs columns ProductKey and PriceNOKperM3.")
+          next
+        }
+        body <- raw[-1L, , drop = FALSE]; names(body) <- hdr
+        longs[[sh]] <- data.frame(ProductKey = trimws(body$ProductKey),
+                                  LengthClass_dm = NA, PriceDiameterClass_cm = NA,
+                                  PriceNOKperM3 = trimws(body$PriceNOKperM3),
+                                  stringsAsFactors = FALSE)
+        ids <- c(ids, PM_FLAT_ID)
+      } else {
+        p <- .parse_wide_grid(raw, id = sh, valid_ids = saw_ids)
+        errs <- c(errs, p$errors)
+        if (!is.null(p$long)) { longs[[sh]] <- p$long; ids <- c(ids, sh) }
+      }
+    }
+    if (length(errs) > 0L) return(fail(errs))
+    if (length(longs) == 0L) return(fail("No price sheets found in the xlsx file."))
+    return(list(layout = "wide", long = do.call(rbind, longs), ids = ids,
+                errors = character(0)))
+  }
+
+  if (ext == "csv") {
+    raw <- tryCatch(utils::read.csv(path, header = FALSE, colClasses = "character",
+                                    check.names = FALSE, na.strings = character(0)),
+                    error = function(e) NULL)
+    if (is.null(raw) || nrow(raw) < 2L) return(fail("Cannot read the CSV file."))
+    hdr <- trimws(as.character(unlist(raw[1L, ])))
+    if ("ProductKey" %in% hdr) {   # long layout; missing columns are reported by validation
+      body <- raw[-1L, , drop = FALSE]; names(body) <- hdr
+      body[] <- lapply(body, function(x) { x <- trimws(x); x[x %in% c("", "NA")] <- NA; x })
+      return(list(layout = "long", long = body, ids = pm_matrix_ids(default),
+                  errors = character(0)))
+    }
+    if (hdr[1L] %in% saw_ids) {
+      p <- .parse_wide_grid(raw, id = NULL, valid_ids = saw_ids)
+      if (length(p$errors) > 0L) return(fail(p$errors))
+      return(list(layout = "wide", long = p$long, ids = p$id, errors = character(0)))
+    }
+    return(fail(paste0(
+      "Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, ",
+      "PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a sawlog ",
+      "matrix name (", paste(saw_ids, collapse = " / "), ") in the top-left cell.")))
+  }
+  fail(sprintf("Unsupported file type '.%s' (use .csv, .xlsx or .rds).", ext))
+}
+
+#' Apply an upload to the scenario: read, merge (wide replaces only its
+#' matrices), validate. Returns list(ok, pm, layout, ids, errors, warnings).
+apply_price_upload <- function(path, filename, scenario, default, pd, lc) {
+  up <- read_price_matrix_upload(path, filename, default)
+  if (length(up$errors) > 0L)
+    return(list(ok = FALSE, pm = NULL, layout = up$layout, ids = up$ids,
+                errors = up$errors, warnings = character(0)))
+  candidate <- if (identical(up$layout, "long")) up$long else {
+    keep <- pm_minimal(scenario)
+    drop <- (keep$ProductKey %in% up$ids & .is_matrix_row(keep)) |
+            (PM_FLAT_ID %in% up$ids & !.is_matrix_row(keep) &
+               keep$ProductKey %in% up$long$ProductKey[is.na(up$long$LengthClass_dm)])
+    rbind(keep[!drop, , drop = FALSE],
+          up$long[, PM_REQUIRED_COLS, drop = FALSE])
+  }
+  v <- validate_scenario_pm(candidate, pd, lc, default = default)
+  list(ok = v$ok, pm = v$pm, layout = up$layout, ids = up$ids,
+       errors = v$errors, warnings = v$warnings)
+}
+
+
+# ---- templates and export ---------------------------------------------------------
+
+#' Long CSV of a full price matrix: the four required columns.
+pm_export <- function(pm, path) {
+  readr::write_csv(pm_minimal(pm), path, na = "")
+  invisible(path)
+}
+
+#' Long-layout template (CSV): the default prices, four columns.
+pm_template_long <- function(default, path) pm_export(default, path)
+
+#' Wide-layout template (xlsx): one sheet per sawlog matrix in the source
+#' layout (top-left cell = ProductKey, header = lengths dm, rows = diameter
+#' classes cm) plus a flat_prices sheet; filled with the default prices.
+pm_template_wide <- function(default, path) {
+  d <- pm_minimal(default)
+  sheets <- lapply(setdiff(pm_matrix_ids(d), PM_FLAT_ID), function(id) {
+    g <- pm_to_grid(d, id)
+    out <- cbind(setNames(data.frame(as.integer(rownames(g))), id), g)
+    names(out) <- c(id, colnames(g))
+    out
+  })
+  names(sheets) <- setdiff(pm_matrix_ids(d), PM_FLAT_ID)
+  f <- pm_to_grid(d, PM_FLAT_ID)
+  sheets[[PM_FLAT_ID]] <- data.frame(ProductKey = rownames(f),
+                                     PriceNOKperM3 = f$PriceNOKperM3,
+                                     stringsAsFactors = FALSE)
+  writexl::write_xlsx(sheets, path)
+  invisible(path)
+}

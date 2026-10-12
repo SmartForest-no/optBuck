@@ -68,7 +68,8 @@ suppressPackageStartupMessages({
 
 for (.h in c("helpers_paths", "helpers_products", "helpers_valuation",
              "helpers_taper", "helpers_bark", "helpers_commercial_volume",
-             "helpers_candidate_generation", "helpers_dp_optimizer")) {
+             "helpers_candidate_generation", "helpers_dp_optimizer",
+             "helpers_price_matrix", "helpers_comparison")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -385,33 +386,10 @@ run_sampled_plot_bucking <- function(
   price_review_items <- val_result$checks$check[val_result$checks$result == "REVIEW"]
   price_val_checks   <- val_result$checks
 
-  # Prepare price matrix subsets for the join (done once, outside the tree loop).
-  # sawlog matrix rows: have a non-NA LengthClass_dm
-  pm_mat_join <- pm[
-    !is.na(pm$LengthClass_dm),
-    intersect(c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
-                "PriceNOKperM3"), names(pm)),
-    drop = FALSE]
-
-  # flat price rows: LengthClass_dm is NA (pulpwood, waste)
-  pm_fl_raw  <- pm[is.na(pm$LengthClass_dm),
-                   intersect(c("ProductKey", "PriceNOKperM3"), names(pm)),
-                   drop = FALSE]
-  # one price per ProductKey (first row wins if duplicates exist)
-  pm_fl_join <- pm_fl_raw[!duplicated(pm_fl_raw$ProductKey), , drop = FALSE]
+  # Price lookup tables, built once (R/helpers_valuation.R; also used for
+  # scenario re-pricing, so runs and comparisons share one lookup).
+  price_lookup <- build_price_lookup(pm)
   t_products_prices <- .pt(t0_products_prices)
-
-  # Build precomputed price lookup vectors (built once; replaces per-tree merge()).
-  # Sawlog: key = "ProductKey|LengthClass_dm|PriceDiameterClass_cm"
-  # The candidate's PriceDiameterClass_cm_used maps to PriceDiameterClass_cm in pm.
-  pm_saw_lookup <- setNames(
-    as.numeric(pm_mat_join$PriceNOKperM3),
-    paste(pm_mat_join$ProductKey, pm_mat_join$LengthClass_dm,
-          pm_mat_join$PriceDiameterClass_cm, sep = "|"))
-  # Flat: key = ProductKey
-  pm_flat_lookup <- setNames(
-    as.numeric(pm_fl_join$PriceNOKperM3),
-    as.character(pm_fl_join$ProductKey))
 
   # ---- 7. Build tree_data metadata lookup -----------------------------------
   # tree_data: needed for metadata lookups inside the per-tree loop.
@@ -576,19 +554,8 @@ run_sampled_plot_bucking <- function(
     t0_join <- proc.time()
     elig <- prepare_price_join_keys(elig, BACKEND_MAX_PRICE_DIAMETER_CLASS_CM)
 
-    # Look up prices using precomputed named-vector lookups.
-    # This replaces per-tree merge() calls with O(n) vectorised hash lookup.
-    is_saw <- grepl("sawlog", elig$ProductKey, ignore.case = TRUE)
-    elig$PriceNOKperM3 <- NA_real_
-    if (any(is_saw)) {
-      saw_keys <- paste(elig$ProductKey[is_saw],
-                        elig$LengthClass_dm[is_saw],
-                        elig$PriceDiameterClass_cm_used[is_saw], sep = "|")
-      elig$PriceNOKperM3[is_saw] <- pm_saw_lookup[saw_keys]
-    }
-    if (any(!is_saw)) {
-      elig$PriceNOKperM3[!is_saw] <- pm_flat_lookup[elig$ProductKey[!is_saw]]
-    }
+    # Look up prices (shared lookup, R/helpers_valuation.R).
+    elig$PriceNOKperM3 <- lookup_prices(elig, price_lookup)
     priced           <- elig
     priced$value_nok <- priced$price_volume_m3 * priced$PriceNOKperM3
     acc_price_join <- acc_price_join + .pt(t0_join)
