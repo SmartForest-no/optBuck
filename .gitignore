@@ -77,3 +77,6 @@ plot_coords*.csv
 
 # ── Audit 17 screenshots (regenerated on every run) ───────────────────────────
 outputs/app_smoke/screenshots/
+
+# ── Design reference screenshots (contain personal details) — never commit ──
+docs/design_reference/
