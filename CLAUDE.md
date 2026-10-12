@@ -44,6 +44,8 @@ pipeline.
 | `DiameterUnderBark` | `TRUE` for all six products: product limits, price-diameter class and price volume all use the under-bark diameter (one diameter drives all three, as in optBuck `buckStem`) | `inputs/ProductData_spruce_pine_default.csv`; `helpers_candidate_generation.R`; audit 14 check 7 |
 | Price lookup | top diameter **under bark**, floored to cm (class cap 50 cm) | `helpers_candidate_generation.R`, `helpers_valuation.R`; audit 18 check 8 |
 | Sawlog price volume | cylinder at the under-bark top diameter rounded down to whole cm × log length (kept 2026-10-12; per-product volume methods planned for Phase 4b) | `helpers_candidate_generation.R` |
+| DP tie-breaking | totals within `DP_TIE_TOL_NOK` = 1e-6 NOK count as equal; then fewer logs, higher `ProductData$Priority` (sawlog 1, pulpwood 2, waste 99), longer log, `ProductKey`; unallocated ranks after a log at equal log count. Independent of row order and prices; reported value = sum of selected logs (decided 2026-10-12) | `R/helpers_dp_optimizer.R` and `.optimize_dp_fast()` must stay identical (audits 16 checks 14-15, 19) |
+| Pattern change | a tree's cutting pattern counts as changed only if the log sets differ and value (at either matrix) or commercial volume by assortment differs; equal-value ties are not changes | `R/helpers_comparison.R`; audit 19 |
 | "Solid volume" | **Everywhere in Apter** (pulpwood and waste price volume, and the NOK/m³ denominator): the sum of 10 cm cylinders, each using the diameter at the **top** of its section (under bark), not rounded. One shared function, `section_volume_fun()`; don't reimplement it (decided 2026-10-12, replacing the prototype's mean-of-end-diameters rule) | `R/helpers_commercial_volume.R`, used by `helpers_candidate_generation.R`; audit 18 check 10 |
 | NOK/m³ denominator | commercial volume under bark: 10 cm cylinders over non-waste logs, each using the under-bark diameter at the top of its section; excludes bark, stump, waste and the top above the last merchantable log; independent of prices and product volume rules. Assortment contribution = assortment value ÷ the scope's commercial volume; each species uses its own denominator | `R/helpers_commercial_volume.R`; audit 18 |
 | Max price-diameter class | 50 cm | `DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM` in `helpers_valuation.R`; logs above this are capped for price lookup only — physical diameter is never changed |
@@ -122,7 +124,16 @@ still out of bounds.
   resolved root as `APTER_ROOT` so the backend agrees. Scripts that run
   before `R/helpers_paths.R` is sourced carry an inline copy of this logic.
 - The app runs `.optimize_dp_fast()` (backend), not the reference
-  `optimize_one_tree_dp()`; audit 16 checks 14-15 assert they agree.
+  `optimize_one_tree_dp()`; audit 16 checks 14-15 and audit 19 assert they
+  agree exactly, including tie-breaking.
+- **Price scenarios (Phase 4a):** `R/helpers_price_matrix.R` (grids in the
+  source layout: diameter rows × length columns; diff, reset, upload with
+  automatic long/wide detection, validation, templates, export) and
+  `R/helpers_comparison.R` (pattern changes, per-m³ comparison). Prices are
+  looked up through one function, `lookup_prices()` /
+  `price_logs()` in `helpers_valuation.R`, for runs and re-pricing alike.
+  The editor lives on the Prices page (`rhandsontable`); the scenario is a
+  `reactiveVal` and runs when "Compare with scenario prices" is ticked.
   `audits/audit_17_app_smoke.R` drives the app headlessly (shinytest2).
 - The app only reads `data_processed_github/` (sanitized, committed, no
   Oracle needed). `data_processed/` and Oracle access are only needed to

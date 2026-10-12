@@ -50,10 +50,25 @@ and pine:
 The pulpwood prices in the default set are temporary flat values, and waste
 is priced at 0 NOK/m³.
 
-**Comparing a price matrix.** Upload a price matrix as a scenario and run it
-on the same trees as the default. The app shows value, volume and logs per
-product for both, and the difference. Uploads must be in the
-`PriceMatrix_long` format (CSV or RDS), one row per price:
+**Comparing price matrices.** On the *Prices and assortments* page, each
+matrix (spruce sawlog, pine sawlog, and the flat pulpwood and waste prices)
+is shown as the default (read-only) next to an editable scenario, in the
+layout of the source price lists: top-diameter classes (cm) as rows and
+length classes (dm) as columns. Cells that differ from the default are
+highlighted, and each matrix can be reset to the default. Tick *Compare with
+scenario prices* in the Simulator to run the same trees under both matrices.
+The comparison shows NOK/m³ and volume shares by assortment under both
+matrices, the trees whose cutting pattern changed, and example stems bucked
+both ways. A tree counts as changed only if the change alters its value or
+volume; patterns that differ only between equal-value alternatives are not
+counted.
+
+**Uploading a scenario.** Drop a file on the upload box: wide (as in the
+editor; xlsx with one sheet per sawlog matrix plus `flat_prices`, or a CSV
+holding one grid) or long (CSV or RDS, one row per price). The layout is
+detected automatically, and a wide file replaces only the matrices it
+contains. Download the wide xlsx template (or the long CSV template) to
+start from the default prices. The long layout has these columns:
 
 | Column | Content |
 |--------|---------|
@@ -62,21 +77,19 @@ product for both, and the difference. Uploads must be in the
 | `PriceDiameterClass_cm` | Sawlogs: top-diameter class in cm. Empty for pulpwood and waste |
 | `PriceNOKperM3` | Price in NOK per m³ |
 
-Uploads are checked against the product definitions before the run. The run
-stops if a sawlog product has no priced lengths, if a sawlog length in the
-product definitions has no price, or if any price is negative. A missing
-pulpwood or waste price is reported as a warning. The default matrix in
-`inputs/price_matrices/PriceMatrix_long_default_2021.csv` is a complete
-example.
+Uploads are checked before they are used: missing columns, non-numeric or
+negative prices, unknown products, length classes that are not defined,
+duplicated cells, and missing sawlog prices are rejected with a message;
+diameter classes that are never used in pricing are reported as warnings.
+Prices are never converted between units. A scenario can be downloaded as a
+long CSV.
 
 **Planned:**
 
-- A side-by-side view of the default and scenario matrices, with in-place
-  editing, highlighted changes, reset to default, and a downloadable import
-  template.
 - Custom assortments, such as poles, large-diameter or small sawlogs and
   special timber, with their own diameter and length limits and price
   matrices.
+- A choice of sale-volume method per product.
 
 ---
 
@@ -125,7 +138,10 @@ The app also shows:
   method per product is planned.
 - Sawlog top-diameter classes above 50 cm are priced as 50 cm. The physical
   diameter is not changed.
-- Each stem is bucked independently.
+- Each stem is bucked independently. When two cutting patterns are worth
+  the same (within 0.000001 NOK), the one with fewer logs is chosen, then
+  the higher-priority product, then the longer log, so results do not
+  depend on input order.
 
 ---
 
@@ -134,7 +150,8 @@ The app also shows:
 Requirements: R and these packages:
 
 ```r
-install.packages(c("shiny", "bslib", "reactable", "arrow", "dplyr", "readr"))
+install.packages(c("shiny", "bslib", "reactable", "rhandsontable", "readxl",
+                   "writexl", "arrow", "dplyr", "readr"))
 
 # taperNOR is not on CRAN:
 devtools::install_git("https://github.com/SmartForest-no/taperNOR")

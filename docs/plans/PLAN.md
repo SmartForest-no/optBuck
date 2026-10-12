@@ -65,6 +65,8 @@ Split into two parts (decided 2026-10-12): 4a first, 4b later.
 
 ## Phase 4a: matrix comparison
 
+**Done (2026-10-12).** Tie-breaking in `R/helpers_dp_optimizer.R` and the fast optimizer; editor and uploads in `R/helpers_price_matrix.R`; comparison in `R/helpers_comparison.R`; audit 19. Upload and templates support the wide source layout (xlsx, CSV) as well as long.
+
 Replace the current price-scenario options (base / multiplier / uploaded). The multiplier inputs are removed; the side-by-side comparison replaces them.
 
 1. **Deterministic tie-breaking in the optimizer (first).** Treat totals within a tolerance as equal and apply a documented rule, such as preferring fewer cuts. The fast and reference optimizers must stay identical (audit 16 checks 14–15). Phase 3's audit 18 found 34 of 137 spruce trees switching between equal-value patterns when all prices were scaled ×1.5 (e.g. different splits of the same flat-priced pulpwood stretch; exact ties since pulpwood volume is the unrounded solid-volume rule).
