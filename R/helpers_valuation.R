@@ -2,7 +2,7 @@
 # R/helpers_valuation.R
 #
 # Purpose : Price matrix loading, validation, and price-join key preparation
-#           for the nfiBuck bucking simulation.
+#           for the Apter bucking simulation.
 #
 # This helper covers:
 #   - Loading PriceMatrix_long

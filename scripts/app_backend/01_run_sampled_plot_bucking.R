@@ -1,7 +1,7 @@
 # ==============================================================================
 # scripts/app_backend/01_run_sampled_plot_bucking.R
 #
-# Purpose : Sampled-plot bucking backend for nfiBuck (Shiny app v1 support).
+# Purpose : Sampled-plot bucking backend for Apter (Shiny app v1 support).
 #           Exposes a single function:
 #             run_sampled_plot_bucking(params, price_matrix_path, root)
 #
@@ -40,15 +40,14 @@ suppressPackageStartupMessages({
 # Resolve R/ relative to project root. This runs before helpers_paths.R is
 # sourced, so it carries an inline copy of get_root_dir()'s env/walk-up logic.
 .BACKEND_ROOT <- local({
-  # APTER_ROOT -> NFIBUCK_ROOT (legacy) -> walk up from getwd() -> stop()
+  # APTER_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = "")
-  env <- env[nzchar(env)]
-  if (length(env) > 0L) {
-    d <- normalizePath(env[[1L]], winslash = "/", mustWork = FALSE)
+  env <- Sys.getenv("APTER_ROOT", unset = "")
+  if (nzchar(env)) {
+    d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from ", names(env)[1L],
-           ") does not contain R/helpers_paths.R.", call. = FALSE)
+      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+           "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)

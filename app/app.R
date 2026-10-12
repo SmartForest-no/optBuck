@@ -1,13 +1,13 @@
 # app/app.R
 #
-# Purpose : Shiny prototype for nfiBuck sampled-plot bucking estimator.
+# Purpose : Shiny app for Apter, the bucking simulator.
 #           v1 scope: spruce/pine, default 2021 price matrix, sampled plots.
 #
 # Run     : from the project root,
 #             shiny::runApp("app")   or   shiny::runApp("app/app.R")
 #           From elsewhere, set APTER_ROOT to the project root first.
 #
-# Root    : APTER_ROOT -> NFIBUCK_ROOT (legacy) -> parent of app/
+# Root    : APTER_ROOT -> parent of app/
 #           (app/helpers_root.R). The resolved root is exported as APTER_ROOT
 #           so the backend resolves the same one.
 #

@@ -8,7 +8,7 @@ ui <- fluidPage(
 
   tags$head(tags$style(HTML(APP_CSS))),
 
-  titlePanel("nfiBuck \u2014 Sampled-plot bucking estimator (v1)"),
+  titlePanel("Apter \u2014 Bucking simulator (v1)"),
 
   sidebarLayout(
     sidebarPanel(

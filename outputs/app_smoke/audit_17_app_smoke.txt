@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-12 10:50:44.173482
+  Run: 2026-10-12 11:24:56.43148
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpcfzqIS/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpeOdP7N/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -22,12 +22,12 @@
 
 --- 05-11. Browser checks ---
   [PASS  ] Check 05: AppDriver starts the app | app started
-  [PASS  ] Check 06: Initial run_status idle and title contains 'nfiBuck' | run_status: 'Select parameters and click Run optimizer.' | title: 'nfiBuck — Sampled-plot bucking estimator (v1)'
-  [PASS  ] Check 07: Main run completes without error notification | run_status: 'Run complete in 5.9 s  |  5 plot(s)  |  113 trees  |  355 selected logs  |  ID: sampled_20261012_105058' | error notifications: 0
+  [PASS  ] Check 06: Initial run_status idle and title contains 'Apter' | run_status: 'Select parameters and click Run optimizer.' | title: 'Apter — Bucking simulator (v1)'
+  [PASS  ] Check 07: Main run completes without error notification | run_status: 'Run complete in 5.6 s  |  5 plot(s)  |  113 trees  |  355 selected logs  |  ID: sampled_20261012_112509' | error notifications: 0
   [PASS  ] Check 08: summary_cards non-empty and tbl_products has rows | summary_cards chars: 231 | tbl_products rows: 2
   [PASS  ] Check 09: Scenario comparison 'same' samples the same plots | cmp_status: 'Comparison complete. Same plots sampled in both scenarios.'
   [PASS  ] Check 10: Multiplier mode renders tbl_cmp_delta | tbl_cmp_delta rows: 1 | error notifications: 0
-  [PASS  ] Check 11: Browser runtime under 180 s | browser checks took 41.4 s (threshold: 180 s)
+  [PASS  ] Check 11: Browser runtime under 180 s | browser checks took 40.2 s (threshold: 180 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

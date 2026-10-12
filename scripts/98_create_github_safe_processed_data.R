@@ -59,7 +59,24 @@ suppressPackageStartupMessages({
 })
 
 # ---- paths -------------------------------------------------------------------
-ROOT     <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck"
+ROOT     <- local({
+  # APTER_ROOT -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv("APTER_ROOT", unset = "")
+  if (nzchar(env)) {
+    d <- normalizePath(env, winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+           "R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
 SRC_DIR  <- file.path(ROOT, "data_processed")
 OUT_DIR  <- file.path(ROOT, "data_processed_github")
 MANIFEST <- file.path(OUT_DIR, "sanitization_manifest.txt")
@@ -237,7 +254,7 @@ dropped_2 <- setdiff(src_cols_2, c("plot_id", KEEP_PLOTS))
 # Step 4: Write sanitization manifest
 # ==============================================================================
 manifest_lines <- c(
-  "nfiBuck -- data_processed_github/ sanitization manifest",
+  "Apter -- data_processed_github/ sanitization manifest",
   paste("Run time    :", RUN_TIME),
   paste("Source      :", SRC_DIR),
   paste("Destination :", OUT_DIR),

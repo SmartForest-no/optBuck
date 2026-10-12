@@ -1,5 +1,5 @@
 # ==============================================================================
-# .gitignore — nfiBuck
+# .gitignore — Apter
 # Private GitHub repository
 # ==============================================================================
 
@@ -68,3 +68,9 @@ verify_hkl_tmp.R
 # ── General temporary / build artefacts ───────────────────────────────────────
 *.tmp
 *.bak
+
+# ── Presentation figures (local-only, not committed) ──────────────────────────
+figures/presentation_2026-10/
+
+# ── Rounded plot coordinates (presentation exception) — never commit ─────────
+plot_coords*.csv

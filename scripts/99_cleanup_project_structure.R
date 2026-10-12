@@ -1,7 +1,8 @@
 # ==============================================================================
 # scripts/99_cleanup_project_structure.R
 #
-# Purpose : Reorganise the nfiBuck repository after the prototype phase.
+# Purpose : Reorganise the repository (then named nfiBuck) after the
+#           prototype phase. One-off; already run.
 #           Numbered R scripts and old audits are moved to prototype_reference/
 #           subfolders.  Old prototype output folders are moved to
 #           outputs/_archive/.  Nothing is permanently deleted.
@@ -28,14 +29,31 @@
 DRY_RUN      <- FALSE
 ARCHIVE_DATE <- format(Sys.Date(), "%Y%m%d")
 
-root_dir     <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck"
+root_dir     <- local({
+  # APTER_ROOT -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv("APTER_ROOT", unset = "")
+  if (nzchar(env)) {
+    d <- normalizePath(env, winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+           "R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
 archive_root <- file.path("_archive", paste0("prototype_", ARCHIVE_DATE))
 
 # Paths resolved from root
 full_archive <- file.path(root_dir, "outputs", archive_root)
 review_dir   <- file.path(root_dir, "outputs", "project_review")
 
-cat(sprintf("=== nfiBuck Cleanup Script ===\n"))
+cat(sprintf("=== Apter Cleanup Script ===\n"))
 cat(sprintf("DRY_RUN      : %s\n", DRY_RUN))
 cat(sprintf("ARCHIVE_DATE : %s\n", ARCHIVE_DATE))
 cat(sprintf("root_dir     : %s\n", root_dir))

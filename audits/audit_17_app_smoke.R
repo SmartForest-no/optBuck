@@ -12,7 +12,7 @@
 #      helpers_*.R) and app/ has no ui.R/server.R (Shiny would treat those
 #      as a second app format; shinytest2 refuses to start)
 #  3.  Root resolution (no browser):
-#        a. APTER_ROOT/NFIBUCK_ROOT unset -> parent of app/ (project root)
+#        a. APTER_ROOT unset              -> parent of app/ (project root)
 #        b. APTER_ROOT = empty temp dir   -> clear error
 #        c. APTER_ROOT = project root     -> project root
 #  4.  Pure helpers (no browser):
@@ -22,8 +22,7 @@
 #        d. resolve_s2_price_path(): "same" -> default_2021, "multiplier"
 #           -> readable CSV with multiplied prices
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
-#  6.  Initial run_status shows the idle text; title contains "nfiBuck"
-#      (title check to be updated in the Phase 1 rename)
+#  6.  Initial run_status shows the idle text; title contains "Apter"
 #  7.  Main run (spruce, HKL 4, abonitet 17, 5 plots, seed 42):
 #      run_status contains "Run complete", no error notification
 #  8.  summary_cards is non-empty; tbl_products has >= 1 row
@@ -51,15 +50,14 @@
 suppressPackageStartupMessages(library(readr))
 
 root_dir <- local({
-  # APTER_ROOT -> NFIBUCK_ROOT (legacy) -> walk up from getwd() -> stop()
+  # APTER_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = "")
-  env <- env[nzchar(env)]
-  if (length(env) > 0L) {
-    d <- normalizePath(env[[1L]], winslash = "/", mustWork = FALSE)
+  env <- Sys.getenv("APTER_ROOT", unset = "")
+  if (nzchar(env)) {
+    d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from ", names(env)[1L],
-           ") does not contain R/helpers_paths.R.", call. = FALSE)
+      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+           "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
@@ -153,16 +151,14 @@ root_src_ok <- tryCatch({
 }, error = function(e) FALSE)
 
 if (root_src_ok) {
-  saved_env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = NA)
+  saved_root  <- Sys.getenv("APTER_ROOT", unset = NA)
   restore_env <- function() {
-    for (v in names(saved_env)) {
-      if (is.na(saved_env[[v]])) Sys.unsetenv(v)
-      else do.call(Sys.setenv, setNames(list(saved_env[[v]]), v))
-    }
+    if (is.na(saved_root)) Sys.unsetenv("APTER_ROOT")
+    else Sys.setenv(APTER_ROOT = saved_root)
   }
 
   # a. unset -> parent of app/
-  Sys.unsetenv(c("APTER_ROOT", "NFIBUCK_ROOT"))
+  Sys.unsetenv("APTER_ROOT")
   r_a <- tryCatch(root_env$resolve_app_root(app_dir),
                   error = function(e) paste("ERROR:", conditionMessage(e)))
   rec("Check 03a: Env unset -> resolves to project root",
@@ -296,7 +292,7 @@ if (!nzchar(helpers_err)) {
 # ==============================================================================
 browser_checks <- c(
   "Check 05: AppDriver starts the app",
-  "Check 06: Initial run_status idle and title contains 'nfiBuck'",
+  "Check 06: Initial run_status idle and title contains 'Apter'",
   "Check 07: Main run completes without error notification",
   "Check 08: summary_cards non-empty and tbl_products has rows",
   "Check 09: Scenario comparison 'same' samples the same plots",
@@ -338,7 +334,7 @@ if (!browser_ok) {
     st0   <- txt(app, "#run_status")
     title <- app$get_js("document.title")
     ok6   <- grepl("Select parameters and click Run optimizer", st0, fixed = TRUE) &&
-             grepl("nfiBuck", title, fixed = TRUE)
+             grepl("Apter", title, fixed = TRUE)
     rec(browser_checks[2], if (ok6) PASS else FAIL,
         sprintf("run_status: '%s' | title: '%s'", st0, title))
 

@@ -31,7 +31,24 @@
 
 suppressPackageStartupMessages(library(readr))
 
-root_dir <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck"
+root_dir <- local({
+  # APTER_ROOT -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv("APTER_ROOT", unset = "")
+  if (nzchar(env)) {
+    d <- normalizePath(env, winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+           "R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
 pm_dir   <- file.path(root_dir, "inputs", "price_matrices")
 
 INTERP_NOTE <- "Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet"

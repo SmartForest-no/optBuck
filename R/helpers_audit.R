@@ -1,7 +1,7 @@
 # ==============================================================================
 # R/helpers_audit.R
 #
-# Purpose : Shared audit utilities for nfiBuck audit scripts.
+# Purpose : Shared audit utilities for Apter audit scripts.
 #
 # Usage   : source("R/helpers_audit.R")
 #

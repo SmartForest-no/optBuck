@@ -1,7 +1,7 @@
 # ==============================================================================
 # R/helpers_paths.R
 #
-# Purpose : Centralised path helpers for the nfiBuck project.
+# Purpose : Centralised path helpers for the Apter project.
 #           All scripts should resolve the project root through get_root_dir()
 #           rather than hardcoding paths inline.
 #
@@ -17,11 +17,9 @@
 #'
 #' Resolution order (first hit wins):
 #'   1. Environment variable  APTER_ROOT
-#'   2. Environment variable  NFIBUCK_ROOT  (legacy, kept until the Phase 1 rename)
-#'   3. R option              apter.root    (options(apter.root = "..."))
-#'   4. R option              nfibuck.root  (legacy)
-#'   5. Walk up from getwd() to the first directory containing R/helpers_paths.R
-#' A root from 1-4 must contain R/helpers_paths.R; otherwise, or if 5 finds
+#'   2. R option              apter.root    (options(apter.root = "..."))
+#'   3. Walk up from getwd() to the first directory containing R/helpers_paths.R
+#' A root from 1-2 must contain R/helpers_paths.R; otherwise, or if 3 finds
 #' nothing, the function stops with a clear message. No path is hardcoded.
 #'
 #' @return Character scalar — absolute path, no trailing slash.
@@ -29,15 +27,13 @@ get_root_dir <- function() {
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
 
   explicit <- c(Sys.getenv("APTER_ROOT", unset = ""),
-                Sys.getenv("NFIBUCK_ROOT", unset = ""),
-                getOption("apter.root", default = ""),
-                getOption("nfibuck.root", default = ""))
+                getOption("apter.root", default = ""))
   explicit <- explicit[nzchar(explicit)]
   if (length(explicit) > 0L) {
     root <- normalizePath(explicit[1L], winslash = "/", mustWork = FALSE)
     if (!is_root(root))
-      stop("Project root '", root, "' (from APTER_ROOT / NFIBUCK_ROOT / ",
-           "options) does not contain R/helpers_paths.R.", call. = FALSE)
+      stop("Project root '", root, "' (from APTER_ROOT or option apter.root) ",
+           "does not contain R/helpers_paths.R.", call. = FALSE)
     return(root)
   }
 

@@ -1,7 +1,7 @@
 # ==============================================================================
 # R/helpers_products.R
 #
-# Purpose : Load and validate ProductData and LengthClasses for the nfiBuck
+# Purpose : Load and validate ProductData and LengthClasses for the Apter
 #           bucking simulation.
 #
 # Accepted assumptions (see CLAUDE.md):
@@ -29,7 +29,7 @@ if (!exists("%||%", mode = "function")) {
 # Constants
 # ------------------------------------------------------------------------------
 
-#' The six active ProductKey values recognised by nfiBuck.
+#' The six active ProductKey values recognised by Apter.
 ACTIVE_PRODUCT_KEYS <- c(
   "spruce_sawlog", "spruce_pulpwood", "spruce_waste",
   "pine_sawlog",   "pine_pulpwood",   "pine_waste"
