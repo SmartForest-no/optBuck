@@ -12,7 +12,8 @@
 #  4.  LengthClasses loads successfully (non-empty)
 #  5.  PriceMatrix_long loads successfully (non-empty)
 #  6.  All six ACTIVE_PRODUCT_KEYS are present in ProductData
-#  7.  DiameterUnderBark is FALSE for all active products
+#  7.  DiameterUnderBark is TRUE for all active products (under-bark product
+#      diameters since 2026-10-12; profiles stay over bark, see check 8)
 #  8.  DiameterSource is taperNOR_over_bark for all active products
 #  9.  Supported sawlog lengths for spruce_sawlog match expected 34-55 dm set
 # 10.  Supported sawlog lengths for pine_sawlog match expected 34-55 dm set
@@ -41,6 +42,10 @@
 # (scripts/97_fill_31dm_sawlog_price_gap.R). Checks 11-12 now assert that
 # 31 dm is supported and flagged PriceSource == "Interpolated", rather than
 # asserting it is unsupported.
+#
+# Note (2026-10-12): product diameters are under bark (DiameterUnderBark =
+# TRUE); check 7 asserts TRUE instead of FALSE. Profiles remain taperNOR over
+# bark (check 8) and are converted with the bark model in R/helpers_bark.R.
 #
 # Note (2026-10-12): zero-priced waste (0 NOK/m3) is an accepted scope
 # decision, recorded in CLAUDE.md "Accepted assumptions". Check 18 now
@@ -192,13 +197,13 @@ cat("\n--- 7. DiameterUnderBark ---\n")
 
 if (!is.null(pd) && "DiameterUnderBark" %in% names(pd)) {
   active_pd <- pd[pd$ProductKey %in% ACTIVE_PRODUCT_KEYS, ]
-  all_false <- all(as.logical(active_pd$DiameterUnderBark) == FALSE, na.rm = TRUE)
-  rec("DiameterUnderBark == FALSE for all active products",
-      if (all_false) PASS else FAIL,
+  all_true  <- all(as.logical(active_pd$DiameterUnderBark) %in% TRUE)
+  rec("DiameterUnderBark == TRUE for all active products",
+      if (all_true) PASS else FAIL,
       sprintf("Values: %s",
               paste(unique(active_pd$DiameterUnderBark), collapse = ", ")))
 } else {
-  rec("DiameterUnderBark == FALSE", FAIL,
+  rec("DiameterUnderBark == TRUE", FAIL,
       if (is.null(pd)) "ProductData not loaded"
       else "DiameterUnderBark column missing")
 }

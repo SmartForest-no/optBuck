@@ -5,7 +5,9 @@
 #           bucking simulation.
 #
 # Accepted assumptions (see CLAUDE.md):
-#   DiameterUnderBark = FALSE for all active products
+#   DiameterUnderBark = TRUE for all active products (2026-10-12: limits,
+#     price class and price volume use under-bark diameters; profiles stay
+#     over bark and are converted with the bark model in helpers_bark.R)
 #   DiameterSource    = taperNOR_over_bark for all active products
 #   Six active ProductKey values (ACTIVE_PRODUCT_KEYS constant below)
 #
@@ -36,7 +38,7 @@ ACTIVE_PRODUCT_KEYS <- c(
 )
 
 #' Expected DiameterUnderBark value for all active products.
-EXPECTED_DIAMETER_UNDER_BARK <- FALSE
+EXPECTED_DIAMETER_UNDER_BARK <- TRUE
 
 #' Expected DiameterSource value for all active products.
 EXPECTED_DIAMETER_SOURCE <- "taperNOR_over_bark"
@@ -104,7 +106,8 @@ load_length_classes <- function(
 #' Checks performed:
 #'   1. All ACTIVE_PRODUCT_KEYS are present.
 #'   2. No extra ProductKey values beyond ACTIVE_PRODUCT_KEYS.
-#'   3. DiameterUnderBark is FALSE for all active products.
+#'   3. DiameterUnderBark equals EXPECTED_DIAMETER_UNDER_BARK (TRUE) for all
+#'      active products.
 #'   4. DiameterSource is "taperNOR_over_bark" for all active products (if column exists).
 #'
 #' @param pd data.frame from load_products().
@@ -141,18 +144,19 @@ check_product_assumptions <- function(pd) {
     else paste("Extra:", paste(extra, collapse = ", "))
   )
 
-  # 3. DiameterUnderBark == FALSE
+  # 3. DiameterUnderBark == EXPECTED_DIAMETER_UNDER_BARK (TRUE)
   if ("DiameterUnderBark" %in% names(pd)) {
     active_pd  <- pd[pd$ProductKey %in% ACTIVE_PRODUCT_KEYS, ]
-    dub_vals   <- unique(active_pd$DiameterUnderBark)
-    all_false  <- all(as.logical(active_pd$DiameterUnderBark) == FALSE)
+    dub        <- as.logical(active_pd$DiameterUnderBark)
+    all_ok     <- all(dub %in% EXPECTED_DIAMETER_UNDER_BARK)
     add_check(
-      "DiameterUnderBark == FALSE for all active products",
-      if (all_false) "PASS" else "FAIL",
-      if (all_false) "all FALSE"
+      sprintf("DiameterUnderBark == %s for all active products",
+              EXPECTED_DIAMETER_UNDER_BARK),
+      if (all_ok) "PASS" else "FAIL",
+      if (all_ok) sprintf("all %s", EXPECTED_DIAMETER_UNDER_BARK)
       else sprintf("Unexpected values: %s",
                    paste(unique(active_pd$DiameterUnderBark[
-                     as.logical(active_pd$DiameterUnderBark) != FALSE]),
+                     !dub %in% EXPECTED_DIAMETER_UNDER_BARK]),
                      collapse = ", "))
     )
   } else {

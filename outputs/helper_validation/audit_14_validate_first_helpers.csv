@@ -11,7 +11,7 @@ ProductData loads (non-empty),PASS,6 rows
 LengthClasses loads (non-empty),PASS,190 rows
 PriceMatrix_long loads (non-empty),PASS,706 rows
 All 6 ACTIVE_PRODUCT_KEYS in ProductData,PASS,"present: spruce_sawlog, spruce_pulpwood, spruce_waste, pine_sawlog, pine_pulpwood, pine_waste"
-DiameterUnderBark == FALSE for all active products,PASS,Values: FALSE
+DiameterUnderBark == TRUE for all active products,PASS,Values: TRUE
 DiameterSource == 'taperNOR_over_bark' for all active products,PASS,Values: taperNOR_over_bark
 "Supported lengths for spruce_sawlog match expected {31, 34, 37, 40, 43, 46, 49, 52, 55} dm",PASS,"actual: {31, 34, 37, 40, 43, 46, 49, 52, 55} dm"
 "Supported lengths for pine_sawlog match expected {31, 34, 37, 40, 43, 46, 49, 52, 55} dm",PASS,"actual: {31, 34, 37, 40, 43, 46, 49, 52, 55} dm"

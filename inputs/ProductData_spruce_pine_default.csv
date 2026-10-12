@@ -1,7 +1,7 @@
 ProductKey,ProductName,ProductType,SpeciesGroupKey,species_group,VolumeDiameterCategory,VolumeLengthCategory,VolumeDiameterAdjustment,DiameterTopPosition,DiameterUnderBark,DiameterSource,MinTopDiameter,MaxTopDiameter,MinButtDiameter,MaxButtDiameter,MinLength,MaxLength,LengthStep,AllowAsFirstLog,AllowAsTopLog,Priority
-spruce_sawlog,Spruce sawlog,sawlog,spruce,spruce,Top,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,FALSE,taperNOR_over_bark,120,Inf,0,Inf,310,550,30,TRUE,TRUE,1
-spruce_pulpwood,Spruce pulpwood,pulpwood,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,FALSE,taperNOR_over_bark,50,Inf,0,Inf,300,550,10,TRUE,TRUE,2
-pine_sawlog,Pine sawlog,sawlog,pine,pine,Top,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,FALSE,taperNOR_over_bark,120,Inf,0,Inf,310,550,30,TRUE,TRUE,1
-pine_pulpwood,Pine pulpwood,pulpwood,pine,pine,All diameters (solid volume),Physical length cm,None,0,FALSE,taperNOR_over_bark,50,Inf,0,Inf,300,550,10,TRUE,TRUE,2
-spruce_waste,Spruce waste,waste,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,FALSE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,TRUE,TRUE,99
-pine_waste,Pine waste,waste,pine,pine,All diameters (solid volume),Physical length cm,None,0,FALSE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,TRUE,TRUE,99
+spruce_sawlog,Spruce sawlog,sawlog,spruce,spruce,Top,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,TRUE,taperNOR_over_bark,120,Inf,0,Inf,310,550,30,TRUE,TRUE,1
+spruce_pulpwood,Spruce pulpwood,pulpwood,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,50,Inf,0,Inf,300,550,10,TRUE,TRUE,2
+pine_sawlog,Pine sawlog,sawlog,pine,pine,Top,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,TRUE,taperNOR_over_bark,120,Inf,0,Inf,310,550,30,TRUE,TRUE,1
+pine_pulpwood,Pine pulpwood,pulpwood,pine,pine,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,50,Inf,0,Inf,300,550,10,TRUE,TRUE,2
+spruce_waste,Spruce waste,waste,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,TRUE,TRUE,99
+pine_waste,Pine waste,waste,pine,pine,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,TRUE,TRUE,99

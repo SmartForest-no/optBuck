@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: R/14_validate_first_helpers.R
-  Run: 2026-10-12 12:39:37.435728
+  Run: 2026-10-12 14:28:37.841099
 ============================================================= 
 
 --- 1. Helper files ---
@@ -24,7 +24,7 @@
   [PASS  ] All 6 ACTIVE_PRODUCT_KEYS in ProductData | present: spruce_sawlog, spruce_pulpwood, spruce_waste, pine_sawlog, pine_pulpwood, pine_waste
 
 --- 7. DiameterUnderBark ---
-  [PASS  ] DiameterUnderBark == FALSE for all active products | Values: FALSE
+  [PASS  ] DiameterUnderBark == TRUE for all active products | Values: TRUE
 
 --- 8. DiameterSource ---
   [PASS  ] DiameterSource == 'taperNOR_over_bark' for all active products | Values: taperNOR_over_bark

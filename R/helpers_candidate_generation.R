@@ -13,6 +13,13 @@
 #   - Volume formula:
 #       "Top" (sawlog): cylinder at top diameter — pi * r_mm^2 * L_cm / 1e8
 #       Other types   : cumulative Huber sum over the profile grid.
+#   - Bark (2026-10-12): products with DiameterUnderBark = TRUE use the
+#     under-bark profile (pv$DiameterValueUB, helpers_bark.R) for butt/top
+#     diameter, eligibility limits, price-diameter class and price volume,
+#     as in optBuck::buckStem (one diameter drives all three). If the
+#     profile has no DiameterValueUB yet it is derived with
+#     add_under_bark_profile(). Products with DiameterUnderBark = FALSE use
+#     the over-bark profile, as before.
 #   - No species filtering by default; products_for_species() provides
 #     a convenience filter.
 #
@@ -30,6 +37,9 @@
 if (!exists("%||%", mode = "function")) {
   `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
 }
+
+if (!exists("add_under_bark_profile", mode = "function"))
+  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_bark.R"))
 
 #' Default stump height in cm (stump = first possible start position).
 CAND_STUMP_HEIGHT_CM <- 10L
@@ -87,7 +97,10 @@ products_for_species <- function(species_group) {
 #'   treid, plot_id, species_group, ProductKey, ProductType,
 #'   StartPos, StopPos, LogLength, TopDiameter (mm), ButtDiameter (mm),
 #'   eligible, price_volume_m3, LengthClass_dm,
-#'   PriceDiameterClass_cm  (raw, uncapped; cap applied in valuation step).
+#'   PriceDiameterClass_cm  (raw, uncapped; cap applied in valuation step),
+#'   TopDiameter_ob, TopDiameter_ub (mm), DiameterUnderBark.
+#'   TopDiameter / ButtDiameter are the product's measuring diameters: under
+#'   bark when the product's DiameterUnderBark is TRUE, else over bark.
 generate_candidate_logs_one_tree <- function(pv,
                                               ProductData,
                                               LengthClasses,
@@ -111,33 +124,40 @@ generate_candidate_logs_one_tree <- function(pv,
 
   # Profile vectors
   diam_pos <- as.integer(pv$diameterPosition)   # cm (sorted ascending)
-  diam_val <- as.numeric(pv$DiameterValue)       # mm
   h_cm     <- as.integer(pv$height_cm)
+  step_int <- as.integer(start_pos_step_cm)
+  prof_pos <- seq(0L, h_cm, by = step_int)
 
-  # Diameter interpolation function (rule=2: extrapolate with boundary values)
-  diam_fun <- stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2)
-
-  # Cumulative solid-volume array on the profile grid (step = PROFILE_STEP_CM)
-  step_int  <- as.integer(start_pos_step_cm)
-  prof_pos  <- seq(0L, h_cm, by = step_int)
-  prof_d    <- diam_fun(prof_pos)
-  n_pp      <- length(prof_pos)
-  if (n_pp >= 2L) {
-    sec_r   <- (prof_d[-n_pp] + prof_d[-1L]) / 4     # mean radius in mm
-    sec_vol <- pi * sec_r^2 * step_int / 1e8          # m3 per section
-    cumvol  <- c(0, cumsum(sec_vol))                  # cumvol[i] = vol at prof_pos[i-1]
-  } else {
-    cumvol <- c(0, 0)
+  # One diameter series (over or under bark): interpolation function
+  # (rule = 2: extrapolate with boundary values) and cumulative solid volume
+  # on the profile grid (step = PROFILE_STEP_CM).
+  make_series <- function(diam_val) {
+    fun    <- stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2)
+    prof_d <- fun(prof_pos)
+    n_pp   <- length(prof_pos)
+    cumvol <- if (n_pp >= 2L) {
+      sec_r   <- (prof_d[-n_pp] + prof_d[-1L]) / 4    # mean radius in mm
+      sec_vol <- pi * sec_r^2 * step_int / 1e8         # m3 per section
+      c(0, cumsum(sec_vol))                            # cumvol[i] = vol at prof_pos[i-1]
+    } else c(0, 0)
+    # Solid volume between two positions (cm), vectorised over pos_a / pos_b.
+    solid_vol <- function(pos_a, pos_b) {
+      ia <- as.integer(pos_a) / step_int + 1L          # 1-based index
+      ib <- as.integer(pos_b) / step_int + 1L
+      ia <- pmax(1L, pmin(ia, length(cumvol)))
+      ib <- pmax(1L, pmin(ib, length(cumvol)))
+      cumvol[ib] - cumvol[ia]
+    }
+    list(fun = fun, solid_vol = solid_vol)
   }
 
-  # Helper: solid volume between two positions (cm), vectorised over pos_a / pos_b.
-  solid_vol_vec <- function(pos_a, pos_b) {
-    ia <- as.integer(pos_a) / step_int + 1L           # 1-based index
-    ib <- as.integer(pos_b) / step_int + 1L
-    ia <- pmax(1L, pmin(ia, length(cumvol)))
-    ib <- pmax(1L, pmin(ib, length(cumvol)))
-    cumvol[ib] - cumvol[ia]
-  }
+  ser_ob <- make_series(as.numeric(pv$DiameterValue))   # mm, over bark
+  needs_ub <- "DiameterUnderBark" %in% names(pd_sp) &&
+    any(as.logical(pd_sp$DiameterUnderBark) %in% TRUE)
+  ser_ub <- if (needs_ub) {
+    if (is.null(pv$DiameterValueUB)) pv <- add_under_bark_profile(pv)
+    make_series(as.numeric(pv$DiameterValueUB))         # mm, under bark
+  } else NULL
 
   # Valid log lengths for this tree (all products), pre-filtered by tree height.
   lc_valid <- LengthClasses[
@@ -186,12 +206,18 @@ generate_candidate_logs_one_tree <- function(pv,
     combos <- combos[combos$stop_pos <= h_cm, , drop = FALSE]
     if (nrow(combos) == 0L) { prod_frames[[j]] <- NULL; next }
 
+    # Measuring diameters: under bark if the product says so, else over bark.
+    ub  <- isTRUE(as.logical(prow$DiameterUnderBark))
+    ser <- if (ub) ser_ub else ser_ob
+
     # Butt diameter at start position (mm)
-    combos$ButtDiameter <- diam_fun(combos$start_pos)
+    combos$ButtDiameter <- ser$fun(combos$start_pos)
 
     # Top diameter at stop position minus a small offset (avoid 0 at apex)
     # Using stop_pos - DiameterTopPosition (=0 in script 11, i.e. at stop_pos)
-    combos$TopDiameter  <- diam_fun(combos$stop_pos)
+    combos$TopDiameter  <- ser$fun(combos$stop_pos)
+    top_ob <- ser_ob$fun(combos$stop_pos)
+    top_ub <- if (!is.null(ser_ub)) ser_ub$fun(combos$stop_pos) else NA_real_
 
     # Eligibility flags
     e_len  <- combos$log_len  >= (prow$MinLength  %||% 0L) &
@@ -224,7 +250,7 @@ generate_candidate_logs_one_tree <- function(pv,
     } else {
       price_vol <- ifelse(
         eligible,
-        solid_vol_vec(combos$start_pos, combos$stop_pos),
+        ser$solid_vol(combos$start_pos, combos$stop_pos),
         NA_real_)
     }
 
@@ -250,6 +276,9 @@ generate_candidate_logs_one_tree <- function(pv,
       price_volume_m3      = round(price_vol, 5),
       LengthClass_dm       = len_dm,
       PriceDiameterClass_cm = diam_class_raw,   # uncapped; rename in valuation
+      TopDiameter_ob       = round(top_ob, 1),
+      TopDiameter_ub       = round(top_ub, 1),
+      DiameterUnderBark    = ub,
       stringsAsFactors     = FALSE
     )
   }
@@ -279,6 +308,9 @@ generate_candidate_logs_one_tree <- function(pv,
     price_volume_m3      = numeric(0),
     LengthClass_dm       = integer(0),
     PriceDiameterClass_cm = integer(0),
+    TopDiameter_ob       = numeric(0),
+    TopDiameter_ub       = numeric(0),
+    DiameterUnderBark    = logical(0),
     stringsAsFactors     = FALSE
   )
 }
