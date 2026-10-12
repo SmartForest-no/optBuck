@@ -1,7 +1,9 @@
 # app/app_server.R
 #
 # Purpose : Shiny server function (`server`). Sourced by app.R after setup.R
-#           and the app helpers (helpers_validation.R, helpers_upload.R).
+#           and the app helpers (helpers_ui.R, helpers_validation.R,
+#           helpers_upload.R). Styling via CSS classes (www/apter.css) and
+#           APTER_CHART colours (theme.R); no inline colours.
 #           Not named server.R: Shiny/shinytest2 reject ui.R/server.R next to app.R.
 
 # ---- server -----------------------------------------------------------------
@@ -32,18 +34,18 @@ server <- function(input, output, session) {
     abon    <- as.integer(input$abonitet)
     fyl     <- selected_fylnr(input$fylnr_sel)
     if (length(hkl_raw) == 0L || length(abon) == 0L)
-      return(div(style = "color:#cc0000;",
+      return(div(class = "note-error",
                  "Select at least one maturity class and one bonitet."))
     n_elig <- count_eligible_plots(plots_prod, hkl_raw, abon, fyl)
     div(
       sprintf("%d eligible plot(s) available.", n_elig), br(),
       if (n_elig == 0L)
-        span(style = "color:#cc0000;", "No matching plots \u2014 adjust selection.")
+        span(class = "note-error", "No matching plots \u2014 adjust selection.")
       else if (n_elig < as.integer(input$n_plots))
-        span(style = "color:#e07000;",
+        span(class = "note-warn",
              sprintf("Fewer than %s plots exist; all will be used.", input$n_plots))
       else
-        span(style = "color:#28a745;", "Stratum OK.")
+        span(class = "note-ok", "Stratum OK.")
     )
   })
 
@@ -62,12 +64,58 @@ server <- function(input, output, session) {
                 nrow(r$selected_logs_all), r$run_id))
   })
 
+  # Run card: parameters as read-only fields, stages as a step list
+  output$run_params <- renderUI({
+    req(input$run_btn > 0L)
+    r <- result(); req(!is.null(r))
+    p <- r$params
+    fyl <- if (is.null(p$fylnr)) "All counties"
+           else paste(names(FYLNR_CHOICES)[match(p$fylnr, FYLNR_CHOICES)],
+                      collapse = ", ")
+    ro_field_row(
+      ro_field("Species group", p$species_group),
+      ro_field("Maturity class (hogstkl)", paste(p$hogstkl, collapse = ", ")),
+      ro_field("Site class (bonitet)", paste(p$abonitet, collapse = ", ")),
+      ro_field("County", fyl),
+      ro_field("Plots sampled", sprintf("%d of %d requested",
+                                        r$n_plots_sampled, as.integer(p$n_plots))),
+      ro_field("Seed", p$seed),
+      ro_field("Run ID", r$run_id, wide = TRUE)
+    )
+  })
+
+  output$run_steps <- renderUI({
+    r <- if (input$run_btn > 0L) result() else NULL
+    if (is.null(r)) return(step_list(run_step_table()))
+    step_list(run_step_table(r$diagnostics$stage_timings, r$started_at))
+  })
+
+  output$home_last_run <- renderUI({
+    r <- if (input$run_btn > 0L) result() else NULL
+    if (is.null(r))
+      return(div(class = "note-muted",
+                 "No run yet. Open the simulator, choose trees and click Run optimizer."))
+    total_val <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
+    div(class = "status-tiles",
+        status_tile(r$run_id, "Done",
+                    c(sprintf("%s \u00b7 %d plot(s) \u00b7 %d trees",
+                              r$params$species_group, r$n_plots_sampled,
+                              r$n_trees_total),
+                      sprintf("Total value %s NOK \u00b7 %d selected logs",
+                              format(round(total_val), big.mark = ",",
+                                     scientific = FALSE),
+                              nrow(r$selected_logs_all)))))
+  })
+
+  observeEvent(input$go_simulator, nav_select("main_nav", "Simulator"))
+
   # Backend call with multi-stage progress indicator
   result <- eventReactive(input$run_btn, {
     req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
 
     # Map user-facing inputs (HKL group, county) -> backend params
-    params <- build_run_params(input)
+    params     <- build_run_params(input)
+    started_at <- Sys.time()   # for the run step list
 
     withProgress(message = "Preparing inputs...", value = 0, {
       incProgress(0.10, detail = "Loading price matrix and products")
@@ -83,6 +131,7 @@ server <- function(input, output, session) {
         incProgress(0.45, detail = "Summarising results")
         Sys.sleep(0)
         incProgress(0.10, detail = "Rendering outputs")
+        res$started_at <- started_at
         res
       }, error = function(e) {
         showNotification(
@@ -139,7 +188,7 @@ server <- function(input, output, session) {
         else "WARNING: sampled plots differ between scenarios.")
   })
 
-  output$tbl_cmp_overview <- renderTable({
+  output$tbl_cmp_overview <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
     s2_lbl <- switch(isolate(input$s2_mode),
@@ -157,9 +206,9 @@ server <- function(input, output, session) {
                  stringsAsFactors = FALSE)
     }
     rbind(mk(r1, "Scenario 1", "default_2021"), mk(r2, "Scenario 2", s2_lbl))
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$tbl_cmp_delta <- renderTable({
+  output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
     req(identical(sort(as.character(r1$plot_summary$plot_id_github)),
@@ -180,9 +229,9 @@ server <- function(input, output, session) {
       Delta_mean_val_ha_pct = pct(h2, h1),
       stringsAsFactors = FALSE
     )
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$tbl_cmp_products <- renderTable({
+  output$tbl_cmp_products <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
     ps1 <- r1$product_summary[, c("ProductKey", "ProductType",
@@ -205,23 +254,34 @@ server <- function(input, output, session) {
       Delta_vol_pct = pct(m$S2_vol, m$total_volume_m3),
       stringsAsFactors = FALSE
     )
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$bar_cmp_value <- renderPlot({
+  output$bar_cmp_value <- renderPlot(res = 96, {
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     ps1 <- result()$product_summary
     ps2 <- result_s2()$product_summary
     keys <- union(ps1$ProductKey, ps2$ProductKey)
     v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
     v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
-    par(mar = c(5, 5, 3, 1))
-    barplot(rbind(S1 = v1, S2 = v2), beside = TRUE,
-            col = c("#2c7be5", "#e07000"), border = NA,
-            main = "Value by product: S1 vs S2", ylab = "NOK", las = 2, cex.names = 0.8)
-    legend("topright", c("S1", "S2"), fill = c("#2c7be5", "#e07000"), bty = "n")
+    ch  <- APTER_CHART
+    old <- apter_par(); on.exit(par(old))
+    m   <- rbind(S1 = v1, S2 = v2); colnames(m) <- gsub("_", "\n", keys)
+    bp  <- barplot(m, beside = TRUE, col = NA, border = NA, axes = FALSE,
+                   ylim = c(0, max(m, 0) * 1.15), las = 1, cex.names = 0.8,
+                   padj = 0.6, space = c(0, 0.9),
+                   main = "Value by product: S1 vs S2", ylab = "NOK")
+    abline(h = axTicks(2), col = ch$grid, lwd = 0.7)
+    barplot(m, beside = TRUE, col = c(ch$series1, ch$series2),
+            border = ch$surface, lwd = 2, axes = FALSE, add = TRUE,
+            space = c(0, 0.9), names.arg = rep("", ncol(m)))
+    axis(2, at = axTicks(2), col = NA, col.ticks = NA,
+         labels = format(axTicks(2), big.mark = ",", scientific = FALSE, trim = TRUE))
+    abline(h = 0, col = ch$baseline)
+    legend("topright", c("S1", "S2"), fill = c(ch$series1, ch$series2),
+           border = NA, bty = "n", text.col = ch$ink, cex = 0.85)
   })
 
-  output$bar_cmp_delta <- renderPlot({
+  output$bar_cmp_delta <- renderPlot(res = 96, {
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     ps1 <- result()$product_summary
     ps2 <- result_s2()$product_summary
@@ -229,14 +289,17 @@ server <- function(input, output, session) {
     v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
     v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
     delta <- setNames(v2 - v1, keys)
-    par(mar = c(5, 5, 3, 1))
-    barplot(delta, col = ifelse(delta >= 0, "#28a745", "#dc3545"), border = NA,
-            main = "Delta value (S2 - S1) by product", ylab = "NOK",
-            las = 2, cex.names = 0.8)
-    abline(h = 0, col = "#555", lty = 2)
+    # Sign is carried by bar direction from the zero baseline and the signed
+    # label, so one neutral colour is used (no colour-only meaning).
+    apter_barplot(delta, col = APTER_CHART$neutral,
+                  main = "Delta value (S2 - S1) by product", ylab = "NOK",
+                  fmt = function(v) {
+                    s <- format(round(v), big.mark = ",", scientific = FALSE, trim = TRUE)
+                    ifelse(v > 0, paste0("+", s), s)
+                  })
   })
 
-  output$tbl_cmp_diag <- renderTable({
+  output$tbl_cmp_diag <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
     pm <- identical(sort(as.character(r1$plot_summary$plot_id_github)),
@@ -252,7 +315,7 @@ server <- function(input, output, session) {
                 round(r1$elapsed_seconds, 1), round(r2$elapsed_seconds, 1)),
       stringsAsFactors = FALSE
     )
-  }, striped = TRUE, hover = TRUE)
+  })))
 
   # ---- Tab 1: Summary -------------------------------------------------------
   output$summary_cards <- renderUI({
@@ -262,23 +325,15 @@ server <- function(input, output, session) {
     pct_logs  <- if (r$n_trees_total > 0)
       round(100 * r$n_trees_with_logs / r$n_trees_total) else 0L
 
-    card <- function(num, lbl, cls = "") {
-      div(class = paste("vcard", cls),
-          div(class = "vnum", num),
-          div(class = "vlbl", lbl))
-    }
-    tagList(
-      div(class = "card-row",
-          card(r$n_plots_sampled,          "Plots sampled"),
-          card(r$n_trees_total,            "Trees (filtered)"),
-          card(sprintf("%d (%d%%)", r$n_trees_with_logs, pct_logs),
-               "Trees with logs", "green"),
-          card(nrow(r$selected_logs_all),  "Selected logs",   "green"),
-          card(format(round(total_val, 0), big.mark = ",", scientific = FALSE),
-               "Total value (NOK)"),
-          card(round(total_vol, 2),        "Total volume (m\u00b3)"),
-          card(sprintf("%.1f s", r$elapsed_seconds), "Runtime", "orange")
-      )
+    ro_field_row(
+      ro_field("Plots sampled",     r$n_plots_sampled),
+      ro_field("Trees (filtered)",  r$n_trees_total),
+      ro_field("Trees with logs",   sprintf("%d (%d%%)", r$n_trees_with_logs, pct_logs)),
+      ro_field("Selected logs",     nrow(r$selected_logs_all)),
+      ro_field("Total value (NOK)", format(round(total_val, 0), big.mark = ",",
+                                           scientific = FALSE)),
+      ro_field("Total volume (m\u00b3)", round(total_vol, 2)),
+      ro_field("Runtime",           sprintf("%.1f s", r$elapsed_seconds))
     )
   })
 
@@ -290,43 +345,35 @@ server <- function(input, output, session) {
       div(class = "stat-strip",
           sprintf("Eligible plots in stratum: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
                   r$n_eligible_plots, n_zero, n_unpr)),
-      div(class = "stat-strip", style = "color:#555;", ESTIMATE_LABEL)
+      div(class = "stat-strip", ESTIMATE_LABEL)
     )
   })
 
   # ---- Tab 2: Products ------------------------------------------------------
-  output$tbl_products <- renderTable({
+  output$tbl_products <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     r$product_summary
-  }, striped = TRUE, hover = TRUE, digits = 3)
+  }), digits = 3))
 
-  output$bar_value_by_product <- renderPlot({
+  output$bar_value_by_product <- renderPlot(res = 96, {
     r <- result(); req(!is.null(r))
     ps <- r$product_summary
     req(nrow(ps) > 0L)
     vals <- setNames(ps$total_value_nok, ps$ProductKey)
-    cols <- c("#4a9a6e", "#2c7be5", "#e07000", "#8b5cf6")[seq_along(vals)]
-    par(mar = c(4, 5, 3, 1))
-    bp <- barplot(vals, col = cols, border = NA,
-                  main = "Total value (NOK) by product",
-                  ylab = "NOK", las = 2, cex.names = 0.8)
-    text(bp, vals / 2,
-         labels = format(round(vals), big.mark = ",", scientific = FALSE),
-         col = "white", cex = 0.8, font = 2)
+    apter_barplot(vals, col = APTER_CHART$series1,
+                  main = "Total value (NOK) by product", ylab = "NOK",
+                  fmt = function(v) format(round(v), big.mark = ",",
+                                           scientific = FALSE, trim = TRUE))
   })
 
-  output$bar_volume_by_product <- renderPlot({
+  output$bar_volume_by_product <- renderPlot(res = 96, {
     r <- result(); req(!is.null(r))
     ps <- r$product_summary
     req(nrow(ps) > 0L)
     vols <- setNames(ps$total_volume_m3, ps$ProductKey)
-    cols <- c("#4a9a6e", "#2c7be5", "#e07000", "#8b5cf6")[seq_along(vols)]
-    par(mar = c(4, 5, 3, 1))
-    bp <- barplot(vols, col = cols, border = NA,
-                  main = "Total volume (m\u00b3) by product",
-                  ylab = "m\u00b3", las = 2, cex.names = 0.8)
-    text(bp, vols / 2, labels = round(vols, 2),
-         col = "white", cex = 0.8, font = 2)
+    apter_barplot(vols, col = APTER_CHART$series1,
+                  main = "Total volume (m\u00b3) by product", ylab = "m\u00b3",
+                  fmt = function(v) format(round(v, 2), nsmall = 2, trim = TRUE))
   })
 
   # ---- Tab 3: Plots ---------------------------------------------------------
@@ -344,30 +391,35 @@ server <- function(input, output, session) {
           format(round(max(vals)),    big.mark = ",")))
   })
 
-  output$tbl_plots <- renderTable({
+  output$tbl_plots <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     r$plot_summary
-  }, striped = TRUE, hover = TRUE, digits = 2)
+  }), digits = 2))
 
-  output$hist_value_ha <- renderPlot({
+  output$hist_value_ha <- renderPlot(res = 96, {
     r <- result(); req(!is.null(r))
     ps   <- r$plot_summary
     vals <- ps$value_per_ha_nok[!is.na(ps$value_per_ha_nok)]
     req(length(vals) > 0L)
-    old_mar <- par(mar = c(4.5, 4.5, 3, 1))
-    on.exit(par(old_mar))
-    hist(vals, col = "#4a9a6e", border = "white",
-         breaks = max(3L, min(15L, length(vals))),
-         main = "Value per ha (NOK) — sampled plots",
+    ch  <- APTER_CHART
+    old <- apter_par(mar = c(4.5, 5, 3, 1)); on.exit(par(old))
+    h <- hist(vals, breaks = max(3L, min(15L, length(vals))), plot = FALSE)
+    plot(h, col = NA, border = NA, axes = FALSE,
+         main = "Value per ha (NOK) \u2014 sampled plots",
          xlab = "NOK / ha", ylab = "Number of plots")
-    abline(v = mean(vals), col = "#e05a2b", lwd = 2, lty = 2)
+    abline(h = axTicks(2), col = ch$grid, lwd = 0.7)
+    plot(h, col = ch$series1, border = ch$surface, add = TRUE)
+    axis(1, col = NA, col.ticks = NA); axis(2, col = NA, col.ticks = NA)
+    abline(h = 0, col = ch$baseline)
+    abline(v = mean(vals), col = ch$ink, lwd = 1.5, lty = 2)
     legend("topright",
            legend = sprintf("mean = %s", format(round(mean(vals)), big.mark = ",")),
-           col = "#e05a2b", lty = 2, lwd = 2, bty = "n", cex = 0.85)
+           col = ch$ink, lty = 2, lwd = 1.5, bty = "n", cex = 0.85,
+           text.col = ch$ink)
   })
 
   # ---- Tab 4: Diagnostics ---------------------------------------------------
-  output$tbl_stage_timings <- renderTable({
+  output$tbl_stage_timings <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     st <- r$diagnostics$stage_timings
     req(is.data.frame(st))
@@ -380,9 +432,9 @@ server <- function(input, output, session) {
                Seconds    = round(st2$elapsed_seconds, 2),
                `Pct total`= paste0(pct, "%"),
                check.names = FALSE, stringsAsFactors = FALSE)
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$tbl_diag <- renderTable({
+  output$tbl_diag <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     diag <- r$diagnostics
     # Drop stage_timings (shown separately) and elapsed_seconds (in status bar).
@@ -391,21 +443,21 @@ server <- function(input, output, session) {
     vals <- vapply(diag, function(x) paste(x, collapse = "; "), character(1))
     data.frame(Parameter = names(vals), Value = unname(vals),
                stringsAsFactors = FALSE)
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$tbl_price_val <- renderTable({
+  output$tbl_price_val <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     r$price_validation_checks
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$tbl_zero_logs <- renderTable({
+  output$tbl_zero_logs <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     zl <- r$zero_log_trees
     if (nrow(zl) == 0L)
       data.frame(Message = "No zero-log trees in this sample.",
                  stringsAsFactors = FALSE)
     else zl
-  }, striped = TRUE, hover = TRUE)
+  })))
 
   # ---- Tab 5: Selected logs -------------------------------------------------
   output$selected_logs_header <- renderUI({
@@ -413,24 +465,23 @@ server <- function(input, output, session) {
     n_total <- nrow(r$selected_logs_all)
     div(class = "stat-strip",
         if (n_total == 0L) "No selected logs."
-        else sprintf("Total selected logs: %d  |  Showing first 100.",
-                     n_total))
+        else sprintf("Total selected logs: %d", n_total))
   })
 
-  output$tbl_selected_logs <- renderTable({
+  output$tbl_selected_logs <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     sl <- r$selected_logs_all
     if (nrow(sl) == 0L)
       return(data.frame(Message = "No selected logs.", stringsAsFactors = FALSE))
-    head(sl, 100L)
-  }, striped = TRUE, hover = TRUE, digits = 3)
+    sl
+  }), digits = 3))
 
   # ---- Prices and assortments tab ------------------------------------------
-  output$tbl_ref_products <- renderTable({
+  output$tbl_ref_products <- renderReactable(apter_reactable(local({
     APP_PRODUCTS
-  }, striped = TRUE, hover = TRUE)
+  })))
 
-  output$tbl_ref_lc <- renderTable({
+  output$tbl_ref_lc <- renderReactable(apter_reactable(local({
     lc <- APP_LC
     # flag rows where the length class is NOT priced in default matrix
     sup_dm <- get_supported_sawlog_lengths(APP_PRICE_LONG)$LengthClass_dm
@@ -439,25 +490,20 @@ server <- function(input, output, session) {
         !is.na(lc$LogLength_dm) & !(lc$LogLength_dm %in% sup_dm),
       "not priced in default 2021 matrix", "")
     lc
-  }, striped = TRUE, hover = TRUE)
+  })))
 
   output$price_matrix_header <- renderUI({
-    n <- nrow(APP_PRICE_LONG)
-    shown <- min(200L, n)
     div(class = "stat-strip",
-        sprintf("Total rows: %d.%s", n,
-                if (n > 200L)
-                  sprintf("  Showing first %d.", shown)
-                else ""))
+        sprintf("Total rows: %d.", nrow(APP_PRICE_LONG)))
   })
 
-  output$tbl_ref_price <- renderTable({
+  output$tbl_ref_price <- renderReactable(apter_reactable(local({
     pm <- APP_PRICE_LONG
     keep <- intersect(c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
                         "PriceNOKperM3", "PriceScenario", "PriceType",
                         "PriceSource", "Notes"),
                       names(pm))
-    head(pm[, keep, drop = FALSE], 200L)
-  }, striped = TRUE, hover = TRUE, digits = 2)
+    pm[, keep, drop = FALSE]
+  }), digits = 2))
 
 }  # end server

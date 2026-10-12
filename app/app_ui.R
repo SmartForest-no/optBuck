@@ -1,184 +1,212 @@
 # app/app_ui.R
 #
-# Purpose : Shiny UI definition (`ui`). Sourced by app.R after setup.R.
+# Purpose : Shiny UI definition (`ui`). Sourced by app.R after setup.R,
+#           theme.R and helpers_ui.R.
 #           Not named ui.R: Shiny/shinytest2 reject ui.R/server.R next to app.R.
+#
+# Layout  : bslib page_navbar (Bootstrap 5) with three pages: Home, Simulator
+#           and Prices and assortments. Styling is in www/apter.css and
+#           theme.R; no inline colours here.
 
-# ---- UI ---------------------------------------------------------------------
-ui <- fluidPage(
+# ---- pages ----------------------------------------------------------------------
 
-  tags$head(tags$style(HTML(APP_CSS))),
+home_page <- nav_panel(
+  "Home",
+  app_header("Bucking simulator for Norway spruce and Scots pine"),
+  div(class = "apter-page",
+    apter_card("Tree sources",
+      div(class = "status-tiles",
+        status_tile("NFI sample trees", "Available",
+                    c("Spruce and pine from the Norwegian National Forest Inventory",
+                      "Selected by species, maturity class, site class and county")),
+        status_tile("Tree lists", "Planned",
+                    c("Upload your own trees",
+                      "Tree ID, species and diameter, with heights where available"),
+                    icon_name = "list", planned = TRUE),
+        status_tile("Stem profiles", "Planned",
+                    c("Upload measured stem profiles",
+                      "For example from harvester data"),
+                    icon_name = "chart-line", planned = TRUE)
+      )
+    ),
+    apter_card("Latest run", uiOutput("home_last_run")),
+    actionButton("go_simulator", "Open simulator", class = "btn-primary")
+  )
+)
 
-  titlePanel("Apter \u2014 Bucking simulator (v1)"),
+simulator_sidebar <- sidebar(
+  width = 320,
 
-  sidebarLayout(
-    sidebarPanel(
-      width = 3,
+  div(class = "sidebar-heading", "Trees"),
+  selectInput("species_group", "Species group",
+              choices = c("spruce", "pine", "both"), selected = "spruce"),
+  checkboxGroupInput("hkl_group", "Maturity class",
+                     choiceNames  = names(HKL_CHOICES),
+                     choiceValues = unname(HKL_CHOICES),
+                     selected     = "4"),
+  uiOutput("abonitet_ui"),
+  selectInput("fylnr_sel", "County",
+              choices  = FYLNR_CHOICES,
+              selected = "__all__"),
+  selectInput("n_plots", "Plots to sample",
+              choices = c("5", "10", "25", "50"), selected = "10"),
+  numericInput("seed", "Random seed", value = 42L, min = 1L, step = 1L),
 
-      selectInput("species_group", "Species group",
-                  choices = c("spruce", "pine", "both"), selected = "spruce"),
+  div(class = "sidebar-heading", "Scenario"),
+  checkboxInput("compare_on", "Run scenario comparison", value = FALSE),
+  conditionalPanel("input.compare_on == true",
+    selectInput("s2_mode", "Scenario 2 prices",
+                choices = c("Same as Scenario 1" = "same",
+                            "Apply multipliers"   = "multiplier",
+                            "Upload matrix (CSV/RDS)" = "upload"),
+                selected = "same"),
+    conditionalPanel("input.s2_mode == 'multiplier'",
+      numericInput("mult_saw",  "Sawlog multiplier",   1.00, 0, 5, step = 0.05),
+      numericInput("mult_pulp", "Pulpwood multiplier", 1.00, 0, 5, step = 0.05),
+      numericInput("mult_wst",  "Waste multiplier",    1.00, 0, 5, step = 0.05)
+    ),
+    conditionalPanel("input.s2_mode == 'upload'",
+      fileInput("s2_file", "Upload price matrix", accept = c(".csv", ".rds"))
+    )
+  ),
 
-      checkboxGroupInput("hkl_group", "Maturity class",
-                         choiceNames  = names(HKL_CHOICES),
-                         choiceValues = unname(HKL_CHOICES),
-                         selected     = "4"),
+  actionButton("run_btn", "Run optimizer",
+               class = "btn-primary", width = "100%"),
 
-      uiOutput("abonitet_ui"),
+  div(class = "sidebar-notes",
+      uiOutput("stratum_preview"),
+      div("HKL 1–2 (young/establishment) are excluded from this prototype."),
+      div("County filtering uses fylnr from the sanitized NFI-derived data.",
+          " Codes use current and historical names where possible."))
+)
 
-      selectInput("fylnr_sel", "County",
-                  choices  = FYLNR_CHOICES,
-                  selected = "__all__"),
+simulator_page <- nav_panel(
+  "Simulator",
+  layout_sidebar(
+    sidebar = simulator_sidebar,
+    fillable = FALSE,
 
-      selectInput("n_plots", "Plots to sample",
-                  choices = c("5", "10", "25", "50"), selected = "10"),
+    div(class = "estimate-label", ESTIMATE_LABEL),
 
-      numericInput("seed", "Random seed", value = 42L, min = 1L, step = 1L),
+    # Details left, steps right, as in the reference's batch details page.
+    layout_columns(col_widths = c(7, 5),
+      apter_card("Run details",
+        uiOutput("run_status"),
+        uiOutput("run_params")
+      ),
+      apter_card("Run steps", collapsible = TRUE,
+        uiOutput("run_steps")
+      )
+    ),
 
-      hr(),
-      checkboxInput("compare_on", "Run scenario comparison", value = FALSE),
-      conditionalPanel("input.compare_on == true",
-        selectInput("s2_mode", "Scenario 2 prices",
-                    choices = c("Same as Scenario 1" = "same",
-                                "Apply multipliers"   = "multiplier",
-                                "Upload matrix (CSV/RDS)" = "upload"),
-                    selected = "same"),
-        conditionalPanel("input.s2_mode == 'multiplier'",
-          numericInput("mult_saw",  "Sawlog multiplier",   1.00, 0, 5, step = 0.05),
-          numericInput("mult_pulp", "Pulpwood multiplier", 1.00, 0, 5, step = 0.05),
-          numericInput("mult_wst",  "Waste multiplier",    1.00, 0, 5, step = 0.05)
-        ),
-        conditionalPanel("input.s2_mode == 'upload'",
-          fileInput("s2_file", "Upload price matrix", accept = c(".csv", ".rds"))
+    navset_card_underline(id = "result_tabs",
+
+      nav_panel("Summary",
+        uiOutput("summary_cards"),
+        uiOutput("summary_detail")
+      ),
+
+      nav_panel("Products",
+        div(class = "section-hdr", "Product summary"),
+        reactableOutput("tbl_products"),
+        layout_columns(col_widths = c(6, 6),
+          plotOutput("bar_value_by_product",  height = "260px"),
+          plotOutput("bar_volume_by_product", height = "260px")
         )
       ),
 
-      hr(),
+      nav_panel("Plots",
+        div(class = "section-hdr", "Plot-level results"),
+        uiOutput("plot_stats_text"),
+        reactableOutput("tbl_plots"),
+        plotOutput("hist_value_ha", height = "260px")
+      ),
 
-      actionButton("run_btn", "Run optimizer",
-                   class = "btn-primary", width = "100%"),
+      nav_panel("Diagnostics",
+        div(class = "section-hdr", "Stage timings (slowest first)"),
+        reactableOutput("tbl_stage_timings"),
+        div(class = "section-hdr", "Run diagnostics"),
+        reactableOutput("tbl_diag"),
+        div(class = "section-hdr", "Price validation"),
+        reactableOutput("tbl_price_val"),
+        div(class = "section-hdr", "Zero-log trees"),
+        reactableOutput("tbl_zero_logs")
+      ),
 
-      hr(),
+      nav_panel("Selected logs",
+        uiOutput("selected_logs_header"),
+        reactableOutput("tbl_selected_logs")
+      ),
 
-      div(style = "font-size: 0.88em; color: #555;",
-          uiOutput("stratum_preview"),
-          br(),
-          div(style = "color:#888; font-size:0.9em;",
-              "HKL 1\u20132 (young/establishment) are excluded from this prototype."),
-          br(),
-          div(style = "color:#888; font-size:0.85em;",
-              "County filtering uses fylnr from the sanitized NFI-derived data.",
-              " Codes use current and historical names where possible."))
-    ),
-
-    mainPanel(
-      width = 9,
-
-      div(class = "estimate-label", ESTIMATE_LABEL),
-      uiOutput("run_status"),
-      br(),
-
-      tabsetPanel(id = "result_tabs",
-
-        tabPanel("Summary",
-          br(),
-          uiOutput("summary_cards"),
-          br(),
-          uiOutput("summary_detail")
+      nav_panel("Scenario comparison",
+        uiOutput("cmp_status"),
+        div(class = "section-hdr", "High-level comparison"),
+        reactableOutput("tbl_cmp_overview"),
+        div(class = "section-hdr", "Difference summary"),
+        reactableOutput("tbl_cmp_delta"),
+        div(class = "section-hdr", "Product-level comparison"),
+        reactableOutput("tbl_cmp_products"),
+        layout_columns(col_widths = c(6, 6),
+          plotOutput("bar_cmp_value", height = "260px"),
+          plotOutput("bar_cmp_delta", height = "260px")
         ),
-
-        tabPanel("Products",
-          br(),
-          div(class = "section-hdr", "Product summary"),
-          tableOutput("tbl_products"),
-          br(),
-          fluidRow(
-            column(6, plotOutput("bar_value_by_product",  height = "240px")),
-            column(6, plotOutput("bar_volume_by_product", height = "240px"))
-          )
-        ),
-
-        tabPanel("Plots",
-          br(),
-          div(class = "section-hdr", "Plot-level results"),
-          uiOutput("plot_stats_text"),
-          tableOutput("tbl_plots"),
-          br(),
-          plotOutput("hist_value_ha", height = "260px")
-        ),
-
-        tabPanel("Diagnostics",
-          br(),
-          div(class = "section-hdr", "Stage timings (slowest first)"),
-          tableOutput("tbl_stage_timings"),
-          br(),
-          div(class = "section-hdr", "Run diagnostics"),
-          tableOutput("tbl_diag"),
-          br(),
-          div(class = "section-hdr", "Price validation"),
-          tableOutput("tbl_price_val"),
-          br(),
-          div(class = "section-hdr", "Zero-log trees"),
-          tableOutput("tbl_zero_logs")
-        ),
-
-        tabPanel("Selected logs",
-          br(),
-          uiOutput("selected_logs_header"),
-          tableOutput("tbl_selected_logs")
-        ),
-        tabPanel("Prices and assortments",
-          br(),
-          div(class = "section-hdr", "Product definitions"),
-          div(class = "stat-strip",
-              "These are the product specifications used by the optimizer.",
-              " DiameterUnderBark = FALSE: all diameters are over-bark",
-              " (taperNOR, with_bark = TRUE)."),
-          tableOutput("tbl_ref_products"),
-          br(),
-          div(class = "section-hdr", "Length and diameter classes"),
-          div(class = "stat-strip",
-              "Note: sawlog length 31 dm is priced by interpolation",
-              " (2×34dm price − 37dm price), not from the original",
-              " PriceMatrixGran/PriceMatrixFuru source spreadsheet.",
-              " See the Notes column below for flagged rows",
-              " (PriceSource = \"Interpolated\")."),
-          tableOutput("tbl_ref_lc"),
-          br(),
-          div(class = "section-hdr", "Default 2021 price matrix"),
-          uiOutput("price_matrix_header"),
-          tableOutput("tbl_ref_price"),
-          br(),
-          div(class = "section-hdr", "Notes and limitations"),
-          tags$ul(
-            tags$li("The current app uses the default 2021 price matrix."),
-            tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
-            tags$li("31 dm sawlog prices are interpolated (2×34dm − 37dm), flagged PriceSource = \"Interpolated\" in the price table."),
-            tags$li("Diameter classes above 50 cm are capped to 50 cm for price lookup only; physical diameters are preserved."),
-            tags$li("Volumes and diameters use taperNOR over-bark values. No bark correction is applied."),
-            tags$li("Estimates are sampled-plot only. No NFI expansion factors or plot weights are applied.")
-          )
-        ),
-        tabPanel("Scenario comparison",
-          br(),
-          uiOutput("cmp_status"),
-          br(),
-          div(class = "section-hdr", "High-level comparison"),
-          tableOutput("tbl_cmp_overview"),
-          br(),
-          div(class = "section-hdr", "Difference summary"),
-          tableOutput("tbl_cmp_delta"),
-          br(),
-          div(class = "section-hdr", "Product-level comparison"),
-          tableOutput("tbl_cmp_products"),
-          br(),
-          fluidRow(
-            column(6, plotOutput("bar_cmp_value", height = "240px")),
-            column(6, plotOutput("bar_cmp_delta", height = "240px"))
-          ),
-          br(),
-          div(class = "section-hdr", "Comparison diagnostics"),
-          tableOutput("tbl_cmp_diag")
-        )
+        div(class = "section-hdr", "Comparison diagnostics"),
+        reactableOutput("tbl_cmp_diag")
       )
     )
   )
+)
+
+prices_page <- nav_panel(
+  "Prices and assortments",
+  div(class = "apter-page",
+    apter_card("Product definitions",
+      div(class = "stat-strip",
+          "These are the product specifications used by the optimizer.",
+          " DiameterUnderBark = FALSE: all diameters are over-bark",
+          " (taperNOR, with_bark = TRUE)."),
+      reactableOutput("tbl_ref_products")
+    ),
+    apter_card("Length and diameter classes",
+      div(class = "stat-strip",
+          "Note: sawlog length 31 dm is priced by interpolation",
+          " (2×34dm price − 37dm price), not from the original",
+          " PriceMatrixGran/PriceMatrixFuru source spreadsheet.",
+          " See the Notes column below for flagged rows",
+          " (PriceSource = \"Interpolated\")."),
+      reactableOutput("tbl_ref_lc")
+    ),
+    apter_card("Default 2021 price matrix",
+      uiOutput("price_matrix_header"),
+      reactableOutput("tbl_ref_price")
+    ),
+    apter_card("Notes and limitations", collapsible = TRUE,
+      tags$ul(
+        tags$li("The current app uses the default 2021 price matrix."),
+        tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
+        tags$li("31 dm sawlog prices are interpolated (2×34dm − 37dm), flagged PriceSource = \"Interpolated\" in the price table."),
+        tags$li("Diameter classes above 50 cm are capped to 50 cm for price lookup only; physical diameters are preserved."),
+        tags$li("Volumes and diameters use taperNOR over-bark values. No bark correction is applied."),
+        tags$li("Estimates are sampled-plot only. No NFI expansion factors or plot weights are applied.")
+      )
+    )
+  )
+)
+
+
+# ---- UI ---------------------------------------------------------------------------
+ui <- page_navbar(
+  id           = "main_nav",
+  title        = navbar_brand(),
+  window_title = "Apter — Bucking simulator (v1)",
+  theme        = apter_theme(),
+  fillable     = FALSE,
+  header = tags$head(
+    tags$link(rel = "stylesheet", href = "apter.css"),
+    tags$link(rel = "icon", type = "image/svg+xml", href = "apter-icon.svg")
+  ),
+  footer = app_footer(APP_VERSION),
+  home_page,
+  simulator_page,
+  prices_page
 )

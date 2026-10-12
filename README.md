@@ -116,7 +116,7 @@ For the selected trees, the app reports:
 Requirements: R and these packages:
 
 ```r
-install.packages(c("shiny", "arrow", "dplyr", "readr"))
+install.packages(c("shiny", "bslib", "reactable", "arrow", "dplyr", "readr"))
 
 # taperNOR is not on CRAN:
 devtools::install_git("https://github.com/SmartForest-no/taperNOR")

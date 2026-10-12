@@ -2,7 +2,8 @@
 #
 # Purpose : App-wide data and constants: plot metadata, product/price
 #           reference tables, HKL/bonitet/county choice mappings, the
-#           estimate label and shared CSS.
+#           estimate label and release version. Styling is in theme.R and
+#           www/apter.css.
 #           Sourced by app.R after ROOT is resolved and the backend is loaded.
 
 # ---- load plot metadata for stratum availability preview --------------------
@@ -56,45 +57,5 @@ FYLNR_CHOICES <- c(
 
 ESTIMATE_LABEL <- "Sampled-plot estimate. Not ha-expanded. No NFI factors applied."
 
-# ---- shared CSS -------------------------------------------------------------
-APP_CSS <- "
-  .estimate-label {
-    background: #f8f9fa;
-    border-left: 4px solid #6c757d;
-    padding: 8px 14px;
-    margin-bottom: 12px;
-    font-size: 0.88em;
-    color: #555;
-  }
-  .status-idle  { color: #888; font-style: italic; padding: 4px 0; }
-  .status-done  { color: #28a745; font-weight: bold; padding: 4px 0; }
-  .status-error { color: #dc3545; font-weight: bold; padding: 4px 0;
-                  white-space: pre-wrap; }
-  .card-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-  .vcard {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: 12px 18px;
-    min-width: 130px;
-    flex: 1;
-    text-align: center;
-  }
-  .vcard .vnum  { font-size: 1.8em; font-weight: bold; color: #2c7be5; }
-  .vcard .vlbl  { font-size: 0.78em; color: #666; margin-top: 2px; }
-  .vcard.green  .vnum { color: #28a745; }
-  .vcard.orange .vnum { color: #e07000; }
-  .section-hdr {
-    font-size: 0.9em; font-weight: 600; color: #444;
-    border-bottom: 1px solid #dee2e6;
-    margin: 14px 0 6px; padding-bottom: 3px;
-  }
-  .stat-strip {
-    background: #f8f9fa;
-    border-radius: 4px;
-    padding: 7px 12px;
-    font-size: 0.88em;
-    color: #555;
-    margin-bottom: 10px;
-  }
-"
+# ---- release version (repo-root VERSION file; shown in the footer) ------------
+APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))

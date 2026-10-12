@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: sampled-plot backend smoke
-  Run: 2026-10-12 11:23:51.066043
+  Run: 2026-10-12 12:39:44.194044
 ============================================================= 
 
 --- 01. Backend script exists ---
@@ -10,7 +10,7 @@
   [PASS  ] Check 02: Backend sources without error | source() completed without error
 
 --- 03. Smoke call completes ---
-  [PASS  ] Check 03: Smoke call completes without error | completed in 5.3 s
+  [PASS  ] Check 03: Smoke call completes without error | completed in 5.7 s
 
 --- 04. Return object structure ---
   [PASS  ] Check 04: Return object has all required names | all 17 required names present
@@ -40,10 +40,10 @@
   [PASS  ] Check 12: No taper profile failures | 0 profile failure(s) in smoke run
 
 --- 13. Runtime ---
-  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 5.3 s (threshold: 120 s)
+  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 5.7 s (threshold: 120 s)
 
 --- 14-15. Fast vs reference optimizer ---
-  [PASS  ] Check 14: .optimize_dp_fast() value and n_selected match reference | 788 trees compared over 3 runs (58.0 s); 0 mismatch(es); max |value diff| = 0.00e+00
+  [PASS  ] Check 14: .optimize_dp_fast() value and n_selected match reference | 788 trees compared over 3 runs (57.8 s); 0 mismatch(es); max |value diff| = 0.00e+00
   [PASS  ] Check 15: .optimize_dp_fast() cutting pattern matches reference | 0 of 788 trees differ in pattern at equal value (ties)
 ============================================================= 
   AUDIT FINAL SUMMARY

@@ -86,10 +86,19 @@ still out of bounds.
   `R/` autoload, no `global.R`, no `modules/`): `app.R` (entry point: root
   resolution, sources the backend and the files below, `shinyApp(ui,
   server)`), `helpers_root.R`, `setup.R` (data, choice mappings, label,
-  CSS), `helpers_validation.R` (inputs -> backend params, stratum counts),
-  `helpers_upload.R` (Scenario 2 price matrix), `app_ui.R` and
+  `APP_VERSION` from the repo-root `VERSION` file), `theme.R`,
+  `helpers_ui.R`, `helpers_validation.R` (inputs -> backend params, stratum
+  counts), `helpers_upload.R` (Scenario 2 price matrix), `app_ui.R` and
   `app_server.R`. Never name them `ui.R`/`server.R`: next to `app.R` Shiny
   treats those as a second app format, and shinytest2 refuses to start.
+- **Styling:** bslib (Bootstrap 5) `page_navbar` modelled on NIBIO
+  ForestSens (`docs/design_reference/`). Tokens and chart colours live in
+  `app/theme.R`, component CSS in `app/www/apter.css`, building blocks
+  (cards, dashed read-only fields, status tiles, step list,
+  `apter_reactable()`, `apter_barplot()`) in `app/helpers_ui.R`. Use those
+  instead of inline `style =` colours, and never copy Oracle/ForestSens
+  assets. Fonts are self-hosted (no Google Fonts). Output IDs are what
+  audit 17 drives; keep them stable.
 - **Project root:** no hardcoded paths. Order is `APTER_ROOT` (and option
   `apter.root` in `get_root_dir()`) -> fallback (app: parent of `app/`;
   `get_root_dir()`, backend, scripts and audits: walk up from `getwd()` to

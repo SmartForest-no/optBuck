@@ -1,17 +1,22 @@
 check,result,detail
 Check 01: shinytest2 + chromote installed and Chrome found,PASS,Chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
-Check 02: Split app files exist,PASS,all 7 present in app/; no ui.R/server.R/global.R
+Check 02: Split app files exist,PASS,all 11 present in app/; no ui.R/server.R/global.R
 Check 03a: Env unset -> resolves to project root,PASS,resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-Check 03b: APTER_ROOT = temp dir -> clear error,PASS,"error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpeOdP7N/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp(""app"") from the project root."
+Check 03b: APTER_ROOT = temp dir -> clear error,PASS,"error: Project root 'C:/Users/leno/AppData/Local/Temp/11/Rtmp0gHZGq/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp(""app"") from the project root."
 Check 03c: APTER_ROOT = project root -> resolves,PASS,resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 Check 04a: .make_s2_pm() applies sawlog/pulp/waste multipliers,PASS,"got 120, 25, 20, 7 (expected 120, 25, 20, 7)"
 Check 04b: build_run_params() maps HKL groups and county,PASS,"HKL '4' -> 41,42; '__all__' -> NULL; HKL '3','5' -> 31,32,51,52; fylnr '03' -> 03"
 Check 04c: count_eligible_plots() matches direct filter,PASS,"HKL4/ab17/all: 248 vs 248; HKL4/ab14,17/fylnr 03: 8 vs 8"
 Check 04d: resolve_s2_price_path() same/multiplier,PASS,same -> 'default_2021'; multiplier -> tempfile with sawlog x1.2: TRUE
 Check 05: AppDriver starts the app,PASS,app started
-Check 06: Initial run_status idle and title contains 'Apter',PASS,run_status: 'Select parameters and click Run optimizer.' | title: 'Apter — Bucking simulator (v1)'
-Check 07: Main run completes without error notification,PASS,run_status: 'Run complete in 5.6 s  |  5 plot(s)  |  113 trees  |  355 selected logs  |  ID: sampled_20261012_112509' | error notifications: 0
+Check 06: Simulator run_status idle and title contains 'Apter',PASS,run_status: 'Select parameters and click Run optimizer.' | title: 'Apter — Bucking simulator (v1)'
+Check 07: Main run completes without error notification,PASS,run_status: 'Run complete in 5.6 s  |  5 plot(s)  |  113 trees  |  355 selected logs  |  ID: sampled_20261012_124106' | error notifications: 0
 Check 08: summary_cards non-empty and tbl_products has rows,PASS,summary_cards chars: 231 | tbl_products rows: 2
 Check 09: Scenario comparison 'same' samples the same plots,PASS,cmp_status: 'Comparison complete. Same plots sampled in both scenarios.'
 Check 10: Multiplier mode renders tbl_cmp_delta,PASS,tbl_cmp_delta rows: 1 | error notifications: 0
-Check 11: Browser runtime under 180 s,PASS,browser checks took 40.2 s (threshold: 180 s)
+"Check 11: Home view shows Apter title, source tiles and release footer",PASS,title: 'Apter' | status tiles: 3 | footer: 'Release 0.2.0'
+Check 12: Bootstrap 5 and self-hosted Inter font loaded,PASS,Bootstrap 5.3.1 | Inter loaded: TRUE | Google Fonts links: 0
+Check 13: Run step list shows all stages done,PASS,10 of 10 steps done
+Check 14: Selected logs table is paginated,PASS,page info: '1 - 10 of 355' | selected logs in run: 355
+Check 15: Screenshots saved for visual review,PASS,5 of 5 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
+Check 16: Browser runtime under 180 s,PASS,browser checks took 45.8 s (threshold: 180 s)

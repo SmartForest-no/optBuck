@@ -9,8 +9,9 @@
 # Checks  :
 #  1.  shinytest2 and chromote are installed and a Chrome is found
 #  2.  Split app files exist (app.R, app_ui.R, app_server.R, setup.R,
-#      helpers_*.R) and app/ has no ui.R/server.R (Shiny would treat those
-#      as a second app format; shinytest2 refuses to start)
+#      theme.R, helpers_*.R, www/apter.css, www/apter-icon.svg) and app/
+#      has no ui.R/server.R (Shiny would treat those as a second app format;
+#      shinytest2 refuses to start)
 #  3.  Root resolution (no browser):
 #        a. APTER_ROOT unset              -> parent of app/ (project root)
 #        b. APTER_ROOT = empty temp dir   -> clear error
@@ -22,14 +23,24 @@
 #        d. resolve_s2_price_path(): "same" -> default_2021, "multiplier"
 #           -> readable CSV with multiplied prices
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
-#  6.  Initial run_status shows the idle text; title contains "Apter"
+#  6.  After switching to the Simulator page: run_status shows the idle
+#      text; window title contains "Apter"
 #  7.  Main run (spruce, HKL 4, abonitet 17, 5 plots, seed 42):
 #      run_status contains "Run complete", no error notification
 #  8.  summary_cards is non-empty; tbl_products has >= 1 row
 #  9.  Scenario comparison, mode "same": cmp_status says
 #      "Same plots sampled"
 # 10.  Multiplier mode (sawlog x1.2): tbl_cmp_delta renders
-# 11.  Total browser runtime under 180 s (REVIEW if above)
+# 11.  Home view (Phase 2): serif "Apter" title, three tree-source tiles,
+#      footer "Release <VERSION>"
+# 12.  Theme: Bootstrap 5 loaded, self-hosted Inter font loaded, no Google
+#      Fonts request
+# 13.  Run step list: all 10 backend stages shown as done after a run
+# 14.  Selected logs table is paginated ("1 - 10 of N", N = selected logs)
+# 15.  Screenshots of Home, Simulator, Products, Scenario comparison and
+#      Prices saved to outputs/app_smoke/screenshots/ (for visual review
+#      against docs/design_reference/)
+# 16.  Total browser runtime under 180 s (REVIEW if above)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -125,8 +136,9 @@ rec("Check 01: shinytest2 + chromote installed and Chrome found",
 # ==============================================================================
 section("02. Split app files exist")
 
-app_files <- c("app.R", "app_ui.R", "app_server.R", "setup.R",
-               "helpers_root.R", "helpers_validation.R", "helpers_upload.R")
+app_files <- c("app.R", "app_ui.R", "app_server.R", "setup.R", "theme.R",
+               "helpers_root.R", "helpers_ui.R", "helpers_validation.R",
+               "helpers_upload.R", "www/apter.css", "www/apter-icon.svg")
 missing_app  <- app_files[!file.exists(file.path(app_dir, app_files))]
 conflicting  <- c("ui.R", "server.R", "global.R")
 conflicting  <- conflicting[file.exists(file.path(app_dir, conflicting))]
@@ -292,25 +304,46 @@ if (!nzchar(helpers_err)) {
 # ==============================================================================
 browser_checks <- c(
   "Check 05: AppDriver starts the app",
-  "Check 06: Initial run_status idle and title contains 'Apter'",
+  "Check 06: Simulator run_status idle and title contains 'Apter'",
   "Check 07: Main run completes without error notification",
   "Check 08: summary_cards non-empty and tbl_products has rows",
   "Check 09: Scenario comparison 'same' samples the same plots",
   "Check 10: Multiplier mode renders tbl_cmp_delta",
-  "Check 11: Browser runtime under 180 s")
+  "Check 11: Home view shows Apter title, source tiles and release footer",
+  "Check 12: Bootstrap 5 and self-hosted Inter font loaded",
+  "Check 13: Run step list shows all stages done",
+  "Check 14: Selected logs table is paginated",
+  "Check 15: Screenshots saved for visual review",
+  "Check 16: Browser runtime under 180 s")
 
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
 } else {
-  section("05-11. Browser checks")
+  section("05-16. Browser checks")
 
   txt <- function(app, sel)
     tryCatch(paste(app$get_text(sel), collapse = " "), error = function(e) "")
   n_err_notif <- function(app)
     app$get_js("document.querySelectorAll('.shiny-notification-error').length")
   n_tbl_rows <- function(app, id)
-    app$get_js(sprintf("document.querySelectorAll('#%s table tbody tr').length", id))
+    app$get_js(sprintf(
+      "document.querySelectorAll('#%s .rt-tbody .rt-tr-group').length", id))
+  shot_dir <- file.path(out_dir, "screenshots")
+  ensure_dir(shot_dir)
+  shots <- character(0)
+  shoot <- function(app, name) {
+    f <- file.path(shot_dir, paste0(name, ".png"))
+    if (file.exists(f)) file.remove(f)   # don't count a stale file from a past run
+    ok <- tryCatch({ app$get_screenshot(f); file.exists(f) },
+                   error = function(e) {
+                     message("screenshot ", name, " failed: ", conditionMessage(e))
+                     FALSE
+                   })
+    if (ok) shots <<- c(shots, f)
+  }
+  app_version <- trimws(readLines(file.path(root_dir, "VERSION"), n = 1L,
+                                  warn = FALSE))
 
   # AppDriver$new() skips (as "On CRAN") outside interactive sessions unless set.
   Sys.setenv(NOT_CRAN = "true")
@@ -321,7 +354,8 @@ if (!browser_ok) {
   app <- tryCatch(
     shinytest2::AppDriver$new(app_dir, name = "audit17",
                               load_timeout = 60 * 1000,
-                              timeout = 120 * 1000),
+                              timeout = 120 * 1000,
+                              width = 1400, height = 1000),
     error = function(e) conditionMessage(e))
   app_ok <- inherits(app, "AppDriver")
 
@@ -330,7 +364,29 @@ if (!browser_ok) {
 
   if (app_ok) {
 
-    # 06. idle state and title
+    # 11-12. Home view and theme (Home is the landing page)
+    app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
+    home_title <- txt(app, ".apter-title")
+    n_tiles    <- app$get_js("document.querySelectorAll('.status-tile').length")
+    footer     <- txt(app, ".apter-footer")
+    ok11 <- identical(trimws(home_title), "Apter") && n_tiles >= 3L &&
+            grepl(sprintf("Release %s", app_version), footer, fixed = TRUE)
+    det11 <- sprintf("title: '%s' | status tiles: %d | footer: '%s'",
+                     trimws(home_title), n_tiles, trimws(footer))
+    bs_ver <- app$get_js(
+      "typeof bootstrap !== 'undefined' ? bootstrap.Tooltip.VERSION : ''")
+    inter_loaded <- app$get_js(paste0(
+      "Array.from(document.fonts).some(f => f.family.replace(/[\"']/g, '') ",
+      "=== 'Inter' && f.status === 'loaded')"))
+    n_gfonts <- app$get_js(
+      "document.querySelectorAll('link[href*=\"fonts.googleapis\"]').length")
+    ok12 <- startsWith(bs_ver, "5") && isTRUE(inter_loaded) && n_gfonts == 0L
+    det12 <- sprintf("Bootstrap %s | Inter loaded: %s | Google Fonts links: %d",
+                     bs_ver, isTRUE(inter_loaded), n_gfonts)
+    shoot(app, "01_home")
+
+    # 06. idle state and title (outputs on hidden pages don't render)
+    app$set_inputs(main_nav = "Simulator")
     st0   <- txt(app, "#run_status")
     title <- app$get_js("document.title")
     ok6   <- grepl("Select parameters and click Run optimizer", st0, fixed = TRUE) &&
@@ -354,12 +410,19 @@ if (!browser_ok) {
     rec(browser_checks[3], if (ok7) PASS else FAIL,
         sprintf("run_status: '%s' | error notifications: %d%s", st1, nerr,
                 if (nzchar(run_err)) paste(" | driver error:", run_err) else ""))
+    n_steps_done <- app$get_js(
+      "document.querySelectorAll('#run_steps .step-icon:not(.is-pending)').length")
+    n_steps      <- app$get_js("document.querySelectorAll('#run_steps .step-row').length")
+    n_sel_logs   <- suppressWarnings(as.integer(
+      sub(".*\\|\\s*(\\d+) selected logs.*", "\\1", st1)))
+    shoot(app, "02_simulator_run")
 
     # 08. summary cards and product table (tabs render only when visible)
     cards <- txt(app, "#summary_cards")
     app$set_inputs(result_tabs = "Products")
     app$wait_for_idle()
     n_prod <- n_tbl_rows(app, "tbl_products")
+    shoot(app, "03_products")
     rec(browser_checks[4], if (nzchar(trimws(cards)) && n_prod >= 1L) PASS else FAIL,
         sprintf("summary_cards chars: %d | tbl_products rows: %d",
                 nchar(trimws(cards)), n_prod))
@@ -375,6 +438,7 @@ if (!browser_ok) {
       ""
     }, error = function(e) conditionMessage(e))
     cmp <- txt(app, "#cmp_status")
+    shoot(app, "04_scenario_comparison")
     rec(browser_checks[5],
         if (!nzchar(cmp_err) && grepl("Same plots sampled", cmp, fixed = TRUE))
           PASS else FAIL,
@@ -397,15 +461,36 @@ if (!browser_ok) {
                 n_delta, nerr2,
                 if (nzchar(mult_err)) paste(" | driver error:", mult_err) else ""))
 
+    # 14. Selected logs pagination
+    app$set_inputs(result_tabs = "Selected logs")
+    page_info <- txt(app, "#tbl_selected_logs .rt-page-info")
+    ok14 <- !is.na(n_sel_logs) &&
+      grepl(sprintf("^1 - %d of %d$", min(10L, n_sel_logs), n_sel_logs),
+            trimws(page_info))
+    det14 <- sprintf("page info: '%s' | selected logs in run: %s",
+                     trimws(page_info), n_sel_logs)
+
+    app$set_inputs(main_nav = "Prices and assortments")
+    shoot(app, "05_prices")
+
+    rec(browser_checks[7], if (ok11) PASS else FAIL, det11)
+    rec(browser_checks[8], if (ok12) PASS else FAIL, det12)
+    rec(browser_checks[9],
+        if (n_steps == 10L && n_steps_done == 10L) PASS else FAIL,
+        sprintf("%d of %d steps done", n_steps_done, n_steps))
+    rec(browser_checks[10], if (ok14) PASS else FAIL, det14)
+    rec(browser_checks[11], if (length(shots) == 5L) PASS else REVIEW,
+        sprintf("%d of 5 screenshots in %s", length(shots), shot_dir))
+
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[2:6])
+    for (ck in browser_checks[2:11])
       rec(ck, FAIL, "skipped: app did not start")
   }
 
-  # 11. runtime
+  # 16. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
-  rec(browser_checks[7], if (t_el < 180) PASS else REVIEW,
+  rec(browser_checks[12], if (t_el < 180) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 180 s)", t_el))
 }
 

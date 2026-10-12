@@ -74,3 +74,6 @@ figures/presentation_2026-10/
 
 # ── Rounded plot coordinates (presentation exception) — never commit ─────────
 plot_coords*.csv
+
+# ── Audit 17 screenshots (regenerated on every run) ───────────────────────────
+outputs/app_smoke/screenshots/

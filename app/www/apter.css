@@ -1,0 +1,255 @@
+/* ==========================================================================
+   app/www/apter.css
+   Component styles for Apter. Look modelled on NIBIO ForestSens (Oracle APEX
+   Redwood style); colours are the tokens in app/theme.R. Own assets only.
+   ========================================================================== */
+
+/* ---- fonts (self-hosted, SIL OFL 1.1; licences in fonts/) ---------------- */
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 500; font-display: swap;
+  src: url("fonts/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/source-serif-4-latin-400-normal.woff2") format("woff2"); }
+
+:root {
+  --apter-page: #F9F8F6;
+  --apter-topbar: #F1EFED;
+  --apter-border: #E4E1DD;
+  --apter-dashed: #B9B3AC;
+  --apter-ink: #161513;
+  --apter-muted: #6F6A66;
+  --apter-accent: #4C6B7A;
+  --apter-primary: #312D2A;
+  --apter-secondary: #EBE9E6;
+  --apter-danger: #B3261E;
+  --apter-warning: #9A5B00;
+  --apter-success: #2F6B3A;
+  --apter-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+body { background: var(--apter-page); color: var(--apter-ink); }
+
+/* ---- top bar --------------------------------------------------------------- */
+.navbar {
+  background: var(--apter-topbar) !important;
+  border-bottom: 1px solid var(--apter-border);
+  min-height: 56px;
+  padding-top: 4px; padding-bottom: 4px;
+}
+.navbar-brand { font-weight: 600; font-size: 1.15rem; color: var(--apter-ink) !important;
+  display: flex; align-items: center; gap: 10px; }
+.navbar-brand img { width: 26px; height: 26px; }
+.navbar .nav-link { color: var(--apter-ink) !important; font-weight: 400;
+  border-bottom: 2px solid transparent; padding-bottom: 6px !important; }
+.navbar .nav-link.active { font-weight: 500; border-bottom-color: var(--apter-ink); }
+
+/* ---- page containers ------------------------------------------------------- */
+.apter-page { padding: 16px; }
+.apter-page > .card, .apter-page > .bslib-card { margin-bottom: 16px; }
+
+/* ---- home header and banner strip ----------------------------------------- */
+.apter-hero {
+  background: #FFFFFF;
+  display: flex; align-items: center; gap: 20px;
+  padding: 30px 16px;
+}
+.apter-hero img { width: 66px; height: 66px; }
+.apter-title {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 400; font-size: 2.4rem; margin: 0; line-height: 1.1;
+}
+.apter-tagline { color: var(--apter-muted); margin: 4px 0 0; }
+.banner-strip {
+  height: 14px;
+  background:
+    radial-gradient(circle at 25% 50%, rgba(255, 255, 255, 0.18) 0 1.5px, transparent 2px) 0 0 / 9px 7px,
+    repeating-linear-gradient(115deg,
+      #3E5C6B 0 38px, #D9CBB1 38px 78px, #E2A23B 78px 98px,
+      #C8553D 98px 114px, #6B3E2E 114px 132px, #EADFCB 132px 176px,
+      #2F4A57 176px 204px, #CDB892 204px 236px);
+}
+
+/* ---- cards ----------------------------------------------------------------- */
+.card, .bslib-card {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  box-shadow: var(--apter-shadow);
+  background: #FFFFFF;
+}
+/* .bslib-card prefix: bslib styles its own headers with higher specificity */
+.card-header, .bslib-card > .card-header, details.apter-card > .card-header {
+  background: #FFFFFF;
+  font-weight: 400; font-size: 1.15rem;
+  color: var(--apter-ink);
+  border-bottom: 1px solid var(--apter-border);
+  padding: 14px 16px;
+}
+/* collapsible card (<details>) */
+details.apter-card > summary { list-style: none; cursor: pointer; }
+details.apter-card > summary::-webkit-details-marker { display: none; }
+details.apter-card > summary::before {
+  content: ""; display: inline-block; vertical-align: middle;
+  margin: 0 14px 3px 4px;
+  border-left: 7px solid var(--apter-ink);
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+  transition: transform 0.15s;
+}
+details.apter-card[open] > summary::before { transform: rotate(90deg); }
+details.apter-card { margin-bottom: 16px; }
+
+/* ---- read-only fields (dashed, labelled boxes) ----------------------------- */
+.ro-row {
+  display: grid; gap: 12px; margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+.ro-field.is-wide { grid-column: span 2; }
+.ro-field {
+  border: 1px dashed var(--apter-dashed); border-radius: 4px;
+  padding: 8px 10px; background: #FFFFFF; min-width: 0;
+}
+.ro-label { font-size: 0.75rem; color: var(--apter-muted); margin-bottom: 2px; }
+.ro-value { font-size: 1.15rem; line-height: 1.3; overflow-wrap: break-word; }
+
+/* ---- status tiles (home) --------------------------------------------------- */
+.status-tiles {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.status-tile {
+  border: 1px solid var(--apter-border); border-radius: 6px;
+  padding: 18px; background: #FFFFFF; box-shadow: var(--apter-shadow);
+}
+.tile-head { display: flex; align-items: center; gap: 12px; }
+.tile-icon {
+  width: 46px; height: 46px; border-radius: 4px; flex: none;
+  background: var(--apter-accent); color: #FFFFFF;
+  display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+}
+.tile-icon.is-planned { background: #A9A39C; }
+.tile-title { font-weight: 600; font-size: 1.05rem; line-height: 1.2; }
+.tile-status { font-size: 0.8rem; color: var(--apter-muted); text-transform: uppercase; }
+.tile-lines { margin-top: 12px; font-size: 0.9rem; }
+.tile-lines .tile-line-muted { color: var(--apter-muted); font-size: 0.82rem; margin-top: 6px; }
+
+/* ---- step list (run status) ------------------------------------------------ */
+.step-list { margin: 4px 0; }
+.step-row {
+  display: grid; align-items: center; column-gap: 14px;
+  grid-template-columns: 30px 1fr auto auto;
+  padding: 9px 4px;
+}
+.step-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #4A4744; color: #FFFFFF;
+  display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+}
+.step-icon.is-pending { background: transparent; border: 2px solid var(--apter-dashed); }
+.step-title { font-weight: 600; }
+.step-sub { color: var(--apter-muted); font-size: 0.85rem; }
+.step-status { color: var(--apter-muted); font-size: 0.8rem; text-transform: uppercase; }
+.step-time { color: var(--apter-muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.step-footer, .count-footer { text-align: right; color: var(--apter-muted); font-size: 0.8rem; margin-top: 6px; }
+
+/* ---- status lines and notes ------------------------------------------------ */
+.status-idle  { color: var(--apter-muted); font-style: italic; padding: 4px 0; }
+.status-done  { color: var(--apter-success); font-weight: 500; padding: 4px 0; }
+.status-error { color: var(--apter-danger); font-weight: 500; padding: 4px 0; white-space: pre-wrap; }
+.note-error { color: var(--apter-danger); }
+.note-warn  { color: var(--apter-warning); }
+.note-ok    { color: var(--apter-success); }
+.note-muted { color: var(--apter-muted); font-size: 0.85rem; }
+.estimate-label {
+  background: var(--apter-topbar); border-left: 3px solid var(--apter-accent);
+  padding: 8px 14px; margin-bottom: 14px; font-size: 0.88em; color: var(--apter-muted);
+  border-radius: 0 4px 4px 0;
+}
+.stat-strip {
+  background: #F6F5F3; border-radius: 4px; padding: 7px 12px;
+  font-size: 0.88em; color: var(--apter-muted); margin-bottom: 10px;
+}
+.section-hdr {
+  font-weight: 500; color: var(--apter-ink);
+  border-bottom: 1px solid var(--apter-border);
+  margin: 16px 0 8px; padding-bottom: 4px;
+}
+.section-hdr:first-child { margin-top: 0; }
+
+/* ---- sidebar ---------------------------------------------------------------- */
+.bslib-sidebar-layout > .sidebar { background: #FFFFFF; border-right: 1px solid var(--apter-border); }
+.sidebar-heading {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--apter-muted); margin: 6px 0 8px;
+}
+.sidebar-notes { font-size: 0.85rem; color: var(--apter-muted); }
+.sidebar-notes > div + div { margin-top: 8px; }
+
+/* ---- form controls ---------------------------------------------------------- */
+.control-label, .form-label { font-size: 0.85rem; font-weight: 500; color: var(--apter-ink); }
+.form-control, .selectize-input {
+  border: 1px solid #CFCAC4 !important; border-radius: 4px !important;
+  box-shadow: none !important; background: #FFFFFF;
+}
+.form-control:focus, .selectize-input.focus {
+  border-color: var(--apter-accent) !important;
+  box-shadow: 0 0 0 2px rgba(76, 107, 122, 0.18) !important;
+}
+.selectize-dropdown { border: 1px solid var(--apter-border); border-radius: 4px; box-shadow: var(--apter-shadow); }
+.selectize-dropdown .active { background: var(--apter-topbar); color: var(--apter-ink); }
+.selectize-dropdown .selected { background: var(--apter-secondary); color: var(--apter-ink); }
+.form-check-input:checked { background-color: var(--apter-accent); border-color: var(--apter-accent); }
+.form-check-input:focus { box-shadow: 0 0 0 2px rgba(76, 107, 122, 0.18); border-color: var(--apter-accent); }
+/* file input as a dashed drop zone */
+.shiny-input-container .input-group:has(.btn-file) {
+  border: 1px dashed var(--apter-dashed); border-radius: 4px; padding: 6px; background: #FFFFFF;
+}
+.shiny-input-container .input-group .btn-file {
+  background: var(--apter-secondary); color: var(--apter-ink); border: none; border-radius: 4px !important;
+}
+.shiny-input-container .input-group .form-control { border: none !important; }
+.progress-bar { background-color: var(--apter-accent); }
+
+/* ---- buttons ---------------------------------------------------------------- */
+.btn { border-radius: 4px; font-weight: 500; padding: 8px 16px; }
+.btn-secondary, .btn-default {
+  background: var(--apter-secondary); border-color: var(--apter-secondary); color: var(--apter-ink);
+}
+.btn-secondary:hover, .btn-default:hover { background: #DDDAD6; border-color: #DDDAD6; color: var(--apter-ink); }
+/* After .btn-default and more specific: actionButton(class = "btn-primary")
+   carries both classes. */
+.btn.btn-primary { background: var(--apter-primary); border-color: var(--apter-primary); color: #FFFFFF; }
+.btn.btn-primary:hover, .btn.btn-primary:focus { background: #4A4541; border-color: #4A4541; color: #FFFFFF; }
+
+/* ---- result tabs (underline) ----------------------------------------------- */
+.nav-underline .nav-link { color: var(--apter-muted); }
+.nav-underline .nav-link.active, .nav-underline .nav-link:hover { color: var(--apter-ink); }
+.nav-underline .nav-link.active { border-bottom-color: var(--apter-ink); font-weight: 500; }
+
+/* ---- tables (reactable) ----------------------------------------------------- */
+.reactable { font-size: 0.88rem; margin-bottom: 8px; }
+.rt-pagination { color: var(--apter-muted); font-size: 0.8rem; justify-content: flex-end; gap: 16px; }
+.apter-single-page .rt-pagination-nav { display: none; }
+.rt-page-button { border-radius: 4px; }
+
+/* ---- notifications and progress --------------------------------------------- */
+.shiny-notification {
+  background: #FFFFFF; color: var(--apter-ink); border: 1px solid var(--apter-border);
+  border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); opacity: 1;
+}
+.shiny-notification-error { border-left: 4px solid var(--apter-danger); }
+.shiny-notification-warning { border-left: 4px solid var(--apter-warning); }
+
+/* ---- footer ----------------------------------------------------------------- */
+.apter-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--apter-border); background: var(--apter-page);
+  padding: 14px 16px; margin-top: 24px; font-size: 0.85rem; color: var(--apter-ink);
+}
+.apter-top {
+  width: 40px; height: 40px; border-radius: 4px; background: var(--apter-secondary);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--apter-ink); text-decoration: none;
+}
+.apter-top:hover { background: #DDDAD6; color: var(--apter-ink); }

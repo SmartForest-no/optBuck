@@ -12,7 +12,11 @@
 #           so the backend resolves the same one.
 #
 # Files   : helpers_root.R        project root resolution
-#           setup.R               data loading, choice mappings, label, CSS
+#           setup.R               data loading, choice mappings, label, version
+#           theme.R               design tokens, bslib (Bootstrap 5) theme
+#           helpers_ui.R          cards, read-only fields, tiles, step list,
+#                                 reactable and plot styling
+#           www/                  apter.css, icon, self-hosted fonts (OFL)
 #           helpers_validation.R  inputs -> backend params, stratum counts
 #           helpers_upload.R      Scenario 2 price matrix (multipliers/upload)
 #           app_ui.R / app_server.R  `ui` and `server` (not ui.R/server.R,
@@ -22,7 +26,11 @@
 # Backend : scripts/app_backend/01_run_sampled_plot_bucking.R
 
 library(shiny)
-suppressPackageStartupMessages(library(arrow))
+suppressPackageStartupMessages({
+  library(bslib)
+  library(reactable)
+  library(arrow)
+})
 
 # runApp() sets the working directory to the app directory.
 APP_DIR <- normalizePath(getwd(), winslash = "/")
@@ -37,8 +45,8 @@ source(file.path(ROOT, "scripts", "app_backend",
                  "01_run_sampled_plot_bucking.R"))
 
 # ---- app files ---------------------------------------------------------------
-for (.f in c("setup.R", "helpers_validation.R", "helpers_upload.R",
-             "app_ui.R", "app_server.R")) {
+for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
+             "helpers_upload.R", "app_ui.R", "app_server.R")) {
   source(file.path(APP_DIR, .f), local = TRUE)
 }
 rm(.f)
