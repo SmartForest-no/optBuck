@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: sampled-plot backend smoke
-  Run: 2026-10-12 14:58:24.645054
+  Run: 2026-10-12 15:25:02.570075
 ============================================================= 
 
 --- 01. Backend script exists ---
@@ -10,7 +10,7 @@
   [PASS  ] Check 02: Backend sources without error | source() completed without error
 
 --- 03. Smoke call completes ---
-  [PASS  ] Check 03: Smoke call completes without error | completed in 5.8 s
+  [PASS  ] Check 03: Smoke call completes without error | completed in 6.6 s
 
 --- 04. Return object structure ---
   [PASS  ] Check 04: Return object has all required names | all 19 required names present
@@ -25,7 +25,7 @@
   [PASS  ] Check 07: plot_id_github present in tree/plot-level data.frames | plot_id_github found in all 4 checked data.frames
 
 --- 08. No overlapping logs ---
-  [PASS  ] Check 08: No overlapping logs in selected_logs_all | overlapping pairs: 0  (total selected logs: 321)
+  [PASS  ] Check 08: No overlapping logs in selected_logs_all | overlapping pairs: 0  (total selected logs: 310)
 
 --- 09. NOK per m3 outputs ---
   [PASS  ] Check 09: NOK per m3 outputs present and consistent | total 382.7 NOK/m3 on 23.429 m3 u.b. | max |sum(contrib) - total| = 5.68e-14 | max |sum(shares) - 1| = 0.00e+00 | non-negative: TRUE
@@ -40,11 +40,11 @@
   [PASS  ] Check 12: No taper profile failures | 0 profile failure(s) in smoke run
 
 --- 13. Runtime ---
-  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 5.8 s (threshold: 120 s)
+  [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 6.6 s (threshold: 120 s)
 
 --- 14-15. Fast vs reference optimizer ---
-  [PASS  ] Check 14: .optimize_dp_fast() value and n_selected match reference | 788 trees compared over 3 runs (63.6 s); 0 mismatch(es); max |value diff| = 0.00e+00
-  [PASS  ] Check 15: .optimize_dp_fast() cutting pattern matches reference | 0 of 788 trees differ in pattern at equal value (ties)
+  [PASS  ] Check 14: .optimize_dp_fast() value and n_selected match reference | 788 trees compared over 3 runs (98.7 s); 0 mismatch(es); max |value diff| = 0.00e+00
+  [PASS  ] Check 15: .optimize_dp_fast() cutting pattern matches reference | 0 of 788 trees differ in cutting pattern (0 of them at equal value)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

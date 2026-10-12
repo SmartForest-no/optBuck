@@ -30,14 +30,14 @@
 #      spruce and pine (HKL 41/42, abonitet 14/17, 25 plots, seed 42) and
 #      "both" (same strata, 10 plots, seed 7). (added 2026-10-12)
 # 15.  Same runs: identical cutting pattern (StartPos, StopPos, ProductKey).
-#      REVIEW if values match but patterns differ (equal-value ties).
+#      Strict since Phase 4a (deterministic tie-breaking): any pattern
+#      difference is a FAIL.
 #
 # Verdict :
 #   PASS                   -- all 15 checks pass
 #   ACCEPTED WITH REVIEW   -- only expected soft items produce REVIEW
 #                             (31 dm price gap, zero-price waste, profile
-#                              failures in unusual strata, slow runtime,
-#                              equal-value ties in check 15)
+#                              failures in unusual strata, slow runtime)
 #   FAIL                   -- backend missing, sourcing error, smoke call
 #                             crashes, required structure missing,
 #                             plot_id leakage, overlapping logs,
@@ -531,15 +531,14 @@ if (source_ok && exists(".optimize_dp_fast", mode = "function")) {
               if (length(eq_errors) > 0L)
                 paste(" | run errors:", paste(eq_errors, collapse = "; "))
               else ""))
+  n_pat_diff <- sum(!eq$pattern_match)
   rec(eq_check_15,
-      if (n_trees == 0L || n_val_bad > 0L) FAIL
-      else if (n_pat_tie > 0L) REVIEW
-      else PASS,
+      if (n_trees == 0L || n_val_bad > 0L || n_pat_diff > 0L) FAIL else PASS,
       if (n_val_bad > 0L)
         sprintf("value/n_selected mismatches in %d tree(s); see check 14", n_val_bad)
       else
-        sprintf("%d of %d trees differ in pattern at equal value (ties)",
-                n_pat_tie, n_trees))
+        sprintf("%d of %d trees differ in cutting pattern (%d of them at equal value)",
+                n_pat_diff, n_trees, n_pat_tie))
 } else {
   rec(eq_check_14, FAIL, "backend not sourced; .optimize_dp_fast() unavailable")
   rec(eq_check_15, FAIL, "backend not sourced; .optimize_dp_fast() unavailable")

@@ -25,8 +25,9 @@
 #      from a fresh taper profile over the non-waste logs only, and never
 #      exceeds the stem volume up to the last non-waste log
 #  7.  Denominator unaffected by prices: a run with all prices x1.5 gives, per
-#      tree, the same commercial volume and value x1.5 (cutting patterns may
-#      differ only by equal-value ties), and NOK/m3 x1.5; on a fixed cutting
+#      tree, the same cutting pattern (strict since Phase 4a's deterministic
+#      tie-breaking), the same commercial volume and value x1.5, and NOK/m3
+#      x1.5; on a fixed cutting
 #      pattern the helper result is identical under two price matrices
 #  8.  Price on under bark: for every sawlog, the price-diameter class is
 #      floor(TopDiameter_ub / 10) and TopDiameter_ub <= TopDiameter_ob
@@ -297,7 +298,8 @@ if (all(runs_ok)) {
   }, logical(1))
   dev_tree_vol <- max(abs(m$commercial_volume_m3.x15 - m$commercial_volume_m3))
   dev_tree_val <- max(abs(m$total_value_nok.x15 - 1.5 * m$total_value_nok))
-  same_logs <- nrow(m) == nrow(ts1) && dev_tree_vol <= 1e-12 && dev_tree_val <= 1e-9
+  same_logs <- nrow(m) == nrow(ts1) && dev_tree_vol <= 1e-12 &&
+    dev_tree_val <= 1e-9 && !any(pattern_differs)
   t1  <- r1$per_m3_summary[r1$per_m3_summary$scope == "Total", ]
   t15 <- r15$per_m3_summary[r15$per_m3_summary$scope == "Total", ]
   dev_vol   <- abs(t15$commercial_volume_m3 - t1$commercial_volume_m3)
@@ -312,7 +314,7 @@ if (all(runs_ok)) {
 
   rec("Check 07: All prices x1.5 -> same commercial volume per tree, NOK/m3 x1.5",
       if (same_logs && dev_vol <= 1e-12 && dev_ratio <= 1e-9 && fixed_same) PASS else FAIL,
-      sprintf("%d trees | max |tree volume diff| %.1e m3, max |value x1.5 diff| %.1e NOK | equal-value tie patterns: %d | total %.6f vs %.6f m3 | NOK/m3 %.3f -> %.3f (ratio - 1.5 = %.1e) | fixed pattern identical: %s",
+      sprintf("%d trees | max |tree volume diff| %.1e m3, max |value x1.5 diff| %.1e NOK | trees with a different pattern: %d | total %.6f vs %.6f m3 | NOK/m3 %.3f -> %.3f (ratio - 1.5 = %.1e) | fixed pattern identical: %s",
               nrow(m), dev_tree_vol, dev_tree_val, sum(pattern_differs),
               t1$commercial_volume_m3, t15$commercial_volume_m3,
               t1$nok_per_m3, t15$nok_per_m3, dev_ratio, fixed_same))

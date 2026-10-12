@@ -106,7 +106,8 @@ products_for_species <- function(species_group) {
 #'   StartPos, StopPos, LogLength, TopDiameter (mm), ButtDiameter (mm),
 #'   eligible, price_volume_m3, LengthClass_dm,
 #'   PriceDiameterClass_cm  (raw, uncapped; cap applied in valuation step),
-#'   TopDiameter_ob, TopDiameter_ub (mm), DiameterUnderBark.
+#'   TopDiameter_ob, TopDiameter_ub (mm), DiameterUnderBark,
+#'   ProductPriority (ProductData$Priority; tie-break key for the optimizers).
 #'   TopDiameter / ButtDiameter are the product's measuring diameters: under
 #'   bark when the product's DiameterUnderBark is TRUE, else over bark.
 generate_candidate_logs_one_tree <- function(pv,
@@ -272,6 +273,8 @@ generate_candidate_logs_one_tree <- function(pv,
       TopDiameter_ob       = round(top_ob, 1),
       TopDiameter_ub       = round(top_ub, 1),
       DiameterUnderBark    = ub,
+      # Tie-break key for the optimizers (R/helpers_dp_optimizer.R).
+      ProductPriority      = as.numeric(prow$Priority %||% 99),
       stringsAsFactors     = FALSE
     )
   }
@@ -304,6 +307,7 @@ generate_candidate_logs_one_tree <- function(pv,
     TopDiameter_ob       = numeric(0),
     TopDiameter_ub       = numeric(0),
     DiameterUnderBark    = logical(0),
+    ProductPriority      = numeric(0),
     stringsAsFactors     = FALSE
   )
 }

@@ -11,6 +11,25 @@
 #      position all_pos[i] to the end.
 #   4. Traceback: follow dp_log chain to recover selected logs.
 #
+# Tie-breaking (2026-10-12, Phase 4a): deterministic and documented.
+#   At each position, every option (skip this position, or start one of the
+#   candidates here) has a total = its own value + the best total from where
+#   it ends. Options whose total is within DP_TIE_TOL_NOK of the best total
+#   count as equal; among those the choice is, in order:
+#     1. fewer logs in the rest of the stem,
+#     2. higher-priority product (ProductPriority, from ProductData$Priority:
+#        sawlog 1, pulpwood 2, waste 99; 99 if absent),
+#     3. the longer log,
+#     4. ProductKey (alphabetical; only matters for equal-priority products),
+#   and leaving the position unallocated ranks after any log at equal log
+#   count. The rule is independent of input row order and of prices (prices
+#   only decide which options tie). The stored value is the chosen option's
+#   own total, so the reported value is always the sum of the selected logs;
+#   at most DP_TIE_TOL_NOK is given up per position.
+#   The app's fast optimizer (.optimize_dp_fast in
+#   scripts/app_backend/01_run_sampled_plot_bucking.R) implements the same
+#   rule; audits 16 (checks 14-15) and 19 assert they agree exactly.
+#
 # Usage:
 #   source("R/helpers_dp_optimizer.R")
 #   result <- optimize_one_tree_dp(valued_candidates)
@@ -21,6 +40,9 @@
 if (!exists("%||%", mode = "function")) {
   `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
 }
+
+#' Totals within this many NOK of the best count as a tie (see header).
+DP_TIE_TOL_NOK <- 1e-6
 
 
 # ------------------------------------------------------------------------------
@@ -62,13 +84,23 @@ optimize_one_tree_dp <- function(valued_candidates) {
     ))
   }
 
+  # Tie-break keys (see header): product priority and alphabetical product rank.
+  prio <- if ("ProductPriority" %in% names(dp_in))
+    as.numeric(dp_in$ProductPriority) else rep(99, n_dp)
+  prio[is.na(prio)] <- 99
+  pk_rank <- match(as.character(dp_in$ProductKey),
+                   sort(unique(as.character(dp_in$ProductKey))))
+  if (length(pk_rank) == 0L || anyNA(pk_rank)) pk_rank <- rep(0L, n_dp)
+  log_len <- dp_in$StopPos - dp_in$StartPos
+
   # State space: sorted unique positions across all starts and stops.
   all_pos  <- sort(unique(c(dp_in$StartPos, dp_in$StopPos)))
   sentinel <- max(all_pos) + 1L
   all_pos  <- c(all_pos, sentinel)
   m        <- length(all_pos)
 
-  dp_val <- numeric(m)      # best value achievable from position all_pos[i]
+  dp_val <- numeric(m)      # total value of the chosen solution from all_pos[i]
+  dp_n   <- integer(m)      # number of logs in that solution
   dp_log <- integer(m)      # index of the candidate chosen at all_pos[i] (0 = none)
 
   # Pre-build a position-to-index lookup (positions are in cm, values up to ~5000).
@@ -76,29 +108,55 @@ optimize_one_tree_dp <- function(valued_candidates) {
   pos_to_idx   <- integer(max_pos + 1L)
   for (i in seq_len(m)) pos_to_idx[all_pos[i] + 1L] <- i
 
+  # TRUE if candidate a (n_a logs) beats candidate b (n_b logs) on the
+  # tie-break keys: fewer logs, higher priority, longer log, ProductKey.
+  key_better <- function(n_a, a, n_b, b) {
+    if (n_a != n_b)                 return(n_a < n_b)
+    if (prio[a] != prio[b])         return(prio[a] < prio[b])
+    if (log_len[a] != log_len[b])   return(log_len[a] > log_len[b])
+    pk_rank[a] < pk_rank[b]
+  }
+
   # Backward induction
   for (i in seq(m - 1L, 1L)) {
     cur_pos   <- all_pos[i]
-    # All candidates starting exactly at cur_pos
+    # All candidates starting exactly at cur_pos, with their totals.
     cand_idx  <- which(dp_in$StartPos == cur_pos)
-
-    best_val  <- dp_val[i + 1L]   # default: skip this position
-    best_cand <- 0L
-
+    tot <- n_tot <- numeric(0); ok_c <- integer(0)
     for (ci in cand_idx) {
       sp    <- dp_in$StopPos[ci]
       if (sp > max_pos) next
       si    <- pos_to_idx[sp + 1L]
       if (si == 0L) next
-      v_tot <- dp_in$value_nok[ci] + dp_val[si]
-      if (v_tot > best_val) {
-        best_val  <- v_tot
-        best_cand <- ci
-      }
+      ok_c  <- c(ok_c, ci)
+      tot   <- c(tot, dp_in$value_nok[ci] + dp_val[si])
+      n_tot <- c(n_tot, 1L + dp_n[si])
     }
 
-    dp_val[i] <- best_val
-    dp_log[i] <- best_cand
+    skip_val <- dp_val[i + 1L]
+    best_tot <- max(c(skip_val, tot))
+
+    # Best candidate among those tied with the best total.
+    best_k <- 0L
+    for (k in seq_along(ok_c)) {
+      if (tot[k] < best_tot - DP_TIE_TOL_NOK) next
+      if (best_k == 0L ||
+          key_better(n_tot[k], ok_c[k], n_tot[best_k], ok_c[best_k]))
+        best_k <- k
+    }
+
+    # Skip if it is tied with the best and needs fewer logs than that candidate
+    # (at equal log count a log ranks before leaving the position unallocated).
+    skip_ok <- skip_val >= best_tot - DP_TIE_TOL_NOK
+    if (best_k == 0L || (skip_ok && dp_n[i + 1L] < n_tot[best_k])) {
+      dp_val[i] <- skip_val
+      dp_n[i]   <- dp_n[i + 1L]
+      dp_log[i] <- 0L
+    } else {
+      dp_val[i] <- tot[best_k]
+      dp_n[i]   <- n_tot[best_k]
+      dp_log[i] <- ok_c[best_k]
+    }
   }
 
   # Traceback

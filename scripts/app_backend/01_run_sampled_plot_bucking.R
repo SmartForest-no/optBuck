@@ -134,7 +134,10 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
 # Fast DP optimizer (v3): pre-split candidates by StartPos + vectorised inner loop.
 # Benchmark showed 10x speedup vs optimize_one_tree_dp() with identical results
 # across all tested trees. Returns the same structure as optimize_one_tree_dp().
-# Does NOT replace helpers_dp_optimizer.R; that file is unchanged.
+# Tie-breaking (Phase 4a): the same documented rule as optimize_one_tree_dp()
+# in R/helpers_dp_optimizer.R (DP_TIE_TOL_NOK; fewer logs, priority, longer
+# log, ProductKey; unallocated last at equal log count). Audits 16 and 19
+# assert the two agree exactly.
 .optimize_dp_fast <- function(valued_candidates) {
   dp_in <- valued_candidates[
     !is.na(valued_candidates$value_nok) &
@@ -152,6 +155,14 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
   sp_vec  <- dp_in$StartPos
   ep_vec  <- dp_in$StopPos
   val_vec <- dp_in$value_nok
+  # Tie-break keys (see R/helpers_dp_optimizer.R).
+  prio_vec <- if ("ProductPriority" %in% names(dp_in))
+    as.numeric(dp_in$ProductPriority) else rep(99, n_dp)
+  prio_vec[is.na(prio_vec)] <- 99
+  pk_vec <- match(as.character(dp_in$ProductKey),
+                  sort(unique(as.character(dp_in$ProductKey))))
+  if (length(pk_vec) == 0L || anyNA(pk_vec)) pk_vec <- rep(0L, n_dp)
+  len_vec <- ep_vec - sp_vec
 
   all_pos  <- sort(unique(c(sp_vec, ep_vec)))
   sentinel <- max(all_pos) + 1L
@@ -167,7 +178,9 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
   cands_by_start <- split(seq_len(n_dp), sp_vec)  # named list, char keys
 
   dp_val <- numeric(m)
+  dp_n   <- integer(m)
   dp_log <- integer(m)
+  tol    <- DP_TIE_TOL_NOK
 
   # Backward induction with vectorised inner operations.
   for (i in seq(m - 1L, 1L)) {
@@ -180,18 +193,28 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
       stop_idx <- pos_to_idx[ep_vec[cands] + 1L]
       valid    <- stop_idx > 0L & ep_vec[cands] <= max_pos
       if (any(valid)) {
-        cv      <- cands[valid]
-        sv      <- stop_idx[valid]
-        total_v <- val_vec[cv] + dp_val[sv]   # vectorised C addition
-        best_k  <- which.max(total_v)          # vectorised C max-search
-        if (total_v[best_k] > default_val) {
-          dp_val[i] <- total_v[best_k]
-          dp_log[i] <- cv[best_k]
-          next
+        cv       <- cands[valid]
+        sv       <- stop_idx[valid]
+        total_v  <- val_vec[cv] + dp_val[sv]   # vectorised C addition
+        best_tot <- max(default_val, total_v)
+        tied     <- which(total_v >= best_tot - tol)
+        if (length(tied) > 0L) {
+          n_t   <- 1L + dp_n[sv[tied]]
+          k     <- tied[order(n_t, prio_vec[cv[tied]], -len_vec[cv[tied]],
+                              pk_vec[cv[tied]])[1L]]
+          n_k   <- 1L + dp_n[sv[k]]
+          # Skip wins only if tied with the best and needing fewer logs.
+          if (!(default_val >= best_tot - tol && dp_n[i + 1L] < n_k)) {
+            dp_val[i] <- total_v[k]
+            dp_n[i]   <- n_k
+            dp_log[i] <- cv[k]
+            next
+          }
         }
       }
     }
     dp_val[i] <- default_val
+    dp_n[i]   <- dp_n[i + 1L]
     # dp_log[i] stays 0 (integer default = skip)
   }
 
