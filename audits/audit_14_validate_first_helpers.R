@@ -23,13 +23,17 @@
 # 15.  prepare_price_join_keys() adds _uncapped and _used columns
 # 16.  prepare_price_join_keys() stores original in _uncapped, cap in _used
 # 17.  validate_price_matrix_against_products() returns no FAIL items
-# 18.  validate_price_matrix_against_products() returns REVIEW for 31 dm gap
+# 18.  validate_price_matrix_against_products() REVIEW items are all accepted:
+#      PASS when every REVIEW is a zero-price item and every zero-price row
+#      belongs to a waste product (accepted as intentional 2026-10-12);
+#      REVIEW for the 31 dm gap or zero prices on non-waste products
 # 19.  Accepted scripts 00-12 exist (no deletions detected)
 # 20.  Accepted scripts 00-12 are unmodified (modified times are pre-today)
 #
 # Verdict :
 #   PASS                   -- all checks pass
-#   ACCEPTED WITH REVIEW   -- only REVIEW item is a zero-priced product (see check 4)
+#   ACCEPTED WITH REVIEW   -- only REVIEW items are a 31 dm gap or a zero price
+#                             on a non-waste product (check 18)
 #   FAIL                   -- any helper function produces wrong results,
 #                             required files missing, or accepted scripts changed
 #
@@ -38,6 +42,10 @@
 # 31 dm is supported and flagged PriceSource == "Interpolated", rather than
 # asserting it is unsupported.
 #
+# Note (2026-10-12): zero-priced waste (0 NOK/m3) is an accepted scope
+# decision, recorded in CLAUDE.md "Accepted assumptions". Check 18 now
+# records PASS when the only REVIEW items are zero prices on waste products.
+#
 # Outputs :
 #   outputs/helper_validation/audit_14_validate_first_helpers.csv
 #   outputs/helper_validation/audit_14_validate_first_helpers.txt
@@ -45,7 +53,25 @@
 
 suppressPackageStartupMessages(library(readr))
 
-root_dir <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck"
+root_dir <- local({
+  # APTER_ROOT -> NFIBUCK_ROOT (legacy) -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = "")
+  env <- env[nzchar(env)]
+  if (length(env) > 0L) {
+    d <- normalizePath(env[[1L]], winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from ", names(env)[1L],
+           ") does not contain R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
 
 source(file.path(root_dir, "R", "helpers_paths.R"))
 source(file.path(root_dir, "R", "helpers_audit.R"))
@@ -336,11 +362,28 @@ if (!is.null(pd) && !is.null(lc) && !is.null(pm)) {
   review_items <- val$checks[val$checks$result == "REVIEW", ]
   only_31dm_review <- nrow(review_items) == 0L ||
     all(grepl("31 dm|zero.price", review_items$detail, ignore.case = TRUE))
+
+  # Zero-priced waste is accepted as intentional (scope decision 2026-10-12).
+  waste_keys <- pd$ProductKey[pd$ProductType == "waste"]
+  zero_keys  <- unique(pm$ProductKey[!is.na(pm$PriceNOKperM3) &
+                                     pm$PriceNOKperM3 == 0])
+  only_zero_review   <- nrow(review_items) > 0L &&
+    all(grepl("zero.price", review_items$detail, ignore.case = TRUE))
+  zero_only_on_waste <- length(zero_keys) > 0L && all(zero_keys %in% waste_keys)
+  waste_zero_accepted <- only_zero_review && zero_only_on_waste
+
   rec("validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices",
-      if (n_review_val > 0L && only_31dm_review) REVIEW
-      else if (n_review_val == 0L) PASS
+      if (n_review_val == 0L || waste_zero_accepted) PASS
+      else if (only_31dm_review) REVIEW
       else FAIL,
-      sprintf("%d REVIEW item(s); all expected: %s", n_review_val, only_31dm_review))
+      if (waste_zero_accepted)
+        sprintf("%d REVIEW item(s), zero prices only on waste (%s): zero-priced waste accepted as intentional (scope decision 2026-10-12)",
+                n_review_val, paste(zero_keys, collapse = ", "))
+      else
+        sprintf("%d REVIEW item(s); all expected: %s; zero-price products: %s",
+                n_review_val, only_31dm_review,
+                if (length(zero_keys) > 0L) paste(zero_keys, collapse = ", ")
+                else "none"))
 } else {
   rec("Full price matrix validation", FAIL,
       "One or more input files not loaded")

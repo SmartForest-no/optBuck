@@ -20,16 +20,25 @@
 # 11.  Price validation contains no FAIL rows
 # 12.  profile_failures == 0 rows (or REVIEW if failures occurred)
 # 13.  Runtime is under 120 seconds (REVIEW if above but run completed)
+# 14.  The app's .optimize_dp_fast() matches the reference
+#      optimize_one_tree_dp() on every tree: dp_best_value within 1e-8 and
+#      equal n_selected. Trees come from three shimmed backend runs:
+#      spruce and pine (HKL 41/42, abonitet 14/17, 25 plots, seed 42) and
+#      "both" (same strata, 10 plots, seed 7). (added 2026-10-12)
+# 15.  Same runs: identical cutting pattern (StartPos, StopPos, ProductKey).
+#      REVIEW if values match but patterns differ (equal-value ties).
 #
 # Verdict :
-#   PASS                   -- all 13 checks pass
+#   PASS                   -- all 15 checks pass
 #   ACCEPTED WITH REVIEW   -- only expected soft items produce REVIEW
 #                             (31 dm price gap, zero-price waste, profile
-#                              failures in unusual strata, slow runtime)
+#                              failures in unusual strata, slow runtime,
+#                              equal-value ties in check 15)
 #   FAIL                   -- backend missing, sourcing error, smoke call
 #                             crashes, required structure missing,
-#                             plot_id leakage, overlapping logs, or
-#                             price validation FAIL
+#                             plot_id leakage, overlapping logs,
+#                             price validation FAIL, or fast/reference
+#                             optimizer value mismatch
 #
 # Outputs :
 #   outputs/sampled_plot_backend_smoke/audit_16_sampled_plot_backend_smoke.csv
@@ -38,7 +47,25 @@
 
 suppressPackageStartupMessages(library(readr))
 
-root_dir <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck"
+root_dir <- local({
+  # APTER_ROOT -> NFIBUCK_ROOT (legacy) -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = "")
+  env <- env[nzchar(env)]
+  if (length(env) > 0L) {
+    d <- normalizePath(env[[1L]], winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from ", names(env)[1L],
+           ") does not contain R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
 
 source(file.path(root_dir, "R", "helpers_paths.R"))
 source(file.path(root_dir, "R", "helpers_audit.R"))
@@ -395,6 +422,102 @@ if (!is.null(smoke_result) && !is.na(smoke_time)) {
 } else {
   rec("Check 13: Runtime under 120 s for n_plots=5", FAIL,
       "smoke call did not complete")
+}
+
+
+# ==============================================================================
+# Checks 14-15: fast optimizer == reference optimizer
+# ==============================================================================
+# The app runs .optimize_dp_fast() (backend), not optimize_one_tree_dp()
+# (R/helpers_dp_optimizer.R). Shim the fast optimizer in the global env so
+# every tree's real priced dp_in is also solved by the reference, then
+# restore it. Runs after check 13 so the smoke runtime is unaffected.
+cat("\n--- 14-15. Fast vs reference optimizer ---\n",
+    file = audit_txt, append = TRUE)
+cat("\n--- 14-15. Fast vs reference optimizer ---\n")
+
+eq_check_14 <- "Check 14: .optimize_dp_fast() value and n_selected match reference"
+eq_check_15 <- "Check 15: .optimize_dp_fast() cutting pattern matches reference"
+
+if (source_ok && exists(".optimize_dp_fast", mode = "function")) {
+  E_eq <- new.env(parent = emptyenv())
+  E_eq$rows <- list()
+
+  .cut_pattern <- function(res) {
+    sl <- res$selected_logs
+    if (!is.data.frame(sl) || nrow(sl) == 0L) return(character(0))
+    sort(paste(sl$StartPos, sl$StopPos, sl$ProductKey, sep = "|"))
+  }
+
+  .fast_impl <- .optimize_dp_fast
+  .optimize_dp_fast <- function(valued_candidates) {
+    f <- .fast_impl(valued_candidates)
+    r <- tryCatch(optimize_one_tree_dp(valued_candidates),
+                  error = function(e) NULL)
+    E_eq$rows[[length(E_eq$rows) + 1L]] <- data.frame(
+      ref_ok        = !is.null(r),
+      value_diff    = if (is.null(r)) NA_real_
+                      else abs(f$dp_best_value - r$dp_best_value),
+      n_sel_match   = !is.null(r) && f$n_selected == r$n_selected,
+      pattern_match = !is.null(r) && identical(.cut_pattern(f), .cut_pattern(r)),
+      stringsAsFactors = FALSE)
+    f
+  }
+
+  eq_settings <- list(
+    list(species_group = "spruce", hogstkl = c(41L, 42L),
+         abonitet = c(14L, 17L), n_plots = 25L, seed = 42L),
+    list(species_group = "pine",   hogstkl = c(41L, 42L),
+         abonitet = c(14L, 17L), n_plots = 25L, seed = 42L),
+    list(species_group = "both",   hogstkl = c(41L, 42L),
+         abonitet = c(14L, 17L), n_plots = 10L, seed = 7L)
+  )
+  eq_errors <- character(0)
+  t_eq <- proc.time()
+  for (s in eq_settings) {
+    err <- tryCatch({
+      run_sampled_plot_bucking(params = s, price_matrix_path = "default_2021",
+                               root = root_dir)
+      ""
+    }, error = function(e) conditionMessage(e))
+    if (nzchar(err))
+      eq_errors <- c(eq_errors, sprintf("%s: %s", s$species_group, err))
+  }
+  t_eq <- as.numeric((proc.time() - t_eq)["elapsed"])
+
+  # Restore the backend's fast optimizer.
+  .optimize_dp_fast <- .fast_impl
+  rm(.fast_impl)
+
+  eq <- if (length(E_eq$rows) > 0L) do.call(rbind, E_eq$rows) else
+    data.frame(ref_ok = logical(0), value_diff = numeric(0),
+               n_sel_match = logical(0), pattern_match = logical(0))
+  n_trees    <- nrow(eq)
+  value_ok   <- eq$ref_ok & !is.na(eq$value_diff) & eq$value_diff <= 1e-8
+  n_val_bad  <- sum(!(value_ok & eq$n_sel_match))
+  n_pat_tie  <- sum(value_ok & eq$n_sel_match & !eq$pattern_match)
+
+  rec(eq_check_14,
+      if (length(eq_errors) == 0L && n_trees > 0L && n_val_bad == 0L) PASS
+      else FAIL,
+      sprintf("%d trees compared over %d runs (%.1f s); %d mismatch(es); max |value diff| = %.2e%s",
+              n_trees, length(eq_settings), t_eq, n_val_bad,
+              if (n_trees > 0L) max(c(0, eq$value_diff), na.rm = TRUE) else NA_real_,
+              if (length(eq_errors) > 0L)
+                paste(" | run errors:", paste(eq_errors, collapse = "; "))
+              else ""))
+  rec(eq_check_15,
+      if (n_trees == 0L || n_val_bad > 0L) FAIL
+      else if (n_pat_tie > 0L) REVIEW
+      else PASS,
+      if (n_val_bad > 0L)
+        sprintf("value/n_selected mismatches in %d tree(s); see check 14", n_val_bad)
+      else
+        sprintf("%d of %d trees differ in pattern at equal value (ties)",
+                n_pat_tie, n_trees))
+} else {
+  rec(eq_check_14, FAIL, "backend not sourced; .optimize_dp_fast() unavailable")
+  rec(eq_check_15, FAIL, "backend not sourced; .optimize_dp_fast() unavailable")
 }
 
 

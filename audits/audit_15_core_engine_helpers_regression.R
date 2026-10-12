@@ -50,7 +50,25 @@ suppressPackageStartupMessages({
   library(readr)
 })
 
-root_dir <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck"
+root_dir <- local({
+  # APTER_ROOT -> NFIBUCK_ROOT (legacy) -> walk up from getwd() -> stop()
+  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
+  env <- Sys.getenv(c("APTER_ROOT", "NFIBUCK_ROOT"), unset = "")
+  env <- env[nzchar(env)]
+  if (length(env) > 0L) {
+    d <- normalizePath(env[[1L]], winslash = "/", mustWork = FALSE)
+    if (!is_root(d))
+      stop("Project root '", d, "' (from ", names(env)[1L],
+           ") does not contain R/helpers_paths.R.", call. = FALSE)
+  } else {
+    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
+    if (!is_root(d))
+      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+           "inside the project directory.", call. = FALSE)
+  }
+  d
+})
 
 source(file.path(root_dir, "R", "helpers_paths.R"))
 source(file.path(root_dir, "R", "helpers_audit.R"))

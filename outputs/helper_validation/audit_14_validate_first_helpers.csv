@@ -24,6 +24,6 @@ prepare_price_join_keys() adds _used column,PASS,column present
 _uncapped stores original PriceDiameterClass_cm unchanged,PASS,original match: TRUE
 "_used == min(original, 50) for all rows",PASS,cap correct: TRUE
 validate_price_matrix_against_products(): no FAIL items,PASS,0 FAIL item(s) in validation
-validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices,REVIEW,1 REVIEW item(s); all expected: TRUE
+validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices,PASS,"1 REVIEW item(s), zero prices only on waste (pine_waste, spruce_waste): zero-priced waste accepted as intentional (scope decision 2026-10-12)"
 All accepted scripts 00-12 exist,PASS,"13 present, 0 missing"
 Accepted scripts 00-12 not modified after script 14 was created,PASS,none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)
