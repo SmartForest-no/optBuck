@@ -67,8 +67,8 @@ suppressPackageStartupMessages({
 })
 
 for (.h in c("helpers_paths", "helpers_products", "helpers_valuation",
-             "helpers_taper", "helpers_bark", "helpers_candidate_generation",
-             "helpers_commercial_volume", "helpers_dp_optimizer")) {
+             "helpers_taper", "helpers_bark", "helpers_commercial_volume",
+             "helpers_candidate_generation", "helpers_dp_optimizer")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)

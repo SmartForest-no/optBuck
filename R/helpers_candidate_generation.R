@@ -11,8 +11,13 @@
 #     (via prepare_price_join_keys()).  This helper outputs
 #     PriceDiameterClass_cm = floor(TopDiameter/10) — the raw, uncapped value.
 #   - Volume formula:
-#       "Top" (sawlog): cylinder at top diameter — pi * r_mm^2 * L_cm / 1e8
-#       Other types   : cumulative Huber sum over the profile grid.
+#       "Top" (sawlog): cylinder at top diameter — pi * r_mm^2 * L_cm / 1e8,
+#                       top diameter rounded down to cm; volume rounded to 5
+#                       decimals.
+#       Other types   : Apter's solid volume (section_volume_fun() in
+#                       helpers_commercial_volume.R, shared with the NOK/m3
+#                       denominator): 10 cm cylinders, each at the diameter at
+#                       the top of its section; not rounded (2026-10-12).
 #   - Bark (2026-10-12): products with DiameterUnderBark = TRUE use the
 #     under-bark profile (pv$DiameterValueUB, helpers_bark.R) for butt/top
 #     diameter, eligibility limits, price-diameter class and price volume,
@@ -40,6 +45,9 @@ if (!exists("%||%", mode = "function")) {
 
 if (!exists("add_under_bark_profile", mode = "function"))
   source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_bark.R"))
+if (!exists("section_volume_fun", mode = "function"))
+  source(file.path(dirname(sys.frame(1L)$ofile %||% "."),
+                   "helpers_commercial_volume.R"))
 
 #' Default stump height in cm (stump = first possible start position).
 CAND_STUMP_HEIGHT_CM <- 10L
@@ -126,29 +134,13 @@ generate_candidate_logs_one_tree <- function(pv,
   diam_pos <- as.integer(pv$diameterPosition)   # cm (sorted ascending)
   h_cm     <- as.integer(pv$height_cm)
   step_int <- as.integer(start_pos_step_cm)
-  prof_pos <- seq(0L, h_cm, by = step_int)
 
   # One diameter series (over or under bark): interpolation function
-  # (rule = 2: extrapolate with boundary values) and cumulative solid volume
-  # on the profile grid (step = PROFILE_STEP_CM).
+  # (rule = 2: extrapolate with boundary values) and Apter's solid volume
+  # (section_volume_fun(), shared with the NOK/m3 denominator).
   make_series <- function(diam_val) {
-    fun    <- stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2)
-    prof_d <- fun(prof_pos)
-    n_pp   <- length(prof_pos)
-    cumvol <- if (n_pp >= 2L) {
-      sec_r   <- (prof_d[-n_pp] + prof_d[-1L]) / 4    # mean radius in mm
-      sec_vol <- pi * sec_r^2 * step_int / 1e8         # m3 per section
-      c(0, cumsum(sec_vol))                            # cumvol[i] = vol at prof_pos[i-1]
-    } else c(0, 0)
-    # Solid volume between two positions (cm), vectorised over pos_a / pos_b.
-    solid_vol <- function(pos_a, pos_b) {
-      ia <- as.integer(pos_a) / step_int + 1L          # 1-based index
-      ib <- as.integer(pos_b) / step_int + 1L
-      ia <- pmax(1L, pmin(ia, length(cumvol)))
-      ib <- pmax(1L, pmin(ib, length(cumvol)))
-      cumvol[ib] - cumvol[ia]
-    }
-    list(fun = fun, solid_vol = solid_vol)
+    list(fun       = stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2),
+         solid_vol = section_volume_fun(diam_pos, diam_val, step_int))
   }
 
   ser_ob <- make_series(as.numeric(pv$DiameterValue))   # mm, over bark
@@ -239,9 +231,10 @@ generate_candidate_logs_one_tree <- function(pv,
       combos$TopDiameter
     }
 
-    if (!is.null(prow$VolumeDiameterCategory) &&
-        !is.na(prow$VolumeDiameterCategory) &&
-        prow$VolumeDiameterCategory == "Top") {
+    is_top <- !is.null(prow$VolumeDiameterCategory) &&
+      !is.na(prow$VolumeDiameterCategory) &&
+      prow$VolumeDiameterCategory == "Top"
+    if (is_top) {
       r_mm      <- top_d_vol / 2
       price_vol <- ifelse(
         eligible & !is.na(r_mm) & r_mm > 0,
@@ -273,7 +266,7 @@ generate_candidate_logs_one_tree <- function(pv,
       TopDiameter          = round(combos$TopDiameter, 1),
       ButtDiameter         = round(combos$ButtDiameter, 1),
       eligible             = eligible,
-      price_volume_m3      = round(price_vol, 5),
+      price_volume_m3      = if (is_top) round(price_vol, 5) else price_vol,
       LengthClass_dm       = len_dm,
       PriceDiameterClass_cm = diam_class_raw,   # uncapped; rename in valuation
       TopDiameter_ob       = round(top_ob, 1),

@@ -69,6 +69,8 @@ Replace the current price-scenario options (base / multiplier / uploaded). Remov
   - Drag-and-drop upload replaces the scenario matrix. Uploads are validated against the `PriceMatrix_long` schema, and an import template can be downloaded.
   - Scenarios can be downloaded as CSV.
 - **Results.** Show default vs. scenario: NOK/m³ total and by assortment, volume shares by assortment, and the change in cutting patterns. Example stems show the bucking under both matrices.
+  - **Cutting-pattern changes count only differences that change value or volume**, so equal-value ties are not shown as changes. Phase 3's audit 18 found 34 of 137 spruce trees switching between equal-value patterns when all prices were scaled ×1.5 (e.g. different splits of the same flat-priced pulpwood stretch; exact ties since pulpwood volume is the unrounded solid-volume rule).
+  - Consider deterministic tie-breaking in the optimizer: treat values within a tolerance as equal and apply a documented rule, such as preferring fewer cuts. Any rule must keep the fast and reference optimizers identical (audit 16 checks 14–15).
 - **Custom assortments.** Users can add assortments (e.g. poles, large-diameter sawlogs, small sawlogs, special timber) with:
   - Species
   - Minimum and maximum top diameter
@@ -78,6 +80,7 @@ Replace the current price-scenario options (base / multiplier / uploaded). Remov
 
   These are added to the product definitions and validated with `validate_price_matrix_against_products()`.
 - **Volume calculation method per product.** Make the price-volume method selectable per product, following the StanForD volume categories as implemented in optBuck (`PriceVolumeCalc()`): e.g. top cylinder (current default for sawlogs), frustum, all diameters (solid volume), calculated Norwegian mid, with the matching volume-diameter and volume-length rules. **Frustum taper is 1 cm per metre** (decided 2026-10-12). optBuck's `PriceVolumeCalc.R` currently uses `LogLength * 0.01`, which is a bug (should be `0.1`, since diameters are in mm and LogLength in cm); Lennart is fixing it in optBuck. Use 1 cm/m here regardless. The commercial-volume denominator does not depend on this choice.
+  - **Reconcile "solid volume".** Apter's solid volume (pulpwood/waste price volume and the denominator) is 10 cm cylinders at each section's under-bark **top** diameter, not rounded, via `section_volume_fun()` (decided 2026-10-12). optBuck's "All diameters (solid volume)" is a different variant: it sums cylinders over every diameter from start to stop inclusive (one section too many), and rounds diameters down to cm before subtracting bark. Reconcile the two when adding per-product volume methods; keep the denominator on Apter's rule.
 - **Proposed extension (confirm with Lennart before building).** A sensitivity tool that shows how cutting patterns and NOK/m³ respond to changing a price cell or assortment by ±x %. It would also show which cells actually affect the bucking. Building a full price-matrix optimiser would need an explicit objective (e.g. target volume shares per assortment), which Lennart must define first.
 
 ## Phase 5: tree list import

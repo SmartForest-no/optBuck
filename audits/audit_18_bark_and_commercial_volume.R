@@ -32,6 +32,8 @@
 #      floor(TopDiameter_ub / 10) and TopDiameter_ub <= TopDiameter_ob
 #      (<=, not <: with the B >= 0 floor a pine top can have zero bark)
 #  9.  Total NOK/m3 equals total value / total commercial volume
+# 10.  For every pulpwood log, price volume equals commercial volume
+#      (tolerance 1e-9 m3)
 #
 # Verdict : PASS / ACCEPTED WITH REVIEW / FAIL (helpers_audit.R)
 #
@@ -356,6 +358,24 @@ if (all(runs_ok)) {
       sprintf("spruce %.1f, pine %.1f NOK/m3 | max deviation %.2e",
               res$spruce$per_m3_summary$nok_per_m3[1],
               res$pine$per_m3_summary$nok_per_m3[1], dev9))
+}
+
+
+# ==============================================================================
+# Check 10: pulpwood price volume equals its commercial volume
+# ==============================================================================
+section("10. Pulpwood price volume = commercial volume")
+
+if (all(runs_ok)) {
+  sl10 <- do.call(rbind, lapply(res, function(r) r$selected_logs_all))
+  pw   <- sl10[sl10$ProductType == "pulpwood", ]
+  d10  <- abs(pw$price_volume_m3 - pw$commercial_volume_m3)
+  rec("Check 10: Pulpwood price volume equals commercial volume (1e-9 m3)",
+      if (nrow(pw) > 0L && all(d10 <= 1e-9)) PASS else FAIL,
+      sprintf("%d pulpwood logs (spruce + pine) | over tolerance: %d | max |diff| %.3e m3 | mean diff (price - commercial) %.3e m3 | totals %.5f vs %.5f m3",
+              nrow(pw), sum(d10 > 1e-9), max(d10),
+              mean(pw$price_volume_m3 - pw$commercial_volume_m3),
+              sum(pw$price_volume_m3), sum(pw$commercial_volume_m3)))
 }
 
 

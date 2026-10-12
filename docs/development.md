@@ -18,7 +18,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Core engine helpers (`R/`) | Regression-tested: audit 15 PASS (23/23) |
 | First-helper validation | Audit 14 PASS (28/28); zero-priced waste accepted 2026-10-12 |
 | App backend | Audit 16 PASS (15/15), including fast vs. reference optimizer equivalence |
-| Bark model and NOK/m³ denominator | Audit 18 PASS (12/12): barkNOR wrapper, B ≥ 0 floor, swappable model, synthetic stems, price independence |
+| Bark model and NOK/m³ denominator | Audit 18 PASS (13/13): barkNOR wrapper, B ≥ 0 floor, swappable model, synthetic stems, price independence |
 | Shiny app (v1, Release 0.2.0) | Audit 17 PASS (22/22), headless shinytest2 smoke test with screenshots |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03

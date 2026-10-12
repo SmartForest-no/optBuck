@@ -120,7 +120,8 @@ The app also shows:
 - Stump height 10 cm; candidate logs on a 10 cm grid.
 - Sawlog sale volume is a cylinder at the under-bark top diameter (rounded
   down to whole cm) over the log length. Pulpwood and waste sale volume is
-  the solid volume of the stem section under bark. A choice of volume
+  the solid volume under bark: 10 cm sections, each at its under-bark top
+  diameter, the same rule as the commercial volume. A choice of volume
   method per product is planned.
 - Sawlog top-diameter classes above 50 cm are priced as 50 cm. The physical
   diameter is not changed.

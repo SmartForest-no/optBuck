@@ -19,6 +19,36 @@
 # ==============================================================================
 
 
+#' Apter's "solid volume" rule, shared by the NOK/m3 denominator and the
+#' pulpwood/waste price volume (helpers_candidate_generation.R), so the two
+#' cannot diverge (decided 2026-10-12, see CLAUDE.md).
+#'
+#' Solid volume between two positions = the sum of 10 cm cylinders, each
+#' using the diameter at the TOP of its section, not rounded. Pass under-bark
+#' diameters for under-bark volume.
+#'
+#' @param positions_cm Profile positions (cm), ascending.
+#' @param d_mm         Diameters at those positions (mm).
+#' @param step_cm      Section length (cm).
+#' @return function(pos_a, pos_b), vectorised: volume (m3) between pos_a and
+#'   pos_b (cm, multiples of step_cm, within the profile). Uses a cumulative
+#'   sum over the profile grid, so it is fast for many candidates.
+section_volume_fun <- function(positions_cm, d_mm, step_cm = 10L) {
+  step_cm <- as.integer(step_cm)
+  grid_max <- as.integer(floor(max(positions_cm) / step_cm) * step_cm)
+  tops     <- seq(step_cm, grid_max, by = step_cm)
+  d_top    <- stats::approx(positions_cm, d_mm, xout = tops, rule = 2)$y
+  cumvol   <- c(0, cumsum(pi * (d_top / 2)^2 * step_cm / 1e8))   # mm^2 * cm -> m3
+  function(pos_a, pos_b) {
+    if (any(pos_a %% step_cm != 0 | pos_b %% step_cm != 0))
+      stop("Solid volume: positions must be multiples of ", step_cm, " cm.")
+    if (any(pos_a < 0 | pos_b > grid_max))
+      stop("Solid volume: positions outside the profile (0 - ", grid_max, " cm).")
+    cumvol[as.integer(pos_b %/% step_cm) + 1L] - cumvol[as.integer(pos_a %/% step_cm) + 1L]
+  }
+}
+
+
 #' Commercial volume under bark (m3) per log.
 #'
 #' @param positions_cm Profile positions (cm), ascending.
@@ -28,20 +58,11 @@
 #' @param step_cm      Section length (cm); StartPos/StopPos must lie on it.
 #' @return Numeric vector, one commercial volume (m3) per row of `logs`.
 commercial_volume_ub <- function(positions_cm, d_ub_mm, logs, step_cm = 10L) {
-  n <- nrow(logs)
-  if (n == 0L) return(numeric(0))
-  if (any(logs$StartPos %% step_cm != 0 | logs$StopPos %% step_cm != 0))
-    stop("commercial_volume_ub(): StartPos/StopPos must be multiples of ",
-         step_cm, " cm.")
-  d_at <- stats::approxfun(positions_cm, d_ub_mm, method = "linear", rule = 2)
-
-  vapply(seq_len(n), function(i) {
-    if (identical(as.character(logs$ProductType[i]), "waste")) return(0)
-    if (logs$StopPos[i] <= logs$StartPos[i]) return(0)
-    tops <- seq(logs$StartPos[i] + step_cm, logs$StopPos[i], by = step_cm)
-    r_mm <- d_at(tops) / 2
-    sum(pi * r_mm^2 * step_cm) / 1e8                  # mm^2 * cm -> m3
-  }, numeric(1))
+  if (nrow(logs) == 0L) return(numeric(0))
+  vol <- section_volume_fun(positions_cm, d_ub_mm, step_cm)
+  v   <- vol(logs$StartPos, logs$StopPos)
+  v[as.character(logs$ProductType) == "waste" | logs$StopPos <= logs$StartPos] <- 0
+  v
 }
 
 

@@ -8,6 +8,7 @@ Check 05b: Linear cone = sum of top-diameter cylinders,PASS,"got 0.4283325964 m3
 Check 05c: Waste log and unbucked top contribute nothing,PASS,"per log 0.402067 / 0.194783 / 0.000000 m3 | total 0.5968507679, hand (non-waste only) 0.5968507679"
 Check 05d: Log from 10 cm excludes the stump section,PASS,"got 0.0706858347 m3 for 1 m, expected 0.0706858347 m3"
 Check 06: Commercial volume = non-waste logs only (recomputed per tree),PASS,201 trees (spruce + pine runs) | max |backend - hand| = 4.44e-16 m3 | waste logs with volume: 0 | trees above stem-to-last-log volume: 0
-"Check 07: All prices x1.5 -> same commercial volume per tree, NOK/m3 x1.5",PASS,"137 trees | max |tree volume diff| 2.8e-17 m3, max |value x1.5 diff| 2.3e-13 NOK | equal-value tie patterns: 22 | total 33.507093 vs 33.507093 m3 | NOK/m3 389.553 -> 584.330 (ratio - 1.5 = 0.0e+00) | fixed pattern identical: TRUE"
-Check 08: Sawlog price class = floor(TopDiameter_ub / 10); TopDiameter_ub <= TopDiameter_ob,PASS,334 sawlogs (spruce + pine) | class mismatches: 0 (boundary cases skipped: 9) | ub > ob: 0 | tops with zero bark: 0 | mean top bark 13.4 mm
-Check 09: Total NOK/m3 = total value / total commercial volume,PASS,"spruce 389.6, pine 370.4 NOK/m3 | max deviation 0.00e+00"
+"Check 07: All prices x1.5 -> same commercial volume per tree, NOK/m3 x1.5",PASS,"137 trees | max |tree volume diff| 1.4e-17 m3, max |value x1.5 diff| 2.3e-13 NOK | equal-value tie patterns: 34 | total 33.507093 vs 33.507093 m3 | NOK/m3 388.938 -> 583.407 (ratio - 1.5 = 0.0e+00) | fixed pattern identical: TRUE"
+Check 08: Sawlog price class = floor(TopDiameter_ub / 10); TopDiameter_ub <= TopDiameter_ob,PASS,335 sawlogs (spruce + pine) | class mismatches: 0 (boundary cases skipped: 8) | ub > ob: 0 | tops with zero bark: 0 | mean top bark 13.3 mm
+Check 09: Total NOK/m3 = total value / total commercial volume,PASS,"spruce 388.9, pine 370.0 NOK/m3 | max deviation 0.00e+00"
+Check 10: Pulpwood price volume equals commercial volume (1e-9 m3),PASS,289 pulpwood logs (spruce + pine) | over tolerance: 0 | max |diff| 0.000e+00 m3 | mean diff (price - commercial) 0.000e+00 m3 | totals 8.72522 vs 8.72522 m3
