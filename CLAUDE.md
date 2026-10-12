@@ -1,15 +1,25 @@
-# nfiBuck — context for Claude and other AI assistants
+# Apter — context for Claude and other AI assistants
 
-This file is for AI collaborators. For a human-facing overview (what the
-project does, how to run it, current status), see [README.md](README.md).
+This file is for AI collaborators. Apter was called nfiBuck until the
+2026-10 rename. Other documents:
+
+- [README.md](README.md) is **partner-facing** (industry partners). Keep it
+  free of internal material: audits, prototype history, data sanitization,
+  Oracle, and phase plans belong in [docs/development.md](docs/development.md)
+  or here. Mark features as planned until they are built.
+- [docs/development.md](docs/development.md) covers the developer side:
+  repository layout, project root, audits, the data pipeline, and the files
+  that keep the old name on purpose.
 
 ## What this is
 
-`nfiBuck` simulates optimal log bucking (cross-cutting) on trees from the
-Norwegian National Forest Inventory (NFI): given a tree's taper profile
+Apter is a bucking simulator: given a spruce or pine stem's taper profile
 (`taperNOR`) and a set of product/price definitions, a backward-induction DP
-optimizer finds the cutting pattern that maximizes total timber value. A
-Shiny app (`app/app.R`) exposes a sampled-plot version of this pipeline.
+optimizer finds the cutting pattern that maximizes total timber value. It is
+for comparing price matrices and planning bucking, not an inventory or
+estimation tool. Trees currently come from a sanitized NFI sample; uploaded
+tree lists and stem profiles are planned. A Shiny app (`app/`) exposes the
+pipeline.
 
 ## Domain terms (Norwegian NFI)
 
@@ -17,7 +27,7 @@ Shiny app (`app/app.R`) exposes a sampled-plot version of this pipeline.
   production/mature forest — 1–2 are young/establishment, excluded by design)
 - **abonitet** — site productivity class (bonitet; lower number = poorer site)
 - **fylnr** — county code. Norway's counties were reorganized in 2024; the
-  app's `FYLNR_CHOICES`/`.FYLNR_NAMES` mapping in `app/app.R` handles both
+  app's `FYLNR_CHOICES`/`.FYLNR_NAMES` mapping in `app/setup.R` handles both
   current and historical codes.
 - **hoh** — elevation (m)
 - **bucking** — cutting a stem into logs (sawlog/pulpwood/waste) to maximize
@@ -61,7 +71,7 @@ the full sanitization record (original `plot_id` is replaced with a synthetic
 **Authorised exception (presentation only).**
 `scripts/local_only/export_plot_coordinates_rounded.R` queries Oracle for
 plot coordinates and exports them rounded to 1 km to
-`C:/nfibuck_private/plot_coords_km.csv`, outside the repo. The project owner
+`C:/apter_private/plot_coords_km.csv`, outside the repo. The project owner
 authorised it for the 2026-10 status presentation only. It needs Oracle
 access, writes nothing into the repository, and its output rows carry no
 plot IDs of any kind. It is not used by the app or the pipeline, and it does
@@ -78,10 +88,11 @@ still out of bounds.
   `helpers_upload.R` (Scenario 2 price matrix), `app_ui.R` and
   `app_server.R`. Never name them `ui.R`/`server.R`: next to `app.R` Shiny
   treats those as a second app format, and shinytest2 refuses to start.
-- **Project root:** no hardcoded paths. Order is `APTER_ROOT` ->
-  `NFIBUCK_ROOT` (legacy, until the Phase 1 rename) -> fallback (app: parent
-  of `app/`; `get_root_dir()`, backend and audits: walk up from `getwd()` to
-  the folder containing `R/helpers_paths.R`) -> `stop()`. The app exports the
+- **Project root:** no hardcoded paths. Order is `APTER_ROOT` (and option
+  `apter.root` in `get_root_dir()`) -> fallback (app: parent of `app/`;
+  `get_root_dir()`, backend, scripts and audits: walk up from `getwd()` to
+  the folder containing `R/helpers_paths.R`) -> `stop()`. The legacy
+  `NFIBUCK_ROOT` / `nfibuck.root` are no longer read. The app exports the
   resolved root as `APTER_ROOT` so the backend agrees. Scripts that run
   before `R/helpers_paths.R` is sourced carry an inline copy of this logic.
 - The app runs `.optimize_dp_fast()` (backend), not the reference
@@ -89,10 +100,14 @@ still out of bounds.
   `audits/audit_17_app_smoke.R` drives the app headlessly (shinytest2).
 - The app only reads `data_processed_github/` (sanitized, committed, no
   Oracle needed). `data_processed/` and Oracle access are only needed to
-  *regenerate* that sanitized data via `scripts/prototype_reference/00_prepare_nfi_2024_data.R`
-  and `scripts/98_create_github_safe_processed_data.R`.
+  *regenerate* that sanitized data via the frozen
+  `scripts/prototype_reference/00_prepare_nfi_2024_data.R` and
+  `scripts/98_create_github_safe_processed_data.R`. Script 00 hardcodes the
+  old nfiBuck root; run it only through
+  `scripts/run_prototype_00_prepare_nfi_data.R`, which substitutes the root
+  in memory without touching the frozen file.
 - `scripts/prototype_reference/` and `audits/prototype_reference/` are a
   frozen, matched pair — the original validated prototype scripts (00–15)
   and their audits (05–12). `audit_14`'s checks 19–20 assert these scripts
   still exist and are unmodified; don't delete or edit them.
-- See README's "Repository contents" section for the full file layout.
+- See [docs/development.md](docs/development.md) for the full file layout.
