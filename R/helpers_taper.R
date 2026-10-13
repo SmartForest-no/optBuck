@@ -21,12 +21,13 @@
 #           pv      <- pvs[["242251"]]
 # ==============================================================================
 
-if (!exists("get_root_dir", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_paths.R"))
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
-if (!exists("%||%", mode = "function")) {
-  `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+if (!exists("get_root_dir", mode = "function"))
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_paths.R"))
+
 
 #' Minimum DBH (cm) accepted by taperNOR.
 TAPER_MIN_DBH_CM <- 5.0
@@ -63,7 +64,7 @@ normalise_tree_inputs_for_taper <- function(tree_row) {
   }
 
   treid        <- as.character(get_field(tree_row, "treid"))
-  plot_id      <- as.character(get_field(tree_row, "plot_id") %||% NA_character_)
+  plot_id      <- as.character(or_default(get_field(tree_row, "plot_id"), NA_character_))
   species_group <- as.character(get_field(tree_row, "species_group"))
 
   dbh_cm <- as.numeric(get_field(tree_row, "dbh_cm", "brysth_dia"))
@@ -143,7 +144,7 @@ generate_taper_profile_one_tree <- function(treid, plot_id = NA_character_,
 
   data.frame(
     treid             = as.character(treid),
-    plot_id           = as.character(plot_id %||% NA_character_),
+    plot_id           = as.character(or_default(plot_id, NA_character_)),
     sesong            = sesong,
     species_group     = species_group,
     dbh_cm            = dbh_cm,
@@ -192,7 +193,7 @@ generate_taper_profiles_for_trees <- function(tree_data,
                dbh_cm        = inp$dbh_cm,
                height_m      = inp$height_m,
                profile_step_m = profile_step_m,
-               sesong        = row_i[["sesong"]] %||% NA)
+               sesong        = or_default(row_i[["sesong"]], NA))
       list(profile = p, ok = TRUE, msg = "")
     }, error = function(e) {
       list(profile = NULL, ok = FALSE, msg = conditionMessage(e))
@@ -204,7 +205,7 @@ generate_taper_profiles_for_trees <- function(tree_data,
       profile_list[[i]] <- result$profile
     } else if (!quiet) {
       warning(sprintf("Tree %s: profile failed: %s",
-                      tree_data$treid[i] %||% i, result$msg))
+                      or_default(tree_data$treid[i], i), result$msg))
     }
   }
 
@@ -269,7 +270,7 @@ profiles_to_profile_vectors <- function(profiles,
 
     pvs[[tid]] <- list(
       treid            = tid,
-      plot_id          = as.character(plot_col[i1] %||% NA_character_),
+      plot_id          = as.character(or_default(plot_col[i1], NA_character_)),
       species_group    = sp_col[i1],
       DBH              = dbh_col[i1],
       height_m         = h_col[i1],

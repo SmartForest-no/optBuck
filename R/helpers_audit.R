@@ -11,18 +11,12 @@
 # ==============================================================================
 
 
-# ------------------------------------------------------------------------------
-# Null-coalescing operator
-# ------------------------------------------------------------------------------
-
-#' Return b if a is NULL or a scalar NA, otherwise return a.
-#'
-#' @param a Left-hand side.
-#' @param b Right-hand side (fallback).
-#' @return a if non-null/non-NA, else b.
-`%||%` <- function(a, b) {
-  if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+# or_default() (Apter's "value or default" rule) lives in R/helpers_utils.R,
+# shared with the app, the backend and its workers. Audits do not define
+# `%||%`: base R's (NULL only) is left alone.
+if (!exists("or_default", mode = "function"))
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
 
 # ------------------------------------------------------------------------------

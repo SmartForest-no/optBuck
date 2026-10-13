@@ -175,7 +175,7 @@ if (source_ok && exists("run_sampled_plot_bucking", mode = "function")) {
     smoke_result <- result_call$result
     smoke_err    <- ""
   } else {
-    smoke_err <- result_call$msg %||% "unknown error"
+    smoke_err <- or_default(result_call$msg, "unknown error")
   }
 }
 
@@ -223,9 +223,9 @@ cat("\n--- 05. n_plots_sampled ---\n", file = audit_txt, append = TRUE)
 cat("\n--- 05. n_plots_sampled ---\n")
 
 if (!is.null(smoke_result)) {
-  n_elig    <- smoke_result$n_eligible_plots %||% NA_integer_
-  n_sampled <- smoke_result$n_plots_sampled  %||% NA_integer_
-  expected  <- min(5L, as.integer(n_elig %||% 5L))
+  n_elig    <- or_default(smoke_result$n_eligible_plots, NA_integer_)
+  n_sampled <- or_default(smoke_result$n_plots_sampled, NA_integer_)
+  expected  <- min(5L, as.integer(or_default(n_elig, 5L)))
 
   rec("Check 05: n_plots_sampled",
       if (is.na(n_sampled)) FAIL
@@ -375,7 +375,7 @@ if (!is.null(smoke_result)) {
     if (is.data.frame(x)) names(x) else NULL)), names(smoke_result$diagnostics))
   bad <- grep("per_ha|plot_area|plot_summary|ha_expan", all_names,
               value = TRUE, ignore.case = TRUE)
-  lbl <- smoke_result$label %||% ""
+  lbl <- or_default(smoke_result$label, "")
   ok_lbl <- grepl("selected trees only", lbl, fixed = TRUE)
   rec("Check 10: No per-ha or plot-level outputs; trees-only label",
       if (length(bad) == 0L && ok_lbl) PASS else FAIL,

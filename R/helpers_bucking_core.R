@@ -25,9 +25,9 @@
 #     so trees can be processed in any chunking or on any worker.
 # ==============================================================================
 
-if (!exists("%||%", mode = "function")) {
-  `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
 
 # ------------------------------------------------------------------------------
@@ -211,7 +211,7 @@ if (!exists("%||%", mode = "function")) {
     nok_per_m3           = nok,
     optimizer_status     = status,
     optimizer_message    = msg,
-    height_source        = as.character(tmeta$height_source %||% NA_character_)
+    height_source        = as.character(or_default(tmeta$height_source, NA_character_))
   )
 }
 
@@ -353,10 +353,10 @@ if (!exists("%||%", mode = "function")) {
                   height_source = if (is.null(hs)) NULL else hs[ti])
     for (gr in prep$groups) {
       t0  <- proc.time()[["elapsed"]]
+      no_products <- list(error = sprintf(
+        "no products configured for species_group '%s'.", pv$species_group))
       geo <- tryCatch(
-        .candidate_columns(pv, gr$plan[[pv$species_group]] %||% list(error = sprintf(
-                             "no products configured for species_group '%s'.",
-                             pv$species_group)),
+        .candidate_columns(pv, or_default(gr$plan[[pv$species_group]], no_products),
                            stump_cm, step_cm, usable_only = TRUE),
         error = function(e) e)
       t_cand <- t_cand + proc.time()[["elapsed"]] - t0
@@ -369,9 +369,8 @@ if (!exists("%||%", mode = "function")) {
         if (inherits(g, "error") || is.null(own) || !is.null(own$error)) {
           t0 <- proc.time()[["elapsed"]]
           g <- tryCatch(
-            .candidate_columns(pv, own %||% list(error = sprintf(
-              "no products configured for species_group '%s'.", pv$species_group)),
-              stump_cm, step_cm, usable_only = TRUE),
+            .candidate_columns(pv, or_default(own, no_products),
+                               stump_cm, step_cm, usable_only = TRUE),
             error = function(e) e)
           t_cand <- t_cand + proc.time()[["elapsed"]] - t0
         }

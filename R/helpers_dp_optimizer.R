@@ -37,9 +37,9 @@
 #   result$dp_best_value   # total value (NOK)
 # ==============================================================================
 
-if (!exists("%||%", mode = "function")) {
-  `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
 #' Totals within this many NOK of the best count as a tie (see header).
 DP_TIE_TOL_NOK <- 1e-6

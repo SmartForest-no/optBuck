@@ -49,20 +49,20 @@
 #   cands <- generate_candidate_logs_one_tree(pv, pd, lc)
 # ==============================================================================
 
-if (!exists("%||%", mode = "function")) {
-  `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
 if (!exists("add_under_bark_profile", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_bark.R"))
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_bark.R"))
 if (!exists("section_volume_fun", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."),
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")),
                    "helpers_commercial_volume.R"))
 if (!exists("price_volume_m3", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."),
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")),
                    "helpers_volume_methods.R"))
 if (!exists("species_products", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_products.R"))
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_products.R"))
 
 #' Default stump height in cm (stump = first possible start position).
 CAND_STUMP_HEIGHT_CM <- 10L
@@ -118,19 +118,19 @@ products_for_species <- function(species_group, ProductData = NULL) {
   products <- lapply(seq_len(nrow(pd_sp)), function(j) {
     prow <- pd_sp[j, , drop = FALSE]
     pk   <- prow$ProductKey
-    min_len <- prow$MinLength %||% 0L
-    max_len <- prow$MaxLength %||% Inf
+    min_len <- or_default(prow$MinLength, 0L)
+    max_len <- or_default(prow$MaxLength, Inf)
     ok <- lc_sp$ProductKey == pk & lc_sp$LogLength >= min_len & lc_sp$LogLength <= max_len
     list(pk = pk, product_type = prow$ProductType,
          lengths = lc_sp$LogLength[ok],
          min_len = min_len, max_len = max_len,
-         min_top = prow$MinTopDiameter %||% 0, max_top = prow$MaxTopDiameter %||% Inf,
-         min_butt = prow$MinButtDiameter %||% 0, max_butt = prow$MaxButtDiameter %||% Inf,
+         min_top = or_default(prow$MinTopDiameter, 0), max_top = or_default(prow$MaxTopDiameter, Inf),
+         min_butt = or_default(prow$MinButtDiameter, 0), max_butt = or_default(prow$MaxButtDiameter, Inf),
          ub = isTRUE(as.logical(prow$DiameterUnderBark)),
-         top_offset = as.numeric(prow$DiameterTopPosition %||% 0),
+         top_offset = as.numeric(or_default(prow$DiameterTopPosition, 0)),
          method = prow$VolumeDiameterCategory,
          adjustment = prow$VolumeDiameterAdjustment,
-         priority = as.numeric(prow$Priority %||% 99))
+         priority = as.numeric(or_default(prow$Priority, 99)))
   })
   list(species_group = species_group, pks = pks, products = products,
        all_lengths = lc_sp$LogLength,

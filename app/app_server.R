@@ -332,7 +332,7 @@ server <- function(input, output, session) {
   output$tbl_cmp_overview <- renderReactable(apter_reactable(local({
     req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
     r1 <- result(); r2 <- result_s2()
-    s2_lbl <- sprintf("scenario (%d cells changed)", r2$n_cells_changed %||% NA_integer_)
+    s2_lbl <- sprintf("scenario (%d cells changed)", or_default(r2$n_cells_changed, NA_integer_))
     mk <- function(r, nm, src) {
       v <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
       m <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
@@ -578,7 +578,7 @@ server <- function(input, output, session) {
           else
             sprintf("Plots matching the selection: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
                     r$n_eligible_plots, n_zero, n_unpr)),
-      div(class = "stat-strip", r$label %||% RESULTS_LABEL)
+      div(class = "stat-strip", or_default(r$label, RESULTS_LABEL))
     )
   })
 
@@ -862,7 +862,7 @@ server <- function(input, output, session) {
   # default grid only custom assortments' prices change.
   apply_grid_edit <- function(x, pmv, only_keys = NULL) {
     if (is.null(x$changes$changes)) return()            # load, not an edit
-    id <- x$params$matrix_id %||% isolate(input$pm_id)
+    id <- or_default(x$params$matrix_id, isolate(input$pm_id))
     g  <- hot_to_r(x)
     ref <- pm_to_grid(isolate(pmv()), id)
     if (!identical(dim(g), dim(ref))) return()
@@ -1063,8 +1063,8 @@ server <- function(input, output, session) {
   observeEvent(input$asm_save, {
     num <- function(x) if (is.null(x) || length(x) == 0L || is.na(x)) NA_real_ else as.numeric(x)
     or  <- function(x, y) if (is.na(x)) y else x
-    na_if_blank <- function(x) { x <- trimws(x %||% ""); if (nzchar(x)) x else NA }
-    name <- trimws(input$asm_name %||% "")
+    na_if_blank <- function(x) { x <- trimws(or_default(x, "")); if (nzchar(x)) x else NA }
+    name <- trimws(or_default(input$asm_name, ""))
     def <- .type_assortment_defs(data.frame(
       Name = name, Class = or(na_if_blank(input$asm_class), assortment_slug(name)),
       Species = input$asm_species,
@@ -1104,7 +1104,7 @@ server <- function(input, output, session) {
     removeModal()
     runs <- intersect(c("default", "scenario"),
                       if (def$UseIn == "both") c("default", "scenario") else def$UseIn)
-    kept <- vapply(runs, function(r) attr(if (r == "default") new_d else new_s, "n_kept") %||% 0L,
+    kept <- vapply(runs, function(r) or_default(attr(if (r == "default") new_d else new_s, "n_kept"), 0L),
                    integer(1))
     asm_msg(list(type = "ok", warnings = v$warnings, text = if (nrow(prev) == 0L)
       sprintf("Added %s (%s). Its prices are in the matrix list below.",

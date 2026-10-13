@@ -149,6 +149,13 @@ still out of bounds.
   - **Rule: results must not depend on the number of workers or on chunking** (identical, not just equal; audit 22). Trees are bucked in `treid` order; per-tree code must stay free of RNG and global state.
   - **Multi-user servers.** The cores − 1 default assumes one R process. On a server with several R processes, set `apter.workers` so that processes × workers ≤ cores.
   - **Main baseline.** `outputs/performance/baseline_main_3fa0a9d.rds` holds main's results before the phase; never regenerate it.
+- **`or_default(x, default)`** (`R/helpers_utils.R`, the single definition)
+  is Apter's "value or default" rule: `default` when `x` is NULL or a single
+  NA. Use it everywhere; never define or rely on `%||%` (base R's, R >= 4.4,
+  only replaces NULL, and helpers used to define their own conditionally,
+  so the app and the audits ran different versions). Every helper that
+  needs it sources `helpers_utils.R` when `or_default` is missing; the
+  backend sources it first and the workers' core environment includes it.
 - **Price scenarios (Phase 4a):** `R/helpers_price_matrix.R` (grids in the
   source layout: diameter rows × length columns; diff, reset, upload with
   automatic long/wide detection, validation, templates, export) and

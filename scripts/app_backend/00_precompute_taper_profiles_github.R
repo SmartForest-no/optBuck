@@ -55,7 +55,7 @@ ROOT <- local({
 })
 
 # ---- source helpers ---------------------------------------------------------
-for (.h in c("helpers_paths", "helpers_taper")) {
+for (.h in c("helpers_utils", "helpers_paths", "helpers_taper")) {
   src <- file.path(ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -130,8 +130,8 @@ cat(sprintf("  Generating profiles (%d trees, step = %.2f m) ...\n",
 profiles    <- generate_taper_profiles_for_trees(
   tree_data, profile_step_m = PROFILE_STEP_M, quiet = FALSE)
 
-profile_ok  <- attr(profiles, "profile_ok")  %||% rep(TRUE, n_valid)
-profile_err <- attr(profiles, "profile_errors") %||% rep("", n_valid)
+profile_ok  <- or_default(attr(profiles, "profile_ok"), rep(TRUE, n_valid))
+profile_err <- or_default(attr(profiles, "profile_errors"), rep("", n_valid))
 
 n_ok   <- sum(profile_ok)
 n_fail <- sum(!profile_ok)

@@ -18,8 +18,8 @@
 #
 # Workers : a chunk ships the bucking core as one environment (.core_env()):
 #           the core helper files sourced into a fresh environment whose
-#           parent is package:stats (so nothing is looked up in a worker's
-#           global environment), with the calling process's `%||%`. Workers
+#           parent is package:stats, so nothing is looked up in a worker's
+#           global environment (or_default() comes from helpers_utils.R). Workers
 #           need no setup and keep no state between chunks.
 # ==============================================================================
 
@@ -53,7 +53,7 @@ apter_workers <- function() {
 }
 
 # The bucking core as one environment, built once per R process.
-.APTER_CORE_FILES <- c("helpers_paths", "helpers_volume_methods", "helpers_bark",
+.APTER_CORE_FILES <- c("helpers_utils", "helpers_paths", "helpers_volume_methods", "helpers_bark",
                        "helpers_commercial_volume", "helpers_products",
                        "helpers_valuation", "helpers_dp_optimizer",
                        "helpers_taper", "helpers_candidate_generation",
@@ -64,9 +64,6 @@ apter_workers <- function() {
   if (!is.null(.apter_core_cache$env)) return(.apter_core_cache$env)
   dir <- file.path(get_root_dir(), "R")
   e <- new.env(parent = as.environment("package:stats"))
-  # The calling process's `%||%` (R >= 4.4 has one in base), so workers
-  # evaluate exactly as this process does.
-  assign("%||%", get("%||%", envir = globalenv()), envir = e)
   for (f in .APTER_CORE_FILES)
     sys.source(file.path(dir, paste0(f, ".R")), envir = e, keep.source = FALSE)
   .apter_core_cache$env <- e

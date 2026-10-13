@@ -257,7 +257,7 @@ summary in `outputs/performance/profile_summary.txt`.
 - Workers (`R/helpers_parallel.R`):
   - `future` multisession (PSOCK, no forking: Windows and Linux).
   - Trees are split into contiguous chunks and combined in chunk order, so results do not depend on the number of workers or the chunking.
-  - Each chunk gets the bucking core as one environment (helper files sourced with parent `package:stats`, and the caller's `%||%`), so workers need no setup.
+  - Each chunk gets the bucking core as one environment (helper files, `helpers_utils.R` first, sourced with parent `package:stats`), so workers need no setup.
   - taperNOR for tree lists is chunked the same way.
 - App (`app/helpers_jobs.R`):
   - a run is a promise chain run by a `shiny::ExtendedTask`, with progress per chunk;

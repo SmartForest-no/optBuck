@@ -24,15 +24,14 @@
 #           chk <- check_product_assumptions(pd)
 # ==============================================================================
 
-# Define %||% locally in case helpers_audit.R is not yet sourced.
-if (!exists("%||%", mode = "function")) {
-  `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
 if (!exists("get_root_dir", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_paths.R"))
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_paths.R"))
 if (!exists("VOLUME_METHODS"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_volume_methods.R"))
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_volume_methods.R"))
 
 
 # ------------------------------------------------------------------------------

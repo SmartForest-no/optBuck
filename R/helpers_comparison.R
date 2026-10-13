@@ -20,6 +20,10 @@
 #        (helpers_dp_optimizer.R).
 # ==============================================================================
 
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
+
 
 .tree_key <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
 .log_set  <- function(l) sort(paste(l$StartPos, l$StopPos, l$ProductKey))
@@ -51,7 +55,7 @@ compare_cutting_patterns <- function(r1, r2, pm1, pm2,
   vol_by_type <- function(l) tapply(l$commercial_volume_m3, l$ProductType, sum)
 
   rows <- lapply(keys, function(k) {
-    a <- l1[[k]] %||% empty; b <- l2[[k]] %||% empty
+    a <- or_default(l1[[k]], empty); b <- or_default(l2[[k]], empty)
     differs <- !identical(.log_set(a), .log_set(b))
     v_a1 <- val(a, lk1); v_b2 <- val(b, lk2)
     v_a2 <- val(a, lk2); v_b1 <- val(b, lk1)

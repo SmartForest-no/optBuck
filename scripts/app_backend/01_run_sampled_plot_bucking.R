@@ -70,7 +70,7 @@ suppressPackageStartupMessages({
   d
 })
 
-for (.h in c("helpers_paths", "helpers_volume_methods", "helpers_products",
+for (.h in c("helpers_utils", "helpers_paths", "helpers_volume_methods", "helpers_products",
              "helpers_valuation",
              "helpers_taper", "helpers_bark", "helpers_commercial_volume",
              "helpers_candidate_generation", "helpers_dp_optimizer", "helpers_bucking_core",
@@ -189,8 +189,8 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
 # runners). Stops on invalid products or a FAILing price matrix.
 .load_products_prices <- function(price_matrix_path, root, products, length_classes) {
   t0_products_prices <- proc.time()
-  pd <- products       %||% load_products(root)
-  lc <- length_classes %||% load_length_classes(root)
+  pd <- or_default(products, load_products(root))
+  lc <- or_default(length_classes, load_length_classes(root))
   if (!"LogLength_dm" %in% names(lc)) lc$LogLength_dm <- lc$LogLength / 10
   prod_val <- validate_products(pd, lc)
   if (!prod_val$ok)
@@ -232,7 +232,7 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
 
   # ---- 10. Assemble tree_summary ---------------------------------------------
   t0_summary <- proc.time()
-  tree_summary_raw <- .bind_cols_lists(all_tree_rows) %||% .empty_tree_summary()
+  tree_summary_raw <- or_default(.bind_cols_lists(all_tree_rows), .empty_tree_summary())
 
   tree_summary <- .rename_to_github(tree_summary_raw)
   .assert_no_plot_id(tree_summary, "tree_summary")
@@ -382,17 +382,17 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
   if (is.null(sg) || !sg %in% c("spruce", "pine", "both"))
     stop("params$species_group must be 'spruce', 'pine', or 'both'.")
 
-  hogstkl_vec  <- as.integer(params$hogstkl  %||% stop("params$hogstkl required."))
-  abonitet_vec <- as.integer(params$abonitet %||% stop("params$abonitet required."))
-  n_plots_req  <- min(as.integer(params$n_plots %||% 10L), 50L)
-  seed_val     <- as.integer(params$seed     %||% 42L)
+  hogstkl_vec  <- as.integer(or_default(params$hogstkl, stop("params$hogstkl required.")))
+  abonitet_vec <- as.integer(or_default(params$abonitet, stop("params$abonitet required.")))
+  n_plots_req  <- min(as.integer(or_default(params$n_plots, 10L)), 50L)
+  seed_val     <- as.integer(or_default(params$seed, 42L))
 
   fylnr_vec   <- params$fylnr      # NULL or character/integer vector
   hoh_min_val <- params$hoh_min    # NULL or numeric
   hoh_max_val <- params$hoh_max    # NULL or numeric
 
-  stump_cm <- as.integer(params$stump_height_cm   %||% 10L)
-  step_cm  <- as.integer(params$start_pos_step_cm %||% 10L)
+  stump_cm <- as.integer(or_default(params$stump_height_cm, 10L))
+  step_cm  <- as.integer(or_default(params$start_pos_step_cm, 10L))
 
   # ---- 2. Load sanitized data ------------------------------------------------
   t0_load_data <- proc.time()
@@ -695,8 +695,8 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
                                   scenario = NULL, workers = 1L, profiles = NULL) {
   t_start <- Sys.time()
   if (!isTRUE(prepared$ok)) stop("The tree list did not pass validation.")
-  stump_cm <- as.integer(params$stump_height_cm   %||% 10L)
-  step_cm  <- as.integer(params$start_pos_step_cm %||% 10L)
+  stump_cm <- as.integer(or_default(params$stump_height_cm, 10L))
+  step_cm  <- as.integer(or_default(params$start_pos_step_cm, 10L))
 
   # Trees within taperNOR's range (others are reported as excluded).
   t0_tree_filter <- proc.time()
@@ -800,7 +800,7 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
 .load_runs <- function(price_matrix_path, root, products, length_classes, scenario) {
   pps <- list(.load_products_prices(price_matrix_path, root, products, length_classes))
   if (!is.null(scenario))
-    pps[[2L]] <- .load_products_prices(scenario$price_matrix_path %||% "default_2021",
+    pps[[2L]] <- .load_products_prices(or_default(scenario$price_matrix_path, "default_2021"),
                                        root, scenario$products, scenario$length_classes)
   pps
 }

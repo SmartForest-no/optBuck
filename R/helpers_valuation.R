@@ -33,12 +33,13 @@
 #           val <- validate_price_matrix_against_products(pd, lc, pm)
 # ==============================================================================
 
-if (!exists("get_root_dir", mode = "function"))
-  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_paths.R"))
+if (!exists("or_default", mode = "function"))   # helpers_utils.R
+  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
+                   "helpers_utils.R"))
 
-if (!exists("%||%", mode = "function")) {
-  `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
-}
+if (!exists("get_root_dir", mode = "function"))
+  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_paths.R"))
+
 
 #' Price-diameter cap (cm) of the default 2021 matrices, whose largest class
 #' is 50. Since Phase 4b (2026-10-13) the cap is per product: the largest

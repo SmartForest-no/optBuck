@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: performance equivalence
-  Run: 2026-10-13 16:15:57.741186
+  Run: 2026-10-13 16:49:53.029026
 ============================================================= 
 
 --- 01. 1 worker vs N workers ---
@@ -19,7 +19,7 @@
   [PASS  ] Check 05: All 8 cases equal the main baseline (commit 3fa0a9d, rows sorted) | nfi_spruce: identical; nfi_pine: identical; nfi_both: identical; tl100: identical; tl1000: identical; tl1000_scn: identical; tl100_custom_default: identical; tl100_custom_scenario: identical
 
 --- 06. workers = 1 runs in this process ---
-  [PASS  ] Check 06: workers = 1 sets no future plan and records 1 worker | plan after the run: FutureStrategy | workers recorded: 1 | all tables identical
+  [PASS  ] Check 06: workers = 1 sets no future plan and records 1 worker | plan after the run: sequential | workers recorded: 1 | all tables identical
 
 --- 07. App background job ---
   [PASS  ] Check 07: The app's background job (run_job_async) equals the backend runner (tree-list comparison, NFI stratum) | all tables identical | progress updates: 11
