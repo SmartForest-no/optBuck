@@ -78,7 +78,18 @@ Replace the current price-scenario options (base / multiplier / uploaded). The m
 3. **Default vs. scenario results.** NOK/m³ total and by assortment, volume shares by assortment, and the change in cutting patterns. Example stems show the bucking under both matrices.
    - **Cutting-pattern changes count only differences that change value or volume**, so equal-value ties are not shown as changes.
 
-## Phase 4b: assortments and volume methods (later)
+## Phase 4b: assortments and volume methods
+
+**Done (2026-10-13).** Volume methods in `R/helpers_volume_methods.R`
+(`Top cylinder`, the former sawlog "Top"; `Top` frustum at 1 cm/m; Apter's
+solid volume; Norwegian mid after the Målereglement for skogsvirke 2026,
+4.1.3–4.1.4, with 3.14); custom assortments in `R/helpers_products.R` and
+`R/helpers_price_matrix.R`, each used in the default run, the scenario run or
+both; per-product price-diameter cap (the largest class of the product's
+matrix, 50 for the defaults); app card on the Prices page; audit 20, and
+audit 17 check 20. Default results are identical to the pre-Phase-4b
+baseline. Quality restrictions are out of scope (stems defect-free). The
+sensitivity tool below is still to be confirmed.
 
 - **Custom assortments.** Users can add assortments (e.g. poles, large-diameter sawlogs, small sawlogs, special timber) with:
   - Species

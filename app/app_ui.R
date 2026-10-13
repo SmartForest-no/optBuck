@@ -255,7 +255,7 @@ prices_page <- nav_panel(
     ),
     apter_card("Notes and limitations", collapsible = TRUE,
       tags$ul(
-        tags$li("Runs use the default 2021 price matrix; the scenario matrix is used for the comparison run."),
+        tags$li("Runs use the default 2021 price matrix (plus custom assortments used in the default run); the scenario matrix and assortments are used for the comparison run."),
         tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
         tags$li("31 dm sawlog prices are interpolated (2×34dm − 37dm), flagged PriceSource = \"Interpolated\" in the price table."),
         tags$li("A log above a matrix's largest diameter class is priced at that class (50 cm for the default 2021 matrices); physical diameters are preserved."),
