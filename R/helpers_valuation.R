@@ -459,17 +459,61 @@ price_class_used <- function(logs, lookup) {
 #' @param lookup build_price_lookup() result, or a PriceMatrix_long.
 lookup_prices <- function(logs, lookup) {
   if (is.data.frame(lookup)) lookup <- build_price_lookup(lookup)
-  price  <- rep(NA_real_, nrow(logs))
-  is_saw <- as.character(logs$ProductKey) %in% lookup$matrix_keys
+  pk   <- as.character(logs$ProductKey)
+  keys <- unique(pk)
+  col <- intersect(c("PriceDiameterClass_cm_uncapped", "PriceDiameterClass_cm",
+                     "PriceDiameterClass_cm_used"), names(logs))
+  if (length(col) == 0L) {
+    # Flat-priced logs need no class (as price_class_used(), matrix ones do).
+    if (any(keys %in% lookup$matrix_keys)) stop("logs need a PriceDiameterClass_cm column.")
+    cls_raw <- rep(NA_integer_, length(pk))
+  } else cls_raw <- logs[[col[1L]]]
+  .price_vectors(keys, match(pk, keys), logs$LengthClass_dm, cls_raw, lookup)$price
+}
+
+#' Prices and price-diameter classes for candidates or logs given as
+#' vectors: the engine of lookup_prices(), used directly by the backend's
+#' per-tree loop (R/helpers_bucking_core.R).
+#'
+#' A matrix product's class is capped at its matrix's largest class
+#' (price_class_used()) and priced by "ProductKey|LengthClass_dm|class";
+#' a flat product by its ProductKey. The key strings are built once per
+#' distinct (product, length class, class) combination, not once per row;
+#' the prices are the same lookups.
+#'
+#' @param keys    ProductKey of each product index.
+#' @param prod    Product index (into keys) per row.
+#' @param lc_dm   LengthClass_dm per row.
+#' @param cls_raw Uncapped PriceDiameterClass_cm per row.
+#' @param lookup  build_price_lookup() result.
+#' @return list(price = NOK/m3 per row (NA where unpriced), class_used =
+#'   capped class per row, as price_class_used()).
+.price_vectors <- function(keys, prod, lc_dm, cls_raw, lookup) {
+  n   <- length(prod)
+  cap <- unname(lookup$max_class[keys])
+  cap[is.na(cap)] <- DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM
+  cls <- pmin(as.integer(cls_raw), as.integer(cap)[prod])
+  price  <- rep(NA_real_, n)
+  saw_p  <- keys %in% lookup$matrix_keys
+  is_saw <- saw_p[prod]
   if (any(is_saw)) {
-    cls <- price_class_used(logs[is_saw, , drop = FALSE], lookup)
-    price[is_saw] <- lookup$saw[paste(logs$ProductKey[is_saw],
-                                      logs$LengthClass_dm[is_saw],
-                                      cls, sep = "|")]
+    i  <- which(is_saw)
+    lc <- lc_dm[i]; cl <- cls[i]
+    if (!anyNA(lc) && !anyNA(cl) && all(lc >= 0 & lc < 1e4 & cl >= 0 & cl < 1e4)) {
+      code <- prod[i] * 1e8 + as.numeric(lc) * 1e4 + cl
+      u    <- unique(code)
+      first <- match(u, code)
+      p_u  <- lookup$saw[paste(keys[prod[i][first]], lc[first], cl[first], sep = "|")]
+      price[i] <- p_u[match(code, u)]
+    } else {
+      price[i] <- lookup$saw[paste(keys[prod[i]], lc, cl, sep = "|")]
+    }
   }
-  if (any(!is_saw))
-    price[!is_saw] <- lookup$flat[as.character(logs$ProductKey[!is_saw])]
-  unname(price)
+  if (any(!is_saw)) {
+    flat_p <- unname(lookup$flat[keys])
+    price[!is_saw] <- flat_p[prod[!is_saw]]
+  }
+  list(price = unname(price), class_used = cls)
 }
 
 #' Re-price logs under a price matrix: PriceNOKperM3 and value_nok replaced.

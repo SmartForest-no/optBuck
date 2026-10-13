@@ -85,6 +85,25 @@ perf_cases <- function(root, tree_list_sizes = c(100L, 1000L)) {
   out
 }
 
+#' Comparisons: pairs of cases on the same trees, run as one call (the
+#' second as `scenario`). Their results must equal the two separate runs.
+PERF_COMPARISONS <- list(
+  tl1000_cmp        = c("tl1000", "tl1000_scn"),
+  tl100_custom_cmp  = c("tl100_custom_default", "tl100_custom_scenario"))
+
+#' Run a comparison: case a with case b as its scenario (extra arguments,
+#' e.g. workers, are passed on). The result holds b's run as $scenario.
+perf_run_comparison <- function(a, b, root, ...) {
+  path_b <- "default_2021"
+  if (!is.null(b$pm)) {
+    path_b <- tempfile(pattern = "apter_perf_pm_", fileext = ".csv")
+    pm_export(b$pm, path_b)
+    on.exit(unlink(path_b), add = TRUE)
+  }
+  perf_run_case(a, root, scenario = list(price_matrix_path = path_b, products = b$pd,
+                                         length_classes = b$lc), ...)
+}
+
 #' Result tables compared with the main baseline, and their sort keys (the
 #' backend's row order on main follows arrow's read order).
 PERF_TABLE_KEYS <- list(

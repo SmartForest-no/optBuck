@@ -50,6 +50,22 @@ for (nm in names(cases)) {
               if (length(not_id) == 0L) "all tables identical"
               else paste(sprintf("%s: %s", names(not_id), not_id), collapse = "; ")))
 }
+for (nm in names(PERF_COMPARISONS)) {
+  ab <- PERF_COMPARISONS[[nm]]
+  t0 <- proc.time()
+  r  <- do.call(perf_run_comparison, c(list(cases[[ab[1L]]], cases[[ab[2L]]], root_dir), extra))
+  el <- (proc.time() - t0)[["elapsed"]]
+  for (side in 1:2) {
+    cmp <- perf_compare(if (side == 1L) r else r$scenario, b[[ab[side]]])
+    all_ok <- all_ok && !any(cmp == "DIFFERS")
+    not_id <- cmp[cmp != "identical"]
+    cat(sprintf("%-24s %6s    %s vs %s: %s\n", if (side == 1L) nm else "",
+                if (side == 1L) sprintf("%.1f s", el) else "", c("A", "B")[side], ab[side],
+                if (length(not_id) == 0L) "all tables identical"
+                else paste(sprintf("%s: %s", names(not_id), not_id), collapse = "; ")))
+  }
+}
+
 cat(if (all_ok) "\nOK: every case matches the main baseline.\n"
     else "\nFAILED: a case differs from the main baseline.\n")
 if (!all_ok) quit(status = 1L)

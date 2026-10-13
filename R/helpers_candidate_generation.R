@@ -88,17 +88,273 @@ products_for_species <- function(species_group, ProductData = NULL) {
   if (length(pks) == 0L) NULL else pks
 }
 
+# ------------------------------------------------------------------------------
+# Product parameters per species (computed once per run, not per tree)
+# ------------------------------------------------------------------------------
+
+#' Candidate-generation parameters for one species: its products (in
+#' ProductData order) with their limits, volume method and allowed lengths
+#' (LengthClasses order), and all length classes of the species' products.
+#' generate_candidate_logs_one_tree() builds this per call; the backend
+#' builds it once per run (.candidate_plan()).
+#'
+#' @return list(species_group, pks, products, all_lengths, needs_ub), or a
+#'   list with an `error` message when the species has no products.
+.candidate_species_plan <- function(species_group, ProductData, LengthClasses) {
+  pks <- products_for_species(species_group, ProductData)
+  if (is.null(pks) || length(pks) == 0L)
+    return(list(error = sprintf("no products configured for species_group '%s'.",
+                                species_group)))
+  pd_sp <- ProductData[ProductData$ProductKey %in% pks, , drop = FALSE]
+  if (nrow(pd_sp) == 0L)
+    return(list(error = sprintf("no matching rows in ProductData for species '%s'.",
+                                species_group)))
+
+  lc_sp <- LengthClasses[LengthClasses$ProductKey %in% pks, , drop = FALSE]
+  products <- lapply(seq_len(nrow(pd_sp)), function(j) {
+    prow <- pd_sp[j, , drop = FALSE]
+    pk   <- prow$ProductKey
+    min_len <- prow$MinLength %||% 0L
+    max_len <- prow$MaxLength %||% Inf
+    ok <- lc_sp$ProductKey == pk & lc_sp$LogLength >= min_len & lc_sp$LogLength <= max_len
+    list(pk = pk, product_type = prow$ProductType,
+         lengths = lc_sp$LogLength[ok],
+         min_len = min_len, max_len = max_len,
+         min_top = prow$MinTopDiameter %||% 0, max_top = prow$MaxTopDiameter %||% Inf,
+         min_butt = prow$MinButtDiameter %||% 0, max_butt = prow$MaxButtDiameter %||% Inf,
+         ub = isTRUE(as.logical(prow$DiameterUnderBark)),
+         top_offset = as.numeric(prow$DiameterTopPosition %||% 0),
+         method = prow$VolumeDiameterCategory,
+         adjustment = prow$VolumeDiameterAdjustment,
+         priority = as.numeric(prow$Priority %||% 99))
+  })
+  list(species_group = species_group, pks = pks, products = products,
+       all_lengths = lc_sp$LogLength,
+       needs_ub = "DiameterUnderBark" %in% names(pd_sp) &&
+         any(as.logical(pd_sp$DiameterUnderBark) %in% TRUE))
+}
+
+#' Candidate-generation parameters for every species of a run, built once.
+#'
+#' @return Named list (one .candidate_species_plan() per species group).
+.candidate_plan <- function(ProductData, LengthClasses,
+                            species_groups = c("spruce", "pine")) {
+  setNames(lapply(species_groups, .candidate_species_plan,
+                  ProductData = ProductData, LengthClasses = LengthClasses),
+           species_groups)
+}
+
 
 # ------------------------------------------------------------------------------
 # One-tree candidate generation (vectorised)
 # ------------------------------------------------------------------------------
 
+#' Candidate logs of one tree as column vectors (no data.frame).
+#'
+#' The engine of generate_candidate_logs_one_tree() and of the backend. For
+#' each product: all start positions x allowed lengths (start position
+#' varying fastest, as expand.grid()), logs ending above the tree dropped,
+#' then measuring diameters, eligibility, price volume and price-diameter
+#' class, all vectorised.
+#'
+#' Diameters on the grid: start positions are multiples of the step, and so
+#' are the measuring positions when lengths and DiameterTopPosition are, so
+#' the profile is interpolated once per grid point and indexed. These are
+#' the values approxfun() gives at each candidate; otherwise it is called
+#' per candidate.
+#'
+#' @param pv   Profile vector list (see generate_candidate_logs_one_tree()).
+#' @param plan .candidate_species_plan() for pv's species group.
+#' @param stump_height_cm,start_pos_step_cm As generate_candidate_logs_one_tree().
+#' @param usable_only FALSE: every candidate with all columns of
+#'   generate_candidate_logs_one_tree() (DiameterUnderBark per row). TRUE (the
+#'   backend): only candidates the optimizer can use (eligible, with a price
+#'   volume), with the price-dependent columns only: prod (index into
+#'   plan$products), StartPos, StopPos, price_volume_m3,
+#'   PriceDiameterClass_cm. .candidate_details() adds the other columns for
+#'   chosen rows.
+#' @return list(cols, n_all, ser_ob, ser_ub, products): cols = list of
+#'   equal-length column vectors, NULL without candidates; n_all = number of
+#'   candidates before the eligibility filter, per product (named by
+#'   ProductKey); the diameter series and products for .candidate_details().
+.candidate_columns <- function(pv, plan,
+                               stump_height_cm   = CAND_STUMP_HEIGHT_CM,
+                               start_pos_step_cm = CAND_START_POS_STEP_CM,
+                               usable_only = FALSE) {
+  if (!is.null(plan$error))
+    stop(sprintf("Tree %s: %s", pv$treid, plan$error))
+
+  # Profile vectors
+  diam_pos <- as.integer(pv$diameterPosition)   # cm (sorted ascending)
+  # Logs end within the profile: a height that is not a whole decimetre
+  # (e.g. an imputed 11.296 m) has a profile ending at 11.2 m, below
+  # round(height * 100). NFI heights are whole decimetres: no change there.
+  h_cm     <- min(as.integer(pv$height_cm), max(diam_pos))
+  step_int <- as.integer(start_pos_step_cm)
+  grid     <- seq(0L, h_cm, by = step_int)
+
+  # One diameter series (over or under bark): interpolation function
+  # (rule = 2: extrapolate with boundary values), its values on the grid,
+  # and Apter's solid volume (section_volume_fun(), shared with the NOK/m3
+  # denominator).
+  make_series <- function(diam_val) {
+    fun <- stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2)
+    list(fun       = fun,
+         grid      = fun(grid),
+         solid_vol = section_volume_fun(diam_pos, diam_val, step_int))
+  }
+  ser_ob <- make_series(as.numeric(pv$DiameterValue))   # mm, over bark
+  ser_ub <- if (plan$needs_ub) {
+    if (is.null(pv$DiameterValueUB)) pv <- add_under_bark_profile(pv)
+    make_series(as.numeric(pv$DiameterValueUB))         # mm, under bark
+  } else NULL
+
+  n_all <- setNames(integer(length(plan$products)),
+                    vapply(plan$products, `[[`, "", "pk"))
+  out <- list()
+
+  # Valid log lengths for this tree (all products), pre-filtered by tree height.
+  max_len_cm  <- h_cm - stump_height_cm
+  log_lengths <- as.integer(plan$all_lengths[plan$all_lengths <= max_len_cm])   # cm
+  if (length(log_lengths) > 0L) {
+    # Start positions (multiples of step_int, starting at stump)
+    start_positions <- seq(as.integer(stump_height_cm), h_cm - min(log_lengths),
+                           by = step_int)
+    for (j in seq_along(plan$products)) {
+      p <- plan$products[[j]]
+      ok_len_vec <- as.integer(p$lengths[p$lengths <= max_len_cm])
+      if (length(ok_len_vec) == 0L) next
+      # Start positions where at least one log can end within the tree.
+      valid_sp <- start_positions[start_positions + min(ok_len_vec) <= h_cm]
+      if (length(valid_sp) == 0L) next
+
+      # All start_pos x log_len combinations, start_pos varying fastest.
+      start_pos <- rep(valid_sp, times = length(ok_len_vec))
+      log_len   <- rep(ok_len_vec, each = length(valid_sp))
+      stop_pos  <- start_pos + log_len
+      keep      <- stop_pos <= h_cm   # logs ending above the tree
+      if (!any(keep)) next
+      if (!all(keep)) {
+        start_pos <- start_pos[keep]; log_len <- log_len[keep]; stop_pos <- stop_pos[keep]
+      }
+      n_all[j] <- length(start_pos)
+
+      # Measuring top diameter: DiameterTopPosition cm below the cut (0 for
+      # the default products, i.e. at stop_pos).
+      top_pos  <- stop_pos - p$top_offset
+      use_grid <- stump_height_cm %% step_int == 0 && p$top_offset %% step_int == 0 &&
+        all(ok_len_vec %% step_int == 0) && min(top_pos) >= 0
+      at <- function(ser, pos)
+        if (use_grid) ser$grid[pos %/% step_int + 1L] else ser$fun(pos)
+
+      # Measuring diameters: under bark if the product says so, else over bark.
+      ser  <- if (p$ub) ser_ub else ser_ob
+      butt <- at(ser, start_pos)
+      top  <- at(ser, top_pos)
+
+      eligible <- log_len >= p$min_len & log_len <= p$max_len &
+                  top  >= p$min_top  & top  <= p$max_top &
+                  butt >= p$min_butt & butt <= p$max_butt
+
+      if (usable_only) {
+        ii <- which(eligible)
+        if (length(ii) == 0L) next
+        start_pos <- start_pos[ii]; log_len <- log_len[ii]; stop_pos <- stop_pos[ii]
+        top <- top[ii]
+        price_vol <- price_volume_m3(method = p$method, top_d_mm = top,
+                                     length_cm = log_len, start_pos = start_pos,
+                                     stop_pos = stop_pos, solid_vol = ser$solid_vol,
+                                     adjustment = p$adjustment)
+        if (anyNA(price_vol)) {
+          ii <- which(!is.na(price_vol))
+          if (length(ii) == 0L) next
+          start_pos <- start_pos[ii]; stop_pos <- stop_pos[ii]
+          top <- top[ii]; price_vol <- price_vol[ii]
+        }
+        out[[length(out) + 1L]] <- list(
+          prod                  = rep(j, length(start_pos)),
+          StartPos              = as.integer(start_pos),
+          StopPos               = as.integer(stop_pos),
+          price_volume_m3       = price_vol,
+          # Raw floor(TopDiameter_mm / 10): the UNCAPPED class; the cap is
+          # applied in helpers_valuation.R.
+          PriceDiameterClass_cm = as.integer(floor(top / 10)))
+        next
+      }
+
+      # Price volume by the product's volume method; NA if ineligible.
+      price_vol <- ifelse(
+        eligible,
+        price_volume_m3(method = p$method, top_d_mm = top, length_cm = log_len,
+                        start_pos = start_pos, stop_pos = stop_pos,
+                        solid_vol = ser$solid_vol, adjustment = p$adjustment),
+        NA_real_)
+      n <- length(start_pos)
+      top_ob <- at(ser_ob, top_pos)
+      top_ub <- if (!is.null(ser_ub)) at(ser_ub, top_pos) else rep(NA_real_, n)
+      out[[length(out) + 1L]] <- list(
+        ProductKey            = rep(p$pk, n),
+        ProductType           = rep(p$product_type, n),
+        StartPos              = as.integer(start_pos),
+        StopPos               = as.integer(stop_pos),
+        LogLength             = as.integer(log_len),
+        TopDiameter           = round(top, 1),
+        ButtDiameter          = round(butt, 1),
+        eligible              = eligible,
+        price_volume_m3       = price_vol,
+        LengthClass_dm        = as.integer(log_len / 10L),
+        PriceDiameterClass_cm = as.integer(floor(top / 10)),   # uncapped
+        TopDiameter_ob        = round(top_ob, 1),
+        TopDiameter_ub        = round(top_ub, 1),
+        DiameterUnderBark     = rep(p$ub, n),
+        # Tie-break key for the optimizers (R/helpers_dp_optimizer.R).
+        ProductPriority       = rep(p$priority, n))
+    }
+  }
+
+  cols <- if (length(out) == 0L) NULL
+          else if (length(out) == 1L) out[[1L]]
+          else setNames(lapply(names(out[[1L]]), function(nm)
+            do.call(c, lapply(out, `[[`, nm))), names(out[[1L]]))
+  list(cols = cols, n_all = n_all, ser_ob = ser_ob, ser_ub = ser_ub,
+       products = plan$products)
+}
+
+#' The remaining candidate columns for chosen rows of a usable_only
+#' .candidate_columns() result (e.g. the selected logs): the columns of
+#' generate_candidate_logs_one_tree() except TopDiameter, ButtDiameter and
+#' eligible, with the same values.
+#'
+#' @param geo .candidate_columns(..., usable_only = TRUE) result.
+#' @param i   Row indices into geo$cols.
+#' @return list of column vectors.
+.candidate_details <- function(geo, i) {
+  cl <- geo$cols
+  prods <- geo$products[cl$prod[i]]
+  start_pos <- cl$StartPos[i]; stop_pos <- cl$StopPos[i]
+  log_len   <- stop_pos - start_pos
+  top_pos   <- stop_pos - vapply(prods, `[[`, 0, "top_offset")
+  list(
+    ProductKey            = vapply(prods, `[[`, "", "pk"),
+    ProductType           = unlist(lapply(prods, `[[`, "product_type")),
+    StartPos              = start_pos,
+    StopPos               = stop_pos,
+    LogLength             = log_len,
+    price_volume_m3       = cl$price_volume_m3[i],
+    LengthClass_dm        = as.integer(log_len / 10L),
+    PriceDiameterClass_cm = cl$PriceDiameterClass_cm[i],
+    TopDiameter_ob        = round(geo$ser_ob$fun(top_pos), 1),
+    TopDiameter_ub        = if (!is.null(geo$ser_ub)) round(geo$ser_ub$fun(top_pos), 1)
+                            else rep(NA_real_, length(i)),
+    DiameterUnderBark     = vapply(prods, `[[`, TRUE, "ub"),
+    ProductPriority       = vapply(prods, `[[`, 0, "priority"))
+}
+
 #' Generate all candidate log combinations for one tree.
 #'
-#' Loops over the applicable products (filtered by species_group inside pv).
-#' For each product, creates expand.grid(start_positions, valid_lengths) and
-#' evaluates eligibility (length, top-diameter, butt-diameter) and volume
-#' vectorially.
+#' For each product applicable to the tree's species: all start positions x
+#' allowed lengths, with eligibility (length, top diameter, butt diameter)
+#' and volume evaluated vectorially (.candidate_columns()).
 #'
 #' @param pv              Profile vector list from profiles_to_profile_vectors().
 #'                        Must contain: treid, plot_id, species_group, DBH (mm),
@@ -124,165 +380,32 @@ generate_candidate_logs_one_tree <- function(pv,
                                               LengthClasses,
                                               stump_height_cm    = CAND_STUMP_HEIGHT_CM,
                                               start_pos_step_cm  = CAND_START_POS_STEP_CM) {
-
-  tree_id  <- pv$treid
-  sg       <- pv$species_group
-  plot_id  <- pv$plot_id
-
-  pks <- products_for_species(sg, ProductData)
-  if (is.null(pks) || length(pks) == 0L)
-    stop(sprintf("Tree %s: no products configured for species_group '%s'.",
-                 tree_id, sg))
-
-  # Filter ProductData to applicable products
-  pd_sp <- ProductData[ProductData$ProductKey %in% pks, , drop = FALSE]
-  if (nrow(pd_sp) == 0L)
-    stop(sprintf("Tree %s: no matching rows in ProductData for species '%s'.",
-                 tree_id, sg))
-
-  # Profile vectors
-  diam_pos <- as.integer(pv$diameterPosition)   # cm (sorted ascending)
-  # Logs end within the profile: a height that is not a whole decimetre
-  # (e.g. an imputed 11.296 m) has a profile ending at 11.2 m, below
-  # round(height * 100). NFI heights are whole decimetres: no change there.
-  h_cm     <- min(as.integer(pv$height_cm), max(diam_pos))
-  step_int <- as.integer(start_pos_step_cm)
-
-  # One diameter series (over or under bark): interpolation function
-  # (rule = 2: extrapolate with boundary values) and Apter's solid volume
-  # (section_volume_fun(), shared with the NOK/m3 denominator).
-  make_series <- function(diam_val) {
-    list(fun       = stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2),
-         solid_vol = section_volume_fun(diam_pos, diam_val, step_int))
-  }
-
-  ser_ob <- make_series(as.numeric(pv$DiameterValue))   # mm, over bark
-  needs_ub <- "DiameterUnderBark" %in% names(pd_sp) &&
-    any(as.logical(pd_sp$DiameterUnderBark) %in% TRUE)
-  ser_ub <- if (needs_ub) {
-    if (is.null(pv$DiameterValueUB)) pv <- add_under_bark_profile(pv)
-    make_series(as.numeric(pv$DiameterValueUB))         # mm, under bark
-  } else NULL
-
-  # Valid log lengths for this tree (all products), pre-filtered by tree height.
-  lc_valid <- LengthClasses[
-    LengthClasses$ProductKey %in% pks &
-    LengthClasses$LogLength  <= (h_cm - stump_height_cm), , drop = FALSE]
-  if (nrow(lc_valid) == 0L)
-    return(.empty_candidates(tree_id, plot_id, sg))
-
-  log_lengths <- as.integer(lc_valid$LogLength)       # cm
-
-  # Start positions (multiples of step_int, starting at stump)
-  start_positions <- seq(as.integer(stump_height_cm),
-                         h_cm - min(log_lengths),
-                         by = step_int)
-  if (length(start_positions) == 0L)
-    return(.empty_candidates(tree_id, plot_id, sg))
-
-  prod_frames <- vector("list", nrow(pd_sp))
-
-  for (j in seq_len(nrow(pd_sp))) {
-    prow <- pd_sp[j, , drop = FALSE]
-    pk   <- prow$ProductKey
-
-    # Valid lengths for this product (LogLength in cm)
-    ok_len <- lc_valid[
-      lc_valid$ProductKey == pk &
-      lc_valid$LogLength >= (prow$MinLength %||% 0L) &
-      lc_valid$LogLength <= (prow$MaxLength %||% Inf), , drop = FALSE]
-    if (nrow(ok_len) == 0L) { prod_frames[[j]] <- NULL; next }
-
-    ok_len_vec <- as.integer(ok_len$LogLength)
-
-    # Filter start positions where at least one log can end within the tree.
-    valid_sp <- start_positions[
-      start_positions + min(ok_len_vec) <= h_cm]
-    if (length(valid_sp) == 0L) { prod_frames[[j]] <- NULL; next }
-
-    # Expand all combinations of start_pos × log_len
-    combos <- expand.grid(start_pos = valid_sp,
-                          log_len   = ok_len_vec,
-                          KEEP.OUT.ATTRS = FALSE,
-                          stringsAsFactors = FALSE)
-    combos$stop_pos <- combos$start_pos + combos$log_len
-
-    # Remove combinations that exceed tree height
-    combos <- combos[combos$stop_pos <= h_cm, , drop = FALSE]
-    if (nrow(combos) == 0L) { prod_frames[[j]] <- NULL; next }
-
-    # Measuring diameters: under bark if the product says so, else over bark.
-    ub  <- isTRUE(as.logical(prow$DiameterUnderBark))
-    ser <- if (ub) ser_ub else ser_ob
-
-    # Butt diameter at start position (mm)
-    combos$ButtDiameter <- ser$fun(combos$start_pos)
-
-    # Measuring top diameter: DiameterTopPosition cm below the cut (0 for the
-    # default products, as in script 11, i.e. at stop_pos).
-    top_pos <- combos$stop_pos - as.numeric(prow$DiameterTopPosition %||% 0)
-    combos$TopDiameter  <- ser$fun(top_pos)
-    top_ob <- ser_ob$fun(top_pos)
-    top_ub <- if (!is.null(ser_ub)) ser_ub$fun(top_pos) else NA_real_
-
-    # Eligibility flags
-    e_len  <- combos$log_len  >= (prow$MinLength  %||% 0L) &
-              combos$log_len  <= (prow$MaxLength  %||% Inf)
-    e_top  <- combos$TopDiameter  >= (prow$MinTopDiameter  %||% 0) &
-              combos$TopDiameter  <= (prow$MaxTopDiameter  %||% Inf)
-    e_butt <- combos$ButtDiameter >= (prow$MinButtDiameter %||% 0) &
-              combos$ButtDiameter <= (prow$MaxButtDiameter %||% Inf)
-    eligible <- e_len & e_top & e_butt
-
-    # Price volume by the product's volume method (helpers_volume_methods.R);
-    # NA for ineligible candidates.
-    price_vol <- ifelse(
-      eligible,
-      price_volume_m3(method     = prow$VolumeDiameterCategory,
-                      top_d_mm   = combos$TopDiameter,
-                      length_cm  = combos$log_len,
-                      start_pos  = combos$start_pos,
-                      stop_pos   = combos$stop_pos,
-                      solid_vol  = ser$solid_vol,
-                      adjustment = prow$VolumeDiameterAdjustment),
-      NA_real_)
-
-    # LengthClass in dm
-    len_dm <- as.integer(combos$log_len / 10L)
-
-    # Price diameter class: raw floor(TopDiameter_mm / 10) = floor(TopDiameter_cm)
-    # NOTE: this is the UNCAPPED value.  Cap is applied in helpers_valuation.R.
-    diam_class_raw <- as.integer(floor(combos$TopDiameter / 10))
-
-    prod_frames[[j]] <- data.frame(
-      treid                = as.character(tree_id),
-      plot_id              = as.character(plot_id),
-      species_group        = sg,
-      ProductKey           = pk,
-      ProductType          = prow$ProductType,
-      StartPos             = as.integer(combos$start_pos),
-      StopPos              = as.integer(combos$stop_pos),
-      LogLength            = as.integer(combos$log_len),
-      TopDiameter          = round(combos$TopDiameter, 1),
-      ButtDiameter         = round(combos$ButtDiameter, 1),
-      eligible             = eligible,
-      price_volume_m3      = price_vol,
-      LengthClass_dm       = len_dm,
-      PriceDiameterClass_cm = diam_class_raw,   # uncapped; rename in valuation
-      TopDiameter_ob       = round(top_ob, 1),
-      TopDiameter_ub       = round(top_ub, 1),
-      DiameterUnderBark    = ub,
-      # Tie-break key for the optimizers (R/helpers_dp_optimizer.R).
-      ProductPriority      = as.numeric(prow$Priority %||% 99),
-      stringsAsFactors     = FALSE
-    )
-  }
-
-  non_null <- Filter(Negate(is.null), prod_frames)
-  if (length(non_null) == 0L)
-    return(.empty_candidates(tree_id, plot_id, sg))
-
-  do.call(rbind, non_null)
+  plan <- .candidate_species_plan(pv$species_group, ProductData, LengthClasses)
+  cols <- .candidate_columns(pv, plan, stump_height_cm, start_pos_step_cm)$cols
+  if (is.null(cols))
+    return(.empty_candidates(pv$treid, pv$plot_id, pv$species_group))
+  n <- length(cols$StartPos)
+  data.frame(
+    treid                 = rep(as.character(pv$treid), n),
+    plot_id               = rep(as.character(pv$plot_id), n),
+    species_group         = rep(pv$species_group, n),
+    ProductKey            = cols$ProductKey,
+    ProductType           = cols$ProductType,
+    StartPos              = cols$StartPos,
+    StopPos               = cols$StopPos,
+    LogLength             = cols$LogLength,
+    TopDiameter           = cols$TopDiameter,
+    ButtDiameter          = cols$ButtDiameter,
+    eligible              = cols$eligible,
+    price_volume_m3       = cols$price_volume_m3,
+    LengthClass_dm        = cols$LengthClass_dm,
+    PriceDiameterClass_cm = cols$PriceDiameterClass_cm,   # uncapped; rename in valuation
+    TopDiameter_ob        = cols$TopDiameter_ob,
+    TopDiameter_ub        = cols$TopDiameter_ub,
+    DiameterUnderBark     = cols$DiameterUnderBark,
+    ProductPriority       = cols$ProductPriority,
+    stringsAsFactors      = FALSE
+  )
 }
 
 
