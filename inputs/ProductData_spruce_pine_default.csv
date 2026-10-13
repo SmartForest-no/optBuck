@@ -1,7 +1,7 @@
-ProductKey,ProductName,ProductType,SpeciesGroupKey,species_group,VolumeDiameterCategory,VolumeLengthCategory,VolumeDiameterAdjustment,DiameterTopPosition,DiameterUnderBark,DiameterSource,MinTopDiameter,MaxTopDiameter,MinButtDiameter,MaxButtDiameter,MinLength,MaxLength,LengthStep,AllowAsFirstLog,AllowAsTopLog,Priority,PriceType
-spruce_sawlog,Spruce sawlog,sawlog,spruce,spruce,Top cylinder,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,TRUE,taperNOR_over_bark,120,Inf,0,Inf,310,550,30,TRUE,TRUE,1,matrix
-spruce_pulpwood,Spruce pulpwood,pulpwood,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,50,Inf,0,Inf,300,550,10,TRUE,TRUE,2,flat
-pine_sawlog,Pine sawlog,sawlog,pine,pine,Top cylinder,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,TRUE,taperNOR_over_bark,120,Inf,0,Inf,310,550,30,TRUE,TRUE,1,matrix
-pine_pulpwood,Pine pulpwood,pulpwood,pine,pine,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,50,Inf,0,Inf,300,550,10,TRUE,TRUE,2,flat
-spruce_waste,Spruce waste,waste,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,TRUE,TRUE,99,flat
-pine_waste,Pine waste,waste,pine,pine,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,TRUE,TRUE,99,flat
+ProductKey,ProductName,ProductType,SpeciesGroupKey,species_group,VolumeDiameterCategory,VolumeLengthCategory,VolumeDiameterAdjustment,DiameterTopPosition,DiameterUnderBark,DiameterSource,MinTopDiameter,MaxTopDiameter,MinButtDiameter,MaxButtDiameter,MinLength,MaxLength,LengthStep,Priority,PriceType
+spruce_sawlog,Spruce sawlog,sawlog,spruce,spruce,Top cylinder,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,TRUE,taperNOR_over_bark,120,600,0,650,310,550,30,1,matrix
+spruce_pulpwood,Spruce pulpwood,pulpwood,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,50,700,0,700,300,550,10,2,flat
+pine_sawlog,Pine sawlog,sawlog,pine,pine,Top cylinder,Length as defined in LengthClasses,Measured diameter rounded downwards to cm,0,TRUE,taperNOR_over_bark,120,500,0,600,310,550,30,1,matrix
+pine_pulpwood,Pine pulpwood,pulpwood,pine,pine,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,50,700,0,700,300,550,10,2,flat
+spruce_waste,Spruce waste,waste,spruce,spruce,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,99,flat
+pine_waste,Pine waste,waste,pine,pine,All diameters (solid volume),Physical length cm,None,0,TRUE,taperNOR_over_bark,0,Inf,0,Inf,10,600,10,99,flat

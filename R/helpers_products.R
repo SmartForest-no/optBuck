@@ -366,9 +366,7 @@ custom_assortment_rows <- function(def) {
     MinLength                = if (length(lens)) min(lens) else NA_real_,
     MaxLength                = if (length(lens)) max(lens) else NA_real_,
     LengthStep               = if (length(lens) > 1L) min(diff(lens)) else 10,
-    AllowAsFirstLog          = TRUE,
-    AllowAsTopLog            = TRUE,
-    Priority                 = suppressWarnings(as.numeric(g("Priority", 1))),
+    Priority                = suppressWarnings(as.numeric(g("Priority", 1))),
     PriceType                = as.character(g("PriceType", "matrix")),
     stringsAsFactors         = FALSE)))
   lc <- if (length(lens) == 0L)
@@ -400,6 +398,174 @@ products_for_run <- function(base_pd, base_lc, defs, run = c("default", "scenari
     }
   }
   list(pd = pd, lc = lc)
+}
+
+#' The base products with their limits before Phase 4c (no maximum top or
+#' butt diameter). Phase 4c set the default maxima from optBuck's
+#' example.hpr; the audits that compare against older baselines (20 check 8,
+#' 22 check 5) run with this, so that the limits are the only change.
+pre_phase4c_limits <- function(pd) {
+  base <- pd$ProductKey %in% ACTIVE_PRODUCT_KEYS
+  pd$MaxTopDiameter[base]  <- Inf
+  pd$MaxButtDiameter[base] <- Inf
+  pd
+}
+
+
+# ------------------------------------------------------------------------------
+# Assortment table (Phase 4c, 2026-10-13)
+# ------------------------------------------------------------------------------
+# The app edits all assortments, base and custom, in one table with one row
+# per product (ProductKey = "<Species>_<slug of Name>", so "Sawlog" / spruce
+# is spruce_sawlog). Units are the app's: cm. Hidden ProductData columns are
+# generated: ProductName, VolumeLengthCategory (no effect in Apter),
+# DiameterUnderBark (always TRUE), DiameterSource and Priority (derived:
+# matrix-priced 1, flat-priced commercial 2, waste 99). A matrix-priced
+# product's lengths are the columns of the run's price matrix; a flat-priced
+# product's are MinLength_cm..MaxLength_cm by LengthStep_cm.
+# custom_assortment_rows() / products_for_run() above are the Phase 4b
+# definition format, kept for the performance cases and audit 20.
+
+#' Columns of the assortment table.
+ASSORTMENT_TABLE_COLS <- c(
+  "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
+  "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
+  "LengthStep_cm", "DiameterTopPosition_cm", "VolumeDiameterCategory",
+  "VolumeDiameterAdjustment", "PriceType")
+
+#' Priority in ties, derived from pricing and type.
+derived_priority <- function(price_type, product_type) {
+  ifelse(as.character(product_type) == "waste", 99,
+         ifelse(as.character(price_type) == "matrix", 1, 2))
+}
+
+#' ProductKeys of the assortment table's rows.
+assortment_table_keys <- function(defs) {
+  if (is.null(defs) || nrow(defs) == 0L) return(character(0))
+  paste0(as.character(defs$Species), "_", vapply(defs$Name, assortment_slug, character(1),
+                                                  USE.NAMES = FALSE))
+}
+
+# Column types of an assortment table.
+.type_assortment_table <- function(d) {
+  num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
+                                          "VolumeDiameterAdjustment", "PriceType"))
+  for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
+  for (n in setdiff(ASSORTMENT_TABLE_COLS, num)) d[[n]] <- as.character(d[[n]])
+  d <- d[, ASSORTMENT_TABLE_COLS, drop = FALSE]
+  rownames(d) <- NULL
+  d
+}
+
+#' The assortment table of a ProductData (e.g. the base products).
+defs_from_products <- function(pd) {
+  sp <- as.character(pd$species_group)
+  nm <- sub(sprintf("^(%s) ", paste(PRODUCT_SPECIES, collapse = "|")), "",
+            as.character(pd$ProductName), ignore.case = TRUE)
+  nm <- paste0(toupper(substring(nm, 1, 1)), substring(nm, 2))
+  .type_assortment_table(data.frame(
+    Name = nm, Type = pd$ProductType, Species = sp,
+    MinTopDiameter_cm = pd$MinTopDiameter / 10, MaxTopDiameter_cm = pd$MaxTopDiameter / 10,
+    MinButtDiameter_cm = pd$MinButtDiameter / 10, MaxButtDiameter_cm = pd$MaxButtDiameter / 10,
+    MinLength_cm = pd$MinLength, MaxLength_cm = pd$MaxLength, LengthStep_cm = pd$LengthStep,
+    DiameterTopPosition_cm = pd$DiameterTopPosition,
+    VolumeDiameterCategory = pd$VolumeDiameterCategory,
+    VolumeDiameterAdjustment = ifelse(is.na(pd$VolumeDiameterAdjustment), "None",
+                                      pd$VolumeDiameterAdjustment),
+    PriceType = pd$PriceType, stringsAsFactors = FALSE))
+}
+
+#' Allowed lengths (cm) of each table row: the matrix columns in `pm` for
+#' matrix-priced rows, MinLength..MaxLength by LengthStep for flat ones.
+#'
+#' @return Named list (ProductKey -> integer cm, ascending).
+assortment_lengths <- function(defs, pm) {
+  keys <- assortment_table_keys(defs)
+  setNames(lapply(seq_len(nrow(defs)), function(i) {
+    if (identical(defs$PriceType[i], "matrix")) {
+      dm <- pm$LengthClass_dm[pm$ProductKey == keys[i] & !is.na(pm$LengthClass_dm)]
+      return(sort(unique(as.numeric(dm) * 10)))
+    }
+    lo <- defs$MinLength_cm[i]; hi <- defs$MaxLength_cm[i]; st <- defs$LengthStep_cm[i]
+    if (anyNA(c(lo, hi, st)) || st <= 0 || hi < lo) return(numeric(0))
+    seq(lo, hi, by = st)
+  }), keys)
+}
+
+#' ProductData and LengthClasses of an assortment table.
+#'
+#' @param defs Assortment table (ASSORTMENT_TABLE_COLS), in product order.
+#' @param pm   The run's price matrix (minimal long); gives the lengths of
+#'   matrix-priced products.
+#' @return list(pd, lc (with LogLength_dm)).
+products_from_defs <- function(defs, pm) {
+  keys <- assortment_table_keys(defs)
+  lens <- assortment_lengths(defs, pm)
+  sp   <- as.character(defs$Species)
+  rng  <- function(f, empty) vapply(lens, function(l) if (length(l)) f(l) else empty, numeric(1),
+                                     USE.NAMES = FALSE)
+  pd <- data.frame(
+    ProductKey               = keys,
+    ProductName              = paste0(toupper(substring(sp, 1, 1)), substring(sp, 2), " ",
+                                      tolower(trimws(defs$Name))),
+    ProductType              = trimws(defs$Type),
+    SpeciesGroupKey          = sp,
+    species_group            = sp,
+    VolumeDiameterCategory   = defs$VolumeDiameterCategory,
+    VolumeLengthCategory     = ifelse(defs$PriceType == "matrix",
+                                      "Length as defined in LengthClasses", "Physical length cm"),
+    VolumeDiameterAdjustment = defs$VolumeDiameterAdjustment,
+    DiameterTopPosition      = as.numeric(defs$DiameterTopPosition_cm),
+    DiameterUnderBark        = rep(EXPECTED_DIAMETER_UNDER_BARK, nrow(defs)),
+    DiameterSource           = rep(EXPECTED_DIAMETER_SOURCE, nrow(defs)),
+    MinTopDiameter           = as.numeric(defs$MinTopDiameter_cm) * 10,
+    MaxTopDiameter           = as.numeric(defs$MaxTopDiameter_cm) * 10,
+    MinButtDiameter          = as.numeric(defs$MinButtDiameter_cm) * 10,
+    MaxButtDiameter          = as.numeric(defs$MaxButtDiameter_cm) * 10,
+    MinLength                = rng(min, NA_real_),
+    MaxLength                = rng(max, NA_real_),
+    LengthStep               = vapply(lens, function(l) if (length(l) > 1L) min(diff(l)) else 10,
+                                      numeric(1), USE.NAMES = FALSE),
+    Priority                 = derived_priority(defs$PriceType, defs$Type),
+    PriceType                = defs$PriceType,
+    stringsAsFactors = FALSE)
+  lc <- data.frame(ProductKey = rep(keys, lengths(lens)),
+                   LogLength = as.numeric(unlist(lens, use.names = FALSE)),
+                   stringsAsFactors = FALSE)
+  lc$LogLength_dm <- lc$LogLength / 10
+  list(pd = pd, lc = lc)
+}
+
+#' Check an assortment table (names, species, lengths) and the products it
+#' gives (validate_products()). `pm` gives matrix-priced lengths.
+#'
+#' @return list(ok, errors, warnings).
+validate_assortment_table <- function(defs, pm) {
+  err <- character(0)
+  miss <- setdiff(ASSORTMENT_TABLE_COLS, names(defs))
+  if (length(miss) > 0L)
+    return(list(ok = FALSE, warnings = character(0),
+                errors = paste("Assortment table missing column(s):", paste(miss, collapse = ", "))))
+  if (nrow(defs) == 0L)
+    return(list(ok = FALSE, warnings = character(0), errors = "There are no assortments."))
+  slug <- vapply(defs$Name, assortment_slug, character(1), USE.NAMES = FALSE)
+  if (any(!nzchar(slug))) err <- c(err, "Every assortment needs a name with letters or digits.")
+  bad_sp <- !defs$Species %in% PRODUCT_SPECIES
+  if (any(bad_sp)) err <- c(err, sprintf("Species must be spruce or pine: %s",
+                                         paste(defs$Name[bad_sp], collapse = ", ")))
+  keys <- assortment_table_keys(defs)
+  if (any(duplicated(keys)))
+    err <- c(err, paste("Two assortments with the same name and species:",
+                        paste(unique(keys[duplicated(keys)]), collapse = ", ")))
+  lens <- assortment_lengths(defs, pm)
+  none <- lengths(lens) == 0L
+  if (any(none))
+    err <- c(err, sprintf("No lengths (a flat price needs min length <= max length and a positive step; a grid needs length columns): %s",
+                          paste(keys[none], collapse = ", ")))
+  if (length(err) > 0L) return(list(ok = FALSE, errors = err, warnings = character(0)))
+  p <- products_from_defs(defs, pm)
+  v <- validate_products(p$pd, p$lc)
+  list(ok = v$ok, errors = v$errors, warnings = v$warnings)
 }
 
 # rbind that fills columns missing on either side with NA.

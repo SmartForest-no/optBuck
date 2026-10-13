@@ -185,6 +185,214 @@ pm_reset <- function(scenario, default, id) {
 }
 
 
+# ---- rows and columns (Phase 4c) ---------------------------------------------------
+# A matrix's columns are its allowed lengths (dm) and its rows its
+# top-diameter classes (cm). Classes are consecutive whole cm, so rows are
+# added and removed at the ends only; a new row or column copies its
+# neighbour's prices.
+
+.matrix_rows <- function(pm, id) pm[pm$ProductKey == id & .is_matrix_row(pm), , drop = FALSE]
+
+#' Add a diameter class below the smallest ("low") or above the largest
+#' ("high") class of matrix `id`.
+pm_add_class <- function(pm, id, end = c("low", "high")) {
+  end <- match.arg(end); pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
+  if (nrow(s) == 0L) stop("No matrix '", id, "'.")
+  from <- if (end == "low") min(s$PriceDiameterClass_cm) else max(s$PriceDiameterClass_cm)
+  to   <- from + if (end == "low") -1L else 1L
+  if (to < 1L) stop("The smallest diameter class is 1 cm.")
+  new <- s[s$PriceDiameterClass_cm == from, , drop = FALSE]
+  new$PriceDiameterClass_cm <- as.integer(to)
+  pm_minimal(rbind(pm, new))
+}
+
+#' Remove the smallest ("low") or largest ("high") diameter class of matrix `id`.
+pm_remove_class <- function(pm, id, end = c("low", "high")) {
+  end <- match.arg(end); pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
+  cls <- unique(s$PriceDiameterClass_cm)
+  if (length(cls) <= 1L) stop("A matrix needs at least one diameter class.")
+  drop <- if (end == "low") min(cls) else max(cls)
+  pm_minimal(pm[!(pm$ProductKey == id & .is_matrix_row(pm) & pm$PriceDiameterClass_cm == drop), ,
+                drop = FALSE])
+}
+
+#' Add length `dm` (whole dm) to matrix `id`, copying the nearest length's
+#' prices (the shorter one on a tie).
+pm_add_length <- function(pm, id, dm) {
+  pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
+  dm <- suppressWarnings(as.numeric(dm))
+  if (length(dm) != 1L || is.na(dm) || dm <= 0 || dm != round(dm))
+    stop("A length is a positive whole number of dm.")
+  lens <- sort(unique(s$LengthClass_dm))
+  if (dm %in% lens) stop(sprintf("Length %d dm is already in the matrix.", as.integer(dm)))
+  from <- lens[which.min(abs(lens - dm))]
+  new <- s[s$LengthClass_dm == from, , drop = FALSE]
+  new$LengthClass_dm <- as.integer(dm)
+  pm_minimal(rbind(pm, new))
+}
+
+#' Remove length `dm` from matrix `id`: that length is no longer allowed.
+pm_remove_length <- function(pm, id, dm) {
+  pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
+  lens <- unique(s$LengthClass_dm)
+  if (!as.integer(dm) %in% lens) stop(sprintf("Length %s dm is not in the matrix.", dm))
+  if (length(lens) <= 1L) stop("A matrix needs at least one length.")
+  pm_minimal(pm[!(pm$ProductKey == id & .is_matrix_row(pm) & pm$LengthClass_dm == as.integer(dm)), ,
+                drop = FALSE])
+}
+
+#' Matrices whose diameter classes have gaps (classes must be consecutive cm).
+.pm_class_gaps <- function(pm) {
+  s <- pm[.is_matrix_row(pm) & !is.na(pm$PriceDiameterClass_cm), , drop = FALSE]
+  ids <- unique(s$ProductKey)
+  ids[vapply(ids, function(id) {
+    cls <- sort(unique(s$PriceDiameterClass_cm[s$ProductKey == id]))
+    length(cls) > 1L && any(diff(cls) != 1L)
+  }, logical(1))]
+}
+
+
+# ---- price set B (Phase 4c) ---------------------------------------------------------
+# B holds a state per product: "same" (A's prices and axes), "own" (B's own
+# matrix or flat price) or "none" (not used in B). B's own prices are kept
+# for every product, so switching back and forth keeps them.
+
+#' B states and their labels.
+B_STATES <- c(same = "Same as A", own = "Own prices", none = "Not used")
+
+#' B's price matrix in effect: A's rows for "same", B's for "own", none for
+#' "none". Products without a state are "same".
+pm_b_effective <- function(pm_a, pm_b, state) {
+  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
+  st <- state[a$ProductKey]; st[is.na(st)] <- "same"
+  keys_b <- names(state)[state == "own"]
+  pm_minimal(rbind(a[st == "same", , drop = FALSE], b[b$ProductKey %in% keys_b, , drop = FALSE]))
+}
+
+#' TRUE when B differs from A: a product not used in B, or an "own" product
+#' whose prices, classes or lengths differ from A's.
+b_differs <- function(pm_a, pm_b, state) {
+  if (any(state == "none")) return(TRUE)
+  key <- function(m) paste(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm)
+  a <- pm_minimal(pm_a); e <- pm_b_effective(pm_a, pm_b, state)
+  if (!identical(sort(key(a)), sort(key(e)))) return(TRUE)
+  any(abs(a$PriceNOKperM3 - e$PriceNOKperM3[match(key(a), key(e))]) > 1e-9, na.rm = TRUE)
+}
+
+#' Set B's own prices of products `keys` to A's (when a product switches to
+#' "own", it starts from A).
+pm_b_copy_a <- function(pm_a, pm_b, keys) {
+  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
+  pm_minimal(rbind(b[!b$ProductKey %in% keys, , drop = FALSE], a[a$ProductKey %in% keys, , drop = FALSE]))
+}
+
+
+# ---- assortment table prices (Phase 4c) ---------------------------------------------
+
+#' Starting prices of a new product: a grid of diameter classes
+#' class_lo..class_hi (cm) x lengths (cm, whole dm), or one flat price.
+pm_start_prices <- function(key, price_type, price, class_lo = NA, class_hi = NA,
+                            lengths_cm = numeric(0)) {
+  if (identical(price_type, "flat"))
+    return(pm_minimal(data.frame(ProductKey = key, LengthClass_dm = NA,
+                                 PriceDiameterClass_cm = NA, PriceNOKperM3 = price)))
+  lo <- suppressWarnings(as.integer(class_lo)); hi <- suppressWarnings(as.integer(class_hi))
+  if (is.na(lo) || is.na(hi) || lo < 1L || hi < lo)
+    stop("Give the smallest and largest diameter class (whole cm, smallest >= 1).")
+  dm <- as.numeric(lengths_cm) / 10
+  if (length(dm) == 0L || any(is.na(dm) | dm != round(dm) | dm <= 0))
+    stop("A price grid needs lengths in whole dm (multiples of 10 cm).")
+  g <- expand.grid(PriceDiameterClass_cm = seq(lo, hi), LengthClass_dm = as.integer(dm),
+                   KEEP.OUT.ATTRS = FALSE)
+  pm_minimal(data.frame(ProductKey = key, LengthClass_dm = g$LengthClass_dm,
+                        PriceDiameterClass_cm = g$PriceDiameterClass_cm,
+                        PriceNOKperM3 = price, stringsAsFactors = FALSE))
+}
+
+#' Give product `from`'s prices to `to` (an assortment renamed or moved to
+#' another species).
+pm_rename_key <- function(pm, from, to) {
+  pm <- pm_minimal(pm)
+  pm$ProductKey[pm$ProductKey == from] <- to
+  pm_minimal(pm)
+}
+
+#' Write the assortment table with both price sets to one xlsx: sheets
+#' "assortments", "prices_A", "prices_B" (B's own prices, long layout) and
+#' "B_states" (ProductKey, State).
+assortment_table_export <- function(defs, pm_a, pm_b, state, path) {
+  writexl::write_xlsx(list(
+    assortments = defs[, ASSORTMENT_TABLE_COLS, drop = FALSE],
+    prices_A = pm_minimal(pm_a), prices_B = pm_minimal(pm_b),
+    B_states = data.frame(ProductKey = names(state), State = unname(state),
+                          stringsAsFactors = FALSE)), path)
+  invisible(path)
+}
+
+#' Read an assortment_table_export() xlsx. Replaces all assortments and
+#' both price sets.
+#'
+#' @return list(ok, defs, pm_a, pm_b, state, errors, warnings).
+assortment_table_import <- function(path) {
+  fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
+  sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
+  if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
+  need <- c("assortments", "prices_A", "prices_B", "B_states")
+  if (!all(need %in% sheets))
+    return(fail(paste("The xlsx needs sheets:", paste(need, collapse = ", "))))
+  rd <- function(sh) as.data.frame(readxl::read_excel(path, sheet = sh, col_types = "text"))
+  defs <- rd("assortments")
+  miss <- setdiff(ASSORTMENT_TABLE_COLS, names(defs))
+  if (length(miss) > 0L)
+    return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
+  defs <- .type_assortment_table(defs)
+  st <- rd("B_states")
+  state <- setNames(as.character(st$State), as.character(st$ProductKey))
+  keys <- assortment_table_keys(defs)
+  bad <- setdiff(unique(state), names(B_STATES))
+  if (length(bad) > 0L)
+    return(fail(sprintf("B_states: State must be one of %s.", paste(names(B_STATES), collapse = ", "))))
+  state <- state[intersect(names(state), keys)]
+  state[setdiff(keys, names(state))] <- "same"
+  state <- state[keys]
+  rd_pm <- function(sh) { m <- rd(sh); m[m$ProductKey %in% keys, , drop = FALSE] }
+  raw_a <- rd_pm("prices_A"); pm_b <- pm_minimal(rd_pm("prices_B"))
+  va <- check_price_set(defs, raw_a)
+  if (!va$ok) return(fail(paste("A:", va$errors)))
+  b  <- b_set(defs, va$pm, pm_b, state)
+  vb <- check_price_set(b$defs, b$pm)
+  if (!vb$ok) return(fail(paste("B:", vb$errors)))
+  list(ok = TRUE, defs = defs, pm_a = va$pm, pm_b = pm_b, state = state, errors = character(0),
+       warnings = c(if (length(va$warnings)) paste("A:", va$warnings),
+                    if (length(vb$warnings)) paste("B:", vb$warnings)))
+}
+
+#' Check a price set: the assortment table with the price matrix it runs
+#' with (validate_assortment_table(), then validate_scenario_pm() against the
+#' products it gives).
+#'
+#' @return list(ok, errors, warnings, pm = minimal matrix or NULL).
+check_price_set <- function(defs, pm) {
+  m <- if (all(PM_REQUIRED_COLS %in% names(pm))) suppressWarnings(pm_minimal(pm)) else pm
+  v <- validate_assortment_table(defs, m)
+  if (!v$ok) return(list(ok = FALSE, errors = v$errors, warnings = v$warnings, pm = NULL))
+  p <- products_from_defs(defs, m)
+  vv <- validate_scenario_pm(pm, p$pd, p$lc)
+  vv$warnings <- c(v$warnings, vv$warnings)
+  vv
+}
+
+#' B's assortment table and price matrix in effect: products "not used" in
+#' B are dropped, "same" take A's prices and axes, "own" B's.
+b_set <- function(defs, pm_a, pm_b, state) {
+  keys <- assortment_table_keys(defs)
+  st <- state[keys]; st[is.na(st)] <- "same"
+  use <- st != "none"
+  list(defs = defs[use, , drop = FALSE],
+       pm = pm_b_effective(pm_a, pm_b, st))
+}
+
+
 # ---- validation -----------------------------------------------------------------
 
 #' Validate a scenario price matrix (long layout).
@@ -245,6 +453,19 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
       warnings <- c(warnings, sprintf(
         "%d matrix row(s) with diameter classes below the product's minimum top diameter; they are never used in pricing.",
         sum(below, na.rm = TRUE)))
+    gaps <- .pm_class_gaps(saw)
+    if (length(gaps) > 0L)
+      errors <- c(errors, paste("Diameter classes must be consecutive whole cm (no gaps):",
+                                paste(gaps, collapse = ", ")))
+    # Logs between the minimum top diameter and the smallest class are unpriced.
+    lo_cls <- tapply(saw$PriceDiameterClass_cm, saw$ProductKey, min, na.rm = TRUE)
+    k <- intersect(names(lo_cls), pd$ProductKey)
+    mt <- floor(as.numeric(pd$MinTopDiameter[match(k, pd$ProductKey)]) / 10)
+    for (j in which(!is.na(mt) & mt < lo_cls[k]))
+      warnings <- c(warnings, sprintf(
+        "%s: the smallest diameter class is %d cm but the minimum top diameter is %g cm; logs below %d cm are unpriced.",
+        k[j], lo_cls[[k[j]]], as.numeric(pd$MinTopDiameter[match(k[j], pd$ProductKey)]) / 10,
+        lo_cls[[k[j]]]))
     # The largest class is the product's price-diameter cap (Phase 4b).
     if (!is.null(default)) {
       dm  <- pm_minimal(default); dm <- dm[.is_matrix_row(dm), , drop = FALSE]
