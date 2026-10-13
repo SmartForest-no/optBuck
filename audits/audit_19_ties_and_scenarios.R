@@ -21,7 +21,7 @@
 #      exported scenario
 #  5.  Long-layout upload errors: missing column, negative, non-numeric,
 #      unknown product, unknown length, duplicate key -> rejected with a
-#      specific message; out-of-range diameter -> accepted with a warning
+#      specific message; a 60 cm class -> accepted with a cap warning (Phase 4b)
 #  6.  Wide-layout uploads: valid wide CSV (one grid) replaces only its own
 #      matrix; wrong headers (non-numeric length, length not in
 #      LengthClasses, unknown matrix name), a non-numeric cell and an
@@ -252,8 +252,11 @@ for (nm in names(long_cases)) {
 u_w60 <- try_long(function(d) rbind(d, transform(
   d[d$ProductKey == "spruce_sawlog" & d$PriceDiameterClass_cm == 50 & d$LengthClass_dm == 55, ],
   PriceDiameterClass_cm = 60L)))
-rec("Check 05: Long upload, diameter class 60 cm -> accepted with a warning",
-    if (isTRUE(u_w60$ok) && any(grepl("outside 12-50", u_w60$warnings, fixed = TRUE))) PASS else FAIL,
+# Phase 4b: the largest class is the product's price cap, so a 60 cm class
+# is used; the warning says the cap moved from the default's 50 cm.
+rec("Check 05: Long upload, diameter class 60 cm -> accepted with a cap warning",
+    if (isTRUE(u_w60$ok) && any(grepl("spruce_sawlog: largest diameter class is 60 cm (default 50 cm)",
+                                      u_w60$warnings, fixed = TRUE))) PASS else FAIL,
     sprintf("ok=%s | warnings: %s", isTRUE(u_w60$ok), paste(u_w60$warnings, collapse = " / ")))
 
 

@@ -20,8 +20,16 @@
 #             replaces only the matrices it contains.
 #   Both layouts go through validate_scenario_pm(). Units are never converted.
 #
-# Matrix ids: one per sawlog ProductKey, plus "flat_prices" (pulpwood and
-#             waste flat prices for all species).
+# Matrix ids: one per matrix-priced ProductKey (sawlogs and matrix custom
+#             assortments), plus "flat_prices" (all flat-priced products:
+#             pulpwood, waste and flat custom assortments, all species).
+#
+# Custom assortments (Phase 4b, 2026-10-13): definitions are rows of
+#   ASSORTMENT_COLS (app units: cm), turned into ProductData by
+#   custom_assortment_rows() (helpers_products.R). pm_new_assortment_prices()
+#   gives a new assortment's starting prices; assortments_export() /
+#   assortments_import() move definitions and their default and scenario
+#   prices as one xlsx.
 # ==============================================================================
 
 #' Matrix id of the flat-price table.
@@ -31,9 +39,12 @@ PM_FLAT_ID <- "flat_prices"
 PM_REQUIRED_COLS <- c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
                       "PriceNOKperM3")
 
-#' Diameter classes (cm) the price lookup can use: below 12 never meets the
-#' sawlog minimum, above 50 is capped (DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM).
-PM_DIAMETER_RANGE_CM <- c(12L, 50L)
+#' Columns of a custom assortment definition (one row per assortment).
+ASSORTMENT_COLS <- c("Name", "Class", "Species", "MinTopDiameter_cm",
+                     "MaxTopDiameter_cm", "MinButtDiameter_cm", "MaxButtDiameter_cm",
+                     "AllowedLengths_cm", "Priority", "DiameterUnderBark",
+                     "DiameterTopPosition_cm", "VolumeDiameterCategory",
+                     "VolumeDiameterAdjustment", "PriceType", "UseIn")
 
 
 #' The four columns Apter uses, typed, from any PriceMatrix_long.
@@ -61,7 +72,7 @@ pm_matrix_ids <- function(pm) {
 
 #' Human label for a matrix id ("spruce_sawlog" -> "Spruce sawlog").
 pm_matrix_label <- function(id) {
-  if (identical(id, PM_FLAT_ID)) return("Flat prices (pulpwood, waste)")
+  if (identical(id, PM_FLAT_ID)) return("Flat prices")
   s <- gsub("_", " ", id)
   paste0(toupper(substring(s, 1, 1)), substring(s, 2))
 }
@@ -136,9 +147,12 @@ pm_diff_mask <- function(default, scenario, id) {
 .same_price <- function(x, y) (is.na(x) && is.na(y)) ||
   (!is.na(x) && !is.na(y) && abs(x - y) <= 1e-9)
 
-#' Number of cells that differ between scenario and default, all matrices.
+#' Number of cells that differ between scenario and default, over the
+#' matrices both have (a custom assortment priced in one run only has no
+#' default to differ from).
 pm_n_diff <- function(default, scenario) {
-  sum(vapply(pm_matrix_ids(default), function(id)
+  ids <- intersect(pm_matrix_ids(default), pm_matrix_ids(scenario))
+  sum(vapply(ids, function(id)
     sum(pm_diff_mask(default, scenario, id)), numeric(1)))
 }
 
@@ -201,12 +215,25 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
       errors <- c(errors, paste("Length class(es) not in LengthClasses:",
                                 paste(paste0(bad_len$ProductKey, " ", bad_len$LengthClass_dm, " dm"),
                                       collapse = ", ")))
-    out_rng <- saw$PriceDiameterClass_cm < PM_DIAMETER_RANGE_CM[1] |
-               saw$PriceDiameterClass_cm > PM_DIAMETER_RANGE_CM[2]
-    if (any(out_rng, na.rm = TRUE))
+    # Classes below the product's minimum top diameter are never used.
+    min_cls <- floor(as.numeric(pd$MinTopDiameter[match(saw$ProductKey, pd$ProductKey)]) / 10)
+    below <- !is.na(min_cls) & saw$PriceDiameterClass_cm < min_cls
+    if (any(below, na.rm = TRUE))
       warnings <- c(warnings, sprintf(
-        "%d sawlog row(s) with diameter classes outside %d-%d cm; they are never used in pricing.",
-        sum(out_rng, na.rm = TRUE), PM_DIAMETER_RANGE_CM[1], PM_DIAMETER_RANGE_CM[2]))
+        "%d matrix row(s) with diameter classes below the product's minimum top diameter; they are never used in pricing.",
+        sum(below, na.rm = TRUE)))
+    # The largest class is the product's price-diameter cap (Phase 4b).
+    if (!is.null(default)) {
+      dm  <- pm_minimal(default); dm <- dm[.is_matrix_row(dm), , drop = FALSE]
+      cap_new <- tapply(saw$PriceDiameterClass_cm, saw$ProductKey, max, na.rm = TRUE)
+      cap_def <- tapply(dm$PriceDiameterClass_cm, dm$ProductKey, max, na.rm = TRUE)
+      k <- intersect(names(cap_new), names(cap_def))
+      k <- k[cap_new[k] != cap_def[k]]
+      for (pk in k)
+        warnings <- c(warnings, sprintf(
+          "%s: largest diameter class is %d cm (default %d cm); larger logs are priced at %d cm.",
+          pk, cap_new[[pk]], cap_def[[pk]], cap_new[[pk]]))
+    }
   }
   key <- paste(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm)
   if (any(duplicated(key)))
@@ -227,6 +254,7 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
     if (nrow(rev) > 0L) warnings <- c(warnings, paste0(rev$check, ": ", rev$detail))
     if (!is.null(default)) {
       d <- pm_minimal(default)
+      d <- d[d$ProductKey %in% pd$ProductKey, , drop = FALSE]   # this run's products
       dk <- paste(d$ProductKey, d$LengthClass_dm, d$PriceDiameterClass_cm)
       n_missing <- sum(!dk %in% key)
       if (n_missing > 0L)
@@ -296,12 +324,15 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
 #'
 #' @param path     File on disk (e.g. fileInput datapath).
 #' @param filename Original name (for the extension); defaults to path.
-#' @param default  Default/current price matrix (gives the sawlog ids).
+#' @param default  Default/current price matrix (gives the matrix ids).
+#' @param matrix_keys Further matrix ProductKeys accepted in a wide upload
+#'   (matrix-priced custom assortments).
 #' @return list(layout = "long"|"wide", long = data.frame (raw long rows, for
 #'   validation), ids = matrices contained (wide) or all ids (long), errors).
-read_price_matrix_upload <- function(path, filename = path, default) {
+read_price_matrix_upload <- function(path, filename = path, default,
+                                     matrix_keys = character(0)) {
   ext <- tolower(tools::file_ext(filename))
-  saw_ids <- setdiff(pm_matrix_ids(default), PM_FLAT_ID)
+  saw_ids <- union(setdiff(pm_matrix_ids(default), PM_FLAT_ID), matrix_keys)
   fail <- function(msg) list(layout = NA_character_, long = NULL, ids = character(0),
                              errors = msg)
 
@@ -362,7 +393,7 @@ read_price_matrix_upload <- function(path, filename = path, default) {
     }
     return(fail(paste0(
       "Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, ",
-      "PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a sawlog ",
+      "PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a ",
       "matrix name (", paste(saw_ids, collapse = " / "), ") in the top-left cell.")))
   }
   fail(sprintf("Unsupported file type '.%s' (use .csv, .xlsx or .rds).", ext))
@@ -371,7 +402,9 @@ read_price_matrix_upload <- function(path, filename = path, default) {
 #' Apply an upload to the scenario: read, merge (wide replaces only its
 #' matrices), validate. Returns list(ok, pm, layout, ids, errors, warnings).
 apply_price_upload <- function(path, filename, scenario, default, pd, lc) {
-  up <- read_price_matrix_upload(path, filename, default)
+  mk <- if ("PriceType" %in% names(pd)) pd$ProductKey[pd$PriceType %in% "matrix"]
+        else character(0)
+  up <- read_price_matrix_upload(path, filename, default, matrix_keys = mk)
   if (length(up$errors) > 0L)
     return(list(ok = FALSE, pm = NULL, layout = up$layout, ids = up$ids,
                 errors = up$errors, warnings = character(0)))
@@ -418,4 +451,168 @@ pm_template_wide <- function(default, path) {
                                      stringsAsFactors = FALSE)
   writexl::write_xlsx(sheets, path)
   invisible(path)
+}
+
+
+# ---- custom assortments (Phase 4b) --------------------------------------------------
+
+#' An empty assortment-definition table.
+empty_assortment_defs <- function() {
+  d <- as.data.frame(setNames(replicate(length(ASSORTMENT_COLS), character(0), simplify = FALSE),
+                              ASSORTMENT_COLS), stringsAsFactors = FALSE)
+  .type_assortment_defs(d)
+}
+
+# Column types of a definition table (numbers numeric, flags logical, rest
+# character; AllowedLengths_cm stays a "310;340" string).
+.type_assortment_defs <- function(d) {
+  for (n in c("MinTopDiameter_cm", "MaxTopDiameter_cm", "MinButtDiameter_cm",
+              "MaxButtDiameter_cm", "Priority", "DiameterTopPosition_cm"))
+    d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
+  d$DiameterUnderBark <- as.logical(d$DiameterUnderBark)
+  for (n in c("Name", "Class", "Species", "AllowedLengths_cm", "VolumeDiameterCategory",
+              "VolumeDiameterAdjustment", "PriceType", "UseIn"))
+    d[[n]] <- as.character(d[[n]])
+  d[, ASSORTMENT_COLS, drop = FALSE]
+}
+
+
+#' Check custom assortment definitions against the base products and each
+#' other. Product rules are those of validate_products().
+#'
+#' @param defs Definition table (ASSORTMENT_COLS).
+#' @param base_pd,base_lc Base ProductData / LengthClasses.
+#' @return list(ok, errors, warnings).
+validate_assortment_defs <- function(defs, base_pd, base_lc) {
+  err <- character(0)
+  miss <- setdiff(ASSORTMENT_COLS, names(defs))
+  if (length(miss) > 0L)
+    return(list(ok = FALSE, warnings = character(0),
+                errors = paste("Assortment definitions missing column(s):",
+                               paste(miss, collapse = ", "))))
+  if (nrow(defs) == 0L) return(list(ok = TRUE, errors = err, warnings = character(0)))
+  slug <- vapply(defs$Name, assortment_slug, character(1))
+  if (any(!nzchar(slug))) err <- c(err, "Every assortment needs a name with letters or digits.")
+  if (any(duplicated(slug[nzchar(slug)])))
+    err <- c(err, paste("Duplicated assortment name:",
+                        paste(unique(defs$Name[duplicated(slug)]), collapse = ", ")))
+  bad_sp <- !defs$Species %in% c(PRODUCT_SPECIES, "both")
+  if (any(bad_sp)) err <- c(err, sprintf("Species must be spruce, pine or both: %s",
+                                         paste(defs$Name[bad_sp], collapse = ", ")))
+  bad_use <- !defs$UseIn %in% ASSORTMENT_USE_IN
+  if (any(bad_use)) err <- c(err, sprintf("UseIn must be one of %s: %s",
+                                          paste(ASSORTMENT_USE_IN, collapse = "/"),
+                                          paste(defs$Name[bad_use], collapse = ", ")))
+  no_len <- vapply(defs$AllowedLengths_cm, function(x) {
+    v <- parse_lengths_cm(x); length(v) == 0L || anyNA(v)
+  }, logical(1))
+  if (any(no_len)) err <- c(err, sprintf("Allowed lengths must be whole cm, e.g. 310;340: %s",
+                                         paste(defs$Name[no_len], collapse = ", ")))
+  if (length(err) > 0L) return(list(ok = FALSE, errors = err, warnings = character(0)))
+
+  all_defs <- defs; all_defs$UseIn <- "both"
+  p <- products_for_run(base_pd, base_lc, all_defs, "default")
+  clash <- intersect(p$pd$ProductKey[-seq_len(nrow(base_pd))], base_pd$ProductKey)
+  if (length(clash) > 0L)
+    err <- c(err, paste("Assortment name clashes with a base product:",
+                        paste(clash, collapse = ", ")))
+  v <- validate_products(p$pd, p$lc)
+  list(ok = length(err) == 0L && v$ok, errors = c(err, v$errors), warnings = v$warnings)
+}
+
+
+#' Starting prices for one custom assortment, long minimal rows.
+#'
+#' Matrix: diameter classes from the minimum top diameter up to the maximum
+#' top diameter (not capped at 50 cm; the largest class is the assortment's
+#' price-diameter cap) x the allowed lengths, all at `price`. A maximum of
+#' Inf needs `max_class_cm`. Flat: one row per species product.
+#'
+#' @param def One definition row (ASSORTMENT_COLS).
+#' @param price Starting price, NOK/m3.
+#' @param max_class_cm Largest diameter class (cm) when MaxTopDiameter_cm is
+#'   Inf or NA.
+pm_new_assortment_prices <- function(def, price, max_class_cm = NA) {
+  r <- custom_assortment_rows(def)
+  keys <- r$pd$ProductKey
+  if (identical(as.character(def$PriceType[1L]), "flat"))
+    return(pm_minimal(data.frame(ProductKey = keys, LengthClass_dm = NA,
+                                 PriceDiameterClass_cm = NA, PriceNOKperM3 = price)))
+  lo <- floor(r$pd$MinTopDiameter[1L] / 10)
+  hi <- if (is.finite(r$pd$MaxTopDiameter[1L])) floor(r$pd$MaxTopDiameter[1L] / 10)
+        else as.numeric(max_class_cm)
+  if (is.na(hi) || hi < lo)
+    stop("Give the largest diameter class for an assortment without a maximum top diameter.")
+  lens <- sort(unique(r$lc$LogLength_dm))
+  g <- expand.grid(PriceDiameterClass_cm = as.integer(seq(lo, hi)),
+                   LengthClass_dm = as.integer(lens), ProductKey = keys,
+                   KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+  pm_minimal(data.frame(ProductKey = g$ProductKey, LengthClass_dm = g$LengthClass_dm,
+                        PriceDiameterClass_cm = g$PriceDiameterClass_cm,
+                        PriceNOKperM3 = price, stringsAsFactors = FALSE))
+}
+
+
+#' Custom ProductKeys of a definition table.
+assortment_keys <- function(defs) {
+  if (is.null(defs) || nrow(defs) == 0L) return(character(0))
+  unlist(lapply(seq_len(nrow(defs)), function(i)
+    custom_assortment_rows(defs[i, , drop = FALSE])$pd$ProductKey))
+}
+
+
+#' Write custom assortments with their prices to one xlsx: sheets
+#' "assortments" (definitions), "default_prices" and "scenario_prices" (long
+#' layout, custom ProductKeys only).
+assortments_export <- function(defs, default_pm, scenario_pm, path) {
+  keys <- assortment_keys(defs)
+  pick <- function(pm) { m <- pm_minimal(pm); m[m$ProductKey %in% keys, , drop = FALSE] }
+  writexl::write_xlsx(list(assortments = defs[, ASSORTMENT_COLS, drop = FALSE],
+                           default_prices = pick(default_pm),
+                           scenario_prices = pick(scenario_pm)), path)
+  invisible(path)
+}
+
+
+#' Read an assortments xlsx (assortments_export() layout) and merge it into
+#' the default and scenario price matrices. The upload replaces all custom
+#' assortments; base prices are kept.
+#'
+#' @return list(ok, defs, default_pm, scenario_pm, errors, warnings).
+assortments_import <- function(path, base_pd, base_lc, default_pm, scenario_pm) {
+  fail <- function(msg) list(ok = FALSE, defs = NULL, default_pm = NULL,
+                             scenario_pm = NULL, errors = msg, warnings = character(0))
+  sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
+  if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
+  need <- c("assortments", "default_prices", "scenario_prices")
+  if (!all(need %in% sheets))
+    return(fail(paste("The xlsx needs sheets:", paste(need, collapse = ", "))))
+  rd <- function(sh) as.data.frame(readxl::read_excel(path, sheet = sh, col_types = "text"))
+  defs <- rd("assortments")
+  if (length(setdiff(ASSORTMENT_COLS, names(defs))) > 0L)
+    return(fail(paste("assortments sheet missing column(s):",
+                      paste(setdiff(ASSORTMENT_COLS, names(defs)), collapse = ", "))))
+  defs <- .type_assortment_defs(defs)
+  v <- validate_assortment_defs(defs, base_pd, base_lc)
+  if (!v$ok) return(fail(v$errors))
+
+  base_keys <- base_pd$ProductKey
+  merge_pm <- function(pm, new) {
+    keep <- pm_minimal(pm); keep <- keep[keep$ProductKey %in% base_keys, , drop = FALSE]
+    pm_minimal(rbind(keep, new[, PM_REQUIRED_COLS, drop = FALSE]))
+  }
+  errs <- character(0); warns <- v$warnings; out <- list()
+  for (run in c("default", "scenario")) {
+    p   <- products_for_run(base_pd, base_lc, defs, run)
+    new <- rd(paste0(run, "_prices"))
+    new <- new[new$ProductKey %in% p$pd$ProductKey, , drop = FALSE]
+    pm  <- merge_pm(if (run == "default") default_pm else scenario_pm, new)
+    vv  <- validate_scenario_pm(pm, p$pd, p$lc)
+    if (!vv$ok) errs <- c(errs, paste0(run, " prices: ", vv$errors))
+    warns <- c(warns, if (length(vv$warnings)) paste0(run, " prices: ", vv$warnings))
+    out[[run]] <- vv$pm
+  }
+  if (length(errs) > 0L) return(fail(errs))
+  list(ok = TRUE, defs = defs, default_pm = out$default, scenario_pm = out$scenario,
+       errors = character(0), warnings = warns)
 }

@@ -19,16 +19,18 @@
 #                    helpers_commercial_volume.R; decided 2026-10-12). Differs
 #                    from optBuck, which sums one section too many and rounds.
 #   "Calculated Norwegian mid"
-#                    Dmid = Dt floored to whole cm + 0.5 cm (class midpoint)
-#                    + 1 cm/m over half the length; V = pi/4 * Dmid^2 * L.
-#                    In mm: Dmid = floor(Dt/10)*10 + 5 + L_cm/20. Not rounded
-#                    to whole dm3. optBuck rounds Dt to whole mm and adds
-#                    0.5 mm (units bug); Apter follows optBuck with the units
-#                    fixed (Lennart, 2026-10-13), after FOR-1990-05-28-469
-#                    5.1.1 ("nedslag til klassebunn") and 5.2.1 (mid diameter
-#                    from the class midpoint and 1 cm/m taper). That
-#                    regulation was repealed in 2001; check the current
-#                    Maalereglement.
+#                    Maalereglement for skogsvirke, Generelle bestemmelser
+#                    (Norsk Virkesmaaling, approved 15 April 2026), sections
+#                    4.1.3-4.1.4: Dt measured 10 cm from the top end, rounded
+#                    down to whole cm, class lower boundary + 0.5 cm, taper
+#                    1.0 cm/m; V = 3.14/4 * (Dt + L/20)^2 * L/100 (Dt cm, L dm,
+#                    V dm3). In mm: Dmid = floor(Dt/10)*10 + 5 + L_cm/20,
+#                    V = 3.14/4 * Dmid^2 * L_cm / 1e8 m3. Uses 3.14, not pi,
+#                    to reproduce the official volume (Lennart, 2026-10-13);
+#                    not rounded to whole dm3. optBuck rounds Dt to whole mm
+#                    and adds 0.5 mm (units bug); Apter follows optBuck with
+#                    the units fixed. Set DiameterTopPosition = 10 for the
+#                    rule's measuring point.
 #
 #   Dt is the product's measuring top diameter (mm): under or over bark per
 #   DiameterUnderBark, read DiameterTopPosition cm below the cut (the
@@ -57,6 +59,10 @@ VOLUME_DIAMETER_ADJUSTMENTS <- c("None", VOLUME_ROUND_DOWN_CM)
 
 #' Frustum / Norwegian mid taper: 1 cm per metre = 0.1 mm per cm of length.
 VOLUME_TAPER_MM_PER_CM <- 0.1
+
+#' The Maalereglement's pi for Norwegian mid (reproduces the official
+#' volume); the other methods use pi.
+VOLUME_NORWEGIAN_PI <- 3.14
 
 
 #' Price volume (m3) of logs, vectorised over logs of one product.
@@ -93,7 +99,7 @@ price_volume_m3 <- function(method, top_d_mm, length_cm,
     },
     "Calculated Norwegian mid" = {
       dmid <- dt + 5 + VOLUME_TAPER_MM_PER_CM * L / 2
-      pi / 4 * dmid^2 * L / 1e8
+      VOLUME_NORWEGIAN_PI / 4 * dmid^2 * L / 1e8
     })
   ifelse(!is.na(top_d_mm) & dt > 0, round(v, 5), NA_real_)
 }
