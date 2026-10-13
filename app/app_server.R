@@ -69,6 +69,19 @@ server <- function(input, output, session) {
     req(input$run_btn > 0L)
     r <- result(); req(!is.null(r))
     p <- r$params
+    if (identical(r$tree_source, "tree_list")) {
+      src <- table(r$tree_summary$height_source)
+      return(ro_field_row(
+        ro_field("Tree source", "Uploaded tree list"),
+        ro_field("File", p$file),
+        ro_field("Species", p$species_group),
+        ro_field("Trees bucked", sprintf("%d of %d (%d outside taperNOR's range)",
+                                         r$n_trees_total, r$diagnostics$n_trees_in_list,
+                                         r$diagnostics$n_trees_excluded_out_of_range)),
+        ro_field("Heights", paste(sprintf("%s: %d", names(src), as.integer(src)),
+                                  collapse = "; "), wide = TRUE),
+        ro_field("Run ID", r$run_id, wide = TRUE)))
+    }
     fyl <- if (is.null(p$fylnr)) "All counties"
            else paste(names(FYLNR_CHOICES)[match(p$fylnr, FYLNR_CHOICES)],
                       collapse = ", ")
@@ -84,10 +97,22 @@ server <- function(input, output, session) {
     )
   })
 
+  # Heights from reference curves (tree lists): shown above all results.
+  output$height_banner <- renderUI({
+    r <- if (input$run_btn > 0L) result() else NULL
+    if (is.null(r) || !identical(r$tree_source, "tree_list")) return(NULL)
+    w <- r$height_warnings[grepl("FinnHoyde", r$height_warnings, fixed = TRUE)]
+    if (length(w) == 0L) return(NULL)
+    div(class = "height-notice", tags$strong("Heights: "),
+        tagList(lapply(w, function(x) div(x))),
+        div("Each tree's height source is in the Trees table (Per m³ tab)."))
+  })
+
   output$run_steps <- renderUI({
     r <- if (input$run_btn > 0L) result() else NULL
     if (is.null(r)) return(step_list(run_step_table()))
-    step_list(run_step_table(r$diagnostics$stage_timings, r$started_at))
+    step_list(run_step_table(r$diagnostics$stage_timings, r$started_at,
+                             tree_list = identical(r$tree_source, "tree_list")))
   })
 
   output$home_last_run <- renderUI({
@@ -111,12 +136,68 @@ server <- function(input, output, session) {
 
   observeEvent(input$go_simulator, nav_select("main_nav", "Simulator"))
 
+  # ---- Uploaded tree list (Phase 5; R/helpers_tree_list.R) -----------------
+  tl_prepared <- reactiveVal(NULL)   # prepare_tree_list() result + $file
+
+  observeEvent(input$tl_upload, {
+    f <- input$tl_upload; req(f)
+    rd <- read_tree_list(f$datapath, f$name)
+    p <- if (length(rd$errors) > 0L)
+      list(ok = FALSE, errors = rd$errors, warnings = character(0))
+    else withProgress(message = "Checking the tree list and imputing heights...", value = 0.5,
+                      prepare_tree_list(rd$data))
+    p$file <- f$name
+    tl_prepared(p)
+  })
+
+  output$tl_validation <- renderUI({
+    p <- tl_prepared()
+    if (is.null(p)) return(div(class = "note-muted", "No tree list uploaded."))
+    h <- p$heights
+    tagList(
+      div(class = if (isTRUE(p$ok)) "pm-msg-ok" else "pm-msg-error",
+          if (isTRUE(p$ok))
+            sprintf("%s: %d trees, %d within taperNOR's range.", p$file, nrow(p$trees),
+                    sum(p$trees$in_range))
+          else paste(c(sprintf("%s cannot be used:", p$file), p$errors), collapse = "\n")),
+      if (length(p$warnings) > 0L)
+        div(class = "pm-msg-warn", paste("Warning:", p$warnings, collapse = "\n")),
+      if (!is.null(h) && nrow(h) > 0L)
+        div(class = "tl-heights",
+            div(class = "section-hdr", "Heights"),
+            tags$ul(lapply(seq_len(nrow(h)), function(i) tags$li(sprintf(
+              "%s: %d trees, %d measured; %s%s", h$species[i], h$n_trees[i], h$n_measured[i],
+              if (h$method[i] == "fieldPlot") sprintf("fieldPlot (%s)", h$model[i]) else h$method[i],
+              if (!is.na(h$ratio[i])) sprintf(", ratio %.2f", h$ratio[i]) else "")))))
+    )
+  })
+
+  output$dl_tree_template <- downloadHandler(
+    filename = function() "apter_tree_list_template.csv",
+    content  = function(file) tree_list_template(file))
+
+  # One backend run on the selected tree source.
+  run_trees <- function(src, params, tl, path, pd, lc) {
+    if (identical(src, "list"))
+      run_tree_list_bucking(tl, price_matrix_path = path, root = ROOT, products = pd,
+                            length_classes = lc, params = list(file = tl$file))
+    else run_sampled_plot_bucking(params = params, price_matrix_path = path, root = ROOT,
+                                  products = pd, length_classes = lc)
+  }
+
   # Backend call with multi-stage progress indicator
   result <- eventReactive(input$run_btn, {
-    req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
+    src <- if (identical(input$tree_source, "list")) "list" else "nfi"
+    tl  <- if (src == "list") tl_prepared() else NULL
+    if (src == "list" && !isTRUE(tl$ok)) {
+      showNotification("Upload a tree list that passes the checks first.",
+                       type = "error", duration = 8)
+      return(NULL)
+    }
+    if (src == "nfi") req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
 
     # Map user-facing inputs (HKL group, county) -> backend params
-    params     <- build_run_params(input)
+    params     <- if (src == "nfi") build_run_params(input) else list()
     started_at <- Sys.time()   # for the run step list
     # Products and prices in effect at this Run, for both runs (result_s2
     # uses the scenario's); later edits wait for the next Run.
@@ -131,18 +212,15 @@ server <- function(input, output, session) {
         Sys.sleep(0)  # yield to allow UI refresh
         incProgress(0.20, detail = "Running bucking optimizer...")
         res <- if (!inp_def$custom) {
-          run_sampled_plot_bucking(
-            params            = params,
-            price_matrix_path = "default_2021",
-            root              = ROOT)
+          run_trees(src, params, tl, "default_2021", NULL, NULL)
         } else {
           # Custom assortments used in the default run (Phase 4b).
           path <- write_scenario_pm(inp_def$pm)
           on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
-          run_sampled_plot_bucking(params = params, price_matrix_path = path,
-                                   root = ROOT, products = inp_def$pd,
-                                   length_classes = inp_def$lc)
+          run_trees(src, params, tl, path, inp_def$pd, inp_def$lc)
         }
+        res$tree_source_input <- src
+        res$tree_list_input   <- tl
         incProgress(0.45, detail = "Summarising results")
         Sys.sleep(0)
         incProgress(0.10, detail = "Rendering outputs")
@@ -176,9 +254,8 @@ server <- function(input, output, session) {
     on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
     withProgress(message = "Running scenario prices...", value = 0.5, {
       tryCatch({
-        r <- run_sampled_plot_bucking(params = params, price_matrix_path = path,
-                                      root = ROOT, products = inp$pd,
-                                      length_classes = inp$lc)
+        r <- run_trees(result()$tree_source_input, params, result()$tree_list_input,
+                       path, inp$pd, inp$lc)
         r$price_matrix    <- inp$pm
         r$n_cells_changed <- pm_n_diff(result()$price_matrix, inp$pm)
         r
@@ -466,9 +543,13 @@ server <- function(input, output, session) {
     n_unpr <- nrow(r$unpriced_summary)
     tagList(
       div(class = "stat-strip",
-          sprintf("Plots matching the selection: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
-                  r$n_eligible_plots, n_zero, n_unpr)),
-      div(class = "stat-strip", RESULTS_LABEL)
+          if (identical(r$tree_source, "tree_list"))
+            sprintf("Trees outside taperNOR's range (excluded): %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
+                    nrow(r$excluded_trees), n_zero, n_unpr)
+          else
+            sprintf("Plots matching the selection: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
+                    r$n_eligible_plots, n_zero, n_unpr)),
+      div(class = "stat-strip", r$label %||% RESULTS_LABEL)
     )
   })
 
@@ -551,7 +632,8 @@ server <- function(input, output, session) {
     ts <- r$tree_summary
     tr <- data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
                      Species = ts$species_group, DBH_cm = ts$dbh_cm,
-                     Height_m = ts$height_m, Logs = ts$n_logs_selected,
+                     Height_m = round(ts$height_m, 1), Height_source = ts$height_source,
+                     Logs = ts$n_logs_selected,
                      Value_NOK = round(ts$total_value_nok, 2),
                      Commercial_volume_ub_m3 = round(ts$commercial_volume_m3, 4),
                      NOK_per_m3 = round(ts$nok_per_m3, 1),
@@ -564,7 +646,7 @@ server <- function(input, output, session) {
                             "commercial_volume_m3", "PriceNOKperM3", "value_nok"),
                           names(sl))
     apter_reactable(tr, page_size = 10L, details = function(i) {
-      logs <- sl[sl$plot_id_github == tr$Plot[i] & sl$treid == tr$Tree[i],
+      logs <- sl[sl$plot_id_github %in% tr$Plot[i] & sl$treid == tr$Tree[i],   # plot may be NA (tree lists)
                  log_cols, drop = FALSE]
       if (nrow(logs) == 0L)
         return(div(class = "note-muted", "No selected logs for this tree."))
@@ -602,6 +684,20 @@ server <- function(input, output, session) {
   output$tbl_price_val <- renderReactable(apter_reactable(local({
     r <- result(); req(!is.null(r))
     r$price_validation_checks
+  })))
+
+  output$tbl_excluded <- renderReactable(apter_reactable(local({
+    r <- result(); req(!is.null(r))
+    ex <- r$excluded_trees
+    if (is.null(ex))
+      data.frame(Message = "NFI sample: trees below 5 cm dbh or 4.5 m height are filtered before sampling.",
+                 stringsAsFactors = FALSE)
+    else if (nrow(ex) == 0L)
+      data.frame(Message = "All uploaded trees are within taperNOR's range.", stringsAsFactors = FALSE)
+    else data.frame(Plot = ex$plot_id_github, Tree = ex$treid, Species = ex$species_group,
+                    DBH_cm = ex$dbh_cm, Height_m = round(ex$height_m, 1),
+                    Height_source = ex$height_source, Reason = ex$excluded_reason,
+                    stringsAsFactors = FALSE)
   })))
 
   output$tbl_zero_logs <- renderReactable(apter_reactable(local({

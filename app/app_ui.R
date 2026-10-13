@@ -19,10 +19,10 @@ home_page <- nav_panel(
         status_tile("NFI sample trees", "Available",
                     c("Spruce and pine from the Norwegian National Forest Inventory",
                       "Selected by species, maturity class, site class and county")),
-        status_tile("Tree lists", "Planned",
+        status_tile("Tree lists", "Available",
                     c("Upload your own trees",
                       "Tree ID, species and diameter, with heights where available"),
-                    icon_name = "list", planned = TRUE),
+                    icon_name = "list"),
         status_tile("Stem profiles", "Planned",
                     c("Upload measured stem profiles",
                       "For example from harvester data"),
@@ -38,19 +38,31 @@ simulator_sidebar <- sidebar(
   width = 320,
 
   div(class = "sidebar-heading", "Trees"),
-  selectInput("species_group", "Species group",
-              choices = c("spruce", "pine", "both"), selected = "spruce"),
-  checkboxGroupInput("hkl_group", "Maturity class",
-                     choiceNames  = names(HKL_CHOICES),
-                     choiceValues = unname(HKL_CHOICES),
-                     selected     = "4"),
-  uiOutput("abonitet_ui"),
-  selectInput("fylnr_sel", "County",
-              choices  = FYLNR_CHOICES,
-              selected = "__all__"),
-  selectInput("n_plots", "Plots to sample",
-              choices = c("5", "10", "25", "50"), selected = "10"),
-  numericInput("seed", "Random seed", value = 42L, min = 1L, step = 1L),
+  radioButtons("tree_source", "Tree source",
+               c("NFI sample" = "nfi", "Uploaded tree list" = "list"), selected = "nfi"),
+  conditionalPanel("input.tree_source == 'nfi'",
+    selectInput("species_group", "Species group",
+                choices = c("spruce", "pine", "both"), selected = "spruce"),
+    checkboxGroupInput("hkl_group", "Maturity class",
+                       choiceNames  = names(HKL_CHOICES),
+                       choiceValues = unname(HKL_CHOICES),
+                       selected     = "4"),
+    uiOutput("abonitet_ui"),
+    selectInput("fylnr_sel", "County",
+                choices  = FYLNR_CHOICES,
+                selected = "__all__"),
+    selectInput("n_plots", "Plots to sample",
+                choices = c("5", "10", "25", "50"), selected = "10"),
+    numericInput("seed", "Random seed", value = 42L, min = 1L, step = 1L)
+  ),
+  conditionalPanel("input.tree_source == 'list'",
+    fileInput("tl_upload", "Tree list (CSV or xlsx)", accept = c(".csv", ".xlsx"),
+              width = "100%"),
+    div(class = "note-muted",
+        "Columns: tree_id, species (spruce/pine), dbh (cm); optional height (m), plot_id. ",
+        downloadLink("dl_tree_template", "Download template (CSV)")),
+    uiOutput("tl_validation")
+  ),
 
   div(class = "sidebar-heading", "Scenario"),
   checkboxInput("compare_on", "Compare with scenario prices", value = FALSE),
@@ -59,11 +71,12 @@ simulator_sidebar <- sidebar(
   actionButton("run_btn", "Run optimizer",
                class = "btn-primary", width = "100%"),
 
-  div(class = "sidebar-notes",
-      uiOutput("stratum_preview"),
-      div("HKL 1–2 (young/establishment) are excluded from this prototype."),
-      div("County filtering uses fylnr from the sanitized NFI-derived data.",
-          " Codes use current and historical names where possible."))
+  conditionalPanel("input.tree_source == 'nfi'",
+    div(class = "sidebar-notes",
+        uiOutput("stratum_preview"),
+        div("HKL 1–2 (young/establishment) are excluded from this prototype."),
+        div("County filtering uses fylnr from the sanitized NFI-derived data.",
+            " Codes use current and historical names where possible.")))
 )
 
 simulator_page <- nav_panel(
@@ -73,6 +86,7 @@ simulator_page <- nav_panel(
     fillable = FALSE,
 
     div(class = "results-label", RESULTS_LABEL),
+    uiOutput("height_banner"),
 
     # Details left, steps right, as in the reference's batch details page.
     layout_columns(col_widths = c(7, 5),
@@ -136,7 +150,9 @@ simulator_page <- nav_panel(
         div(class = "section-hdr", "Price validation"),
         reactableOutput("tbl_price_val"),
         div(class = "section-hdr", "Zero-log trees"),
-        reactableOutput("tbl_zero_logs")
+        reactableOutput("tbl_zero_logs"),
+        div(class = "section-hdr", "Trees outside taperNOR's range (not bucked)"),
+        reactableOutput("tbl_excluded")
       ),
 
       nav_panel("Selected logs",

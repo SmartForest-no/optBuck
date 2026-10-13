@@ -58,6 +58,10 @@
 #      replaced) reports the scenario's 38 remaining cells kept; a comparison
 #      run shows
 #      'poles' in the per-m3 comparison, without error notifications
+# 21.  Tree list (Phase 5): switch the tree source to an uploaded list,
+#      upload the template -> validation panel lists 12 trees and the height
+#      methods; Run -> the FinnHoyde height banner shows and the Trees table
+#      has a Height_source column; no error notifications
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -326,7 +330,8 @@ browser_checks <- c(
   "Check 17: Price-matrix editor: grids side by side, highlights, reset",
   "Check 18: Stale-scenario notice after editing prices",
   "Check 19: Browser runtime under 180 s",
-  "Check 20: Custom assortment added in the UI runs in the comparison")
+  "Check 20: Custom assortment added in the UI runs in the comparison",
+  "Check 21: Uploaded tree list validates, runs and reports height sources")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -643,9 +648,52 @@ if (!browser_ok) {
                 paste0(if (nzchar(asm_err)) paste(" | form error:", asm_err) else "",
                        if (nzchar(run20_err)) paste(" | run error:", run20_err) else "")))
 
+    # 21. uploaded tree list (template)
+    tl_csv <- tempfile(fileext = ".csv")
+    tree_list_template(tl_csv)
+    tl_err <- tryCatch({
+      # Check 20 left the Simulator open: no output changes, so don't wait.
+      app$set_inputs(main_nav = "Simulator", wait_ = FALSE)
+      app$set_inputs(tree_source = "list", wait_ = FALSE)
+      app$upload_file(tl_upload = tl_csv)
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    tl_panel <- txt(app, "#tl_validation")
+    run21_err <- tryCatch({
+      app$set_inputs(compare_on = FALSE, wait_ = FALSE)
+      app$click("run_btn")
+      app$wait_for_idle(timeout = 120 * 1000)
+      app$set_inputs(result_tabs = "Per m³", wait_ = FALSE)
+      app$wait_for_idle()
+      app$run_js(paste0(
+        "var d = Array.from(document.querySelectorAll('details.apter-card'))",
+        ".find(function(e){ return e.querySelector('summary').textContent.trim() === 'Trees'; });",
+        "if (d) { d.open = true; d.dispatchEvent(new Event('toggle')); }"))
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    banner21 <- txt(app, "#height_banner")
+    trees21  <- txt(app, "#tbl_trees")
+    st21     <- txt(app, "#run_status")
+    nerr21   <- n_err_notif(app)
+    tryCatch(app$get_screenshot(file.path(shot_dir, "08_tree_list.png")), error = function(e) NULL)
+    ok21 <- !nzchar(tl_err) && !nzchar(run21_err) &&
+      grepl("12 trees, 12 within taperNOR's range", tl_panel, fixed = TRUE) &&
+      grepl("FinnHoyde (calibrated, n = 4)", tl_panel, fixed = TRUE) &&
+      grepl("Run complete", st21, fixed = TRUE) &&
+      grepl("FinnHoyde, uncalibrated", banner21, fixed = TRUE) &&
+      grepl("Height_source", trees21, fixed = TRUE) && nerr21 == 0L
+    rec(browser_checks[17], if (ok21) PASS else FAIL,
+        sprintf("panel: '%s' | status: '%s' | banner: '%s' | Height_source column: %s | error notifications: %d%s",
+                substr(trimws(tl_panel), 1, 160), trimws(st21), substr(trimws(banner21), 1, 120),
+                grepl("Height_source", trees21, fixed = TRUE), nerr21,
+                paste0(if (nzchar(tl_err)) paste(" | upload error:", tl_err) else "",
+                       if (nzchar(run21_err)) paste(" | run error:", run21_err) else "")))
+
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:14, 16)])
+    for (ck in browser_checks[c(2:14, 16, 17)])
       rec(ck, FAIL, "skipped: app did not start")
   }
 

@@ -143,8 +143,15 @@ RUN_STAGE_LABELS <- data.frame(
 #' @param stage_timings data.frame(stage, elapsed_seconds) from the backend,
 #'   or NULL before the first run (all steps pending).
 #' @param started_at POSIXct start of the run.
-run_step_table <- function(stage_timings = NULL, started_at = NULL) {
+run_step_table <- function(stage_timings = NULL, started_at = NULL, tree_list = FALSE) {
   lab <- RUN_STAGE_LABELS
+  if (tree_list) {   # uploaded tree list (Phase 5): no sampling, taperNOR at run time
+    sub <- c(load_data = "Tree list read and checked at upload",
+             filter_stratum_and_sample_plots = "No sampling: all uploaded trees",
+             load_precomputed_taper_profiles = "taperNOR profiles at run time")
+    lab$subtitle[match(names(sub), lab$stage)] <- sub
+    lab$title[lab$stage == "filter_stratum_and_sample_plots"] <- "Select trees"
+  }
   if (is.null(stage_timings) || is.null(started_at))
     return(data.frame(title = lab$title, subtitle = lab$subtitle,
                       status = "Waiting", time = "", done = FALSE,

@@ -86,14 +86,21 @@ finnhoyde_height <- function(d_cm, species) {
   note <- ""
   if (n_plots >= 2L) {
     t0 <- proc.time()[["elapsed"]]
+    # fieldPlot's own timeout is disabled (Inf): it never interrupts nlme and
+    # would only skip it; Apter's time limit does the interrupting.
     m <- tryCatch(suppressMessages(.with_time_limit(
-           fieldPlot::fitHD_Plot(d, h, sp = 1L, plotID = plot, timeout = timeout_s),
+           fieldPlot::fitHD_Plot(d, h, sp = 1L, plotID = plot, timeout = Inf),
            timeout_s)), error = function(e) e)
     el <- proc.time()[["elapsed"]] - t0
     if (inherits(m, "nlme")) return(list(model = m, model_class = "nlme", note = note))
-    note <- if (inherits(m, "error"))
-      sprintf("nlme stopped after %.1f s (%s); nls used", el, conditionMessage(m))
-      else "nlme did not converge; nls used"
+    # fitHD_Plot() catches the time-limit error itself and returns its nls
+    # fallback, so a timeout is recognised by the elapsed time.
+    if (!inherits(m, "error") && el >= timeout_s)
+      return(list(model = m, model_class = "nls", note = sprintf(
+        "nlme stopped at the %g s time limit; nls used", timeout_s)))
+    if (inherits(m, "nls")) return(list(model = m, model_class = "nls",
+                                        note = "nlme did not converge; nls used"))
+    note <- sprintf("nlme stopped after %.1f s (%s); nls used", el, conditionMessage(m))
   } else {
     note <- "fewer than 2 plots; nls used (no plot effect)"
   }

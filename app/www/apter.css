@@ -276,3 +276,12 @@ details.apter-card { margin-bottom: 16px; }
   background: #FDF3E1; border-left: 3px solid var(--apter-warning); color: var(--apter-ink);
   padding: 8px 12px; margin: 6px 0 10px; border-radius: 0 4px 4px 0; font-size: 0.9rem;
 }
+/* Tree lists (Phase 5): heights from reference curves, and the sidebar
+   validation panel */
+.height-notice {
+  background: #FDF3E1; border-left: 3px solid var(--apter-warning); color: var(--apter-ink);
+  padding: 8px 12px; margin: 6px 0 10px; border-radius: 0 4px 4px 0; font-size: 0.9rem;
+}
+.height-notice div { margin-top: 2px; }
+.tl-heights ul { padding-left: 18px; margin-bottom: 4px; font-size: 0.88rem; }
+#tl_validation .pm-msg-warn, #tl_validation .pm-msg-error { white-space: pre-wrap; font-size: 0.88rem; }

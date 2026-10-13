@@ -1,0 +1,58 @@
+============================================================= 
+  Audit: tree lists and heights
+  Run: 2026-10-13 13:20:05.747187
+============================================================= 
+
+--- 01. FinnHoyde reference curves by hand ---
+  [PASS  ] Check 01: FinnHoyde spruce (10, 14.9, 15, 30 cm) and pine (9.9, 10, 34.9, 35, 50 cm) equal the hand values | spruce 7.300000, 10.240000, 10.363264, 16.642749 | pine 7.780144, 7.845600, 17.160302, 17.095000, 18.700000
+
+--- 02. Single-species lists ---
+  [PASS  ] Check 02: Spruce-only and pine-only lists impute without error, with fieldPlot | spruce nlme | pine nlme
+
+--- 03. Methods per species ---
+  [PASS  ] Check 03: >= 10 heights -> fieldPlot (plot / species curve for a plot without heights); none -> uncalibrated FinnHoyde; measured heights unchanged; every tree has a source | spruce: 27 measured, model nlme; missing in measured plots: fieldPlot (plot); plot P9: fieldPlot (species curve) | pine: FinnHoyde (uncalibrated)
+  [PASS  ] Check 03b: Calibration by hand: ratio 53.5 / 44.603255 = 1.199464; a 22 cm spruce gets 16.592107 m, 'FinnHoyde (calibrated, n = 3)' | ratio 1.199464 (summary 1.199464), height 16.592107, source 'FinnHoyde (calibrated, n = 3)'
+  [PASS  ] Check 03c: Ratio 1.8 warns, ratio 1.2 does not; site-independence warning only for the species without heights | Spruce: measured heights are on average 80 % above the FinnHoyde curve (ratio 1.80, n = 3); check the heights or measure more trees. | Heights for 2 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. | (inside: 0 warnings)
+
+--- 04. Time limit on the nlme fit ---
+  [PASS  ] Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights | full fit: nlme in 0.60 s | limited: nls in 0.29 s, note 'nlme stopped at the 0.2 s time limit; nls used'
+
+--- 05. Validation of broken tree lists ---
+  [PASS  ] Check 05: missing column -> rejected | Missing required column(s): dbh
+  [PASS  ] Check 05: empty -> rejected | The tree list is empty.
+  [PASS  ] Check 05: non-numeric dbh -> rejected | Non-numeric dbh in 1 row(s) (rows 3), e.g. '30,5'.
+  [PASS  ] Check 05: non-numeric height -> rejected | Non-numeric height in 1 row(s) (rows 2), e.g. 'tall'.
+  [PASS  ] Check 05: missing tree_id -> rejected | Missing tree_id in 1 row(s) (rows 3).
+  [PASS  ] Check 05: duplicate in plot -> rejected | Duplicated tree_id within plot_id: A/1.
+  [PASS  ] Check 05: duplicate, no plot -> rejected | Duplicated tree_id: 1.
+  [PASS  ] Check 05: unknown species -> rejected | Unknown species in 1 row(s): birch (use spruce or pine).
+  [PASS  ] Check 05: dbh <= 0 -> rejected | dbh must be > 0: 1 row(s) (rows 2).
+  [PASS  ] Check 05: height <= 0 -> rejected | height must be > 0: 1 row(s) (rows 4).
+  [PASS  ] Check 05: missing dbh -> rejected | Missing dbh in 1 row(s) (rows 4).
+  [PASS  ] Check 05: all out of range -> rejected | No tree is within taperNOR's range (dbh >= 5 cm and height >= 4.5 m).
+  [PASS  ] Check 05: unsupported file type -> rejected | Unsupported file type '.txt' (use .csv or .xlsx).
+  [PASS  ] Check 05: dbh looks like mm -> accepted with a warning | The median dbh is 250; dbh must be in cm (this looks like mm). / Heights for 2 spruce trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. / Heights for 1 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. / 3 tree(s) beyond 80 cm dbh or 40 m height: the taper and height models extrapolate there.
+  [PASS  ] Check 05: height looks like dm -> accepted with a warning | The median height is 195; height must be in m (this looks like dm). / 3 tree(s) with an implausible height/diameter ratio (outside 30-150), e.g. tree A/1: 780. / Spruce: measured heights are on average 1166 % above the FinnHoyde curve (ratio 12.66, n = 2); check the heights or measure more trees. / Pine: measured heights are on average 1183 % above the FinnHoyde curve (ratio 12.83, n = 1); check the heights or measure more trees. / 3 tree(s) beyond 80 cm dbh or 40 m height: the taper and height models extrapolate there.
+  [PASS  ] Check 05: implausible h/d -> accepted with a warning | 1 tree(s) with an implausible height/diameter ratio (outside 30-150), e.g. tree A/1: 24. / Heights for 1 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees.
+  [PASS  ] Check 05: out of range -> accepted with a warning | Heights for 1 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. / 1 tree(s) outside taperNOR's range are excluded: 1 with dbh below 5.0 cm.
+  [PASS  ] Check 05: beyond 80 cm -> accepted with a warning | Heights for 1 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. / 1 tree(s) beyond 80 cm dbh or 40 m height: the taper and height models extrapolate there.
+  [PASS  ] Check 05: ignored column -> accepted with a warning | Ignored column(s): age / Heights for 1 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees.
+
+--- 06. NFI trees as a tree list ---
+  [PASS  ] Check 06: NFI trees uploaded as a tree list (with their heights) give the same logs, values and NOK/m3 | 69 trees | logs 177 vs 177, unmatched 0 | NOK/m3 379.0643 vs 379.0643
+
+--- 07. End to end, mixed list, with a scenario comparison ---
+  [PASS  ] Check 07: Mixed list: run at default and scenario prices, comparison, height source per tree, excluded tree listed | 32 trees bucked, 1 excluded (dbh below 5.0 cm) | sources: fieldPlot (plot) 9, FinnHoyde (uncalibrated) 8, measured 15 | changed trees 6 | NOK/m3 385.4 -> 494.0
+
+--- 08. Template ---
+  [PASS  ] Check 08: Template validates; only warning: uncalibrated pine heights; spruce calibrated (n = 4) | Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees.
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 28
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/tree_lists/audit_21_tree_lists_and_heights.csv
