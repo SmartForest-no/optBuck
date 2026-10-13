@@ -17,7 +17,8 @@ pm_side <- function(side) {
     if (side == "B") uiOutput("pm_b_state_ui"),
     div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark"),
     uiOutput(paste0("pm_", s, "_note")),
-    rHandsontableOutput(paste0("pm_", s)),
+    if (side == "B") conditionalPanel("output.pm_b_shown", rHandsontableOutput("pm_b"))
+    else rHandsontableOutput("pm_a"),
     uiOutput(paste0("pm_", s, "_axes")),
     div(class = "pm-actions",
       actionButton(paste0("pm_", s, "_reset"), "Reset to 2021 prices", class = "btn-secondary"),

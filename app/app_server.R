@@ -406,14 +406,21 @@ server <- function(input, output, session) {
       return(w)
     }
     s <- or_default(st[id], "same")
-    req(s != "none")
+    if (s == "none") return(NULL)                     # no grid
     if (s == "same") return(pm_widget(pm_to_grid(a, id), id, TRUE, PM_SAME_RENDERER))
     pm_widget(pm_to_grid(b, id), id, FALSE, PM_DIFF_RENDERER,
               def = unname(pm_default_aligned(a, b, id)))
   })
 
+  # The B grid is hidden when the shown matrix is "Not used" in B.
+  output$pm_b_shown <- reactive({
+    id <- input$pm_id
+    is.null(id) || is_flat(id) || !identical(unname(b_state()[id]), "none")
+  })
+  outputOptions(output, "pm_b_shown", suspendWhenHidden = FALSE)
+
   output$pm_b_state_ui <- renderUI({
-    id <- input$pm_id; req(id, !is_flat(id))
+    pm_tick(); id <- input$pm_id; req(id, !is_flat(id))   # follows uploads and resets
     selectInput("pm_b_state", NULL, setNames(names(B_STATES), B_STATES),
                 selected = or_default(isolate(b_state())[id], "same"), width = "220px")
   })
@@ -664,9 +671,14 @@ server <- function(input, output, session) {
     s <- r$scenario; s$price_matrix <- r$price_matrix_b
     s
   })
+  # Shown when the last finished run compared A and B. While a run is busy
+  # the result is pending and this observer waits, so the tab stays as it
+  # is (hiding the open tab would leave its outputs stale).
   observe({
-    show <- has_result() && !is.null(result()$scenario)
-    if (show) nav_show("result_tabs", "comparison") else nav_hide("result_tabs", "comparison")
+    show <- input$run_btn > 0L && !is.null(result()) && !is.null(result()$scenario)
+    if (show) return(nav_show("result_tabs", "comparison"))
+    if (identical(isolate(input$result_tabs), "comparison")) nav_select("result_tabs", "summary")
+    nav_hide("result_tabs", "comparison")
   })
 
   output$run_status <- renderUI({
