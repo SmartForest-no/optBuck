@@ -19,11 +19,12 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | First-helper validation | Audit 14 PASS (28/28); zero-priced waste accepted 2026-10-12 |
 | App backend | Audit 16 PASS (15/15), including fast vs. reference optimizer equivalence |
 | Bark model and NOK/m³ denominator | Audit 18 PASS (13/13): barkNOR wrapper, B ≥ 0 floor, swappable model, synthetic stems, price independence |
-| Tie-breaking and price scenarios | Audit 19 PASS (25/25): synthetic ties, order independence, matrix helpers, long and wide uploads, pattern comparison |
-| Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline, validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
+| Tie-breaking and price scenarios | Audit 19 PASS (26/26): synthetic ties, order independence, matrix helpers, long and wide uploads (class gaps rejected), pattern comparison |
+| Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline (with the pre-Phase-4c limits), validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
 | Tree lists and height imputation (Phase 5) | Audit 21 PASS (28/28): FinnHoyde curves and calibration by hand, fieldPlot wrapper (single species, time limit), validation of broken files, NFI trees as a tree list give identical results, end-to-end runs |
-| Shiny app (v1, Release 0.2.0) | Audit 17 PASS (27/27), headless shinytest2 smoke test with screenshots, including a custom assortment added and edited through the form, an uploaded tree list, and Run disabled with progress while a run task runs |
-| Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase, the app's background job equals the backend |
+| Shiny app (Phase 4c layout) | Audit 17 PASS (28/28), headless shinytest2 smoke test with screenshots: two tabs, A editable, B states, rows and columns, automatic comparison when B differs, no "default"/"scenario" text, a custom assortment through the form, an uploaded tree list, Run disabled with progress while a run task runs |
+| Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
+| Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
 (`scripts/97_fill_31dm_sawlog_price_gap.R`). Rows are flagged
@@ -38,15 +39,16 @@ app/                        Shiny app, files sourced explicitly by app.R
   app.R                     Entry point: resolves the root, sources the backend
                             and the files below, calls shinyApp(ui, server)
   helpers_root.R            Project root resolution (APTER_ROOT / parent of app/)
-  setup.R                   Data loading, HKL/bonitet/county choices, label, APP_VERSION
+  setup.R                   Data, default assortments and prices (APP_DEFS, APP_PM_DEFAULT),
+                            HKL/bonitet/county choices, fixed plots/seed, APP_VERSION
   theme.R                   Design tokens, chart colours, bslib (Bootstrap 5) theme
-  helpers_ui.R              Cards, read-only fields, status tiles, step list,
-                            reactable tables, base-R plot styling
+  helpers_ui.R              Stripe, cards, read-only fields, reactable tables,
+                            base-R plot styling, grid renderers
   helpers_validation.R      Inputs -> backend params; stratum plot counts
-  helpers_upload.R          Writes the scenario price matrix for the comparison run
+  helpers_upload.R          Price files for the runs; uploads merged into price set A or B
   helpers_jobs.R            Runs as background jobs: promise chain over the workers
                             (shiny::ExtendedTask), progress per chunk
-  app_ui.R                  `ui`: page_navbar with Home, Simulator, Prices and assortments
+  app_ui.R                  `ui`: page_navbar with Assortments and prices, Simulator
                             (not ui.R: Shiny treats ui.R + app.R as two app formats)
   app_server.R              `server`
   www/
@@ -56,7 +58,8 @@ app/                        Shiny app, files sourced explicitly by app.R
 
 R/                          Core engine helpers
   helpers_paths.R           Project root and path utilities (get_root_dir())
-  helpers_products.R        Product definitions, assumption checks, custom assortments, validate_products()
+  helpers_products.R        Product definitions, assumption checks, the assortment table
+                            (defs_from_products(), products_from_defs()), validate_products()
   helpers_volume_methods.R  Price-volume methods (Top cylinder, Top frustum, solid volume, Norwegian mid)
   helpers_valuation.R       Price matrix loading, validation, price lookup with per-product class cap
   helpers_audit.R           Audit logging framework
@@ -68,9 +71,10 @@ R/                          Core engine helpers
   helpers_parallel.R        Workers (apter.workers), chunks, futures; the core shipped to workers
   helpers_bark.R            Swappable bark model (default taperNOR::barkNOR, B >= 0 floor)
   helpers_commercial_volume.R  NOK/m3 denominator and per-m3 summaries
-  helpers_price_matrix.R    Price-matrix scenarios: grids, diff, reset, upload (long/wide), templates;
-                            custom assortment definitions, starting prices, assortments xlsx I/O
-  helpers_comparison.R      Default vs. scenario: pattern changes, NOK/m3 comparison
+  helpers_price_matrix.R    Price matrices: grids, diff, rows/columns, upload (long/wide), export;
+                            price set B (states, b_set(), b_differs()), check_price_set(),
+                            assortment xlsx I/O; Phase 4b definition format (performance cases)
+  helpers_comparison.R      A vs. B: pattern changes, NOK/m3 comparison
   helpers_heights.R         Height imputation for tree lists (fieldPlot wrapper, FinnHoyde curves)
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
 
@@ -84,6 +88,7 @@ audits/
   audit_20_assortments_and_volume_methods.R  Volume methods, custom assortments, per-product price cap
   audit_21_tree_lists_and_heights.R          Tree lists, height imputation, tree-list runs
   audit_22_performance_equivalence.R         Workers, chunking, comparisons, main baseline, app jobs
+  audit_23_assortment_table_and_price_sets.R Assortment table, default limits, rows/columns, price set B
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -98,6 +103,7 @@ scripts/
   performance_check.R                     Quick check of every case against the main baseline
   performance_profile.R                   Per-tree stage profile (step 1 of the phase)
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
+  phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
   app_backend/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
     01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer): NFI
@@ -123,17 +129,17 @@ outputs/
   app_smoke/                Audit 17 results
   commercial_volume/        Audit 18 results
   scenario_comparison/      Audit 19 results
-  assortments/              Audit 20 results and the pre-Phase-4b default-results baseline
+  assortments/              Audits 20 and 23 results and the pre-Phase-4b default-results baseline
   tree_lists/               Audit 21 results
-  performance/              Audit 22 results, main baseline, profile and benchmarks
+  performance/              Audit 22 results, main baseline, profile, benchmarks, Phase 4c limits report
   app_cache/                Taper profile cache (local, regenerated by app_backend/00)
   stratum_availability/     Species/hogstkl/abonitet/fylnr combinations with enough plots
 
-VERSION                     Release number shown in the app footer (bump by hand)
+VERSION                     Release number (internal since Phase 4c; bump by hand)
 
 docs/
   development.md            This file
-  plans/                    Roadmap (PLAN.md) and phase plans
+  plans/                    Roadmap (PLAN.md)
 ```
 
 ### Not in the repository
@@ -173,28 +179,35 @@ read (removed in the 2026-10 rename).
 
 ## App appearance
 
-The look follows NIBIO's ForestSens (Oracle APEX Redwood style); reference
-screenshots are in `docs/design_reference/`. Everything is our own: colours
+The look follows NIBIO's ForestSens (Oracle APEX Redwood style; reference
+screenshots in `docs/design_reference/`) with the "Forest & sand" palette of
+Phase 4c: forest green `#3F6E58` is the only strong colour (logo, primary
+buttons, active tab, status icons), secondary buttons are sand `#EAE5DC`.
+Everything is our own: colours
 are the tokens in `app/theme.R` (`APTER_TOKENS`, `APTER_CHART`), component
 styles are in `app/www/apter.css`, and building blocks are in
 `app/helpers_ui.R`. No inline colours in `app_ui.R` / `app_server.R`, and no
 Oracle or ForestSens assets.
 
 - Fonts are self-hosted from `app/www/fonts/` (no Google Fonts request at
-  runtime): Inter for the UI, Source Serif 4 for the landing title only.
-  Both are SIL OFL 1.1; keep the licence files next to the font files.
-- Chart colours were checked with a colour-vision-deficiency validator
-  against the white card surface. Single-series charts use one colour;
-  Scenario 1/2 use blue/orange; the delta chart uses a neutral colour
-  because the sign is shown by bar direction.
-- Audit 17 saves screenshots of every page to
-  `outputs/app_smoke/screenshots/` for review against the references.
+  runtime): Inter for the UI (Source Serif 4 is still in `fonts/` but unused
+  since the Home page went). Both are SIL OFL 1.1; keep the licence files
+  next to the font files.
+- Chart colours were checked with the dataviz palette validator (headless
+  Chrome, all pairs, white surface; 2026-10-13). Sawlog green `#3F6E58`,
+  pulpwood sand `#B38A52`, waste grey `#C4BFB8`, custom assortments charcoal
+  `#3A3836`: worst CVD dE 13.3, worst normal-vision dE 16.6. The proposed
+  `#C9A97A` / `#A39E98` failed (normal-vision dE 8.0 between them). A is
+  green, B sand; the delta chart uses a neutral grey because the sign is
+  shown by bar direction.
+- Audit 17 saves screenshots of both tabs, the results and the comparison
+  to `outputs/app_smoke/screenshots/` for review.
 
 ## Running the audits
 
 Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
-REVIEW, or FAIL. Re-run audits 14–17 at the end of every development phase.
+REVIEW, or FAIL. Re-run all audits (14–23) at the end of every development phase.
 
 **Prerequisites**
 
@@ -215,12 +228,13 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 14 — first helpers | `Rscript audits/audit_14_validate_first_helpers.R` | Nothing beyond the repo |
 | 15 — engine regression | `Rscript audits/audit_15_core_engine_helpers_regression.R` | `outputs/stem_profiles/stem_profiles_example_500trees.parquet` (from frozen prototype script 02, which needs `data_processed/`) |
 | 16 — backend smoke | `Rscript audits/audit_16_sampled_plot_backend_smoke.R` | Taper profile cache (`scripts/app_backend/00_…`) |
-| 17 — app smoke | `Rscript audits/audit_17_app_smoke.R` | shinytest2, chromote, Chrome; use `Rscript`, not `source()` |
+| 17 — app smoke | `Rscript audits/audit_17_app_smoke.R` | shinytest2, chromote, Chrome; use `Rscript`, not `source()`; runs the app with `APTER_N_PLOTS=5` |
 | 18 — bark and commercial volume | `Rscript audits/audit_18_bark_and_commercial_volume.R` | taperNOR; taper profile cache for its backend runs |
 | 19 — ties and scenarios | `Rscript audits/audit_19_ties_and_scenarios.R` | readxl, writexl; taper profile cache |
 | 20 — assortments and volume methods | `Rscript audits/audit_20_assortments_and_volume_methods.R` | readxl, writexl, taperNOR; taper profile cache; `outputs/assortments/baseline_phase4b_default.rds` |
 | 21 — tree lists and heights | `Rscript audits/audit_21_tree_lists_and_heights.R` | fieldPlot, nlme, taperNOR, readxl; taper profile cache (check 6) |
 | 22 — performance equivalence | `Rscript audits/audit_22_performance_equivalence.R` | future, promises, later, taperNOR; taper profile cache; `outputs/performance/baseline_main_3fa0a9d.rds`; uses up to 15 workers |
+| 23 — assortment table and price sets | `Rscript audits/audit_23_assortment_table_and_price_sets.R` | readxl, writexl, taperNOR |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -351,3 +365,35 @@ These keep the old name on purpose:
 | `docs/plans/phase0.md`, `docs/plans/PLAN.md` | Historical plan; "formerly nfiBuck" |
 | `scripts/99_cleanup_project_structure.R` header, `scripts/run_prototype_00_prepare_nfi_data.R` | Describe the old name and the old root that the wrapper replaces |
 | This file, CLAUDE.md | "formerly nfiBuck" notes |
+
+---
+
+## Phase 4c: interface and default limits
+
+- **Assortment table.** The app keeps all assortments, base and custom, in one
+  table (`ASSORTMENT_TABLE_COLS`, cm, one row per ProductKey); `products_from_defs()`
+  turns it into ProductData and LengthClasses for each run. Priority is derived
+  (matrix 1, flat 2, waste 99); a matrix-priced product's lengths are the
+  columns of the run's matrix, so B can have its own lengths. The Phase 4b
+  definition format (`custom_assortment_rows()`, `products_for_run()`, `UseIn`,
+  explicit Priority) stays for `scripts/performance_cases.R` and audit 20, whose
+  baselines depend on it.
+- **A and B.** B holds its own prices for every product and a state per product
+  (`same`, `own`, `none`). A run compares A and B when `b_differs()`. With the
+  default table and 2021 prices, A runs through the default price file and
+  products, as before; audit 23 check 10 shows the explicit path gives the same.
+- **Fixed sampling.** NFI runs use 200 plots and seed 42 (`app/setup.R`);
+  `APTER_N_PLOTS` overrides the number (audit 17 uses 5).
+- **Default diameter limits** (optBuck's example.hpr, under bark): spruce sawlog
+  max top 60 / butt 65 cm, pine sawlog 50 / 60, pulpwood 70 / 70. The baselines
+  predate them, so audits 20 (check 8), 22 (check 5) and
+  `scripts/performance_check.R` run with `pre_phase4c_limits()`. What the new
+  limits change is in `outputs/performance/phase4c_limits_change.txt`
+  (`scripts/phase4c_limits_change_report.R`): only the NFI spruce stratum, 6 of
+  339 trees and 22 logs; value 27 268.08 -> 27 150.33 NOK, commercial volume
+  70.30 -> 69.90 m³, NOK/m³ 387.90 -> 388.41 (value falls less than the
+  commercial volume, so NOK/m³ rises slightly).
+- `inputs/ProductData_spruce_pine_default.rds` is a stale prototype artifact
+  (no PriceType column; read only by frozen prototype script 03) and was not
+  updated.
+

@@ -53,7 +53,7 @@ errors. Likely unit errors (a dbh that looks like mm, a height that looks
 like dm), implausible height/diameter ratios and trees outside the taper
 model's range are warnings. Values are never converted between units. Trees
 below 5 cm dbh or 4.5 m height are not bucked, as for NFI trees; they are
-listed under Diagnostics.
+listed in the check panel.
 
 **Missing heights** are estimated per species, and every tree reports which
 method gave its height:
@@ -77,84 +77,78 @@ d < 10: 1.3 + 0.65456·d (Eid & Fitje 1993); 10 ≤ d < 35: 0.39 + 0.852·d −
 
 ---
 
-## Products and price matrices
+## Assortments and prices
 
-Apter ships with a default product set and the 2021 price matrices for spruce
-and pine:
+The app opens on *Assortments and prices*. All assortments, the base set and
+any you add, are in one table and are edited, removed and added the same way.
+Apter ships with this base set and the 2021 price matrices for spruce and
+pine (diameters under bark):
 
-| Product | Top diameter | Lengths |
-|---------|--------------|---------|
-| Sawlog (spruce, pine) | ≥ 12 cm | 3.1–5.5 m in 30 cm steps |
-| Pulpwood (spruce, pine) | ≥ 5 cm | 3.0–5.5 m in 10 cm steps |
-| Waste (spruce, pine) | any | 0.1–6.0 m |
+| Assortment | Min top diameter | Max top diameter | Max butt diameter | Lengths |
+|------------|------------------|------------------|-------------------|---------|
+| Sawlog, spruce | 12 cm | 60 cm | 65 cm | 3.1–5.5 m in 30 cm steps |
+| Sawlog, pine | 12 cm | 50 cm | 60 cm | 3.1–5.5 m in 30 cm steps |
+| Pulpwood (spruce, pine) | 5 cm | 70 cm | 70 cm | 3.0–5.5 m in 10 cm steps |
+| Waste (spruce, pine) | any | – | – | 0.1–6.0 m |
 
-The pulpwood prices in the default set are temporary flat values, and waste
-is priced at 0 NOK/m³.
+The pulpwood prices in the base set are temporary flat values, and waste is
+priced at 0 NOK/m³. *Reset to defaults* restores the base set; assortments
+you added stay.
 
-**Comparing price matrices.** On the *Prices and assortments* page, each
-matrix (spruce sawlog, pine sawlog, any custom assortments, and the flat
-prices)
-is shown as the default (read-only) next to an editable scenario, in the
+**Adding an assortment.** Add assortments such as poles, large-diameter or
+small sawlogs and special timber. Each assortment has a name, a type (its
+class in the results), a species (spruce, pine, or both, which adds one of
+each), minimum and maximum top and butt diameters (cm), where the top
+diameter is read (cm below the cut), a sale-volume method and diameter
+rounding (below), and its pricing: a price matrix, or one flat price over a
+range of lengths. Stems are assumed free of defects; no quality restrictions
+are applied. Assortments always count as saleable volume. The assortments,
+with both price sets, can be downloaded and uploaded as one xlsx file.
+
+**Price sets A and B.** Each price matrix is shown twice, as A and B, in the
 layout of the source price lists: top-diameter classes (cm) as rows and
-length classes (dm) as columns. Cells that differ from the default are
-highlighted, and each matrix can be reset to the default. Tick *Compare with
-scenario prices* in the Simulator to run the same trees under both matrices.
-The comparison shows NOK/m³ and volume shares by assortment under both
-matrices, the trees whose cutting pattern changed, and example stems bucked
-both ways. A tree counts as changed only if the change alters its value or
-volume; patterns that differ only between equal-value alternatives are not
-counted.
+length classes (dm) as columns, in NOK/m³ under bark. A starts from the 2021
+prices. In B, each assortment is either *Same as A* (shown greyed), has its
+*Own prices*, or is *Not used*. Cells of B that differ from A are
+highlighted. Both sides can be edited, reset to the 2021 prices, uploaded and
+downloaded.
 
-**Uploading a scenario.** Drop a file on the upload box: wide (as in the
-editor; xlsx with one sheet per price grid plus `flat_prices`, or a CSV
-holding one grid) or long (CSV or RDS, one row per price). The layout is
-detected automatically, and a wide file replaces only the matrices it
-contains. Download the wide xlsx template (or the long CSV template) to
-start from the default prices. The long layout has these columns:
+A matrix's columns are the assortment's allowed lengths and its rows its
+top-diameter classes. Lengths can be added and removed (a removed length is
+no longer cut); diameter classes are added or removed at the smallest and
+largest end, so there are no gaps. A log with a top diameter above the
+largest class is priced at that class (50 cm in the 2021 matrices); its
+physical diameter is not changed.
+
+**Uploading prices.** Drop a file on A's or B's upload box: wide (as in the
+editor; xlsx with one sheet per price matrix plus `flat_prices`, or a CSV
+holding one matrix) or long (CSV or RDS, one row per price). The layout is
+detected automatically. A wide file replaces only the matrices it contains;
+in B, uploaded assortments get their own prices. A downloaded price set is a
+ready-made template. The long layout has these columns:
 
 | Column | Content |
 |--------|---------|
-| `ProductKey` | Product, e.g. `spruce_sawlog`, `pine_pulpwood`, `spruce_waste`, or a custom assortment such as `spruce_poles` |
-| `LengthClass_dm` | Grid-priced products: length class in dm (e.g. 31, 34, …, 55). Empty for flat-priced products |
-| `PriceDiameterClass_cm` | Grid-priced products: top-diameter class in cm. Empty for flat-priced products |
+| `ProductKey` | Assortment and species, e.g. `spruce_sawlog`, `pine_pulpwood`, `spruce_waste`, or an added assortment such as `spruce_poles` |
+| `LengthClass_dm` | Matrix-priced assortments: length class in dm (e.g. 31, 34, …, 55). Empty for flat-priced assortments |
+| `PriceDiameterClass_cm` | Matrix-priced assortments: top-diameter class in cm. Empty for flat-priced assortments |
 | `PriceNOKperM3` | Price in NOK per m³ |
 
 Uploads are checked before they are used: missing columns, non-numeric or
-negative prices, unknown products, length classes that are not defined,
-duplicated cells, and missing sawlog prices are rejected with a message;
-diameter classes below a product's minimum top diameter, and a largest
-class that differs from the default, are reported as warnings.
-Prices are never converted between units. A scenario can be downloaded as a
-long CSV.
-
-**Custom assortments.** Add assortments such as poles, large-diameter or
-small sawlogs and special timber on the *Prices and assortments* page. Each
-assortment has:
-
-- species (spruce, pine or both), minimum and maximum top diameter, and
-  optionally minimum and maximum butt diameter (cm);
-- the allowed log lengths (cm);
-- a priority, which decides between equally valued cutting patterns;
-- whether diameters are measured under bark, and where the top diameter is
-  measured (cm below the cut);
-- a sale-volume method (below);
-- prices: a grid of length classes by top-diameter classes, like the sawlog
-  matrices, or one flat price;
-- whether it is used in the default run, the scenario run or both. Using it
-  in the scenario only shows what adding the assortment changes.
-
-New assortments appear in the price editor next to the base products, and
-their default prices can be edited there. Editing an assortment keeps the
-prices of every grid cell that still exists; new cells start at the
-starting price. Assortments are shown in the
-results as their own class, and always count as saleable volume. Stems are
-assumed free of defects; no quality restrictions are applied. Assortments,
-with their default and scenario prices, can be downloaded and uploaded as
-one xlsx file.
+negative prices, unknown assortments, gaps in the diameter classes,
+duplicated cells and assortments without prices are rejected with a message;
+diameter classes that start above an assortment's minimum top diameter, and
+a largest class that differs from the 2021 matrix, are reported as warnings.
+Prices are never converted between units.
 
 ---
 
 ## Results
+
+In the *Simulator*, choose the trees and click *Run optimizer*. NFI runs
+sample up to 200 plots of the selected stratum (all plots if there are
+fewer), with a fixed random seed, so a run can be repeated. When B differs
+from A, the same trees are bucked under both price sets.
 
 All results describe the selected trees only. The headline figure is
 **NOK per m³ of commercial volume under bark**:
@@ -168,16 +162,20 @@ All results describe the selected trees only. The headline figure is
   commercial volume), with each assortment's contribution and its share of
   the commercial volume.
 
-The app also shows:
+The results have these tabs:
 
-- Value (NOK) and sale (price) volume by product
-- Per-tree results on demand, with each tree's logs: position, length,
-  product, top diameter over and under bark, price-diameter class, volumes
-  and value
-- Diagnostics: price-matrix checks, candidates without a price, and stems
-  with no saleable logs
-- For a price-matrix comparison: NOK/m³, value and volume under both
-  matrices, and the differences
+- **Summary:** run time, plots, trees, trees with logs, logs, commercial
+  volume, total value, NOK per m³ and sale (price) volume
+- **Per m³:** NOK/m³ in total, per species and by assortment, and per-tree
+  results on demand with each tree's logs (position, length, product, top
+  diameter over and under bark, price-diameter class, volumes and value)
+- **Products:** value and sale volume by product
+- **Selected logs:** every log cut
+- **Price matrix comparison** (when B differs from A): NOK/m³, value and
+  volume under A and B and the differences, the trees whose cutting pattern
+  changed, and example stems bucked both ways. A tree counts as changed only
+  if the change alters its value or volume; patterns that differ only
+  between equal-value alternatives are not counted.
 
 ---
 
@@ -193,24 +191,24 @@ The app also shows:
   component.
 - Stump height 10 cm; candidate logs on a 10 cm grid.
 - Sale volume is measured per product, with one of four methods:
-  - **Top cylinder** (the default for sawlogs): a cylinder at the
+  - **Top cylinder** (sawlogs in the base set): a cylinder at the
     under-bark top diameter, rounded down to whole cm, over the log length.
   - **Top**: a frustum from the top diameter, widening by 1 cm per metre
     towards the butt.
-  - **Solid volume** (the default for pulpwood and waste): 10 cm sections,
+  - **Solid volume** (pulpwood and waste in the base set): 10 cm sections,
     each at its under-bark top diameter, the same rule as the commercial
     volume.
   - **Calculated Norwegian mid**, as in the Målereglement for skogsvirke
     (Norsk Virkesmåling, 2026, sections 4.1.3–4.1.4): the top diameter
     rounded down to whole cm plus 0.5 cm, plus 1 cm per metre over half the
     log length, V = 3.14/4 · D² · L.
-- A log with a top diameter above a price grid's largest diameter class is
-  priced at that class (50 cm in the default sawlog matrices). The physical
+- A log with a top diameter above a price matrix's largest diameter class is
+  priced at that class (50 cm in the 2021 sawlog matrices). The physical
   diameter is not changed.
 - Each stem is bucked independently. When two cutting patterns are worth
   the same (within 0.000001 NOK), the one with fewer logs is chosen, then
-  the higher-priority product, then the longer log, so results do not
-  depend on input order.
+  a matrix-priced product before a flat-priced one and waste last, then the
+  longer log, so results do not depend on input order.
 
 ---
 

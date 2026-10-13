@@ -47,8 +47,12 @@ the pipeline.
 | Norwegian mid | Målereglement for skogsvirke, Generelle bestemmelser (Norsk Virkesmåling, approved 15 April 2026), 4.1.3–4.1.4: Dt 10 cm from the top end (`DiameterTopPosition = 10`), rounded down to whole cm, + 0.5 cm (class midpoint), taper 1.0 cm/m; V = **3.14**/4 · (Dt + L/20)² · L/100 (cm, dm, dm³), 3.14 not π to reproduce the official volume; not rounded to whole dm³. Dt 187.6 mm, L 4 m → 131.9585 dm³. optBuck's `PriceVolumeCalc.R` rounds Dt to whole mm and adds 0.5 mm (units bug, 0.13657 m³ there); Apter follows optBuck with the units fixed (decided 2026-10-13) | `R/helpers_volume_methods.R`; audit 20 check 3 |
 | `DiameterTopPosition` | cm below the cut where a product's top diameter is read; drives its limits, price class and price volume (one diameter for all three). 0 for the default products (at the cut) | `helpers_candidate_generation.R`; audit 20 check 5b |
 | `VolumeDiameterAdjustment` / `VolumeLengthCategory` | rounding down to cm applies to Top cylinder and Top; Norwegian mid always floors; solid volume never rounds (combination rejected). Length category has no effect: logs are cut at exactly their class length (no trim allowance) | `R/helpers_volume_methods.R`, `validate_products()` |
-| Custom assortments | extra ProductData rows (Phase 4b): species, min/max top and butt diameter, allowed lengths, Priority (tie rule), `DiameterUnderBark`, `DiameterTopPosition`, volume method, `PriceType` matrix or flat, `UseIn` default / scenario / both. Definitions are shared by both runs (only membership and prices differ). `ProductType` = the assortment class: groups species in the Total per-m³ scope; `waste` is reserved, so custom assortments always count in the denominator. No quality restrictions (stems defect-free). An unpriced custom assortment FAILs price validation. Editing an assortment keeps the default and scenario prices of every cell that still exists (matched by species, length and diameter class, so a rename keeps them); new cells get the starting price, removed cells are dropped (`pm_keep_assortment_prices()`). In the stem diagram custom classes share the neutral fill and are named on the log: with any two products able to touch, only the three base colours pass the dataviz all-pairs check (run in headless Chrome, 2026-10-13) | `R/helpers_products.R`, `R/helpers_price_matrix.R`; audit 20 |
-| DP tie-breaking | totals within `DP_TIE_TOL_NOK` = 1e-6 NOK count as equal; then fewer logs, higher `ProductData$Priority` (sawlog 1, pulpwood 2, waste 99), longer log, `ProductKey`; unallocated ranks after a log at equal log count. Independent of row order and prices; reported value = sum of selected logs (decided 2026-10-12) | `R/helpers_dp_optimizer.R` and `.optimize_dp_fast()` must stay identical (audits 16 checks 14-15, 19) |
+| Default diameter limits | under bark, from optBuck's example.hpr (`DiameterClassMAX`, `DiameterMAXButt`; Phase 4c, 2026-10-13): spruce sawlog max top 60 / max butt 65 cm, pine sawlog 50 / 60, pulpwood 70 / 70, waste none; minimum top diameters unchanged (12, 5, 0). The only intended result change of Phase 4c (`outputs/performance/phase4c_limits_change.txt`); baseline audits use `pre_phase4c_limits()` | `inputs/ProductData_spruce_pine_default.csv`; audit 23 check 2 |
+| Assortment table | (Phase 4c) base and custom assortments in one table, one row per ProductKey = `<species>_<slug(Name)>`, edited and removed alike; "Reset to defaults" restores the base rows and keeps custom ones. Hidden, generated: ProductName, VolumeLengthCategory (no effect), DiameterUnderBark (always TRUE), DiameterSource, Priority (derived: matrix-priced 1, flat-priced commercial 2, waste 99). A matrix-priced product's lengths are the columns of the run's matrix (a removed column = length not allowed) and its price classes the rows (consecutive, added/removed at the ends only); flat-priced: MinLength..MaxLength by LengthStep. LengthClasses is derived, never edited. AllowAsFirstLog/AllowAsTopLog removed (always TRUE, unused) | `R/helpers_products.R` (`defs_from_products()`, `products_from_defs()`); audit 23 |
+| Price sets A and B | (Phase 4c) A starts from the 2021 prices; B has a state per product: `same` (A's prices and axes, shown greyed), `own` (B's own matrix, may have its own rows/columns, so B gets its own LengthClasses) or `none` (not used in B). A comparison runs when `b_differs()` (any `none`, or an `own` matrix differing in cells, rows or columns); otherwise one run with A. Removing an assortment removes it from both. User-facing text says A/B, never default/scenario; internal names (`default`, `scenario`, backend `$scenario`) stay | `R/helpers_price_matrix.R` (`b_set()`, `b_differs()`); audits 17, 23 |
+| NFI sampling | 200 plots (all when the stratum has fewer), seed 42, both fixed and hidden (Phase 4c); `APTER_N_PLOTS` overrides the number (audit 17 uses 5) | `app/setup.R`, `build_run_params()` |
+| Custom assortments | extra ProductData rows (Phase 4b; since Phase 4c rows of the assortment table): species, min/max top and butt diameter, lengths, `DiameterTopPosition`, volume method, `PriceType` matrix or flat. Definitions are shared by A and B (only membership, prices and matrix axes differ). The Phase 4b definition format (`custom_assortment_rows()`, `products_for_run()`, `UseIn`, explicit Priority) remains only for `scripts/performance_cases.R` and audit 20, whose baselines depend on it. `ProductType` = the assortment class: groups species in the Total per-m³ scope; `waste` is reserved, so custom assortments always count in the denominator. No quality restrictions (stems defect-free). An unpriced custom assortment FAILs price validation. Editing an assortment in the app keeps its A and B prices when its pricing stays (moved to the new key on a rename); changing matrix <-> flat starts from the starting price. Colours (Phase 4c, dataviz validator all pairs, headless Chrome, 2026-10-13): sawlog `#3F6E58`, pulpwood `#B38A52`, waste `#C4BFB8`, custom fold `#3A3836` (worst CVD dE 13.3, normal 16.6); the proposed `#C9A97A`/`#A39E98` failed (normal dE 8.0); A green, B sand | `R/helpers_products.R`, `R/helpers_price_matrix.R`, `app/theme.R`; audits 20, 23 |
+| DP tie-breaking | totals within `DP_TIE_TOL_NOK` = 1e-6 NOK count as equal; then fewer logs, higher `ProductData$Priority` (sawlog 1, pulpwood 2, waste 99; derived from pricing in the app since Phase 4c), longer log, `ProductKey`; unallocated ranks after a log at equal log count. Independent of row order and prices; reported value = sum of selected logs (decided 2026-10-12) | `R/helpers_dp_optimizer.R` and `.optimize_dp_fast()` must stay identical (audits 16 checks 14-15, 19) |
 | Pattern change | a tree's cutting pattern counts as changed only if the log sets differ and value (at either matrix) or commercial volume by assortment differs; equal-value ties are not changes | `R/helpers_comparison.R`; audit 19 |
 | "Solid volume" | **Everywhere in Apter** (pulpwood and waste price volume, and the NOK/m³ denominator): the sum of 10 cm cylinders, each using the diameter at the **top** of its section (under bark), not rounded. One shared function, `section_volume_fun()`; don't reimplement it (decided 2026-10-12, replacing the prototype's mean-of-end-diameters rule) | `R/helpers_commercial_volume.R`, used by `helpers_candidate_generation.R`; audit 18 check 10 |
 | NOK/m³ denominator | commercial volume under bark: 10 cm cylinders over non-waste logs, each using the under-bark diameter at the top of its section; excludes bark, stump, waste and the top above the last merchantable log; independent of prices and product volume rules. Assortment contribution = assortment value ÷ the scope's commercial volume; each species uses its own denominator | `R/helpers_commercial_volume.R`; audit 18 |
@@ -118,14 +122,18 @@ still out of bounds.
   server)`), `helpers_root.R`, `setup.R` (data, choice mappings, label,
   `APP_VERSION` from the repo-root `VERSION` file), `theme.R`,
   `helpers_ui.R`, `helpers_validation.R` (inputs -> backend params, stratum
-  counts), `helpers_upload.R` (Scenario 2 price matrix), `app_ui.R` and
+  counts), `helpers_upload.R` (price files, uploads to A or B), `app_ui.R` and
   `app_server.R`. Never name them `ui.R`/`server.R`: next to `app.R` Shiny
   treats those as a second app format, and shinytest2 refuses to start.
 - **Styling:** bslib (Bootstrap 5) `page_navbar` modelled on NIBIO
   ForestSens (`docs/design_reference/`). Tokens and chart colours live in
   `app/theme.R`, component CSS in `app/www/apter.css`, building blocks
-  (cards, dashed read-only fields, status tiles, step list,
-  `apter_reactable()`, `apter_barplot()`) in `app/helpers_ui.R`. Use those
+  (stripe, cards, dashed read-only fields, grid renderers,
+  `apter_reactable()`, `apter_barplot()`) in `app/helpers_ui.R`. Palette
+  "Forest & sand" (Phase 4c): forest green is the only strong colour. Two
+  tabs, Assortments and prices (first) and Simulator; no Home, footer, Run
+  details/steps, Diagnostics or explanatory notes (keep real errors and
+  warnings only). Use those
   instead of inline `style =` colours, and never copy Oracle/ForestSens
   assets. Fonts are self-hosted (no Google Fonts). Output IDs are what
   audit 17 drives; keep them stable.
@@ -162,14 +170,15 @@ still out of bounds.
   `R/helpers_comparison.R` (pattern changes, per-m³ comparison). Prices are
   looked up through one function, `lookup_prices()` /
   `price_logs()` in `helpers_valuation.R`, for runs and re-pricing alike.
-  The editor lives on the Prices page (`rhandsontable`); the scenario is a
-  `reactiveVal` and runs when "Compare with scenario prices" is ticked.
-- **Custom assortments (Phase 4b):** definitions (`ASSORTMENT_COLS`, app
-  units in cm) live in the `custom_defs()` `reactiveVal`;
-  `products_for_run()` builds each run's ProductData/LengthClasses, which
-  the app passes to `run_sampled_plot_bucking(products =, length_classes =)`.
-  `default_pm()` and `scenario_pm()` each hold prices for their own run's
-  products only. Never test a product's kind by its key name (no
+  The editor lives on the Assortments and prices tab (`rhandsontable`).
+- **Assortments and A/B (Phase 4c):** the app holds the assortment table
+  (`asm_defs()`, `ASSORTMENT_TABLE_COLS`, cm), A (`pm_a()`), B's own prices
+  (`pm_b()`, all products) and B's states (`b_state()`).
+  `products_from_defs()` builds each run's ProductData/LengthClasses, which
+  the app passes to the runners (`products =`, `length_classes =`); B goes as
+  `scenario =`. With the default table and 2021 prices A runs through the
+  default price file and products (audit 23 check 10: identical to the
+  explicit path). `check_price_set()` validates a set before a run. Never test a product's kind by its key name (no
   `grepl("sawlog")`): matrix vs. flat comes from matrix rows / `PriceType`,
   species products from `species_products()`.
 - **Tree lists (Phase 5):** `R/helpers_tree_list.R` (`read_tree_list()`,
