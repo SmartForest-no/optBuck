@@ -48,7 +48,10 @@
 #      text anywhere in the page
 # 17.  Price-matrix editor: default and scenario grids render side by side,
 #      uploaded changes are highlighted, Reset brings the count back to 0
-# 18.  Total browser runtime under 180 s (REVIEW if above)
+# 18.  Stale-scenario notice: absent right after a run; after the scenario
+#      is edited (reset), "Scenario prices changed since last run" shows on
+#      the Run card and the Scenario comparison tab
+# 19.  Total browser runtime under 180 s (REVIEW if above)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -315,7 +318,8 @@ browser_checks <- c(
   "Check 15: Screenshots saved for visual review",
   "Check 16: Per m3 tab renders; Trees card expands; no per-ha text",
   "Check 17: Price-matrix editor: grids side by side, highlights, reset",
-  "Check 18: Browser runtime under 180 s")
+  "Check 18: Stale-scenario notice after editing prices",
+  "Check 19: Browser runtime under 180 s")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -478,6 +482,7 @@ if (!browser_ok) {
     stem_img  <- app$get_js("document.querySelectorAll('#stem_compare img').length")
     nerr2     <- n_err_notif(app)
     shoot(app, "04_scenario_comparison")
+    stale_before <- paste(txt(app, "#scenario_stale_run"), txt(app, "#scenario_stale_cmp"))
     ok10 <- !nzchar(up_err) && !nzchar(run10_err) &&
       grepl("351 cell(s) differ", pm_status_up, fixed = TRUE) &&
       n_delta >= 1L && n_per_m3c >= 1L &&
@@ -546,6 +551,21 @@ if (!browser_ok) {
     n_hl_reset <- app$get_js("document.querySelectorAll('#pm_scenario td.pm-diff').length")
     ok17 <- isTRUE(grids_side) && n_hl > 0L && !nzchar(reset_err) &&
       grepl("^0 cell\\(s\\) differ", trimws(pm_status_reset)) && n_hl_reset == 0L
+    # 18. stale-scenario notice after the reset (prices changed since the run)
+    stale_err <- tryCatch({
+      app$set_inputs(main_nav = "Simulator")
+      app$set_inputs(result_tabs = "Scenario comparison")
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    stale_run <- txt(app, "#scenario_stale_run")
+    stale_cmp <- txt(app, "#scenario_stale_cmp")
+    msg18 <- "Scenario prices changed since last run"
+    ok18 <- !nzchar(stale_err) && !grepl(msg18, stale_before, fixed = TRUE) &&
+      grepl(msg18, stale_run, fixed = TRUE) && grepl(msg18, stale_cmp, fixed = TRUE)
+    det18 <- sprintf("before edit: '%s' | after reset, Run card: '%s' | comparison tab: '%s'%s",
+                     trimws(stale_before), trimws(stale_run), trimws(stale_cmp),
+                     if (nzchar(stale_err)) paste(" | driver error:", stale_err) else "")
     det17 <- sprintf("grids side by side: %s | highlighted cells after upload: %d | after reset: '%s', highlighted %d | upload message: '%s'%s",
                      isTRUE(grids_side), n_hl, trimws(pm_status_reset), n_hl_reset,
                      substr(trimws(upload_msg), 1, 120),
@@ -562,16 +582,17 @@ if (!browser_ok) {
         sprintf("%d of 6 screenshots in %s", length(shots), shot_dir))
     rec(browser_checks[12], if (ok16) PASS else FAIL, det16)
     rec(browser_checks[13], if (ok17) PASS else FAIL, det17)
+    rec(browser_checks[14], if (ok18) PASS else FAIL, det18)
 
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[2:13])
+    for (ck in browser_checks[2:14])
       rec(ck, FAIL, "skipped: app did not start")
   }
 
-  # 18. runtime
+  # 19. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
-  rec(browser_checks[14], if (t_el < 180) PASS else REVIEW,
+  rec(browser_checks[15], if (t_el < 180) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 180 s)", t_el))
 }
 

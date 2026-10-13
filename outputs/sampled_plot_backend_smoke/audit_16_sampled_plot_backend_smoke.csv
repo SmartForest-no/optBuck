@@ -12,5 +12,5 @@ Check 10: No per-ha or plot-level outputs; trees-only label,PASS,per-ha/plot nam
 Check 11: Price validation contains no FAIL rows,PASS,"0 FAIL, 1 REVIEW in price validation checks"
 Check 12: No taper profile failures,PASS,0 profile failure(s) in smoke run
 Check 13: Runtime under 120 s for n_plots=5,PASS,runtime: 6.9 s (threshold: 120 s)
-Check 14: .optimize_dp_fast() value and n_selected match reference,PASS,788 trees compared over 3 runs (96.4 s); 0 mismatch(es); max |value diff| = 0.00e+00
+Check 14: .optimize_dp_fast() value and n_selected match reference,PASS,788 trees compared over 3 runs (96.8 s); 0 mismatch(es); max |value diff| = 0.00e+00
 Check 15: .optimize_dp_fast() cutting pattern matches reference,PASS,0 of 788 trees differ in cutting pattern (0 of them at equal value)

@@ -118,6 +118,7 @@ server <- function(input, output, session) {
     # Map user-facing inputs (HKL group, county) -> backend params
     params     <- build_run_params(input)
     started_at <- Sys.time()   # for the run step list
+    pm_at_run  <- scenario_pm() # scenario in effect at this Run (used by result_s2)
 
     withProgress(message = "Preparing inputs...", value = 0, {
       incProgress(0.10, detail = "Loading price matrix and products")
@@ -135,6 +136,7 @@ server <- function(input, output, session) {
         incProgress(0.10, detail = "Rendering outputs")
         res$started_at   <- started_at
         res$price_matrix <- APP_PM_DEFAULT
+        res$scenario_pm  <- pm_at_run
         res
       }, error = function(e) {
         showNotification(
@@ -149,12 +151,13 @@ server <- function(input, output, session) {
 
   # ---- Comparison: S2 reactive, renders ------------------------------------
 
-  # Scenario run: same trees, the scenario matrix from the Prices page.
-  # Edits after a run take effect at the next Run optimizer.
+  # Scenario run: same trees, the scenario matrix in effect when Run was
+  # clicked (result()$scenario_pm). Later edits take effect at the next Run;
+  # until then a notice says the prices changed (scenario_stale()).
   result_s2 <- reactive({
     req(isTRUE(input$compare_on), !is.null(result()))
     params <- isolate(build_run_params(input))
-    pm     <- isolate(scenario_pm())
+    pm     <- result()$scenario_pm
     path   <- write_scenario_pm(pm)
     on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
     withProgress(message = "Running scenario prices...", value = 0.5, {
@@ -171,6 +174,19 @@ server <- function(input, output, session) {
       })
     })
   })
+
+  # TRUE when the scenario matrix was edited after the last run.
+  scenario_stale <- reactive({
+    r <- if (input$run_btn > 0L) result() else NULL
+    !is.null(r) && !identical(scenario_pm(), r$scenario_pm)
+  })
+  stale_notice <- function() {
+    if (!isTRUE(input$compare_on) || !scenario_stale()) return(NULL)
+    div(class = "stale-notice",
+        "Scenario prices changed since last run; run again to update.")
+  }
+  output$scenario_stale_run <- renderUI(stale_notice())
+  output$scenario_stale_cmp <- renderUI(stale_notice())
 
   # Per-tree pattern comparison (R/helpers_comparison.R).
   cmp_trees <- reactive({

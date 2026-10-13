@@ -272,3 +272,7 @@ details.apter-card { margin-bottom: 16px; }
 .pm-msg-error { color: var(--apter-danger); white-space: pre-wrap; }
 .pm-msg-ok { color: var(--apter-success); }
 .pm-msg-warn { color: var(--apter-warning); }
+.stale-notice {
+  background: #FDF3E1; border-left: 3px solid var(--apter-warning); color: var(--apter-ink);
+  padding: 8px 12px; margin: 6px 0 10px; border-radius: 0 4px 4px 0; font-size: 0.9rem;
+}

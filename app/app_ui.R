@@ -78,6 +78,7 @@ simulator_page <- nav_panel(
     layout_columns(col_widths = c(7, 5),
       apter_card("Run details",
         uiOutput("run_status"),
+        uiOutput("scenario_stale_run"),
         uiOutput("run_params")
       ),
       apter_card("Run steps", collapsible = TRUE,
@@ -144,6 +145,7 @@ simulator_page <- nav_panel(
       ),
 
       nav_panel("Scenario comparison",
+        uiOutput("scenario_stale_cmp"),
         uiOutput("cmp_status"),
         div(class = "section-hdr", "Default vs. scenario"),
         reactableOutput("tbl_cmp_overview"),
