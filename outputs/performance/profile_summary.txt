@@ -1,0 +1,88 @@
+
+==== 100 trees ====
+Backend run 5.7 s; profiled tree values identical to the backend run: TRUE
+Run-level: taperNOR 0.20 s, profile conversion 0.09 s, under bark 0.02 s, summaries 0.10 s
+Per-tree loop (profiled) 5.0 s:
+  cand       1.90 s   37.6 %   19.00 ms/tree
+  filter     0.35 s    6.9 %    3.46 ms/tree
+  keys       0.14 s    2.8 %    1.40 ms/tree
+  lookup     0.25 s    4.9 %    2.47 ms/tree
+  unpr       0.09 s    1.9 %    0.94 ms/tree
+  dp_in      0.52 s   10.4 %    5.23 ms/tree
+  dp         1.71 s   33.8 %   17.08 ms/tree
+  comvol     0.04 s    0.8 %    0.39 ms/tree
+  row        0.05 s    1.0 %    0.53 ms/tree
+Candidates per tree: all 12392, eligible 11221 (median 11783, max 16347); selected logs 3.2
+Time per tree: median 46.3 ms, max 343.2 ms; cor(time, eligible) 0.32, cor(time, height) 0.32
+Geometry size per 1000 trees: eligible candidates 1287 MB, compact columns 558 MB
+
+==== 1000 trees ====
+Backend run 53.5 s; profiled tree values identical to the backend run: TRUE
+Run-level: taperNOR 1.74 s, profile conversion 3.78 s, under bark 0.03 s, summaries 0.33 s
+Per-tree loop (profiled) 47.5 s:
+  cand      19.07 s   40.1 %   19.07 ms/tree
+  filter     3.33 s    7.0 %    3.33 ms/tree
+  keys       1.29 s    2.7 %    1.29 ms/tree
+  lookup     2.60 s    5.5 %    2.60 ms/tree
+  unpr       0.75 s    1.6 %    0.75 ms/tree
+  dp_in      4.52 s    9.5 %    4.52 ms/tree
+  dp        15.19 s   32.0 %   15.19 ms/tree
+  comvol     0.25 s    0.5 %    0.25 ms/tree
+  row        0.52 s    1.1 %    0.52 ms/tree
+Candidates per tree: all 12786, eligible 11660 (median 12307, max 17614); selected logs 3.3
+Time per tree: median 45.0 ms, max 192.4 ms; cor(time, eligible) 0.45, cor(time, height) 0.45
+Geometry size per 1000 trees: eligible candidates 1338 MB, compact columns 580 MB
+
+==== Rprof, 100 trees (self and total time by function) ====
+Top self time:
+  "[.data.frame"                         0.55 s   31.1 %
+  "rbind"                                0.14 s    8.2 %
+  ".optimize_dp_fast"                    0.10 s    5.9 %
+  "data.frame"                           0.10 s    5.4 %
+  "anyDuplicated.default"                0.06 s    3.1 %
+  "order"                                0.05 s    2.8 %
+  "deparse"                              0.05 s    2.8 %
+  "%in%"                                 0.05 s    2.8 %
+  "structure"                            0.04 s    2.5 %
+  "unique.default"                       0.04 s    2.3 %
+  ".approxfun"                           0.04 s    2.0 %
+  "generate_candidate_logs_one_tree"     0.02 s    1.1 %
+  "as.data.frame"                        0.02 s    1.1 %
+  "[["                                   0.02 s    1.1 %
+  "match.arg"                            0.02 s    1.1 %
+  "which"                                0.02 s    1.1 %
+  "anyDuplicated"                        0.01 s    0.8 %
+  "lookup_prices"                        0.01 s    0.8 %
+  "vapply"                               0.01 s    0.8 %
+  "[[.data.frame"                        0.01 s    0.8 %
+Top total time:
+  "profile_trees"                        1.77 s  100.0 %
+  "["                                    0.70 s   39.8 %
+  "[.data.frame"                         0.70 s   39.5 %
+  "generate_candidate_logs_one_tree"     0.62 s   35.0 %
+  ".optimize_dp_fast"                    0.48 s   27.1 %
+  "data.frame"                           0.42 s   24.0 %
+  "<Anonymous>"                          0.20 s   11.0 %
+  "do.call"                              0.19 s   10.7 %
+  "rbind"                                0.18 s   10.2 %
+  "as.data.frame"                        0.16 s    9.0 %
+  "structure"                            0.15 s    8.8 %
+  "utils::object.size"                   0.15 s    8.5 %
+  "order"                                0.14 s    7.6 %
+  "paste"                                0.12 s    6.5 %
+  "deparse1"                             0.12 s    6.5 %
+  "deparse"                              0.10 s    5.9 %
+  "%in%"                                 0.10 s    5.4 %
+  "force"                                0.07 s    4.2 %
+  "anyDuplicated"                        0.07 s    4.0 %
+  "lookup_prices"                        0.06 s    3.4 %
+  "as.data.frame.numeric"                0.06 s    3.4 %
+  "anyDuplicated.default"                0.06 s    3.1 %
+  "[["                                   0.05 s    2.8 %
+  "match.arg"                            0.05 s    2.8 %
+  "mode"                                 0.05 s    2.8 %
+  "ifelse"                               0.04 s    2.5 %
+  "as.data.frame.character"              0.04 s    2.5 %
+  "price_class_used"                     0.04 s    2.5 %
+  "unique.default"                       0.04 s    2.3 %
+  ".approxfun"                           0.04 s    2.0 %
