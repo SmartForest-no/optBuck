@@ -1,7 +1,8 @@
 # app/app.R
 #
 # Purpose : Shiny app for Apter, the bucking simulator.
-#           v1 scope: spruce/pine, default 2021 price matrix, sampled plots.
+#           Two tabs (Phase 4c): Assortments and prices (price sets A and B),
+#           Simulator (NFI sample or tree list; compares A and B when B differs).
 #
 # Run     : from the project root,
 #             shiny::runApp("app")   or   shiny::runApp("app/app.R")
@@ -12,13 +13,13 @@
 #           so the backend resolves the same one.
 #
 # Files   : helpers_root.R        project root resolution
-#           setup.R               data loading, choice mappings, label, version
+#           setup.R               data, default assortments and prices, choices
 #           theme.R               design tokens, bslib (Bootstrap 5) theme
-#           helpers_ui.R          cards, read-only fields, tiles, step list,
+#           helpers_ui.R          cards, read-only fields, stripe,
 #                                 reactable and plot styling
 #           www/                  apter.css, icon, self-hosted fonts (OFL)
 #           helpers_validation.R  inputs -> backend params, stratum counts
-#           helpers_upload.R      writes the scenario price matrix for the run
+#           helpers_upload.R      price files for runs, uploads to A or B
 #           helpers_jobs.R        runs as background jobs (ExtendedTask, workers)
 #           app_ui.R / app_server.R  `ui` and `server` (not ui.R/server.R,
 #                                    which Shiny treats as a separate app format)

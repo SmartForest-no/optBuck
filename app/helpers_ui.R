@@ -1,38 +1,19 @@
 # app/helpers_ui.R
 #
 # Purpose : UI building blocks in the ForestSens / Redwood style (cards,
-#           read-only fields, status tiles, step list, tables, plots).
+#           read-only fields, tables, plots).
 #           Pure functions returning tags or widgets; styles in www/apter.css,
 #           colours in theme.R.
 
 
 # ---- page chrome ---------------------------------------------------------------
 
-#' Home header: icon tile, serif "Apter" title and tagline, then the stripe.
-app_header <- function(tagline) {
-  tagList(
-    div(class = "apter-hero",
-        tags$img(src = "apter-icon.svg", alt = ""),
-        div(h1(class = "apter-title", "Apter"),
-            p(class = "apter-tagline", tagline))),
-    banner_strip()
-  )
-}
-
-#' Decorative stripe below the home header (own CSS pattern).
+#' Decorative stripe under the top bar (own CSS pattern).
 banner_strip <- function() div(class = "banner-strip", `aria-hidden` = "true")
 
 #' Navbar brand: small icon and app name.
 navbar_brand <- function() {
   tags$span(tags$img(src = "apter-icon.svg", alt = ""), "Apter")
-}
-
-#' Footer with the release version and a back-to-top button.
-app_footer <- function(version) {
-  tags$footer(class = "apter-footer",
-              span(sprintf("Release %s", version)),
-              tags$a(class = "apter-top", href = "#", title = "Back to top",
-                     `aria-label` = "Back to top", icon("chevron-up")))
 }
 
 
@@ -61,110 +42,6 @@ ro_field <- function(label, value, wide = FALSE) {
 
 #' A responsive row of read-only fields.
 ro_field_row <- function(...) div(class = "ro-row", ...)
-
-
-# ---- status tiles ----------------------------------------------------------------
-
-#' Home-style tile: slate square icon, title, status caption, optional lines.
-#'
-#' @param status  Caption shown under the title (e.g. "AVAILABLE", "PLANNED").
-#' @param lines   Character vector: first line normal, the rest muted.
-#' @param planned TRUE greys out the icon.
-status_tile <- function(title, status, lines = NULL, icon_name = "check",
-                        planned = FALSE) {
-  body <- if (length(lines) > 0L)
-    div(class = "tile-lines",
-        div(lines[1L]),
-        lapply(lines[-1L], function(l) div(class = "tile-line-muted", l)))
-  div(class = "status-tile",
-      div(class = "tile-head",
-          div(class = paste("tile-icon", if (planned) "is-planned"),
-              icon(icon_name)),
-          div(div(class = "tile-title", title),
-              div(class = "tile-status", status))),
-      body)
-}
-
-
-# ---- step list -------------------------------------------------------------------
-
-#' Step list: circle check, title, subtitle, status and time per row, with a
-#' "1 - n" count at the bottom right.
-#'
-#' @param steps data.frame with columns title, subtitle, status, time and
-#'   done (logical; FALSE shows an empty circle).
-step_list <- function(steps) {
-  n <- nrow(steps)
-  rows <- lapply(seq_len(n), function(i) {
-    s <- steps[i, ]
-    div(class = "step-row",
-        div(class = paste("step-icon", if (!isTRUE(s$done)) "is-pending"),
-            if (isTRUE(s$done)) icon("check")),
-        div(div(class = "step-title", s$title),
-            div(class = "step-sub", s$subtitle)),
-        div(class = "step-status", s$status),
-        div(class = "step-time", s$time))
-  })
-  div(class = "step-list", rows,
-      div(class = "step-footer", if (n > 0L) sprintf("1 - %d", n) else "0"))
-}
-
-
-#' Plain-language titles for the backend's stage_timings rows.
-RUN_STAGE_LABELS <- data.frame(
-  stage = c("load_data", "filter_stratum_and_sample_plots", "tree_filtering",
-            "load_products_and_prices", "load_precomputed_taper_profiles",
-            "profile_vector_conversion", "under_bark_profiles",
-            "candidate_generation",
-            "price_joining", "dp_optimization", "summary_assembly"),
-  title = c("Load data", "Sample plots", "Filter trees",
-            "Products and prices", "Taper profiles", "Profile grid",
-            "Bark", "Candidate logs", "Pricing", "Optimal bucking", "Summaries"),
-  subtitle = c("Sanitized NFI plots and trees",
-               "Selection filter and random plot sample",
-               "DBH ≥ 5 cm and height ≥ 4.5 m",
-               "Load and validate the price matrix",
-               "Precomputed taperNOR profiles",
-               "Profiles on the 10 cm grid",
-               "Under-bark diameters (barkNOR)",
-               "All eligible logs per stem",
-               "Join candidates to the price matrix",
-               "Dynamic programming per stem",
-               "Tree, plot and product summaries"),
-  stringsAsFactors = FALSE
-)
-
-#' Step rows for step_list() from a run's stage timings.
-#'
-#' Times are the start time plus cumulative stage durations. Candidate
-#' generation, pricing and optimisation run interleaved per tree, so their
-#' times are the end of the accumulated stage, not of a separate pass.
-#'
-#' @param stage_timings data.frame(stage, elapsed_seconds) from the backend,
-#'   or NULL before the first run (all steps pending).
-#' @param started_at POSIXct start of the run.
-run_step_table <- function(stage_timings = NULL, started_at = NULL, tree_list = FALSE) {
-  lab <- RUN_STAGE_LABELS
-  if (tree_list) {   # uploaded tree list (Phase 5): no sampling, taperNOR at run time
-    sub <- c(load_data = "Tree list read and checked at upload",
-             filter_stratum_and_sample_plots = "No sampling: all uploaded trees",
-             load_precomputed_taper_profiles = "taperNOR profiles at run time")
-    lab$subtitle[match(names(sub), lab$stage)] <- sub
-    lab$title[lab$stage == "filter_stratum_and_sample_plots"] <- "Select trees"
-  }
-  if (is.null(stage_timings) || is.null(started_at))
-    return(data.frame(title = lab$title, subtitle = lab$subtitle,
-                      status = "Waiting", time = "", done = FALSE,
-                      stringsAsFactors = FALSE))
-  st   <- stage_timings[match(lab$stage, stage_timings$stage), ]
-  secs <- ifelse(is.na(st$elapsed_seconds), 0, st$elapsed_seconds)
-  ends <- started_at + cumsum(secs)
-  data.frame(title    = lab$title,
-             subtitle = sprintf("%s · %.2f s", lab$subtitle, secs),
-             status   = "Done",
-             time     = format(ends, "%H:%M:%S"),
-             done     = TRUE, stringsAsFactors = FALSE)
-}
 
 
 # ---- tables ----------------------------------------------------------------------
@@ -261,21 +138,20 @@ apter_barplot <- function(vals, col, main, ylab, fmt = format) {
 }
 
 
-#' Stem diagram: default vs. scenario bucking of one tree, along the stem.
+#' Stem diagram: the bucking of one tree under price sets A and B.
 #'
-#' Two horizontal bars (default above, scenario below); each log is a block
-#' from StartPos to StopPos coloured by assortment, with a 2 px surface gap
-#' and a text label (length in dm) so colour is never the only cue.
+#' Two horizontal bars (A above, B below); each log is a block from StartPos
+#' to StopPos coloured by assortment, with a 2 px surface gap and a text label
+#' (length in dm) so colour is never the only cue.
 #'
-#' @param logs_default,logs_scenario Selected logs of one tree
+#' @param logs_default,logs_scenario Selected logs of one tree under A and B
 #'   (StartPos, StopPos in cm; ProductType; LengthClass_dm).
 #' @param height_m Tree height (m), for the x-axis extent.
 #' @param title    Plot title.
 apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   ch  <- APTER_CHART
-  # Custom assortment classes share the neutral fill (see theme.R: only three
-  # categorical colours pass when any two products can touch); their label
-  # names the class.
+  # Custom assortment classes share the charcoal "other" fill (theme.R); their
+  # label names the class.
   types  <- unique(as.character(c(logs_default$ProductType, logs_scenario$ProductType)))
   custom <- length(setdiff(types, names(ch$assortment))) > 0L
   old <- apter_par(mar = c(3.5, 6.5, 3, 1)); on.exit(graphics::par(old))
@@ -286,24 +162,25 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   graphics::axis(1, col = NA, col.ticks = NA)
   graphics::mtext("Height along the stem (m)", side = 1, line = 2.2,
                   col = ch$muted, cex = 0.8)
-  graphics::axis(2, at = c(2, 1), labels = c("Default", "Scenario"),
+  graphics::axis(2, at = c(2, 1), labels = c("A", "B"),
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {
     graphics::rect(0, y - 0.32, height_m, y + 0.32, col = "#F1EFED", border = NA)
     if (nrow(l) == 0L) return(invisible())
-    fill <- ch$assortment[as.character(l$ProductType)]
-    fill[is.na(fill)] <- ch$neutral
+    type <- as.character(l$ProductType)
+    is_custom <- !type %in% names(ch$assortment)
+    slot <- ifelse(is_custom, "other", type)
+    fill <- c(ch$assortment, other = ch$other)[slot]
     graphics::rect(l$StartPos / 100, y - 0.32, l$StopPos / 100, y + 0.32,
                    col = fill, border = ch$surface, lwd = 2)
-    is_custom <- !as.character(l$ProductType) %in% names(ch$assortment)
     lab <- ifelse(is.na(l$LengthClass_dm), "", paste0(l$LengthClass_dm))
     lab[is_custom] <- paste(l$ProductType[is_custom], lab[is_custom])
     wide <- (l$StopPos - l$StartPos) / 100 > x_max / 25 * ifelse(is_custom, 3, 1)
     graphics::text(((l$StartPos + l$StopPos) / 200)[wide], y, lab[wide],
-                   col = "#FFFFFF", cex = 0.75, font = 2)
+                   col = ch$label_on[slot][wide], cex = 0.75, font = 2)
   }
   draw(logs_default, 2); draw(logs_scenario, 1)
-  leg <- c(ch$assortment, if (custom) c("custom assortments" = ch$neutral))
+  leg <- c(ch$assortment, if (custom) c("custom assortments" = ch$other))
   graphics::legend("top", horiz = TRUE, bty = "n", inset = c(0, -0.02),
                    legend = names(leg), fill = leg,
                    border = NA, text.col = ch$ink, cex = 0.8, xpd = TRUE)
@@ -312,8 +189,23 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
                   col = ch$muted, cex = 0.7)
 }
 
-#' rhandsontable renderer: highlight scenario cells that differ from the
-#' default grid passed as params$def (row-major), class "pm-diff".
+#' rhandsontable renderer: plain numbers (price set A).
+PM_PLAIN_RENDERER <- "
+function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.NumericRenderer.apply(this, arguments);
+  return td;
+}"
+
+#' rhandsontable renderer: B "Same as A", greyed (class "pm-same").
+PM_SAME_RENDERER <- "
+function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.NumericRenderer.apply(this, arguments);
+  td.classList.add('pm-same');
+  return td;
+}"
+
+#' rhandsontable renderer: highlight B cells that differ from A's grid
+#' passed as params$def (row-major), class "pm-diff".
 PM_DIFF_RENDERER <- "
 function(instance, td, row, col, prop, value, cellProperties) {
   Handsontable.renderers.NumericRenderer.apply(this, arguments);
@@ -326,16 +218,5 @@ function(instance, td, row, col, prop, value, cellProperties) {
                (dv !== null && !empty && Math.abs(Number(value) - dv) <= 1e-9);
     if (!same) td.classList.add('pm-diff');
   }
-  return td;
-}"
-
-#' rhandsontable renderer for the read-only default: mark interpolated cells
-#' (params$interp, row-major logicals), class "pm-interp".
-PM_INTERP_RENDERER <- "
-function(instance, td, row, col, prop, value, cellProperties) {
-  Handsontable.renderers.NumericRenderer.apply(this, arguments);
-  td.classList.remove('pm-interp');
-  var m = instance.params && instance.params.interp;
-  if (m && m[row] !== undefined && m[row][col]) td.classList.add('pm-interp');
   return td;
 }"

@@ -14,18 +14,22 @@ selected_fylnr <- function(fylnr_sel) {
 
 #' Map sidebar inputs to the params list for run_sampled_plot_bucking().
 #'
+#' The number of plots and the seed are fixed (Phase 4c): APP_N_PLOTS (200,
+#' or APTER_N_PLOTS) and APP_SEED (42), from setup.R.
+#'
 #' @param input_list Shiny `input` (or a plain list) with species_group,
-#'   hkl_group, abonitet, fylnr_sel, n_plots, seed.
+#'   hkl_group, abonitet, fylnr_sel.
 #' @param hkl_map    User-facing HKL group -> raw hogstkl codes.
 #' @return Named list of backend params.
-build_run_params <- function(input_list, hkl_map = HKL_MAP) {
+build_run_params <- function(input_list, hkl_map = HKL_MAP,
+                             n_plots = APP_N_PLOTS, seed = APP_SEED) {
   list(
     species_group = input_list$species_group,
     hogstkl       = unlist(hkl_map[input_list$hkl_group]),
     abonitet      = as.integer(input_list$abonitet),
     fylnr         = selected_fylnr(input_list$fylnr_sel),
-    n_plots       = as.integer(input_list$n_plots),
-    seed          = as.integer(input_list$seed)
+    n_plots       = as.integer(n_plots),
+    seed          = as.integer(seed)
   )
 }
 

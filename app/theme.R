@@ -13,39 +13,45 @@ APTER_TOKENS <- list(
   border      = "#E4E1DD",
   ink         = "#161513",   # primary text
   ink_muted   = "#6F6A66",   # labels, captions, "DONE"
-  primary     = "#312D2A",   # charcoal primary button
-  secondary   = "#EBE9E6",   # grey secondary button
-  accent      = "#4C6B7A",   # slate status checks
+  # Palette "Forest & sand" (Phase 4c): forest green is the only strong
+  # colour (logo, primary buttons, active tab, status icons).
+  primary     = "#3F6E58",   # forest green primary button
+  secondary   = "#EAE5DC",   # sand secondary button
+  accent      = "#3F6E58",   # links, focus, progress, active tab
   icon_green  = "#3F6E58",   # app icon tile
   danger      = "#B3261E",
   warning     = "#9A5B00",
   success     = "#2F6B3A"
 )
 
-#' Chart colours (validated with the dataviz skill's palette checker against
-#' the white card surface: slot 1 blue / slot 2 orange pass CVD, normal-vision
-#' and contrast checks). Ink and grid follow the reference chart chrome.
+#' Chart colours, "Forest & sand" (Phase 4c). Ink and grid follow the
+#' reference chart chrome.
+#'
+#' Checked with the dataviz skill's validator in headless Chrome on the white
+#' surface, all pairs (in the stem diagram any two products can touch),
+#' 2026-10-13. The proposed sand #C9A97A and grey #A39E98 failed (normal-vision
+#' dE 8.0 between them, floor 15), so pulpwood is a darker sand and waste a
+#' lighter grey: green / sand / grey / charcoal pass CVD (worst dE 13.3,
+#' protan, green vs sand) and normal vision (worst dE 16.6, grey vs sand).
+#' Waste and the custom charcoal sit outside the validator's lightness band
+#' and the muted hues read low-chroma by design; every log carries a text
+#' label and the legend names each colour, so colour is never the only cue.
 APTER_CHART <- list(
-  series1  = "#2a78d6",   # single-series bars, histogram, Scenario 1
-  series2  = "#eb6834",   # Scenario 2
-  neutral  = "#52514e",   # delta bars (sign is carried by position)
+  series1  = "#3F6E58",   # single-series bars, price set A
+  series2  = "#B38A52",   # price set B (A vs B: CVD dE 13.3, normal dE 19.5)
+  neutral  = "#6F6A66",   # delta bars (sign is carried by position)
   ink      = "#161513",
   ink2     = "#52514e",   # value labels
   muted    = "#6F6A66",   # axis text
   grid     = "#E1E0D9",
   baseline = "#C3C2B7",
   surface  = "#FFFFFF",
-  # Assortments in the stem diagram (categorical slots 1-3; validated on the
-  # white surface: CVD and normal-vision pass; waste aqua is below 3:1, so
-  # every log carries a text label and the legend names each colour).
-  assortment = c(sawlog = "#2a78d6", pulpwood = "#eb6834", waste = "#1baf7a")
-  # Custom assortment classes (Phase 4b) fold into the neutral fill and are
-  # named by their label. In the stem diagram any two products can touch, so
-  # the palette is checked on all pairs (dataviz validator in headless Chrome,
-  # 2026-10-13): only these three slots pass; adding any of slots 4-8 fails
-  # (e.g. green vs orange protan dE 3.2, red vs orange normal dE 7.1). The
-  # neutral #52514e against the three passes CVD (dE 9.2) and normal vision
-  # (dE 21.8); it is grey by design, the "other" fold.
+  # Assortments in the stem diagram. Custom assortment classes fold into the
+  # charcoal "other" fill and are named by their label.
+  assortment = c(sawlog = "#3F6E58", pulpwood = "#B38A52", waste = "#C4BFB8"),
+  other      = "#3A3836",
+  # Log label colour per fill (light waste grey takes dark ink).
+  label_on   = c(sawlog = "#FFFFFF", pulpwood = "#FFFFFF", waste = "#161513", other = "#FFFFFF")
 )
 
 

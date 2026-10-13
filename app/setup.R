@@ -1,8 +1,9 @@
 # app/setup.R
 #
 # Purpose : App-wide data and constants: plot metadata, product/price
-#           reference tables, HKL/bonitet/county choice mappings, the
-#           results label and release version. Styling is in theme.R and
+#           default assortments and prices, HKL/bonitet/county choice
+#           mappings, fixed sampling settings and the release version
+#           (internal). Styling is in theme.R and
 #           www/apter.css.
 #           Sourced by app.R after ROOT is resolved and the backend is loaded.
 
@@ -10,19 +11,19 @@
 plots_all <- as.data.frame(arrow::read_parquet(
   file.path(ROOT, "data_processed_github", "nfi_plots_github.parquet")))
 
-# ---- load product / price reference data (displayed read-only) -------------
+# ---- default assortments and prices -------------------------------------------
+# The base products as the assortment table (Phase 4c; R/helpers_products.R)
+# and the 2021 prices in Apter's minimal long form. Both price sets A and B
+# start from these; "Reset to defaults" and "Reset to 2021 prices" restore them.
 APP_PRODUCTS   <- load_products(ROOT)
-APP_LC         <- load_length_classes(ROOT)
-APP_PRICE_LONG <- load_price_matrix_long(ROOT)
-# Price-matrix editor (Phase 4a): default in Apter's minimal long form,
-# matrix choices, and which default cells are interpolated (31 dm).
-APP_PM_DEFAULT <- pm_minimal(APP_PRICE_LONG)
-PM_CHOICES <- setNames(pm_matrix_ids(APP_PM_DEFAULT),
-                       vapply(pm_matrix_ids(APP_PM_DEFAULT), pm_matrix_label, character(1)))
-.interp <- APP_PRICE_LONG[APP_PRICE_LONG$PriceSource %in% "Interpolated", ]
-APP_PM_INTERP_KEYS <- paste(.interp$ProductKey, .interp$LengthClass_dm,
-                            .interp$PriceDiameterClass_cm)
-rm(.interp)
+APP_PM_DEFAULT <- pm_minimal(load_price_matrix_long(ROOT))
+APP_DEFS       <- defs_from_products(APP_PRODUCTS)
+
+# ---- fixed sampling settings (Phase 4c) ----------------------------------------
+# NFI runs sample up to 200 plots (strata with fewer plots use all of them)
+# with seed 42. APTER_N_PLOTS overrides the number (audit 17 runs with 5).
+APP_N_PLOTS <- as.integer(or_default(suppressWarnings(as.integer(Sys.getenv("APTER_N_PLOTS"))), 200L))
+APP_SEED    <- 42L
 
 # ---- HKL group mapping (user-facing -> raw hogstkl codes) -----------------
 HKL_CHOICES <- c(
@@ -64,12 +65,7 @@ FYLNR_CHOICES <- c(
   setNames(.DATA_FYLNR, vapply(.DATA_FYLNR, .fylnr_lbl, character(1)))
 )
 
-# Shown above results: what the numbers describe (Phase 3, 2026-10-12).
-RESULTS_LABEL <- paste(
-  "Results describe the selected trees only. Values are NOK per m\u00b3 of",
-  "commercial volume under bark (bark: taperNOR::barkNOR, floored at 0, provisional).")
-
-# ---- release version (repo-root VERSION file; shown in the footer) ------------
+# ---- release version (repo-root VERSION file; internal, not shown) ------------
 APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))
 
 # ---- parallel workers (R/helpers_parallel.R) ---------------------------------

@@ -2,14 +2,21 @@
 #
 # Purpose : Shiny server function (`server`). Sourced by app.R after setup.R
 #           and the app helpers (helpers_ui.R, helpers_validation.R,
-#           helpers_upload.R). Styling via CSS classes (www/apter.css) and
-#           APTER_CHART colours (theme.R); no inline colours.
+#           helpers_upload.R, helpers_jobs.R). Styling via CSS classes
+#           (www/apter.css) and APTER_CHART colours (theme.R); no inline colours.
 #           Not named server.R: Shiny/shinytest2 reject ui.R/server.R next to app.R.
+#
+# State   : (Phase 4c) one assortment table for all products (asm_defs()),
+#           price set A (pm_a()) and B: B's own prices (pm_b()) and a state
+#           per product (b_state(): same / own / none; R/helpers_price_matrix.R).
+#           Internal names: "default" and "scenario" in the backend mean A and B.
 
 # ---- server -----------------------------------------------------------------
 server <- function(input, output, session) {
 
-  # Dynamic bonitet selector — filtered to available values for selected HKL group and county
+  # ---- Sidebar: NFI selection ----------------------------------------------
+
+  # Bonitet choices: values available for the selected HKL group and county.
   output$abonitet_ui <- renderUI({
     hkl_raw    <- unlist(HKL_MAP[input$hkl_group])
     fyl        <- selected_fylnr(input$fylnr_sel)
@@ -28,123 +35,15 @@ server <- function(input, output, session) {
                        selected     = sel)
   })
 
-  # Selection availability preview
-  output$stratum_preview <- renderUI({
+  # Only real errors: an empty selection or no matching plots.
+  output$stratum_error <- renderUI({
     hkl_raw <- unlist(HKL_MAP[input$hkl_group])
     abon    <- as.integer(input$abonitet)
-    fyl     <- selected_fylnr(input$fylnr_sel)
     if (length(hkl_raw) == 0L || length(abon) == 0L)
-      return(div(class = "note-error",
-                 "Select at least one maturity class and one bonitet."))
-    n_elig <- count_eligible_plots(plots_prod, hkl_raw, abon, fyl)
-    div(
-      sprintf("%d eligible plot(s) available.", n_elig), br(),
-      if (n_elig == 0L)
-        span(class = "note-error", "No matching plots \u2014 adjust selection.")
-      else if (n_elig < as.integer(input$n_plots))
-        span(class = "note-warn",
-             sprintf("Fewer than %s plots exist; all will be used.", input$n_plots))
-      else
-        span(class = "note-ok", "Selection OK.")
-    )
+      return(div(class = "note-error", "Select at least one maturity class and one site class."))
+    if (count_eligible_plots(plots_prod, hkl_raw, abon, selected_fylnr(input$fylnr_sel)) == 0L)
+      div(class = "note-error", "No plots match this selection.")
   })
-
-  # Run status line
-  output$run_status <- renderUI({
-    if (input$run_btn == 0L)
-      return(div(class = "status-idle",
-                 "Select parameters and click Run optimizer."))
-    if (task_busy()) {
-      p <- run_progress()
-      if (is.null(p)) return(div(class = "status-running", "Starting run..."))
-      known <- !is.na(p$total) && p$total > 0L
-      return(div(class = "status-running",
-                 if (known) sprintf("%s: %d / %d", p$what, p$done, p$total) else p$what,
-                 if (known) div(class = "run-progress",
-                                div(class = "run-progress-bar",
-                                    style = sprintf("width: %.0f%%", 100 * p$done / p$total)))))
-    }
-    r <- result()
-    if (is.null(r))
-      return(div(class = "status-error",
-                 "Run failed. See error message above."))
-    div(class = "status-done",
-        sprintf("Run complete in %.1f s  |  %d plot(s)  |  %d trees  |  %d selected logs  |  ID: %s",
-                r$elapsed_seconds, r$n_plots_sampled, r$n_trees_total,
-                nrow(r$selected_logs_all), r$run_id))
-  })
-
-  # Run card: parameters as read-only fields, stages as a step list
-  output$run_params <- renderUI({
-    req(input$run_btn > 0L)
-    r <- result(); req(!is.null(r))
-    p <- r$params
-    if (identical(r$tree_source, "tree_list")) {
-      src <- table(r$tree_summary$height_source)
-      return(ro_field_row(
-        ro_field("Tree source", "Uploaded tree list"),
-        ro_field("File", p$file),
-        ro_field("Species", p$species_group),
-        ro_field("Trees bucked", sprintf("%d of %d (%d outside taperNOR's range)",
-                                         r$n_trees_total, r$diagnostics$n_trees_in_list,
-                                         r$diagnostics$n_trees_excluded_out_of_range)),
-        ro_field("Heights", paste(sprintf("%s: %d", names(src), as.integer(src)),
-                                  collapse = "; "), wide = TRUE),
-        ro_field("Run ID", r$run_id, wide = TRUE)))
-    }
-    fyl <- if (is.null(p$fylnr)) "All counties"
-           else paste(names(FYLNR_CHOICES)[match(p$fylnr, FYLNR_CHOICES)],
-                      collapse = ", ")
-    ro_field_row(
-      ro_field("Species group", p$species_group),
-      ro_field("Maturity class (hogstkl)", paste(p$hogstkl, collapse = ", ")),
-      ro_field("Site class (bonitet)", paste(p$abonitet, collapse = ", ")),
-      ro_field("County", fyl),
-      ro_field("Plots sampled", sprintf("%d of %d requested",
-                                        r$n_plots_sampled, as.integer(p$n_plots))),
-      ro_field("Seed", p$seed),
-      ro_field("Run ID", r$run_id, wide = TRUE)
-    )
-  })
-
-  # Heights from reference curves (tree lists): shown above all results.
-  output$height_banner <- renderUI({
-    r <- if (input$run_btn > 0L) result() else NULL
-    if (is.null(r) || !identical(r$tree_source, "tree_list")) return(NULL)
-    w <- r$height_warnings[grepl("FinnHoyde", r$height_warnings, fixed = TRUE)]
-    if (length(w) == 0L) return(NULL)
-    div(class = "height-notice", tags$strong("Heights: "),
-        tagList(lapply(w, function(x) div(x))),
-        div("Each tree's height source is in the Trees table (Per m³ tab)."))
-  })
-
-  output$run_steps <- renderUI({
-    r <- if (input$run_btn > 0L) result() else NULL
-    if (is.null(r)) return(step_list(run_step_table()))
-    step_list(run_step_table(r$diagnostics$stage_timings, r$started_at,
-                             tree_list = identical(r$tree_source, "tree_list")))
-  })
-
-  output$home_last_run <- renderUI({
-    r <- if (input$run_btn > 0L) result() else NULL
-    if (is.null(r))
-      return(div(class = "note-muted",
-                 "No run yet. Open the simulator, choose trees and click Run optimizer."))
-    total_val <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
-    tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-    div(class = "status-tiles",
-        status_tile(r$run_id, "Done",
-                    c(sprintf("%s \u00b7 %d plot(s) \u00b7 %d trees",
-                              r$params$species_group, r$n_plots_sampled,
-                              r$n_trees_total),
-                      sprintf("%s NOK per m\u00b3 \u00b7 total value %s NOK \u00b7 %d logs",
-                              format(round(tot$nok_per_m3, 1), nsmall = 1),
-                              format(round(total_val), big.mark = ",",
-                                     scientific = FALSE),
-                              nrow(r$selected_logs_all)))))
-  })
-
-  observeEvent(input$go_simulator, nav_select("main_nav", "Simulator"))
 
   # ---- Uploaded tree list (Phase 5; R/helpers_tree_list.R) -----------------
   tl_prepared <- reactiveVal(NULL)   # prepare_tree_list() result + $file
@@ -162,8 +61,9 @@ server <- function(input, output, session) {
 
   output$tl_validation <- renderUI({
     p <- tl_prepared()
-    if (is.null(p)) return(div(class = "note-muted", "No tree list uploaded."))
-    h <- p$heights
+    if (is.null(p)) return(NULL)
+    h  <- p$heights
+    ex <- if (!is.null(p$trees)) p$trees[!p$trees$in_range, , drop = FALSE]
     tagList(
       div(class = if (isTRUE(p$ok)) "pm-msg-ok" else "pm-msg-error",
           if (isTRUE(p$ok))
@@ -172,6 +72,11 @@ server <- function(input, output, session) {
           else paste(c(sprintf("%s cannot be used:", p$file), p$errors), collapse = "\n")),
       if (length(p$warnings) > 0L)
         div(class = "pm-msg-warn", paste("Warning:", p$warnings, collapse = "\n")),
+      if (!is.null(ex) && nrow(ex) > 0L)
+        tags$details(class = "tl-excluded",
+          tags$summary(sprintf("%d tree(s) not bucked", nrow(ex))),
+          tags$ul(lapply(seq_len(nrow(ex)), function(i)
+            tags$li(sprintf("%s: %s", ex$treid[i], ex$excluded_reason[i]))))),
       if (!is.null(h) && nrow(h) > 0L)
         div(class = "tl-heights",
             div(class = "section-hdr", "Heights"),
@@ -186,6 +91,499 @@ server <- function(input, output, session) {
     filename = function() "apter_tree_list_template.csv",
     content  = function(file) tree_list_template(file))
 
+
+  # ---- Assortments and price sets A and B ----------------------------------
+  asm_defs <- reactiveVal(APP_DEFS)
+  pm_a     <- reactiveVal(APP_PM_DEFAULT)
+  pm_b     <- reactiveVal(APP_PM_DEFAULT)          # B's own prices (all products)
+  b_state  <- reactiveVal(setNames(rep("same", nrow(APP_DEFS)), assortment_table_keys(APP_DEFS)))
+  pm_tick  <- reactiveVal(0L)     # re-render the grids
+  pm_msg   <- reactiveVal(NULL)   # last price upload / reset / edit message
+  asm_msg  <- reactiveVal(NULL)   # last assortment add / edit / upload message
+  redraw   <- function() pm_tick(isolate(pm_tick()) + 1L)
+
+  # Everything that changes a run; a run stores it to detect stale results.
+  pm_state  <- reactive(list(asm_defs(), pm_a(), pm_b(), b_state()))
+  b_now     <- reactive(b_set(asm_defs(), pm_a(), pm_b(), b_state()))
+  b_differ  <- reactive(b_differs(pm_a(), pm_b(), b_state()))
+
+  key_label <- function(keys) {
+    d <- asm_defs(); k <- assortment_table_keys(d)
+    i <- match(keys, k)
+    ifelse(is.na(i), keys, sprintf("%s %s", tools::toTitleCase(d$Species[i]), tolower(d$Name[i])))
+  }
+
+  # ---- assortment table ----
+  dash <- function(x) ifelse(is.finite(x), format(x, trim = TRUE), "–")
+  output$tbl_assortments <- renderReactable({
+    d <- asm_defs()
+    p <- products_from_defs(d, pm_a())$pd
+    apter_reactable(data.frame(
+      Assortment = d$Name, Type = d$Type, Species = d$Species,
+      `Min top diameter (cm)` = dash(d$MinTopDiameter_cm),
+      `Max top diameter (cm)` = dash(d$MaxTopDiameter_cm),
+      `Max butt diameter (cm)` = dash(d$MaxButtDiameter_cm),
+      `Min length (cm)` = dash(p$MinLength), `Max length (cm)` = dash(p$MaxLength),
+      `Length step (cm)` = dash(p$LengthStep),
+      `Volume method` = d$VolumeDiameterCategory,
+      `Diameter rounding` = ifelse(d$VolumeDiameterAdjustment == VOLUME_ROUND_DOWN_CM,
+                                   "Down to cm", "None"),
+      check.names = FALSE, stringsAsFactors = FALSE), page_size = 12L)
+  })
+
+  observeEvent(asm_defs(), {
+    k <- assortment_table_keys(asm_defs()); sel <- isolate(input$asm_pick)
+    updateSelectInput(session, "asm_pick", choices = setNames(k, key_label(k)),
+                      selected = if (isTRUE(sel %in% k)) sel else k[1L])
+  })
+
+  asm_editing  <- reactiveVal(NULL)   # ProductKey being edited; NULL = new
+  asm_form_err <- reactiveVal(NULL)
+  output$asm_form_msg <- renderUI({
+    e <- asm_form_err(); if (is.null(e)) return(NULL)
+    div(class = "pm-msg-error", paste(e, collapse = "\n"))
+  })
+
+  asm_modal <- function(d = NULL) {
+    new <- is.null(d)
+    v <- function(n, default) {
+      x <- if (new) NULL else d[[n]]
+      if (is.null(x) || length(x) == 0L || is.na(x)) default else x
+    }
+    fin <- function(n) { x <- v(n, NA); if (is.finite(x)) x else NA }
+    sp <- c("Spruce" = "spruce", "Pine" = "pine")
+    modalDialog(
+      title = if (new) "Add assortment" else paste("Edit", d$Name, "–", d$Species),
+      size = "l", easyClose = FALSE,
+      layout_columns(col_widths = c(4, 4, 4),
+        textInput("asm_name", "Assortment", v("Name", "")),
+        textInput("asm_type", "Type", v("Type", "")),
+        selectInput("asm_species", "Species",
+                    if (new) c("Spruce and pine" = "both", sp) else sp,
+                    v("Species", if (new) "both" else "spruce")),
+        numericInput("asm_min_top", "Min top diameter (cm)", v("MinTopDiameter_cm", 0), min = 0),
+        numericInput("asm_max_top", "Max top diameter (cm; empty = no limit)",
+                     fin("MaxTopDiameter_cm"), min = 0),
+        numericInput("asm_min_butt", "Min butt diameter (cm)", v("MinButtDiameter_cm", 0), min = 0),
+        numericInput("asm_max_butt", "Max butt diameter (cm; empty = no limit)",
+                     fin("MaxButtDiameter_cm"), min = 0),
+        radioButtons("asm_price_type", "Pricing",
+                     c("Price matrix" = "matrix", "Flat price" = "flat"), v("PriceType", "matrix")),
+        numericInput("asm_dtp", "Top diameter read (cm below the cut)",
+                     v("DiameterTopPosition_cm", 0), min = 0, step = 10),
+        selectInput("asm_method", "Volume method", VOLUME_METHODS,
+                    v("VolumeDiameterCategory", "Top cylinder")),
+        selectInput("asm_adjust", "Diameter rounding",
+                    c("None" = "None", "Down to cm" = VOLUME_ROUND_DOWN_CM),
+                    v("VolumeDiameterAdjustment", "None"))
+      ),
+      # Lengths: a flat price uses min..max by step; a matrix's lengths are
+      # its columns (set here only for a new matrix).
+      conditionalPanel(
+        if (new || !identical(d$PriceType, "matrix")) "true" else "input.asm_price_type == 'flat'",
+        layout_columns(col_widths = c(4, 4, 4),
+          numericInput("asm_min_len", "Min length (cm)", v("MinLength_cm", 310), min = 10, step = 10),
+          numericInput("asm_max_len", "Max length (cm)", v("MaxLength_cm", 550), min = 10, step = 10),
+          numericInput("asm_step", "Length step (cm)", v("LengthStep_cm", 30), min = 10, step = 10))),
+      conditionalPanel(
+        if (new) "true" else sprintf("input.asm_price_type != '%s'", d$PriceType),
+        layout_columns(col_widths = c(4, 4, 4),
+          numericInput("asm_price", "Starting price (NOK/m³)", 500, min = 0),
+          conditionalPanel("input.asm_price_type == 'matrix'",
+            numericInput("asm_max_class", "Largest diameter class (cm; without a max top diameter)",
+                         NA, min = 1)))),
+      uiOutput("asm_form_msg"),
+      footer = tagList(modalButton("Cancel"),
+                       actionButton("asm_save", "Save", class = "btn-primary")))
+  }
+
+  observeEvent(input$asm_add, {
+    asm_editing(NULL); asm_form_err(NULL); showModal(asm_modal())
+  })
+  observeEvent(input$asm_edit, {
+    d <- asm_defs(); i <- match(input$asm_pick, assortment_table_keys(d)); req(!is.na(i))
+    asm_editing(input$asm_pick); asm_form_err(NULL); showModal(asm_modal(d[i, , drop = FALSE]))
+  })
+
+  # Replace the prices of `keys` in a matrix by `new` (NULL: remove them).
+  swap_prices <- function(pm, keys, new = NULL)
+    pm_minimal(rbind(pm[!pm$ProductKey %in% keys, , drop = FALSE], new))
+
+  observeEvent(input$asm_save, {
+    num <- function(x) if (is.null(x) || length(x) == 0L || is.na(x)) NA_real_ else as.numeric(x)
+    or  <- function(x, y) if (is.na(x)) y else x
+    name <- trimws(or_default(input$asm_name, ""))
+    type <- trimws(or_default(input$asm_type, ""))
+    species <- if (identical(input$asm_species, "both")) PRODUCT_SPECIES else input$asm_species
+    ptype <- input$asm_price_type
+    rows <- .type_assortment_table(data.frame(
+      Name = name, Type = if (nzchar(type)) type else assortment_slug(name), Species = species,
+      MinTopDiameter_cm = or(num(input$asm_min_top), 0),
+      MaxTopDiameter_cm = or(num(input$asm_max_top), Inf),
+      MinButtDiameter_cm = or(num(input$asm_min_butt), 0),
+      MaxButtDiameter_cm = or(num(input$asm_max_butt), Inf),
+      MinLength_cm = num(input$asm_min_len), MaxLength_cm = num(input$asm_max_len),
+      LengthStep_cm = num(input$asm_step),
+      DiameterTopPosition_cm = or(num(input$asm_dtp), 0),
+      VolumeDiameterCategory = input$asm_method,
+      VolumeDiameterAdjustment = input$asm_adjust, PriceType = ptype,
+      stringsAsFactors = FALSE))
+    new_keys <- assortment_table_keys(rows)
+
+    d <- asm_defs(); keys <- assortment_table_keys(d)
+    a <- pm_a(); b <- pm_b(); st <- b_state()
+    old <- asm_editing()
+    i_old <- if (is.null(old)) NA_integer_ else match(old, keys)
+    same_pricing <- !is.na(i_old) && identical(d$PriceType[i_old], ptype)
+    if (same_pricing && ptype == "matrix") {   # lengths stay the matrix columns
+      rows$MinLength_cm <- d$MinLength_cm[i_old]; rows$MaxLength_cm <- d$MaxLength_cm[i_old]
+      rows$LengthStep_cm <- d$LengthStep_cm[i_old]
+    }
+
+    errs <- character(0); start <- NULL
+    taken <- intersect(new_keys, setdiff(keys, old))
+    if (length(taken) > 0L)
+      errs <- c(errs, sprintf("%s already exists.", paste(key_label(taken), collapse = " and ")))
+    if (!same_pricing) {
+      price <- num(input$asm_price)
+      if (is.na(price) || price < 0) errs <- c(errs, "Give a starting price of 0 NOK/m³ or more.")
+      lens <- if (ptype == "matrix" && !anyNA(c(rows$MinLength_cm[1], rows$MaxLength_cm[1], rows$LengthStep_cm[1])) &&
+                  rows$LengthStep_cm[1] > 0 && rows$MaxLength_cm[1] >= rows$MinLength_cm[1])
+        seq(rows$MinLength_cm[1], rows$MaxLength_cm[1], by = rows$LengthStep_cm[1]) else numeric(0)
+      hi <- if (is.finite(rows$MaxTopDiameter_cm[1])) floor(rows$MaxTopDiameter_cm[1]) else num(input$asm_max_class)
+      if (length(errs) == 0L)
+        start <- tryCatch(do.call(rbind, lapply(new_keys, function(k)
+          pm_start_prices(k, ptype, price, max(1, floor(rows$MinTopDiameter_cm[1])), hi, lens))),
+          error = function(e) { errs <<- c(errs, conditionMessage(e)); NULL })
+    }
+    if (length(errs) > 0L) { asm_form_err(errs); return() }
+
+    # The new table and prices. An edit keeps the row's place and, with the
+    # same pricing, its prices on both sides (moved to the new key).
+    if (is.na(i_old)) {
+      d2 <- rbind(d, rows)
+      a2 <- swap_prices(a, new_keys, start); b2 <- swap_prices(b, new_keys, start)
+      st2 <- c(st[setdiff(names(st), new_keys)], setNames(rep("same", length(new_keys)), new_keys))
+    } else {
+      d2 <- d; d2[i_old, ] <- rows
+      k1 <- new_keys
+      if (same_pricing) {
+        a2 <- pm_rename_key(swap_prices(a, setdiff(k1, old)), old, k1)
+        b2 <- pm_rename_key(swap_prices(b, setdiff(k1, old)), old, k1)
+        st2 <- st; names(st2)[names(st2) == old] <- k1
+      } else {
+        a2 <- swap_prices(a, c(old, k1), start); b2 <- swap_prices(b, c(old, k1), start)
+        st2 <- st; names(st2)[names(st2) == old] <- k1; st2[k1] <- "same"
+      }
+    }
+    st2 <- st2[assortment_table_keys(d2)]
+    v <- check_price_set(d2, a2)
+    if (v$ok) {
+      bb <- b_set(d2, a2, b2, st2)
+      vb <- check_price_set(bb$defs, bb$pm)
+      if (!vb$ok) v <- list(ok = FALSE, errors = paste("B:", vb$errors))
+    }
+    if (!v$ok) { asm_form_err(v$errors); return() }
+
+    asm_defs(d2); pm_a(a2); pm_b(b2); b_state(st2)
+    redraw(); removeModal()
+    asm_msg(list(type = "ok", warnings = v$warnings,
+                 text = sprintf("%s %s.", if (is.na(i_old)) "Added" else "Saved",
+                                paste(key_label(new_keys), collapse = " and "))))
+  })
+
+  observeEvent(input$asm_remove, {
+    d <- asm_defs(); k <- input$asm_pick; i <- match(k, assortment_table_keys(d)); req(!is.na(i))
+    if (nrow(d) == 1L) {
+      asm_msg(list(type = "error", text = "The last assortment cannot be removed."))
+      return()
+    }
+    lbl <- key_label(k)
+    asm_defs(d[-i, , drop = FALSE])
+    pm_a(swap_prices(pm_a(), k)); pm_b(swap_prices(pm_b(), k))
+    st <- b_state(); b_state(st[names(st) != k])
+    redraw()
+    asm_msg(list(type = "ok", text = sprintf("Removed %s.", lbl)))
+  })
+
+  # Base assortments back to their defaults (definitions, 2021 prices in A,
+  # "Same as A" in B); custom assortments stay.
+  observeEvent(input$asm_reset, {
+    base <- assortment_table_keys(APP_DEFS)
+    d <- asm_defs(); custom <- d[!assortment_table_keys(d) %in% base, , drop = FALSE]
+    d2 <- rbind(APP_DEFS, custom)
+    def_rows <- APP_PM_DEFAULT[APP_PM_DEFAULT$ProductKey %in% base, , drop = FALSE]
+    pm_a(swap_prices(pm_a(), base, def_rows)); pm_b(swap_prices(pm_b(), base, def_rows))
+    st <- b_state(); st[base] <- "same"
+    asm_defs(d2); b_state(st[assortment_table_keys(d2)])
+    redraw()
+    asm_msg(list(type = "ok", text = "Base assortments reset to the defaults; custom assortments kept."))
+  })
+
+  output$dl_assortments <- downloadHandler(
+    filename = function() "apter_assortments.xlsx",
+    content  = function(file) assortment_table_export(asm_defs(), pm_a(), pm_b(), b_state(), file))
+
+  observeEvent(input$asm_upload, {
+    f <- input$asm_upload; req(f)
+    res <- assortment_table_import(f$datapath)
+    if (isTRUE(res$ok)) {
+      asm_defs(res$defs); pm_a(res$pm_a); pm_b(res$pm_b); b_state(res$state)
+      redraw()
+      asm_msg(list(type = "ok", warnings = res$warnings, text = sprintf(
+        "Loaded %s: %d assortment(s) with prices A and B.", f$name, nrow(res$defs))))
+    } else {
+      asm_msg(list(type = "error", text = paste(
+        c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
+    }
+  })
+
+  msg_ui <- function(m) {
+    if (is.null(m)) return(NULL)
+    tagList(
+      div(class = if (identical(m$type, "error")) "pm-msg-error" else "pm-msg-ok", m$text),
+      if (length(m$warnings) > 0L)
+        div(class = "pm-msg-warn", paste("Warning:", m$warnings, collapse = "\n")))
+  }
+  output$asm_msg <- renderUI(msg_ui(asm_msg()))
+  output$pm_upload_msg <- renderUI(msg_ui(pm_msg()))
+
+
+  # ---- price matrices ----
+  # Matrix choices: matrix-priced products in table order, then the flat table.
+  pm_ids <- reactive({
+    d <- asm_defs(); k <- assortment_table_keys(d)
+    c(k[d$PriceType == "matrix"], if (any(d$PriceType == "flat")) PM_FLAT_ID)
+  })
+  observeEvent(pm_ids(), {
+    ids <- pm_ids(); sel <- isolate(input$pm_id)
+    lbl <- ifelse(ids == PM_FLAT_ID, "Flat prices", key_label(ids))
+    updateSelectInput(session, "pm_id", choices = setNames(ids, lbl),
+                      selected = if (isTRUE(sel %in% ids)) sel else ids[1L])
+  })
+  is_flat <- function(id) identical(id, PM_FLAT_ID)
+  flat_keys <- reactive({ d <- asm_defs(); assortment_table_keys(d)[d$PriceType == "flat"] })
+
+  pm_widget <- function(grid, id, read_only, renderer = NULL, def = NULL) {
+    w <- rhandsontable(grid, rowHeaders = rownames(grid), readOnly = read_only,
+                       height = 520, stretchH = "all", matrix_id = id, def = def)
+    w <- hot_cols(w, renderer = renderer, columnSorting = FALSE)
+    w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
+    if (!read_only) w <- hot_validate_numeric(w, cols = seq_len(ncol(grid)), min = 0)
+    w
+  }
+
+  # A: every matrix editable.
+  output$pm_a <- renderRHandsontable({
+    pm_tick(); id <- input$pm_id; req(id, id %in% pm_ids())
+    a <- isolate(pm_a())
+    g <- if (is_flat(id)) {
+      f <- pm_to_grid(a, PM_FLAT_ID); f[rownames(f) %in% isolate(flat_keys()), , drop = FALSE]
+    } else pm_to_grid(a, id)
+    pm_widget(g, id, FALSE, PM_PLAIN_RENDERER)
+  })
+
+  # B: "Same as A" shows A greyed and read-only, "Own prices" B's own
+  # prices (cells that differ from A highlighted), "Not used" no grid. The
+  # flat table carries the state per product in its first column.
+  output$pm_b <- renderRHandsontable({
+    pm_tick(); id <- input$pm_id; req(id, id %in% pm_ids())
+    a <- isolate(pm_a()); b <- isolate(pm_b()); st <- isolate(b_state())
+    if (is_flat(id)) {
+      k <- isolate(flat_keys())
+      pa <- pm_to_grid(a, PM_FLAT_ID); pb <- pm_to_grid(b, PM_FLAT_ID)
+      s  <- st[k]; s[is.na(s)] <- "same"
+      price <- ifelse(s == "own", pb[k, 1], ifelse(s == "same", pa[k, 1], NA_real_))
+      g <- data.frame(B = unname(B_STATES[s]), PriceNOKperM3 = price, row.names = k,
+                      stringsAsFactors = FALSE)
+      w <- rhandsontable(g, rowHeaders = k, height = 520, stretchH = "all", matrix_id = id,
+                         def = unname(cbind(NA, pa[k, 1])))
+      w <- hot_col(w, "B", type = "dropdown", source = unname(B_STATES), strict = TRUE,
+                   allowInvalid = FALSE)
+      w <- hot_col(w, "PriceNOKperM3", renderer = PM_DIFF_RENDERER)
+      w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
+      for (i in which(s != "own")) w <- hot_cell(w, i, 2, readOnly = TRUE)
+      return(w)
+    }
+    s <- or_default(st[id], "same")
+    req(s != "none")
+    if (s == "same") return(pm_widget(pm_to_grid(a, id), id, TRUE, PM_SAME_RENDERER))
+    pm_widget(pm_to_grid(b, id), id, FALSE, PM_DIFF_RENDERER,
+              def = unname(pm_default_aligned(a, b, id)))
+  })
+
+  output$pm_b_state_ui <- renderUI({
+    id <- input$pm_id; req(id, !is_flat(id))
+    selectInput("pm_b_state", NULL, setNames(names(B_STATES), B_STATES),
+                selected = or_default(isolate(b_state())[id], "same"), width = "220px")
+  })
+  observeEvent(input$pm_b_state, {
+    id <- input$pm_id; req(id, !is_flat(id))
+    st <- b_state(); new <- input$pm_b_state
+    if (identical(unname(st[id]), new)) return()
+    if (new == "own") pm_b(pm_b_copy_a(pm_a(), pm_b(), id))
+    st[id] <- new; b_state(st); redraw()
+  })
+  output$pm_b_note <- renderUI({
+    id <- input$pm_id; req(id, !is_flat(id))
+    if (identical(unname(b_state()[id]), "none")) div(class = "note-muted", "Not used in B.")
+  })
+  output$pm_a_note <- renderUI(NULL)
+
+  # Grid edits. The matrix id travels with the widget, so a stale grid of
+  # the previously shown matrix is never written elsewhere.
+  apply_grid_edit <- function(x, pmv) {
+    if (is.null(x$changes$changes)) return()            # load, not an edit
+    id <- or_default(x$params$matrix_id, isolate(input$pm_id))
+    g  <- hot_to_r(x)
+    ref <- pm_to_grid(isolate(pmv()), id)
+    if (is_flat(id)) ref <- ref[rownames(ref) %in% rownames(g), , drop = FALSE]
+    if (!identical(dim(g), dim(ref))) return()
+    rownames(g) <- rownames(ref); colnames(g) <- colnames(ref)
+    if (any(as.matrix(g) < 0, na.rm = TRUE)) {
+      pm_msg(list(type = "error", text = "Negative prices are not allowed; the edit was undone."))
+      redraw(); return()
+    }
+    pmv(pm_from_grid(g, id, isolate(pmv())))
+  }
+  observeEvent(input$pm_a, apply_grid_edit(input$pm_a, pm_a))
+  observeEvent(input$pm_b, {
+    x <- input$pm_b
+    if (is.null(x$changes$changes)) return()
+    id <- or_default(x$params$matrix_id, isolate(input$pm_id))
+    if (!is_flat(id)) {
+      if (identical(unname(isolate(b_state())[id]), "own")) apply_grid_edit(x, pm_b)
+      return()
+    }
+    g  <- hot_to_r(x); k <- isolate(flat_keys())
+    if (nrow(g) != length(k)) return()
+    st <- isolate(b_state()); b <- isolate(pm_b()); a <- isolate(pm_a())
+    new_st <- names(B_STATES)[match(g$B, B_STATES)]
+    changed <- FALSE
+    for (i in seq_along(k)) {
+      if (is.na(new_st[i])) next
+      if (!identical(unname(st[k[i]]), new_st[i])) {
+        if (new_st[i] == "own") b <- pm_b_copy_a(a, b, k[i])
+        st[k[i]] <- new_st[i]; changed <- TRUE
+      } else if (new_st[i] == "own") {
+        p <- as.numeric(g$PriceNOKperM3[i])
+        if (!is.na(p) && p < 0) {
+          pm_msg(list(type = "error", text = "Negative prices are not allowed; the edit was undone."))
+          redraw(); return()
+        }
+        j <- b$ProductKey == k[i] & is.na(b$LengthClass_dm)
+        if (!is.na(p) && any(j) && abs(b$PriceNOKperM3[j] - p) > 1e-9) b$PriceNOKperM3[j] <- p
+      }
+    }
+    pm_b(b); b_state(st)
+    if (changed) redraw()
+  })
+
+  # Rows (diameter classes, ends only) and columns (lengths) of a matrix.
+  axes_ui <- function(s, id, pm) {
+    lens <- sort(unique(pm$LengthClass_dm[pm$ProductKey == id & !is.na(pm$LengthClass_dm)]))
+    b <- function(n, l) actionButton(paste0(s, n), l, class = "btn-secondary btn-sm")
+    div(class = "pm-axes",
+      div(class = "pm-axes-row",
+          span(class = "pm-axes-lbl", "Diameter classes"),
+          b("_cls_add_lo", "+ smaller"), b("_cls_rm_lo", "− smallest"),
+          b("_cls_add_hi", "+ larger"), b("_cls_rm_hi", "− largest")),
+      div(class = "pm-axes-row",
+          span(class = "pm-axes-lbl", "Lengths (dm)"),
+          numericInput(paste0(s, "_len_new"), NULL, NA, min = 1, step = 1, width = "90px"),
+          b("_len_add", "Add"),
+          selectInput(paste0(s, "_len_pick"), NULL, lens, width = "90px"),
+          b("_len_rm", "Remove")))
+  }
+  output$pm_a_axes <- renderUI({
+    pm_tick(); id <- input$pm_id; req(id, !is_flat(id), id %in% pm_ids())
+    axes_ui("pm_a", id, isolate(pm_a()))
+  })
+  output$pm_b_axes <- renderUI({
+    pm_tick(); id <- input$pm_id; req(id, !is_flat(id), id %in% pm_ids())
+    req(identical(unname(isolate(b_state())[id]), "own"))
+    axes_ui("pm_b", id, isolate(pm_b()))
+  })
+  axes_observers <- function(s, pmv) {
+    edit <- function(f) {
+      id <- isolate(input$pm_id); req(id, !is_flat(id))
+      res <- tryCatch(f(isolate(pmv()), id), error = function(e) e)
+      if (inherits(res, "error"))
+        return(pm_msg(list(type = "error", text = conditionMessage(res))))
+      pmv(res); pm_msg(NULL); redraw()
+    }
+    observeEvent(input[[paste0(s, "_cls_add_lo")]], edit(function(pm, id) pm_add_class(pm, id, "low")))
+    observeEvent(input[[paste0(s, "_cls_add_hi")]], edit(function(pm, id) pm_add_class(pm, id, "high")))
+    observeEvent(input[[paste0(s, "_cls_rm_lo")]],  edit(function(pm, id) pm_remove_class(pm, id, "low")))
+    observeEvent(input[[paste0(s, "_cls_rm_hi")]],  edit(function(pm, id) pm_remove_class(pm, id, "high")))
+    observeEvent(input[[paste0(s, "_len_add")]],
+                 edit(function(pm, id) pm_add_length(pm, id, input[[paste0(s, "_len_new")]])))
+    observeEvent(input[[paste0(s, "_len_rm")]],
+                 edit(function(pm, id) pm_remove_length(pm, id, input[[paste0(s, "_len_pick")]])))
+  }
+  axes_observers("pm_a", pm_a)
+  axes_observers("pm_b", pm_b)
+
+  # Reset to 2021 prices: the base products' 2021 rows (classes and lengths
+  # too). In B, a base product equal to A goes back to "Same as A",
+  # otherwise it gets the 2021 prices as its own.
+  base_reset_keys <- function() {
+    d <- asm_defs(); k <- assortment_table_keys(d)
+    bk <- assortment_table_keys(APP_DEFS)
+    k[k %in% bk & d$PriceType == APP_DEFS$PriceType[match(k, bk)]]
+  }
+  observeEvent(input$pm_a_reset, {
+    k <- base_reset_keys()
+    pm_a(swap_prices(pm_a(), k, APP_PM_DEFAULT[APP_PM_DEFAULT$ProductKey %in% k, , drop = FALSE]))
+    redraw()
+    pm_msg(list(type = "ok", text = "A: base assortments reset to the 2021 prices."))
+  })
+  observeEvent(input$pm_b_reset, {
+    k <- base_reset_keys(); st <- b_state(); a <- pm_minimal(pm_a())
+    def <- APP_PM_DEFAULT[APP_PM_DEFAULT$ProductKey %in% k, , drop = FALSE]
+    pm_b(swap_prices(pm_b(), k, def))
+    for (key in k) {
+      same <- isTRUE(all.equal(a[a$ProductKey == key, ], pm_minimal(def[def$ProductKey == key, ]),
+                               check.attributes = FALSE))
+      st[key] <- if (same) "same" else "own"
+    }
+    b_state(st); redraw()
+    pm_msg(list(type = "ok", text = "B: base assortments reset to the 2021 prices."))
+  })
+
+  # Uploads (helpers_upload.R).
+  do_upload <- function(side, f) {
+    res <- upload_price_set(f$datapath, f$name, side, asm_defs(), pm_a(), pm_b(), b_state())
+    if (isTRUE(res$ok)) {
+      if (side == "A") pm_a(res$pm) else { pm_b(res$pm); b_state(res$state) }
+      redraw()
+      pm_msg(list(type = "ok", warnings = res$warnings, text = sprintf(
+        "%s: loaded %s (%s layout): %s.", side, f$name, res$layout,
+        paste(ifelse(res$ids == PM_FLAT_ID, "flat prices", key_label(res$ids)), collapse = ", "))))
+    } else {
+      pm_msg(list(type = "error", text = paste(
+        c(sprintf("%s: %s was not loaded:", side, f$name), res$errors), collapse = "\n")))
+    }
+  }
+  observeEvent(input$pm_a_upload, { req(input$pm_a_upload); do_upload("A", input$pm_a_upload) })
+  observeEvent(input$pm_b_upload, { req(input$pm_b_upload); do_upload("B", input$pm_b_upload) })
+
+  side_pm <- function(side) if (side == "A") pm_a() else b_now()$pm
+  output$dl_a_wide <- downloadHandler(filename = function() "apter_prices_A.xlsx",
+                                      content = function(file) pm_template_wide(side_pm("A"), file))
+  output$dl_a_long <- downloadHandler(filename = function() "apter_prices_A.csv",
+                                      content = function(file) pm_export(side_pm("A"), file))
+  output$dl_b_wide <- downloadHandler(filename = function() "apter_prices_B.xlsx",
+                                      content = function(file) pm_template_wide(side_pm("B"), file))
+  output$dl_b_long <- downloadHandler(filename = function() "apter_prices_B.csv",
+                                      content = function(file) pm_export(side_pm("B"), file))
+
+  output$pm_status <- renderUI({
+    div(class = "pm-status", if (b_differ()) tags$strong("B differs from A: runs compare A and B.")
+                             else "B equals A: runs use A only.")
+  })
+
+
   # ---- Runs as background tasks (helpers_jobs.R) ---------------------------
   # The backend runs on the workers (R/helpers_parallel.R) as an
   # ExtendedTask: the app stays responsive, the run status shows progress
@@ -194,425 +592,137 @@ server <- function(input, output, session) {
   progress_cb  <- function(done, total, what)
     run_progress(list(done = done, total = total, what = what))
 
-  # A task: one job (spec, see run_job_async()); `extra` is added to the
-  # result. Errors are notified and give NULL; temporary price files go.
-  job_task <- function(label) ExtendedTask$new(function(spec, extra) {
+  run_task <- ExtendedTask$new(function(spec, extra) {
     p <- promises::then(run_job_async(spec, progress_cb), function(res) {
       for (n in names(extra)) res[[n]] <- extra[[n]]
       res
     })
     p <- promises::catch(p, function(e) {
-      showNotification(paste0(label, conditionMessage(e)), type = "error",
+      showNotification(paste0("Backend error: ", conditionMessage(e)), type = "error",
                        duration = NULL, session = session)
       NULL
     })
     promises::finally(p, function() unlink(spec$files))
   })
-  run_task <- job_task("Backend error: ")
-  scn_task <- job_task("Scenario error: ")
-  task_busy <- reactive(run_task$status() == "running" || scn_task$status() == "running")
+  task_busy <- reactive(run_task$status() == "running")
   observe(updateActionButton(session, "run_btn", disabled = task_busy()))
 
-  # Run: the default run, and the scenario run on the same trees when
-  # comparing (one candidate pass for both; the backend's `scenario`).
+  # Run: price set A, and B on the same trees when B differs from A (one
+  # candidate pass for both; the backend's `scenario`).
   run_rejected <- reactiveVal(FALSE)
   observeEvent(input$run_btn, {
+    reject <- function(msg) {
+      showNotification(msg, type = "error", duration = 10); run_rejected(TRUE)
+    }
     src <- if (identical(input$tree_source, "list")) "list" else "nfi"
     tl  <- if (src == "list") tl_prepared() else NULL
-    if (src == "list" && !isTRUE(tl$ok)) {
-      showNotification("Upload a tree list that passes the checks first.",
-                       type = "error", duration = 8)
-      run_rejected(TRUE)
-      return()
-    }
+    if (src == "list" && !isTRUE(tl$ok))
+      return(reject("Upload a tree list that passes the checks first."))
     if (src == "nfi") req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
+
+    d <- asm_defs(); a <- pm_minimal(pm_a())
+    va <- check_price_set(d, a)
+    if (!va$ok) return(reject(paste(c("Price set A cannot be used:", va$errors), collapse = "\n")))
+    compare <- b_differ(); b <- NULL
+    if (compare) {
+      b <- b_now()
+      vb <- check_price_set(b$defs, b$pm)
+      if (!vb$ok) return(reject(paste(c("Price set B cannot be used:", vb$errors), collapse = "\n")))
+    }
     run_rejected(FALSE)
 
-    # Products and prices in effect at this Run, for both runs (result_s2
-    # uses the scenario's); later edits wait for the next Run.
-    inp_def <- run_inputs("default")
-    inp_scn <- run_inputs("scenario")
-    files   <- character(0)
-    # Custom assortments used in the default run (Phase 4b): its own matrix.
-    def_path <- "default_2021"
-    if (inp_def$custom) { def_path <- write_scenario_pm(inp_def$pm); files <- def_path }
+    # A with the default assortments and 2021 prices runs exactly as before
+    # Phase 4c (the default price file and products).
+    files <- character(0); path <- "default_2021"; pd <- NULL; lc <- NULL
+    if (!(identical(d, APP_DEFS) && identical(a, APP_PM_DEFAULT))) {
+      path <- write_price_file(a); files <- path
+      p <- products_from_defs(d, a); pd <- p$pd; lc <- p$lc
+    }
     scenario <- NULL
-    if (isTRUE(input$compare_on)) {
-      scn_path <- write_scenario_pm(inp_scn$pm); files <- c(files, scn_path)
-      scenario <- list(price_matrix_path = scn_path, products = inp_scn$pd,
-                       length_classes = inp_scn$lc)
+    if (compare) {
+      path_b <- write_price_file(b$pm); files <- c(files, path_b)
+      pb <- products_from_defs(b$defs, b$pm)
+      scenario <- list(price_matrix_path = path_b, products = pb$pd, length_classes = pb$lc)
     }
     spec <- list(src = src, params = if (src == "nfi") build_run_params(input) else list(),
-                 tl = tl, list_params = list(file = tl$file), path = def_path,
-                 pd = if (inp_def$custom) inp_def$pd else NULL,
-                 lc = if (inp_def$custom) inp_def$lc else NULL,
+                 tl = tl, list_params = list(file = tl$file), path = path, pd = pd, lc = lc,
                  scenario = scenario, files = files)
     run_progress(NULL)
-    run_task$invoke(spec, list(
-      tree_source_input = src, tree_list_input = tl,
-      started_at      = Sys.time(),   # for the run step list
-      price_matrix    = if (inp_def$custom) inp_def$pm else APP_PM_DEFAULT,
-      scenario_inputs = inp_scn, state = pm_state(),
-      spec            = spec[c("src", "params", "tl", "list_params")]))
+    run_task$invoke(spec, list(price_matrix = a, price_matrix_b = if (compare) b$pm,
+                               state = pm_state()))
   })
 
   result <- reactive({
     if (run_rejected()) return(NULL)
     run_task$result()
   })
+  has_result <- reactive(input$run_btn > 0L && !task_busy() && !is.null(result()))
 
-
-  # ---- Comparison: S2 reactive, renders ------------------------------------
-
-  # Scenario run: same trees, the scenario products and prices in effect
-  # when Run was clicked (result()$scenario_inputs). Later edits take effect
-  # at the next Run; until then a notice says the prices changed
-  # (scenario_stale()). Ticked before Run, it comes with the run; ticked
-  # afterwards, it runs as its own task on the run's trees.
-  scn_for <- reactiveVal(NULL)   # run_id the scenario task was started for
-  observe({
-    req(isTRUE(input$compare_on))
-    r <- result(); req(!is.null(r), is.null(r$scenario))
-    if (identical(isolate(scn_for()), r$run_id)) return()
-    scn_for(r$run_id)
-    inp  <- r$scenario_inputs
-    path <- write_scenario_pm(inp$pm)
-    spec <- c(r$spec, list(path = path, pd = inp$pd, lc = inp$lc, scenario = NULL,
-                           files = path))
-    run_progress(NULL)
-    scn_task$invoke(spec, list())
-  })
-
-  result_s2 <- reactive({
-    req(isTRUE(input$compare_on))
-    r <- result(); req(!is.null(r))
-    s <- if (!is.null(r$scenario)) r$scenario else {
-      req(identical(scn_for(), r$run_id))
-      scn_task$result()
-    }
-    req(!is.null(s))
-    s$price_matrix    <- r$scenario_inputs$pm
-    s$n_cells_changed <- pm_n_diff(r$price_matrix, r$scenario_inputs$pm)
+  # B's run (the backend's $scenario), with its prices.
+  result_b <- reactive({
+    req(has_result()); r <- result(); req(!is.null(r$scenario))
+    s <- r$scenario; s$price_matrix <- r$price_matrix_b
     s
   })
-
-  # TRUE when prices or custom assortments were edited after the last run.
-  scenario_stale <- reactive({
-    r <- if (input$run_btn > 0L) result() else NULL
-    !is.null(r) && !identical(pm_state(), r$state)
-  })
-  stale_notice <- function() {
-    if (!isTRUE(input$compare_on) || !scenario_stale()) return(NULL)
-    div(class = "stale-notice",
-        "Scenario prices changed since last run; run again to update.")
-  }
-  output$scenario_stale_run <- renderUI(stale_notice())
-  output$scenario_stale_cmp <- renderUI(stale_notice())
-
-  # Per-tree pattern comparison (R/helpers_comparison.R).
-  cmp_trees <- reactive({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    compare_cutting_patterns(result(), result_s2(),
-                             result()$price_matrix, result_s2()$price_matrix)
+  observe({
+    show <- has_result() && !is.null(result()$scenario)
+    if (show) nav_show("result_tabs", "comparison") else nav_hide("result_tabs", "comparison")
   })
 
-  output$cmp_status <- renderUI({
-    if (!isTRUE(input$compare_on))
-      return(div(class = "stat-strip",
-                 "Tick 'Compare with scenario prices' in the sidebar and click Run optimizer."))
-    r1 <- result(); r2 <- result_s2()
-    if (is.null(r1)) return(div(class = "status-error", "Scenario 1 failed."))
-    if (is.null(r2)) return(div(class = "status-error", "Scenario 2 failed."))
-    pm <- identical(r1$sampled_plot_ids, r2$sampled_plot_ids)
-    div(class = if (pm) "status-done" else "status-error",
-        if (pm) "Comparison complete. Same plots sampled in both scenarios."
-        else "WARNING: sampled plots differ between scenarios.")
+  output$run_status <- renderUI({
+    if (!task_busy()) return(NULL)
+    p <- run_progress()
+    if (is.null(p)) return(div(class = "status-running", "Starting run..."))
+    known <- !is.na(p$total) && p$total > 0L
+    div(class = "status-running",
+        if (known) sprintf("%s: %d / %d", p$what, p$done, p$total) else p$what,
+        if (known) div(class = "run-progress",
+                       div(class = "run-progress-bar",
+                           style = sprintf("width: %.0f%%", 100 * p$done / p$total))))
   })
 
-  output$tbl_cmp_overview <- renderReactable(apter_reactable(local({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    r1 <- result(); r2 <- result_s2()
-    s2_lbl <- sprintf("scenario (%d cells changed)", or_default(r2$n_cells_changed, NA_integer_))
-    mk <- function(r, nm, src) {
-      v <- sum(r$selected_logs_all$value_nok, na.rm = TRUE)
-      m <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
-      tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-      data.frame(Scenario = nm, Price_source = src,
-                 Plots = r$n_plots_sampled, Trees = r$n_trees_total,
-                 Trees_w_logs = r$n_trees_with_logs,
-                 Value_NOK = round(v, 2), Price_volume_m3 = round(m, 4),
-                 Commercial_m3_ub = round(tot$commercial_volume_m3, 4),
-                 NOK_per_m3 = round(tot$nok_per_m3, 1),
-                 Runtime_s = round(r$elapsed_seconds, 1),
-                 stringsAsFactors = FALSE)
-    }
-    rbind(mk(r1, "Default", "default_2021"), mk(r2, "Scenario", s2_lbl))
-  })))
-
-  output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    r1 <- result(); r2 <- result_s2()
-    req(identical(r1$sampled_plot_ids, r2$sampled_plot_ids))
-    v1 <- sum(r1$selected_logs_all$value_nok, na.rm = TRUE)
-    v2 <- sum(r2$selected_logs_all$value_nok, na.rm = TRUE)
-    m1 <- sum(r1$selected_logs_all$price_volume_m3, na.rm = TRUE)
-    m2 <- sum(r2$selected_logs_all$price_volume_m3, na.rm = TRUE)
-    t1 <- r1$per_m3_summary[r1$per_m3_summary$scope == "Total", ]
-    t2 <- r2$per_m3_summary[r2$per_m3_summary$scope == "Total", ]
-    h1 <- t1$nok_per_m3; h2 <- t2$nok_per_m3
-    c1 <- t1$commercial_volume_m3; c2 <- t2$commercial_volume_m3
-    pct <- function(a, b) if (abs(b) > 1e-9) round((a - b) / abs(b) * 100, 2) else 0
-    data.frame(
-      Delta_value_NOK      = round(v2 - v1, 2),
-      Delta_value_pct      = pct(v2, v1),
-      Delta_volume_m3      = round(m2 - m1, 4),
-      Delta_volume_pct     = pct(m2, m1),
-      Delta_commercial_m3  = round(c2 - c1, 4),
-      Delta_NOK_per_m3     = round(h2 - h1, 1),
-      Delta_NOK_per_m3_pct = pct(h2, h1),
-      Trees_changed        = sum(cmp_trees()$changed),
-      stringsAsFactors = FALSE
-    )
-  })))
-
-  output$tbl_cmp_per_m3 <- renderReactable(apter_reactable(local({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    x <- compare_per_m3(result(), result_s2())
-    data.frame(Scope = x$scope, Assortment = x$assortment,
-               NOK_per_m3_default  = round(x$nok_per_m3_default, 1),
-               NOK_per_m3_scenario = round(x$nok_per_m3_scenario, 1),
-               Delta_NOK_per_m3    = round(x$delta_nok_per_m3, 1),
-               Share_pct_default   = round(100 * x$volume_share_default, 1),
-               Share_pct_scenario  = round(100 * x$volume_share_scenario, 1),
-               Delta_share_pp      = round(100 * x$delta_volume_share, 1),
-               stringsAsFactors = FALSE)
-  }), page_size = 12L))
-
-  output$cmp_patterns <- renderUI({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    x <- cmp_trees()
-    tagList(
-      div(class = "stat-strip",
-          tags$strong(sprintf("%d of %d trees changed their cutting pattern",
-                              sum(x$changed), nrow(x))),
-          " (the change alters value or volume)."),
-      if (sum(x$tie_only) > 0L)
-        div(class = "note-muted",
-            sprintf("%d tree(s) differ only by equal-value ties; not counted as changes.",
-                    sum(x$tie_only)))
-    )
+  output$stale_notice <- renderUI({
+    req(has_result())
+    if (!identical(pm_state(), result()$state))
+      div(class = "stale-notice", "Prices or assortments changed since this run.")
   })
 
-  output$tbl_cmp_trees <- renderReactable({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
-    if (nrow(x) == 0L)
-      return(apter_reactable(data.frame(Message = "No tree changed its cutting pattern.")))
-    x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
-    apter_reactable(data.frame(
-      Plot = x$plot_id_github, Tree = x$treid, Species = x$species_group,
-      Logs_default = x$n_logs_default, Logs_scenario = x$n_logs_scenario,
-      Value_default_NOK = round(x$value_default, 2),
-      Value_scenario_NOK = round(x$value_scenario, 2),
-      Gain_at_scenario_prices = round(x$gain_at_scenario, 2),
-      Gain_at_default_prices  = round(x$gain_at_default, 2),
-      Max_volume_diff_m3 = round(x$max_volume_diff_m3, 4),
-      stringsAsFactors = FALSE))
+  # Heights from reference curves (tree lists): shown above all results.
+  output$height_banner <- renderUI({
+    if (!has_result() || !identical(result()$tree_source, "tree_list")) return(NULL)
+    w <- result()$height_warnings
+    w <- w[grepl("FinnHoyde", w, fixed = TRUE)]
+    if (length(w) == 0L) return(NULL)
+    div(class = "height-notice", tags$strong("Heights: "),
+        tagList(lapply(w, function(x) div(x))))
   })
 
-  output$cmp_tree_ui <- renderUI({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    x <- cmp_trees()
-    x <- x[order(!x$changed, -abs(x$value_scenario - x$value_default)), , drop = FALSE]
-    lbl <- sprintf("%s / %s (%s%s)", x$plot_id_github, x$treid, x$species_group,
-                   ifelse(x$changed, sprintf(", %+.1f NOK", x$value_scenario - x$value_default),
-                          ", unchanged"))
-    selectInput("cmp_tree", "Tree (changed trees first, largest value change first)",
-                choices = setNames(paste(x$plot_id_github, x$treid, sep = "|"), lbl),
-                width = "100%")
-  })
 
-  output$stem_compare <- renderPlot(res = 96, {
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()),
-        !is.null(input$cmp_tree))
-    k  <- input$cmp_tree
-    tk <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
-    l1 <- result()$selected_logs_all;   l1 <- l1[tk(l1) == k, , drop = FALSE]
-    l2 <- result_s2()$selected_logs_all; l2 <- l2[tk(l2) == k, , drop = FALSE]
-    ts <- result()$tree_summary; tr <- ts[tk(ts) == k, , drop = FALSE]
-    req(nrow(tr) == 1L)
-    apter_stem_compare(l1, l2, tr$height_m,
-                       sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
-                               tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
-  })
-
-  output$tbl_cmp_products <- renderReactable(apter_reactable(local({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    r1 <- result(); r2 <- result_s2()
-    ps1 <- r1$product_summary[, c("ProductKey", "ProductType",
-                                   "total_value_nok", "total_volume_m3")]
-    ps2 <- r2$product_summary[, c("ProductKey", "total_value_nok", "total_volume_m3")]
-    names(ps2)[2:3] <- c("S2_val", "S2_vol")
-    m <- merge(ps1, ps2, by = "ProductKey", all = TRUE)
-    m[is.na(m)] <- 0
-    pct <- function(a, b) ifelse(abs(b) > 1e-9, round((a - b) / abs(b) * 100, 2), 0)
-    # Share of the scenario's total commercial volume under bark, per product.
-    share <- function(r, keys) {
-      sl  <- r$selected_logs_all
-      tot <- sum(sl$commercial_volume_m3, na.rm = TRUE)
-      vapply(keys, function(k)
-        if (tot > 0) sum(sl$commercial_volume_m3[sl$ProductKey == k]) / tot else 0,
-        numeric(1), USE.NAMES = FALSE)
-    }
-    data.frame(
-      ProductKey   = m$ProductKey,
-      ProductType  = m$ProductType,
-      S1_value     = round(m$total_value_nok, 2),
-      S2_value     = round(m$S2_val, 2),
-      Delta_value  = round(m$S2_val - m$total_value_nok, 2),
-      Delta_val_pct = pct(m$S2_val, m$total_value_nok),
-      S1_volume    = round(m$total_volume_m3, 4),
-      S2_volume    = round(m$S2_vol, 4),
-      Delta_volume = round(m$S2_vol - m$total_volume_m3, 4),
-      Delta_vol_pct = pct(m$S2_vol, m$total_volume_m3),
-      S1_vol_share_pct = round(100 * share(r1, m$ProductKey), 1),
-      S2_vol_share_pct = round(100 * share(r2, m$ProductKey), 1),
-      stringsAsFactors = FALSE
-    )
-  })))
-
-  output$bar_cmp_value <- renderPlot(res = 96, {
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    ps1 <- result()$product_summary
-    ps2 <- result_s2()$product_summary
-    keys <- union(ps1$ProductKey, ps2$ProductKey)
-    v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
-    v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
-    ch  <- APTER_CHART
-    old <- apter_par(); on.exit(par(old))
-    m   <- rbind(S1 = v1, S2 = v2); colnames(m) <- gsub("_", "\n", keys)
-    bp  <- barplot(m, beside = TRUE, col = NA, border = NA, axes = FALSE,
-                   ylim = c(0, max(m, 0) * 1.15), las = 1, cex.names = 0.8,
-                   padj = 0.6, space = c(0, 0.9),
-                   main = "Value by product: default vs scenario", ylab = "NOK")
-    abline(h = axTicks(2), col = ch$grid, lwd = 0.7)
-    barplot(m, beside = TRUE, col = c(ch$series1, ch$series2),
-            border = ch$surface, lwd = 2, axes = FALSE, add = TRUE,
-            space = c(0, 0.9), names.arg = rep("", ncol(m)))
-    axis(2, at = axTicks(2), col = NA, col.ticks = NA,
-         labels = format(axTicks(2), big.mark = ",", scientific = FALSE, trim = TRUE))
-    abline(h = 0, col = ch$baseline)
-    legend("topright", c("Default", "Scenario"), fill = c(ch$series1, ch$series2),
-           border = NA, bty = "n", text.col = ch$ink, cex = 0.85)
-  })
-
-  output$bar_cmp_delta <- renderPlot(res = 96, {
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    ps1 <- result()$product_summary
-    ps2 <- result_s2()$product_summary
-    keys <- union(ps1$ProductKey, ps2$ProductKey)
-    v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
-    v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
-    delta <- setNames(v2 - v1, keys)
-    # Sign is carried by bar direction from the zero baseline and the signed
-    # label, so one neutral colour is used (no colour-only meaning).
-    apter_barplot(delta, col = APTER_CHART$neutral,
-                  main = "Value change (scenario \u2212 default) by product", ylab = "NOK",
-                  fmt = function(v) {
-                    s <- format(round(v), big.mark = ",", scientific = FALSE, trim = TRUE)
-                    ifelse(v > 0, paste0("+", s), s)
-                  })
-  })
-
-  output$tbl_cmp_diag <- renderReactable(apter_reactable(local({
-    req(isTRUE(input$compare_on), !is.null(result()), !is.null(result_s2()))
-    r1 <- result(); r2 <- result_s2()
-    pm <- identical(r1$sampled_plot_ids, r2$sampled_plot_ids)
-    data.frame(
-      Item  = c("Same sampled plots", "S1 price FAILs", "S2 price FAILs",
-                "S1 unpriced groups", "S2 unpriced groups",
-                "S1 runtime s", "S2 runtime s"),
-      Value = c(as.character(pm),
-                sum(r1$price_validation_checks$result == "FAIL"),
-                sum(r2$price_validation_checks$result == "FAIL"),
-                nrow(r1$unpriced_summary), nrow(r2$unpriced_summary),
-                round(r1$elapsed_seconds, 1), round(r2$elapsed_seconds, 1)),
-      stringsAsFactors = FALSE
-    )
-  })))
-
-  # ---- Tab 1: Summary -------------------------------------------------------
+  # ---- Summary ----------------------------------------------------------------
+  fmt_int <- function(x) format(round(x), big.mark = ",", scientific = FALSE, trim = TRUE)
   output$summary_cards <- renderUI({
-    r <- result(); req(!is.null(r))
-    total_val <- sum(r$selected_logs_all$value_nok,       na.rm = TRUE)
-    total_vol <- sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE)
-    pct_logs  <- if (r$n_trees_total > 0)
-      round(100 * r$n_trees_with_logs / r$n_trees_total) else 0L
+    if (input$run_btn == 0L) return(div(class = "note-muted", "No run yet."))
+    req(has_result()); r <- result()
     tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-
     ro_field_row(
-      ro_field("Plots sampled",     r$n_plots_sampled),
-      ro_field("Trees (filtered)",  r$n_trees_total),
-      ro_field("Trees with logs",   sprintf("%d (%d%%)", r$n_trees_with_logs, pct_logs)),
-      ro_field("Selected logs",     nrow(r$selected_logs_all)),
-      ro_field("NOK per m\u00b3 (commercial, under bark)",
-               if (is.na(tot$nok_per_m3)) "\u2013" else
-                 format(round(tot$nok_per_m3, 1), nsmall = 1)),
-      ro_field("Total value (NOK)", format(round(total_val, 0), big.mark = ",",
-                                           scientific = FALSE)),
-      ro_field("Commercial volume u.b. (m\u00b3)", round(tot$commercial_volume_m3, 2)),
-      ro_field("Price volume (m\u00b3)", round(total_vol, 2)),
-      ro_field("Runtime",           sprintf("%.1f s", r$elapsed_seconds))
+      ro_field("Run time", sprintf("%.1f s", r$elapsed_seconds)),
+      ro_field("Plots", r$n_plots_sampled),
+      ro_field("Trees", r$n_trees_total),
+      ro_field("Trees with logs", r$n_trees_with_logs),
+      ro_field("Logs", nrow(r$selected_logs_all)),
+      ro_field("Commercial volume (m³ u.b.)", format(round(tot$commercial_volume_m3, 2), nsmall = 2)),
+      ro_field("Total value (NOK)", fmt_int(sum(r$selected_logs_all$value_nok, na.rm = TRUE))),
+      ro_field("NOK per m³",
+               if (is.na(tot$nok_per_m3)) "–" else format(round(tot$nok_per_m3, 1), nsmall = 1)),
+      ro_field("Price volume (m³)",
+               format(round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 2), nsmall = 2))
     )
   })
 
-  output$summary_detail <- renderUI({
-    r <- result(); req(!is.null(r))
-    n_zero <- nrow(r$zero_log_trees)
-    n_unpr <- nrow(r$unpriced_summary)
-    tagList(
-      div(class = "stat-strip",
-          if (identical(r$tree_source, "tree_list"))
-            sprintf("Trees outside taperNOR's range (excluded): %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
-                    nrow(r$excluded_trees), n_zero, n_unpr)
-          else
-            sprintf("Plots matching the selection: %d  |  Zero-log trees: %d  |  Unpriced-candidate groups: %d",
-                    r$n_eligible_plots, n_zero, n_unpr)),
-      div(class = "stat-strip", or_default(r$label, RESULTS_LABEL))
-    )
-  })
 
-  # ---- Tab 2: Products ------------------------------------------------------
-  output$tbl_products <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    r$product_summary
-  }), digits = 3))
-
-  output$bar_value_by_product <- renderPlot(res = 96, {
-    r <- result(); req(!is.null(r))
-    ps <- r$product_summary
-    req(nrow(ps) > 0L)
-    vals <- setNames(ps$total_value_nok, ps$ProductKey)
-    apter_barplot(vals, col = APTER_CHART$series1,
-                  main = "Total value (NOK) by product", ylab = "NOK",
-                  fmt = function(v) format(round(v), big.mark = ",",
-                                           scientific = FALSE, trim = TRUE))
-  })
-
-  output$bar_volume_by_product <- renderPlot(res = 96, {
-    r <- result(); req(!is.null(r))
-    ps <- r$product_summary
-    req(nrow(ps) > 0L)
-    vols <- setNames(ps$total_volume_m3, ps$ProductKey)
-    apter_barplot(vols, col = APTER_CHART$series1,
-                  main = "Total volume (m\u00b3) by product", ylab = "m\u00b3",
-                  fmt = function(v) format(round(v, 2), nsmall = 2, trim = TRUE))
-  })
-
-  # ---- Per m3 tab --------------------------------------------------------------
+  # ---- Per m3 -----------------------------------------------------------------
   output$tbl_per_m3 <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    s <- r$per_m3_summary
+    req(has_result()); s <- result()$per_m3_summary
     data.frame(Scope = s$scope, Trees = s$n_trees,
                Value_NOK = round(s$value_nok, 2),
                Commercial_volume_ub_m3 = round(s$commercial_volume_m3, 4),
@@ -621,8 +731,7 @@ server <- function(input, output, session) {
   })))
 
   output$tbl_per_m3_assortment <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    a <- r$per_m3_by_assortment
+    req(has_result()); a <- result()$per_m3_by_assortment
     data.frame(Scope = a$scope, Assortment = a$assortment,
                Value_NOK = round(a$value_nok, 2),
                Commercial_volume_ub_m3 = round(a$commercial_volume_m3, 4),
@@ -631,23 +740,21 @@ server <- function(input, output, session) {
                check.names = FALSE, stringsAsFactors = FALSE)
   })))
 
+  total_by_assortment <- function() {
+    a <- result()$per_m3_by_assortment
+    a[a$scope == "Total", , drop = FALSE]
+  }
   output$bar_per_m3_contribution <- renderPlot(res = 96, {
-    r <- result(); req(!is.null(r))
-    a <- r$per_m3_by_assortment
-    a <- a[a$scope == "Total", , drop = FALSE]
-    req(nrow(a) > 0L)
+    req(has_result()); a <- total_by_assortment(); req(nrow(a) > 0L)
     apter_barplot(setNames(a$nok_per_m3_contribution, a$assortment),
                   col = APTER_CHART$series1,
-                  main = "NOK per m\u00b3 by assortment (contribution)",
-                  ylab = "NOK / m\u00b3",
+                  main = "NOK per m³ by assortment (contribution)",
+                  ylab = "NOK / m³",
                   fmt = function(v) format(round(v, 1), nsmall = 1, trim = TRUE))
   })
 
   output$bar_volume_share <- renderPlot(res = 96, {
-    r <- result(); req(!is.null(r))
-    a <- r$per_m3_by_assortment
-    a <- a[a$scope == "Total", , drop = FALSE]
-    req(nrow(a) > 0L)
+    req(has_result()); a <- total_by_assortment(); req(nrow(a) > 0L)
     apter_barplot(setNames(100 * a$volume_share, a$assortment),
                   col = APTER_CHART$series1,
                   main = "Share of commercial volume by assortment",
@@ -657,7 +764,7 @@ server <- function(input, output, session) {
 
   # Tree detail on demand: one row per tree, its logs in the row details.
   output$tbl_trees <- renderReactable({
-    r <- result(); req(!is.null(r))
+    req(has_result()); r <- result()
     ts <- r$tree_summary
     tr <- data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
                      Species = ts$species_group, DBH_cm = ts$dbh_cm,
@@ -683,466 +790,203 @@ server <- function(input, output, session) {
     })
   })
 
-  # ---- Tab 4: Diagnostics ---------------------------------------------------
-  output$tbl_stage_timings <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    st <- r$diagnostics$stage_timings
-    req(is.data.frame(st))
-    # Exclude "total" row; sort by elapsed descending.
-    st2 <- st[st$stage != "total", ]
-    st2 <- st2[order(st2$elapsed_seconds, decreasing = TRUE), ]
-    pct <- round(100 * st2$elapsed_seconds /
-                   r$diagnostics$elapsed_seconds)
-    data.frame(Stage      = st2$stage,
-               Seconds    = round(st2$elapsed_seconds, 2),
-               `Pct total`= paste0(pct, "%"),
-               check.names = FALSE, stringsAsFactors = FALSE)
-  })))
 
-  output$tbl_diag <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    diag <- r$diagnostics
-    # Drop stage_timings (shown separately) and elapsed_seconds (in status bar).
-    skip <- c("stage_timings", "elapsed_seconds")
-    diag <- diag[!names(diag) %in% skip]
-    vals <- vapply(diag, function(x) paste(x, collapse = "; "), character(1))
-    data.frame(Parameter = names(vals), Value = unname(vals),
-               stringsAsFactors = FALSE)
-  })))
+  # ---- Products -----------------------------------------------------------------
+  output$tbl_products <- renderReactable(apter_reactable(local({
+    req(has_result()); result()$product_summary
+  }), digits = 3))
 
-  output$tbl_price_val <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    r$price_validation_checks
-  })))
-
-  output$tbl_excluded <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    ex <- r$excluded_trees
-    if (is.null(ex))
-      data.frame(Message = "NFI sample: trees below 5 cm dbh or 4.5 m height are filtered before sampling.",
-                 stringsAsFactors = FALSE)
-    else if (nrow(ex) == 0L)
-      data.frame(Message = "All uploaded trees are within taperNOR's range.", stringsAsFactors = FALSE)
-    else data.frame(Plot = ex$plot_id_github, Tree = ex$treid, Species = ex$species_group,
-                    DBH_cm = ex$dbh_cm, Height_m = round(ex$height_m, 1),
-                    Height_source = ex$height_source, Reason = ex$excluded_reason,
-                    stringsAsFactors = FALSE)
-  })))
-
-  output$tbl_zero_logs <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    zl <- r$zero_log_trees
-    if (nrow(zl) == 0L)
-      data.frame(Message = "No zero-log trees in this sample.",
-                 stringsAsFactors = FALSE)
-    else zl
-  })))
-
-  # ---- Tab 5: Selected logs -------------------------------------------------
-  output$selected_logs_header <- renderUI({
-    r <- result(); req(!is.null(r))
-    n_total <- nrow(r$selected_logs_all)
-    div(class = "stat-strip",
-        if (n_total == 0L) "No selected logs."
-        else sprintf("Total selected logs: %d", n_total))
+  output$bar_value_by_product <- renderPlot(res = 96, {
+    req(has_result()); ps <- result()$product_summary; req(nrow(ps) > 0L)
+    apter_barplot(setNames(ps$total_value_nok, ps$ProductKey), col = APTER_CHART$series1,
+                  main = "Total value (NOK) by product", ylab = "NOK", fmt = fmt_int)
   })
 
+  output$bar_volume_by_product <- renderPlot(res = 96, {
+    req(has_result()); ps <- result()$product_summary; req(nrow(ps) > 0L)
+    apter_barplot(setNames(ps$total_volume_m3, ps$ProductKey), col = APTER_CHART$series1,
+                  main = "Total volume (m³) by product", ylab = "m³",
+                  fmt = function(v) format(round(v, 2), nsmall = 2, trim = TRUE))
+  })
+
+
+  # ---- Selected logs ------------------------------------------------------------
   output$tbl_selected_logs <- renderReactable(apter_reactable(local({
-    r <- result(); req(!is.null(r))
-    sl <- r$selected_logs_all
+    req(has_result()); sl <- result()$selected_logs_all
     if (nrow(sl) == 0L)
       return(data.frame(Message = "No selected logs.", stringsAsFactors = FALSE))
     sl
   }), digits = 3))
 
-  # ---- Prices and assortments tab ------------------------------------------
-  output$tbl_ref_products <- renderReactable(apter_reactable(local({
-    APP_PRODUCTS
+
+  # ---- Price matrix comparison (A vs B) ------------------------------------------
+  # Per-tree pattern comparison (R/helpers_comparison.R).
+  cmp_trees <- reactive({
+    r1 <- result(); r2 <- result_b()
+    compare_cutting_patterns(r1, r2, r1$price_matrix, r2$price_matrix)
+  })
+
+  output$tbl_cmp_overview <- renderReactable(apter_reactable(local({
+    r1 <- result(); r2 <- result_b()
+    mk <- function(r, nm) {
+      tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
+      data.frame(Price_set = nm, Plots = r$n_plots_sampled, Trees = r$n_trees_total,
+                 Trees_w_logs = r$n_trees_with_logs,
+                 Value_NOK = round(sum(r$selected_logs_all$value_nok, na.rm = TRUE), 2),
+                 Price_volume_m3 = round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 4),
+                 Commercial_m3_ub = round(tot$commercial_volume_m3, 4),
+                 NOK_per_m3 = round(tot$nok_per_m3, 1),
+                 stringsAsFactors = FALSE)
+    }
+    rbind(mk(r1, "A"), mk(r2, "B"))
   })))
 
-  output$tbl_ref_lc <- renderReactable(apter_reactable(local({
-    lc <- APP_LC
-    # flag rows where the length class is NOT priced in default matrix
-    sup_dm <- get_supported_sawlog_lengths(APP_PRICE_LONG)$LengthClass_dm
-    lc$Note <- ifelse(
-      grepl("sawlog", lc$ProductKey, ignore.case = TRUE) &
-        !is.na(lc$LogLength_dm) & !(lc$LogLength_dm %in% sup_dm),
-      "not priced in default 2021 matrix", "")
-    lc
+  output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
+    r1 <- result(); r2 <- result_b()
+    v1 <- sum(r1$selected_logs_all$value_nok, na.rm = TRUE)
+    v2 <- sum(r2$selected_logs_all$value_nok, na.rm = TRUE)
+    m1 <- sum(r1$selected_logs_all$price_volume_m3, na.rm = TRUE)
+    m2 <- sum(r2$selected_logs_all$price_volume_m3, na.rm = TRUE)
+    t1 <- r1$per_m3_summary[r1$per_m3_summary$scope == "Total", ]
+    t2 <- r2$per_m3_summary[r2$per_m3_summary$scope == "Total", ]
+    pct <- function(a, b) if (abs(b) > 1e-9) round((a - b) / abs(b) * 100, 2) else 0
+    data.frame(
+      Delta_value_NOK      = round(v2 - v1, 2),
+      Delta_value_pct      = pct(v2, v1),
+      Delta_volume_m3      = round(m2 - m1, 4),
+      Delta_volume_pct     = pct(m2, m1),
+      Delta_commercial_m3  = round(t2$commercial_volume_m3 - t1$commercial_volume_m3, 4),
+      Delta_NOK_per_m3     = round(t2$nok_per_m3 - t1$nok_per_m3, 1),
+      Delta_NOK_per_m3_pct = pct(t2$nok_per_m3, t1$nok_per_m3),
+      Trees_changed        = sum(cmp_trees()$changed),
+      stringsAsFactors = FALSE)
   })))
 
-  # ---- Price-matrix editor (R/helpers_price_matrix.R) ---------------------------
-  # Two price sets: default_pm() (the 2021 default plus default-side prices
-  # of custom assortments; base prices read-only) and scenario_pm(). Each
-  # holds prices for the products of its own run only.
-  default_pm  <- reactiveVal(APP_PM_DEFAULT)
-  scenario_pm <- reactiveVal(APP_PM_DEFAULT)
-  custom_defs <- reactiveVal(empty_assortment_defs())   # Phase 4b assortments
-  custom_keys <- reactive(assortment_keys(custom_defs()))
-  pm_tick     <- reactiveVal(0L)     # re-render the grids
-  pm_msg      <- reactiveVal(NULL)   # last upload / reset / edit message
-  asm_msg     <- reactiveVal(NULL)   # last assortment add / edit / upload message
+  output$tbl_cmp_per_m3 <- renderReactable(apter_reactable(local({
+    x <- compare_per_m3(result(), result_b())
+    data.frame(Scope = x$scope, Assortment = x$assortment,
+               NOK_per_m3_A = round(x$nok_per_m3_default, 1),
+               NOK_per_m3_B = round(x$nok_per_m3_scenario, 1),
+               Delta_NOK_per_m3 = round(x$delta_nok_per_m3, 1),
+               Share_pct_A = round(100 * x$volume_share_default, 1),
+               Share_pct_B = round(100 * x$volume_share_scenario, 1),
+               Delta_share_pp = round(100 * x$delta_volume_share, 1),
+               stringsAsFactors = FALSE)
+  }), page_size = 12L))
 
-  # Everything that changes a run; a run stores it to detect stale results.
-  pm_state <- reactive(list(custom_defs(), default_pm(), scenario_pm()))
+  output$cmp_patterns <- renderUI({
+    x <- cmp_trees()
+    div(class = "stat-strip",
+        tags$strong(sprintf("%d of %d trees changed their cutting pattern", sum(x$changed), nrow(x))),
+        if (sum(x$tie_only) > 0L)
+          sprintf(" (%d more differ only by equal-value ties)", sum(x$tie_only)))
+  })
 
-  # Products, length classes and prices of one run (base + custom by UseIn).
-  run_inputs <- function(run) {
-    p  <- products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), run)
-    pm <- pm_minimal(if (run == "default") default_pm() else scenario_pm())
-    list(pd = p$pd, lc = p$lc, pm = pm[pm$ProductKey %in% p$pd$ProductKey, , drop = FALSE],
-         custom = nrow(p$pd) > nrow(APP_PRODUCTS))
+  output$tbl_cmp_trees <- renderReactable({
+    x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
+    if (nrow(x) == 0L)
+      return(apter_reactable(data.frame(Message = "No tree changed its cutting pattern.")))
+    x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
+    apter_reactable(data.frame(
+      Plot = x$plot_id_github, Tree = x$treid, Species = x$species_group,
+      Logs_A = x$n_logs_default, Logs_B = x$n_logs_scenario,
+      Value_A_NOK = round(x$value_default, 2),
+      Value_B_NOK = round(x$value_scenario, 2),
+      Gain_at_B_prices = round(x$gain_at_scenario, 2),
+      Gain_at_A_prices = round(x$gain_at_default, 2),
+      Max_volume_diff_m3 = round(x$max_volume_diff_m3, 4),
+      stringsAsFactors = FALSE))
+  })
+
+  output$cmp_tree_ui <- renderUI({
+    x <- cmp_trees()
+    x <- x[order(!x$changed, -abs(x$value_scenario - x$value_default)), , drop = FALSE]
+    lbl <- sprintf("%s / %s (%s%s)", x$plot_id_github, x$treid, x$species_group,
+                   ifelse(x$changed, sprintf(", %+.1f NOK", x$value_scenario - x$value_default),
+                          ", unchanged"))
+    selectInput("cmp_tree", "Tree (changed trees first, largest value change first)",
+                choices = setNames(paste(x$plot_id_github, x$treid, sep = "|"), lbl),
+                width = "100%")
+  })
+
+  output$stem_compare <- renderPlot(res = 96, {
+    req(!is.null(input$cmp_tree))
+    k  <- input$cmp_tree
+    tk <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
+    l1 <- result()$selected_logs_all;   l1 <- l1[tk(l1) == k, , drop = FALSE]
+    l2 <- result_b()$selected_logs_all; l2 <- l2[tk(l2) == k, , drop = FALSE]
+    ts <- result()$tree_summary; tr <- ts[tk(ts) == k, , drop = FALSE]
+    req(nrow(tr) == 1L)
+    apter_stem_compare(l1, l2, tr$height_m,
+                       sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
+                               tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
+  })
+
+  product_values <- function() {
+    ps1 <- result()$product_summary; ps2 <- result_b()$product_summary
+    keys <- union(ps1$ProductKey, ps2$ProductKey)
+    v1 <- ps1$total_value_nok[match(keys, ps1$ProductKey)]; v1[is.na(v1)] <- 0
+    v2 <- ps2$total_value_nok[match(keys, ps2$ProductKey)]; v2[is.na(v2)] <- 0
+    list(keys = keys, a = v1, b = v2)
   }
-  # Drop prices of products not in the run (e.g. after a flat reset).
-  keep_run_keys <- function(pm, run)
-    pm[pm$ProductKey %in% products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), run)$pd$ProductKey,
-       , drop = FALSE]
-  pm_has <- function(pm, id) if (identical(id, PM_FLAT_ID)) any(is.na(pm$LengthClass_dm))
-                             else id %in% pm$ProductKey[!is.na(pm$LengthClass_dm)]
 
-  # Matrix choices follow the custom assortments (initial choices: setup.R).
-  pm_ids <- reactive({
-    ids <- unique(c(pm_matrix_ids(default_pm()), pm_matrix_ids(scenario_pm())))
-    c(setdiff(ids, PM_FLAT_ID), PM_FLAT_ID)
-  })
-  observeEvent(pm_ids(), {
-    ids <- pm_ids(); sel <- isolate(input$pm_id)
-    updateSelectInput(session, "pm_id",
-                      choices = setNames(ids, vapply(ids, pm_matrix_label, character(1))),
-                      selected = if (isTRUE(sel %in% ids)) sel else ids[1L])
-  }, ignoreInit = TRUE)
-
-  pm_widget <- function(grid, id, read_only, renderer, def = NULL, interp = NULL) {
-    w <- rhandsontable(grid, rowHeaders = rownames(grid), readOnly = read_only,
-                       height = 560, stretchH = "all", matrix_id = id,
-                       def = def, interp = interp)
-    w <- hot_cols(w, renderer = renderer, columnSorting = FALSE)
-    w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
-    if (!read_only) w <- hot_validate_numeric(w, cols = seq_len(ncol(grid)), min = 0)
-    w
-  }
-
-  # Default grid: base prices read-only; custom assortments' rows editable.
-  output$pm_default <- renderRHandsontable({
-    pm_tick(); id <- input$pm_id; req(id)
-    dpm <- isolate(default_pm()); req(pm_has(dpm, id))
-    g  <- pm_to_grid(dpm, id)
-    interp <- if (identical(id, PM_FLAT_ID))
-      matrix(FALSE, nrow(g), ncol(g)) else
-      outer(rownames(g), colnames(g), function(d, l)
-        paste(id, l, d) %in% APP_PM_INTERP_KEYS)
-    custom <- if (identical(id, PM_FLAT_ID)) rownames(g) %in% custom_keys()
-              else rep(id %in% custom_keys(), nrow(g))
-    w <- pm_widget(g, id, !any(custom), PM_INTERP_RENDERER, interp = unname(interp))
-    if (any(custom)) for (i in which(!custom)) w <- hot_row(w, i, readOnly = TRUE)
-    w
-  })
-  output$pm_default_note <- renderUI({
-    id <- input$pm_id; req(id)
-    if (!pm_has(default_pm(), id))
-      div(class = "note-muted", "Not used in the default run.")
-    else if (id %in% custom_keys() || (identical(id, PM_FLAT_ID) &&
-                                       any(custom_keys() %in% default_pm()$ProductKey)))
-      div(class = "note-muted", "Custom assortment prices are editable here.")
-  })
-
-  output$pm_scenario <- renderRHandsontable({
-    pm_tick(); id <- input$pm_id; req(id)
-    spm <- isolate(scenario_pm()); req(pm_has(spm, id))
-    pm_widget(pm_to_grid(spm, id), id, FALSE, PM_DIFF_RENDERER,
-              def = unname(pm_default_aligned(default_pm(), spm, id)))
-  })
-  output$pm_scenario_note <- renderUI({
-    id <- input$pm_id; req(id)
-    if (!pm_has(scenario_pm(), id)) div(class = "note-muted", "Not used in the scenario run.")
-  })
-
-  # Edits in a grid. The matrix id travels with the widget, so a stale grid
-  # from the previously shown matrix is never written elsewhere. In the
-  # default grid only custom assortments' prices change.
-  apply_grid_edit <- function(x, pmv, only_keys = NULL) {
-    if (is.null(x$changes$changes)) return()            # load, not an edit
-    id <- or_default(x$params$matrix_id, isolate(input$pm_id))
-    g  <- hot_to_r(x)
-    ref <- pm_to_grid(isolate(pmv()), id)
-    if (!identical(dim(g), dim(ref))) return()
-    rownames(g) <- rownames(ref); colnames(g) <- colnames(ref)
-    if (any(as.matrix(g) < 0, na.rm = TRUE)) {
-      pm_msg(list(type = "error", text = "Negative prices are not allowed; the edit was undone."))
-      pm_tick(pm_tick() + 1L)
-      return()
+  output$tbl_cmp_products <- renderReactable(apter_reactable(local({
+    r1 <- result(); r2 <- result_b()
+    ps1 <- r1$product_summary[, c("ProductKey", "ProductType", "total_value_nok", "total_volume_m3")]
+    ps2 <- r2$product_summary[, c("ProductKey", "ProductType", "total_value_nok", "total_volume_m3")]
+    names(ps2)[2:4] <- c("type_b", "B_val", "B_vol")
+    m <- merge(ps1, ps2, by = "ProductKey", all = TRUE)
+    m$ProductType[is.na(m$ProductType)] <- m$type_b[is.na(m$ProductType)]
+    for (n in c("total_value_nok", "total_volume_m3", "B_val", "B_vol")) m[[n]][is.na(m[[n]])] <- 0
+    pct <- function(a, b) ifelse(abs(b) > 1e-9, round((a - b) / abs(b) * 100, 2), 0)
+    # Share of the run's total commercial volume under bark, per product.
+    share <- function(r, keys) {
+      sl  <- r$selected_logs_all
+      tot <- sum(sl$commercial_volume_m3, na.rm = TRUE)
+      vapply(keys, function(k)
+        if (tot > 0) sum(sl$commercial_volume_m3[sl$ProductKey == k]) / tot else 0,
+        numeric(1), USE.NAMES = FALSE)
     }
-    if (!is.null(only_keys) && identical(id, PM_FLAT_ID)) {
-      fixed <- !rownames(g) %in% only_keys
-      g[fixed, ] <- ref[fixed, ]
-    } else if (!is.null(only_keys) && !id %in% only_keys) return()
-    pmv(pm_from_grid(g, id, isolate(pmv())))
-  }
-  observeEvent(input$pm_scenario, apply_grid_edit(input$pm_scenario, scenario_pm))
-  observeEvent(input$pm_default,
-               apply_grid_edit(input$pm_default, default_pm, only_keys = isolate(custom_keys())))
-
-  observeEvent(input$pm_reset, {
-    id <- input$pm_id
-    if (!pm_has(default_pm(), id) || !pm_has(scenario_pm(), id)) {
-      pm_msg(list(type = "error", text = sprintf(
-        "%s is priced in one run only; there is no default to reset to.", pm_matrix_label(id))))
-      return()
-    }
-    scenario_pm(keep_run_keys(pm_reset(scenario_pm(), default_pm(), id), "scenario"))
-    pm_tick(pm_tick() + 1L)
-    pm_msg(list(type = "ok", text = sprintf("%s reset to the default.", pm_matrix_label(id))))
-  })
-
-  observeEvent(input$pm_upload, {
-    f <- input$pm_upload; req(f)
-    p <- products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), "scenario")
-    res <- apply_price_upload(f$datapath, f$name, scenario_pm(), default_pm(), p$pd, p$lc)
-    if (isTRUE(res$ok)) {
-      scenario_pm(res$pm)
-      pm_tick(pm_tick() + 1L)
-      pm_msg(list(type = "ok", warnings = res$warnings, text = sprintf(
-        "Loaded %s (%s layout): replaced %s.", f$name, res$layout,
-        paste(vapply(res$ids, pm_matrix_label, character(1)), collapse = ", "))))
-    } else {
-      pm_msg(list(type = "error", text = paste(
-        c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
-    }
-  })
-
-  output$pm_status <- renderUI({
-    req(input$pm_id)
-    n_all <- pm_n_diff(default_pm(), scenario_pm())
-    n_now <- if (pm_has(default_pm(), input$pm_id) && pm_has(scenario_pm(), input$pm_id))
-      sum(pm_diff_mask(default_pm(), scenario_pm(), input$pm_id)) else 0L
-    div(class = "pm-status",
-        tags$strong(sprintf("%d cell(s) differ from the default", n_all)),
-        sprintf(" (%d in this matrix).", n_now))
-  })
-
-  msg_ui <- function(m) {
-    if (is.null(m)) return(NULL)
-    tagList(
-      div(class = if (identical(m$type, "error")) "pm-msg-error" else "pm-msg-ok", m$text),
-      if (length(m$warnings) > 0L)
-        div(class = "pm-msg-warn", paste("Warning:", m$warnings, collapse = "\n")))
-  }
-  output$pm_upload_msg <- renderUI(msg_ui(pm_msg()))
-
-  # Templates hold the scenario run's products, filled with default prices
-  # where there are any.
-  template_pm <- reactive({
-    keys <- products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), "scenario")$pd$ProductKey
-    d <- pm_minimal(default_pm()); s <- pm_minimal(scenario_pm())
-    d <- d[d$ProductKey %in% keys, , drop = FALSE]
-    pm_minimal(rbind(d, s[s$ProductKey %in% setdiff(keys, d$ProductKey), , drop = FALSE]))
-  })
-  output$dl_template_wide <- downloadHandler(
-    filename = function() "apter_price_template_wide.xlsx",
-    content  = function(file) pm_template_wide(template_pm(), file))
-  output$dl_template_long <- downloadHandler(
-    filename = function() "apter_price_template_long.csv",
-    content  = function(file) pm_template_long(template_pm(), file))
-  output$dl_scenario <- downloadHandler(
-    filename = function() "apter_scenario_prices.csv",
-    content  = function(file) pm_export(scenario_pm(), file))
-
-  output$scenario_sidebar <- renderUI({
-    n <- pm_n_diff(default_pm(), scenario_pm())
-    k <- nrow(custom_defs())
-    div(class = "note-muted",
-        sprintf("Scenario: %d price cell(s) differ from the default.", n),
-        if (k > 0L) tagList(br(), sprintf("%d custom assortment(s).", k)), br(),
-        actionLink("go_prices", "Edit scenario prices"))
-  })
-  observeEvent(input$go_prices, nav_select("main_nav", "Prices and assortments"))
-
-
-  # ---- Custom assortments (Phase 4b) ------------------------------------------
-  USE_IN_LABELS <- c(both = "Default and scenario", default = "Default only",
-                     scenario = "Scenario only")
-
-  output$tbl_assortments <- renderReactable(apter_reactable(local({
-    d <- custom_defs()
-    if (nrow(d) == 0L)
-      return(data.frame(Message = "No custom assortments. Add one, or upload an assortments file.",
-                        stringsAsFactors = FALSE))
-    rng <- function(lo, hi) sprintf("%s–%s", ifelse(is.na(lo), 0, lo),
-                                    ifelse(is.finite(hi), hi, "∞"))
-    data.frame(Name = d$Name, Class = d$Class, Species = d$Species,
-               `Top (cm)` = rng(d$MinTopDiameter_cm, d$MaxTopDiameter_cm),
-               `Butt (cm)` = rng(d$MinButtDiameter_cm, d$MaxButtDiameter_cm),
-               `Lengths (cm)` = d$AllowedLengths_cm, Priority = d$Priority,
-               `Under bark` = d$DiameterUnderBark,
-               `Dt below cut (cm)` = d$DiameterTopPosition_cm,
-               `Volume method` = d$VolumeDiameterCategory,
-               Rounding = d$VolumeDiameterAdjustment, Pricing = d$PriceType,
-               `Used in` = unname(USE_IN_LABELS[d$UseIn]),
-               check.names = FALSE, stringsAsFactors = FALSE)
+    data.frame(
+      ProductKey = m$ProductKey, ProductType = m$ProductType,
+      A_value = round(m$total_value_nok, 2), B_value = round(m$B_val, 2),
+      Delta_value = round(m$B_val - m$total_value_nok, 2),
+      Delta_val_pct = pct(m$B_val, m$total_value_nok),
+      A_volume = round(m$total_volume_m3, 4), B_volume = round(m$B_vol, 4),
+      Delta_volume = round(m$B_vol - m$total_volume_m3, 4),
+      Delta_vol_pct = pct(m$B_vol, m$total_volume_m3),
+      A_vol_share_pct = round(100 * share(r1, m$ProductKey), 1),
+      B_vol_share_pct = round(100 * share(r2, m$ProductKey), 1),
+      stringsAsFactors = FALSE)
   })))
 
-  observeEvent(custom_defs(), {
-    n <- custom_defs()$Name
-    updateSelectInput(session, "asm_pick", choices = n,
-                      selected = if (isTRUE(isolate(input$asm_pick) %in% n)) isolate(input$asm_pick) else n[1L])
+  output$bar_cmp_value <- renderPlot(res = 96, {
+    v <- product_values()
+    ch  <- APTER_CHART
+    old <- apter_par(); on.exit(par(old))
+    m   <- rbind(A = v$a, B = v$b); colnames(m) <- gsub("_", "\n", v$keys)
+    barplot(m, beside = TRUE, col = NA, border = NA, axes = FALSE,
+            ylim = c(0, max(m, 0) * 1.15), las = 1, cex.names = 0.8,
+            padj = 0.6, space = c(0, 0.9),
+            main = "Value by product: A and B", ylab = "NOK")
+    abline(h = axTicks(2), col = ch$grid, lwd = 0.7)
+    barplot(m, beside = TRUE, col = c(ch$series1, ch$series2),
+            border = ch$surface, lwd = 2, axes = FALSE, add = TRUE,
+            space = c(0, 0.9), names.arg = rep("", ncol(m)))
+    axis(2, at = axTicks(2), col = NA, col.ticks = NA,
+         labels = format(axTicks(2), big.mark = ",", scientific = FALSE, trim = TRUE))
+    abline(h = 0, col = ch$baseline)
+    legend("topright", c("A", "B"), fill = c(ch$series1, ch$series2),
+           border = NA, bty = "n", text.col = ch$ink, cex = 0.85)
   })
 
-  asm_editing  <- reactiveVal(NULL)   # Name of the assortment being edited; NULL = new
-  asm_form_err <- reactiveVal(NULL)
-  output$asm_form_msg <- renderUI({
-    e <- asm_form_err(); if (is.null(e)) return(NULL)
-    div(class = "pm-msg-error", paste(e, collapse = "\n"))
+  output$bar_cmp_delta <- renderPlot(res = 96, {
+    v <- product_values()
+    # Sign is carried by bar direction from the zero baseline and the signed
+    # label, so one neutral colour is used (no colour-only meaning).
+    apter_barplot(setNames(v$b - v$a, v$keys), col = APTER_CHART$neutral,
+                  main = "Value change (B − A) by product", ylab = "NOK",
+                  fmt = function(x) ifelse(x > 0, paste0("+", fmt_int(x)), fmt_int(x)))
   })
-
-  asm_modal <- function(d = NULL) {
-    v <- function(n, default) {
-      x <- if (is.null(d)) NULL else d[[n]]
-      if (is.null(x) || length(x) == 0L || is.na(x)) default else x
-    }
-    fin <- function(n) { x <- v(n, NA); if (is.finite(x)) x else NA }
-    modalDialog(
-      title = if (is.null(d)) "Add assortment" else paste("Edit", d$Name),
-      size = "l", easyClose = FALSE,
-      layout_columns(col_widths = c(6, 6),
-        textInput("asm_name", "Name", v("Name", "")),
-        textInput("asm_class", "Assortment class (groups species in the Total results)",
-                  v("Class", "")),
-        selectInput("asm_species", "Species",
-                    c("Spruce and pine" = "both", "Spruce" = "spruce", "Pine" = "pine"),
-                    v("Species", "both")),
-        selectInput("asm_use_in", "Used in", setNames(names(USE_IN_LABELS), USE_IN_LABELS),
-                    v("UseIn", "scenario")),
-        numericInput("asm_min_top", "Min top diameter (cm)", v("MinTopDiameter_cm", 0), min = 0),
-        numericInput("asm_max_top", "Max top diameter (cm; empty = none)", fin("MaxTopDiameter_cm"), min = 0),
-        numericInput("asm_min_butt", "Min butt diameter (cm)", v("MinButtDiameter_cm", 0), min = 0),
-        numericInput("asm_max_butt", "Max butt diameter (cm; empty = none)", fin("MaxButtDiameter_cm"), min = 0),
-        textInput("asm_lengths", "Allowed lengths (cm, e.g. 400;430;460)", v("AllowedLengths_cm", "")),
-        numericInput("asm_priority", "Priority in ties (1 = highest; sawlog 1, pulpwood 2)",
-                     v("Priority", 1)),
-        selectInput("asm_method", "Price-volume method", VOLUME_METHODS,
-                    v("VolumeDiameterCategory", "Top cylinder")),
-        selectInput("asm_adjust", "Top diameter for volume",
-                    c("As measured" = "None", "Rounded down to whole cm" = VOLUME_ROUND_DOWN_CM),
-                    v("VolumeDiameterAdjustment", "None")),
-        numericInput("asm_dtp", "Top diameter measured (cm below the cut; Norwegian rule: 10)",
-                     v("DiameterTopPosition_cm", 0), min = 0, step = 10),
-        checkboxInput("asm_ub", "Diameters under bark", v("DiameterUnderBark", TRUE)),
-        radioButtons("asm_price_type", "Pricing",
-                     c("Grid (length × diameter class)" = "matrix", "Flat price" = "flat"),
-                     v("PriceType", "matrix")),
-        numericInput("asm_price", "Starting price for new cells (NOK/m³)", 500, min = 0),
-        numericInput("asm_max_class",
-                     "Largest diameter class (cm; grid without a max top diameter)", NA, min = 1)
-      ),
-      div(class = "note-muted",
-          if (is.null(d)) "A new assortment starts at the starting price in every cell; edit the prices in the price matrices."
-          else paste("Saving keeps the default and scenario prices of every cell that still exists",
-                     "(same species, diameter class and length; a flat price stays if pricing stays flat).",
-                     "New cells get the starting price; cells no longer in the grid are dropped."),
-          " The largest diameter class of a grid is its price cap: larger logs are priced at it."),
-      uiOutput("asm_form_msg"),
-      footer = tagList(modalButton("Cancel"),
-                       actionButton("asm_save", "Save", class = "btn-primary")))
-  }
-
-  observeEvent(input$asm_add, {
-    asm_editing(NULL); asm_form_err(NULL); showModal(asm_modal())
-  })
-  observeEvent(input$asm_edit, {
-    d <- custom_defs(); i <- match(input$asm_pick, d$Name); req(!is.na(i))
-    asm_editing(d$Name[i]); asm_form_err(NULL); showModal(asm_modal(d[i, , drop = FALSE]))
-  })
-
-  # Replace the prices of `drop` keys; add `new` rows where the run uses them.
-  replace_prices <- function(pm, drop, new, use_in, run) {
-    m <- pm_minimal(pm); m <- m[!m$ProductKey %in% drop, , drop = FALSE]
-    if (!is.null(new) && use_in %in% c("both", run)) m <- pm_minimal(rbind(m, new))
-    m
-  }
-
-  observeEvent(input$asm_save, {
-    num <- function(x) if (is.null(x) || length(x) == 0L || is.na(x)) NA_real_ else as.numeric(x)
-    or  <- function(x, y) if (is.na(x)) y else x
-    na_if_blank <- function(x) { x <- trimws(or_default(x, "")); if (nzchar(x)) x else NA }
-    name <- trimws(or_default(input$asm_name, ""))
-    def <- .type_assortment_defs(data.frame(
-      Name = name, Class = or(na_if_blank(input$asm_class), assortment_slug(name)),
-      Species = input$asm_species,
-      MinTopDiameter_cm = or(num(input$asm_min_top), 0),
-      MaxTopDiameter_cm = or(num(input$asm_max_top), Inf),
-      MinButtDiameter_cm = or(num(input$asm_min_butt), 0),
-      MaxButtDiameter_cm = or(num(input$asm_max_butt), Inf),
-      AllowedLengths_cm = input$asm_lengths, Priority = num(input$asm_priority),
-      DiameterUnderBark = isTRUE(input$asm_ub),
-      DiameterTopPosition_cm = or(num(input$asm_dtp), 0),
-      VolumeDiameterCategory = input$asm_method,
-      VolumeDiameterAdjustment = input$asm_adjust, PriceType = input$asm_price_type,
-      UseIn = input$asm_use_in, stringsAsFactors = FALSE))
-    old  <- custom_defs()
-    prev <- if (is.null(asm_editing())) old[0, , drop = FALSE]
-            else old[old$Name == asm_editing(), , drop = FALSE]
-    defs <- rbind(old[!old$Name %in% prev$Name, , drop = FALSE], def)
-    v <- validate_assortment_defs(defs, APP_PRODUCTS, APP_LC)
-    price <- num(input$asm_price)
-    errs <- c(v$errors, if (is.na(price) || price < 0) "Give a starting price of 0 NOK/m³ or more.")
-    new <- if (length(errs) == 0L)
-      tryCatch(pm_new_assortment_prices(def, price, num(input$asm_max_class)),
-               error = function(e) conditionMessage(e))
-    if (is.character(new)) errs <- c(errs, new)
-    if (length(errs) > 0L) { asm_form_err(errs); return() }
-
-    # An edit keeps the prices of cells that still exist, per run; new cells
-    # get the starting price and removed cells are dropped.
-    drop <- union(assortment_keys(prev), unique(new$ProductKey))
-    keep <- function(pm) if (nrow(prev) == 0L) new
-                         else pm_keep_assortment_prices(new, pm, prev, def)
-    new_d <- keep(default_pm()); new_s <- keep(scenario_pm())
-    default_pm(replace_prices(default_pm(), drop, new_d, def$UseIn, "default"))
-    scenario_pm(replace_prices(scenario_pm(), drop, new_s, def$UseIn, "scenario"))
-    custom_defs(defs)
-    pm_tick(pm_tick() + 1L)
-    removeModal()
-    runs <- intersect(c("default", "scenario"),
-                      if (def$UseIn == "both") c("default", "scenario") else def$UseIn)
-    kept <- vapply(runs, function(r) or_default(attr(if (r == "default") new_d else new_s, "n_kept"), 0L),
-                   integer(1))
-    asm_msg(list(type = "ok", warnings = v$warnings, text = if (nrow(prev) == 0L)
-      sprintf("Added %s (%s). Its prices are in the matrix list below.",
-              name, USE_IN_LABELS[[def$UseIn]])
-      else sprintf(
-        "Saved %s (%s): of %d price cell(s), %s; new cells at the starting price.",
-        name, USE_IN_LABELS[[def$UseIn]], nrow(new),
-        paste(sprintf("%d kept in the %s", kept, runs), collapse = ", "))))
-  })
-
-  observeEvent(input$asm_remove, {
-    d <- custom_defs(); i <- match(input$asm_pick, d$Name); req(!is.na(i))
-    keys <- assortment_keys(d[i, , drop = FALSE])
-    default_pm(replace_prices(default_pm(), keys, NULL, "both", "default"))
-    scenario_pm(replace_prices(scenario_pm(), keys, NULL, "both", "scenario"))
-    custom_defs(d[-i, , drop = FALSE])
-    pm_tick(pm_tick() + 1L)
-    asm_msg(list(type = "ok", text = sprintf("Removed %s.", d$Name[i])))
-  })
-
-  output$dl_assortments <- downloadHandler(
-    filename = function() "apter_assortments.xlsx",
-    content  = function(file) assortments_export(custom_defs(), default_pm(), scenario_pm(), file))
-
-  observeEvent(input$asm_upload, {
-    f <- input$asm_upload; req(f)
-    res <- assortments_import(f$datapath, APP_PRODUCTS, APP_LC, default_pm(), scenario_pm())
-    if (isTRUE(res$ok)) {
-      custom_defs(res$defs); default_pm(res$default_pm); scenario_pm(res$scenario_pm)
-      pm_tick(pm_tick() + 1L)
-      asm_msg(list(type = "ok", warnings = res$warnings, text = sprintf(
-        "Loaded %s: %d custom assortment(s) with their default and scenario prices.",
-        f$name, nrow(res$defs))))
-    } else {
-      asm_msg(list(type = "error", text = paste(
-        c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
-    }
-  })
-  output$asm_msg <- renderUI(msg_ui(asm_msg()))
 
 }  # end server

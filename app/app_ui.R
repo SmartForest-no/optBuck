@@ -4,35 +4,63 @@
 #           theme.R and helpers_ui.R.
 #           Not named ui.R: Shiny/shinytest2 reject ui.R/server.R next to app.R.
 #
-# Layout  : bslib page_navbar (Bootstrap 5) with three pages: Home, Simulator
-#           and Prices and assortments. Styling is in www/apter.css and
-#           theme.R; no inline colours here.
+# Layout  : bslib page_navbar (Bootstrap 5) with two tabs (Phase 4c):
+#           Assortments and prices (opens first) and Simulator. Styling is in
+#           www/apter.css and theme.R; no inline colours here.
 
-# ---- pages ----------------------------------------------------------------------
+# ---- Assortments and prices --------------------------------------------------------
 
-home_page <- nav_panel(
-  "Home",
-  app_header("Bucking simulator for Norway spruce and Scots pine"),
+pm_side <- function(side) {
+  s <- tolower(side)
+  div(class = "pm-grid",
+    div(class = "section-hdr", side),
+    if (side == "B") uiOutput("pm_b_state_ui"),
+    div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark"),
+    uiOutput(paste0("pm_", s, "_note")),
+    rHandsontableOutput(paste0("pm_", s)),
+    uiOutput(paste0("pm_", s, "_axes")),
+    div(class = "pm-actions",
+      actionButton(paste0("pm_", s, "_reset"), "Reset to 2021 prices", class = "btn-secondary"),
+      downloadButton(paste0("dl_", s, "_wide"), "Download (xlsx)", class = "btn-secondary"),
+      downloadButton(paste0("dl_", s, "_long"), "Download (CSV)", class = "btn-secondary")),
+    fileInput(paste0("pm_", s, "_upload"), "Upload price matrix (xlsx or CSV, wide or long)",
+              accept = c(".csv", ".xlsx", ".rds"), width = "100%")
+  )
+}
+
+prices_page <- nav_panel(
+  "Assortments and prices", value = "prices",
   div(class = "apter-page",
-    apter_card("Tree sources",
-      div(class = "status-tiles",
-        status_tile("NFI sample trees", "Available",
-                    c("Spruce and pine from the Norwegian National Forest Inventory",
-                      "Selected by species, maturity class, site class and county")),
-        status_tile("Tree lists", "Available",
-                    c("Upload your own trees",
-                      "Tree ID, species and diameter, with heights where available"),
-                    icon_name = "list"),
-        status_tile("Stem profiles", "Planned",
-                    c("Upload measured stem profiles",
-                      "For example from harvester data"),
-                    icon_name = "chart-line", planned = TRUE)
-      )
+    apter_card("Assortments",
+      div(class = "pm-toolbar",
+        actionButton("asm_add", "Add assortment", class = "btn-primary"),
+        selectInput("asm_pick", "Assortment", choices = character(0)),
+        actionButton("asm_edit", "Edit", class = "btn-secondary"),
+        actionButton("asm_remove", "Remove", class = "btn-secondary"),
+        actionButton("asm_reset", "Reset to defaults", class = "btn-secondary")
+      ),
+      reactableOutput("tbl_assortments"),
+      layout_columns(col_widths = c(6, 6),
+        fileInput("asm_upload", "Upload assortments (xlsx downloaded here)",
+                  accept = ".xlsx", width = "100%"),
+        div(class = "pm-actions",
+            downloadButton("dl_assortments", "Download assortments (xlsx)", class = "btn-secondary"))
+      ),
+      uiOutput("asm_msg")
     ),
-    apter_card("Latest run", uiOutput("home_last_run")),
-    actionButton("go_simulator", "Open simulator", class = "btn-primary")
+    apter_card("Price matrices",
+      div(class = "pm-toolbar",
+        selectInput("pm_id", "Matrix", choices = character(0)),
+        uiOutput("pm_status")
+      ),
+      layout_columns(col_widths = c(6, 6), pm_side("A"), pm_side("B")),
+      uiOutput("pm_upload_msg")
+    )
   )
 )
+
+
+# ---- Simulator -----------------------------------------------------------------------
 
 simulator_sidebar <- sidebar(
   width = 320,
@@ -51,9 +79,7 @@ simulator_sidebar <- sidebar(
     selectInput("fylnr_sel", "County",
                 choices  = FYLNR_CHOICES,
                 selected = "__all__"),
-    selectInput("n_plots", "Plots to sample",
-                choices = c("5", "10", "25", "50"), selected = "10"),
-    numericInput("seed", "Random seed", value = 42L, min = 1L, step = 1L)
+    uiOutput("stratum_error")
   ),
   conditionalPanel("input.tree_source == 'list'",
     fileInput("tl_upload", "Tree list (CSV or xlsx)", accept = c(".csv", ".xlsx"),
@@ -64,76 +90,41 @@ simulator_sidebar <- sidebar(
     uiOutput("tl_validation")
   ),
 
-  div(class = "sidebar-heading", "Scenario"),
-  checkboxInput("compare_on", "Compare with scenario prices", value = FALSE),
-  uiOutput("scenario_sidebar"),
-
   actionButton("run_btn", "Run optimizer",
-               class = "btn-primary", width = "100%"),
-
-  conditionalPanel("input.tree_source == 'nfi'",
-    div(class = "sidebar-notes",
-        uiOutput("stratum_preview"),
-        div("HKL 1–2 (young/establishment) are excluded from this prototype."),
-        div("County filtering uses fylnr from the sanitized NFI-derived data.",
-            " Codes use current and historical names where possible.")))
+               class = "btn-primary", width = "100%")
 )
 
 simulator_page <- nav_panel(
-  "Simulator",
+  "Simulator", value = "simulator",
   layout_sidebar(
     sidebar = simulator_sidebar,
     fillable = FALSE,
 
-    div(class = "results-label", RESULTS_LABEL),
+    uiOutput("run_status"),
     uiOutput("height_banner"),
-
-    # Details left, steps right, as in the reference's batch details page.
-    layout_columns(col_widths = c(7, 5),
-      apter_card("Run details",
-        uiOutput("run_status"),
-        uiOutput("scenario_stale_run"),
-        uiOutput("run_params")
-      ),
-      apter_card("Run steps", collapsible = TRUE,
-        uiOutput("run_steps")
-      )
-    ),
 
     navset_card_underline(id = "result_tabs",
 
-      nav_panel("Summary",
-        uiOutput("summary_cards"),
-        uiOutput("summary_detail")
+      nav_panel("Summary", value = "summary",
+        uiOutput("stale_notice"),
+        uiOutput("summary_cards")
       ),
 
-      nav_panel("Per m\u00b3",
-        div(class = "section-hdr",
-            "NOK per m\u00b3 of commercial volume under bark"),
-        div(class = "stat-strip",
-            "Commercial volume: the 10 cm sections of all non-waste logs, each",
-            " using the under-bark diameter at the top of its section. Bark,",
-            " stump, waste and the top above the last merchantable log are",
-            " excluded. Each species uses its own commercial volume."),
+      nav_panel("Per m³", value = "per_m3",
+        div(class = "section-hdr", "NOK per m³ of commercial volume under bark"),
         reactableOutput("tbl_per_m3"),
         div(class = "section-hdr", "By assortment"),
-        div(class = "stat-strip",
-            "Contribution = assortment value \u00f7 the scope's commercial volume,",
-            " so contributions add up to the scope's NOK/m\u00b3."),
         reactableOutput("tbl_per_m3_assortment"),
         layout_columns(col_widths = c(6, 6),
           plotOutput("bar_per_m3_contribution", height = "260px"),
           plotOutput("bar_volume_share",        height = "260px")
         ),
         apter_card("Trees", collapsible = TRUE, open = FALSE,
-          div(class = "stat-strip",
-              "One row per tree. Expand a row to see its logs."),
           reactableOutput("tbl_trees")
         )
       ),
 
-      nav_panel("Products",
-        div(class = "section-hdr", "Product summary"),
+      nav_panel("Products", value = "products",
         reactableOutput("tbl_products"),
         layout_columns(col_widths = c(6, 6),
           plotOutput("bar_value_by_product",  height = "260px"),
@@ -141,33 +132,16 @@ simulator_page <- nav_panel(
         )
       ),
 
-
-      nav_panel("Diagnostics",
-        div(class = "section-hdr", "Stage timings (slowest first)"),
-        reactableOutput("tbl_stage_timings"),
-        div(class = "section-hdr", "Run diagnostics"),
-        reactableOutput("tbl_diag"),
-        div(class = "section-hdr", "Price validation"),
-        reactableOutput("tbl_price_val"),
-        div(class = "section-hdr", "Zero-log trees"),
-        reactableOutput("tbl_zero_logs"),
-        div(class = "section-hdr", "Trees outside taperNOR's range (not bucked)"),
-        reactableOutput("tbl_excluded")
-      ),
-
-      nav_panel("Selected logs",
-        uiOutput("selected_logs_header"),
+      nav_panel("Selected logs", value = "logs",
         reactableOutput("tbl_selected_logs")
       ),
 
-      nav_panel("Scenario comparison",
-        uiOutput("scenario_stale_cmp"),
-        uiOutput("cmp_status"),
-        div(class = "section-hdr", "Default vs. scenario"),
+      nav_panel("Price matrix comparison", value = "comparison",
+        div(class = "section-hdr", "A and B"),
         reactableOutput("tbl_cmp_overview"),
-        div(class = "section-hdr", "Difference summary"),
+        div(class = "section-hdr", "Difference (B − A)"),
         reactableOutput("tbl_cmp_delta"),
-        div(class = "section-hdr", "NOK per m\u00b3 and volume share by assortment"),
+        div(class = "section-hdr", "NOK per m³ and volume share by assortment"),
         reactableOutput("tbl_cmp_per_m3"),
         div(class = "section-hdr", "Cutting-pattern changes"),
         uiOutput("cmp_patterns"),
@@ -180,105 +154,7 @@ simulator_page <- nav_panel(
           plotOutput("bar_cmp_value", height = "260px"),
           plotOutput("bar_cmp_delta", height = "260px")
         ),
-        reactableOutput("tbl_cmp_products"),
-        div(class = "section-hdr", "Comparison diagnostics"),
-        reactableOutput("tbl_cmp_diag")
-      )
-    )
-  )
-)
-
-prices_page <- nav_panel(
-  "Prices and assortments",
-  div(class = "apter-page",
-    apter_card("Product definitions",
-      div(class = "stat-strip",
-          "These are the product specifications used by the optimizer.",
-          " DiameterUnderBark = TRUE: product limits, price-diameter classes",
-          " and price volumes use under-bark diameters (taperNOR over-bark",
-          " profile minus taperNOR::barkNOR double bark, floored at 0)."),
-      reactableOutput("tbl_ref_products")
-    ),
-    apter_card("Length and diameter classes",
-      div(class = "stat-strip",
-          "Note: sawlog length 31 dm is priced by interpolation",
-          " (2×34dm price − 37dm price), not from the original",
-          " PriceMatrixGran/PriceMatrixFuru source spreadsheet.",
-          " See the Notes column below for flagged rows",
-          " (PriceSource = \"Interpolated\")."),
-      reactableOutput("tbl_ref_lc")
-    ),
-    apter_card("Custom assortments",
-      div(class = "stat-strip",
-          "Add assortments such as poles, large or small sawlogs or special timber.",
-          " Each has its species, diameter limits, allowed lengths, a price-volume",
-          " method and prices (a grid or a flat price), and is used in the default",
-          " run, the scenario run or both. Stems are assumed defect-free (no",
-          " quality restrictions)."),
-      div(class = "pm-toolbar",
-        actionButton("asm_add", "Add assortment", class = "btn-primary"),
-        selectInput("asm_pick", "Assortment", choices = character(0)),
-        actionButton("asm_edit", "Edit", class = "btn-secondary"),
-        actionButton("asm_remove", "Remove", class = "btn-secondary")
-      ),
-      reactableOutput("tbl_assortments"),
-      layout_columns(col_widths = c(6, 6),
-        fileInput("asm_upload",
-                  "Upload assortments: an xlsx downloaded here (definitions with default and scenario prices)",
-                  accept = ".xlsx", width = "100%"),
-        div(class = "pm-actions",
-            downloadButton("dl_assortments", "Download assortments (xlsx)", class = "btn-secondary"))
-      ),
-      uiOutput("asm_msg")
-    ),
-    apter_card("Price matrices: default vs. scenario",
-      div(class = "stat-strip",
-          "The default 2021 matrix is read-only (custom assortments' default prices",
-          " are editable); edit the scenario on the right",
-          " (prices in NOK per m\u00b3 under bark; rows: top-diameter class in cm,",
-          " columns: length class in dm). The scenario is used when",
-          " 'Compare with scenario prices' is ticked in the Simulator."),
-      div(class = "pm-toolbar",
-        selectInput("pm_id", "Matrix", choices = PM_CHOICES,
-                    selected = unname(PM_CHOICES[1])),
-        actionButton("pm_reset", "Reset to default", class = "btn-secondary"),
-        uiOutput("pm_status")
-      ),
-      layout_columns(col_widths = c(6, 6),
-        div(class = "pm-grid",
-            div(class = "section-hdr", "Default (read-only)"),
-            uiOutput("pm_default_note"),
-            rHandsontableOutput("pm_default")),
-        div(class = "pm-grid",
-            div(class = "section-hdr", "Scenario (editable)"),
-            uiOutput("pm_scenario_note"),
-            rHandsontableOutput("pm_scenario"))
-      ),
-      div(class = "stat-strip pm-legend",
-          tags$span(class = "sw-diff", "highlighted"), "differs from the default",
-          tags$span(class = "sw-interp", "italic"),
-          "31 dm price interpolated (2\u00d734 dm \u2212 37 dm)"),
-      layout_columns(col_widths = c(6, 6),
-        fileInput("pm_upload",
-                  "Upload scenario prices: drop a file here (CSV, xlsx or RDS; wide or long layout)",
-                  accept = c(".csv", ".xlsx", ".rds"), width = "100%"),
-        div(class = "pm-actions",
-            downloadButton("dl_template_wide", "Template (xlsx, wide)", class = "btn-primary"),
-            downloadButton("dl_template_long", "Template (CSV, long)", class = "btn-secondary"),
-            downloadButton("dl_scenario", "Download scenario (CSV)", class = "btn-secondary"))
-      ),
-      uiOutput("pm_upload_msg")
-    ),
-    apter_card("Notes and limitations", collapsible = TRUE,
-      tags$ul(
-        tags$li("Runs use the default 2021 price matrix (plus custom assortments used in the default run); the scenario matrix and assortments are used for the comparison run."),
-        tags$li("Unpriced candidates are excluded from optimization and reported in Diagnostics."),
-        tags$li("31 dm sawlog prices are interpolated (2×34dm − 37dm), flagged PriceSource = \"Interpolated\" in the price table."),
-        tags$li("A log above a matrix's largest diameter class is priced at that class (50 cm for the default 2021 matrices); physical diameters are preserved."),
-        tags$li("Stem profiles are taperNOR over bark. Under-bark diameters subtract taperNOR::barkNOR double bark thickness, floored at 0 so the under-bark diameter never exceeds the over-bark diameter (provisional, pending the taperNOR authors)."),
-        tags$li("Price volume per product. Top cylinder (default sawlogs): cylinder at the under-bark top diameter, rounded down to whole cm. Top: frustum from the top diameter with 1 cm per metre taper. Solid volume (default pulpwood and waste): 10 cm sections under bark, each at its top diameter. Calculated Norwegian mid (Målereglement for skogsvirke 2026, 4.1.3–4.1.4): top diameter rounded down to whole cm + 0.5 cm + 1 cm/m over half the length, V = 3.14/4 · D² · L."),
-        tags$li("Custom assortments are defect-free (no quality restrictions) and always count in the commercial volume (the NOK per m³ denominator); the denominator does not depend on any product's volume method."),
-        tags$li("Results describe the selected trees only. Values are NOK per m\u00b3 of commercial volume under bark (10 cm sections of non-waste logs, each using the under-bark diameter at its top).")
+        reactableOutput("tbl_cmp_products")
       )
     )
   )
@@ -289,15 +165,17 @@ prices_page <- nav_panel(
 ui <- page_navbar(
   id           = "main_nav",
   title        = navbar_brand(),
-  window_title = "Apter — Bucking simulator (v1)",
+  window_title = "Apter — Bucking simulator",
   theme        = apter_theme(),
   fillable     = FALSE,
-  header = tags$head(
-    tags$link(rel = "stylesheet", href = "apter.css"),
-    tags$link(rel = "icon", type = "image/svg+xml", href = "apter-icon.svg")
+  selected     = "prices",
+  header = tagList(
+    tags$head(
+      tags$link(rel = "stylesheet", href = "apter.css"),
+      tags$link(rel = "icon", type = "image/svg+xml", href = "apter-icon.svg")
+    ),
+    banner_strip()
   ),
-  footer = app_footer(APP_VERSION),
-  home_page,
-  simulator_page,
-  prices_page
+  prices_page,
+  simulator_page
 )

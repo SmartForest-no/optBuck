@@ -6,6 +6,4 @@
   <!-- cut marks between logs (tile colour shows through) -->
   <path d="M21 25.5 L43 23.5" stroke="#3F6E58" stroke-width="3" stroke-linecap="round"/>
   <path d="M20 40 L44 38" stroke="#3F6E58" stroke-width="3" stroke-linecap="round"/>
-  <!-- growth rings hinted on the butt -->
-  <path d="M26 54 Q32 49 38 54" fill="none" stroke="#C9B48F" stroke-width="1.6"/>
 </svg>
