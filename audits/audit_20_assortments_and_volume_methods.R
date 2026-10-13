@@ -285,6 +285,12 @@ if (!file.exists(base_path)) {
   det <- character(0); ok8 <- TRUE
   for (n in setdiff(names(b), "meta")) {
     r <- run_sampled_plot_bucking(b$meta$strata[[n]], "default_2021", root_dir)
+    # Phase 5 added tree_summary$height_source ("NFI" for NFI trees); the
+    # baseline predates it, so it is checked separately and left out here.
+    if (!all(r$tree_summary$height_source == "NFI")) {
+      ok8 <- FALSE; det <- c(det, sprintf("%s: height_source not all 'NFI'", n))
+    }
+    r$tree_summary$height_source <- NULL
     for (k in names(keys8)) {
       a <- srt(r[[k]], keys8[[k]]); e <- srt(b[[n]][[k]], keys8[[k]])
       # Rows identical; sums over trees may differ in the last bit only

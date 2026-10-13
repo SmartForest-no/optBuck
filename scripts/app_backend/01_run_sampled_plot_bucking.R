@@ -74,7 +74,8 @@ for (.h in c("helpers_paths", "helpers_volume_methods", "helpers_products",
              "helpers_valuation",
              "helpers_taper", "helpers_bark", "helpers_commercial_volume",
              "helpers_candidate_generation", "helpers_dp_optimizer",
-             "helpers_price_matrix", "helpers_comparison")) {
+             "helpers_price_matrix", "helpers_comparison", "helpers_heights",
+             "helpers_tree_list")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -126,6 +127,7 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
              total_value_nok = numeric(0), total_volume_m3 = numeric(0),
              commercial_volume_m3 = numeric(0), nok_per_m3 = numeric(0),
              optimizer_status = character(0), optimizer_message = character(0),
+             height_source = character(0),
              stringsAsFactors = FALSE)
 }
 
@@ -254,6 +256,311 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
        optimizer_message = sprintf("Selected %d logs", n_sel))
 }
 
+# Products, length classes and prices for one run, validated (step 6 of the
+# runners). Stops on invalid products or a FAILing price matrix.
+.load_products_prices <- function(price_matrix_path, root, products, length_classes) {
+  t0_products_prices <- proc.time()
+  pd <- products       %||% load_products(root)
+  lc <- length_classes %||% load_length_classes(root)
+  if (!"LogLength_dm" %in% names(lc)) lc$LogLength_dm <- lc$LogLength / 10
+  prod_val <- validate_products(pd, lc)
+  if (!prod_val$ok)
+    stop("Product definitions invalid:\n",
+         paste0("  ", prod_val$errors, collapse = "\n"))
+
+  if (identical(price_matrix_path, "default_2021")) {
+    pm <- load_price_matrix_long(root)
+  } else if (grepl("\\.rds$", price_matrix_path, ignore.case = TRUE)) {
+    pm <- readRDS(price_matrix_path)
+    pm <- as.data.frame(pm)
+  } else {
+    pm <- as.data.frame(readr::read_csv(price_matrix_path, show_col_types = FALSE))
+  }
+
+  val_result <- validate_price_matrix_against_products(pd, lc, pm)
+  fail_rows  <- val_result$checks[val_result$checks$result == "FAIL", ]
+  if (nrow(fail_rows) > 0L)
+    stop("Price matrix validation FAILED:\n",
+         paste0("  ", fail_rows$check, ": ", fail_rows$detail, collapse = "\n"))
+
+  price_review_items <- val_result$checks$check[val_result$checks$result == "REVIEW"]
+  price_val_checks   <- val_result$checks
+
+  # Price lookup tables, built once (R/helpers_valuation.R; also used for
+  # scenario re-pricing, so runs and comparisons share one lookup).
+  price_lookup <- build_price_lookup(pm)
+  t_products_prices <- .pt(t0_products_prices)
+
+  list(pd = pd, lc = lc, pm = pm, lookup = price_lookup, checks = price_val_checks,
+       review = price_review_items, secs = t_products_prices)
+}
+
+# Per-tree candidate generation, pricing and optimization, and the result
+# tables (steps 9-15), shared by NFI runs and tree lists (Phase 5).
+# pvs: profile vectors with under-bark profiles; tree_data: one row per
+# tree (plot_id, treid, species_group, dbh_cm, height_m, height_source).
+.buck_profiles <- function(pvs, tree_data, pd, lc, price_lookup, stump_cm, step_cm) {
+  tree_ids_valid   <- names(pvs)
+  n_trees_in_optim <- length(tree_ids_valid)
+  # Fast tree-metadata lookup by treid.
+  td_list <- setNames(
+    lapply(seq_len(nrow(tree_data)), function(i) tree_data[i, , drop = FALSE]),
+    tree_data$treid)
+
+  # ---- 9. Per-tree candidate generation, pricing, and optimization ----------
+  all_selected  <- vector("list", n_trees_in_optim)
+  all_tree_rows <- vector("list", n_trees_in_optim)
+  all_unpriced  <- vector("list", n_trees_in_optim)
+  n_unpriced_total <- 0L
+  # Per-stage accumulators (seconds, summed across all trees).
+  acc_cand_gen   <- 0
+  acc_price_join <- 0
+  acc_dp_optim   <- 0
+
+  for (i in seq_len(n_trees_in_optim)) {
+
+    tid  <- tree_ids_valid[i]
+    pv   <- pvs[[tid]]
+    tmeta <- td_list[[tid]]
+
+    if (is.null(tmeta)) next   # should not happen
+
+    # Helper: build a no-logs tree row with a given status.
+    make_tree_row <- function(status, msg) {
+      data.frame(
+        plot_id          = as.character(tmeta$plot_id),
+        treid            = tid,
+        species_group    = pv$species_group,
+        dbh_cm           = as.numeric(tmeta$dbh_cm),
+        height_m         = as.numeric(tmeta$height_m),
+        n_logs_selected  = 0L,
+        total_value_nok  = 0,
+        total_volume_m3  = 0,
+        commercial_volume_m3 = 0,
+        nok_per_m3       = NA_real_,
+        optimizer_status  = status,
+        optimizer_message = msg,
+        height_source    = as.character(tmeta$height_source %||% NA_character_),
+        stringsAsFactors = FALSE
+      )
+    }
+
+    # Generate all candidate log combinations.
+    t0_cand <- proc.time()
+    cands_raw <- tryCatch(
+      generate_candidate_logs_one_tree(pv, pd, lc, stump_cm, step_cm),
+      error = function(e) {
+        warning(sprintf("Tree %s: candidate generation error: %s",
+                        tid, conditionMessage(e)))
+        NULL
+      }
+    )
+    acc_cand_gen <- acc_cand_gen + .pt(t0_cand)
+
+    if (is.null(cands_raw) || nrow(cands_raw) == 0L) {
+      all_tree_rows[[i]] <- make_tree_row(
+        "no_candidates", "Candidate generation returned 0 rows")
+      next
+    }
+
+    # Keep only technically eligible candidates with valid volume.
+    elig <- cands_raw[
+      cands_raw$eligible & !is.na(cands_raw$price_volume_m3), , drop = FALSE]
+
+    if (nrow(elig) == 0L) {
+      all_tree_rows[[i]] <- make_tree_row(
+        "no_candidates", "No eligible candidates after eligibility filter")
+      next
+    }
+
+    # Add PriceDiameterClass_cm_uncapped and PriceDiameterClass_cm_used.
+    t0_join <- proc.time()
+    # Per-product cap: the largest class of each product's matrix.
+    elig <- prepare_price_join_keys(elig, price_lookup)
+
+    # Look up prices (shared lookup, R/helpers_valuation.R).
+    elig$PriceNOKperM3 <- lookup_prices(elig, price_lookup)
+    priced           <- elig
+    priced$value_nok <- priced$price_volume_m3 * priced$PriceNOKperM3
+    acc_price_join <- acc_price_join + .pt(t0_join)
+
+    # Track unpriced candidates compactly (ProductKey x LengthClass_dm counts).
+    unpriced_rows <- priced[is.na(priced$PriceNOKperM3), , drop = FALSE]
+    n_unpriced_total <- n_unpriced_total + nrow(unpriced_rows)
+    if (nrow(unpriced_rows) > 0L) {
+      up_tab <- as.data.frame(
+        table(ProductKey     = unpriced_rows$ProductKey,
+              LengthClass_dm = as.character(unpriced_rows$LengthClass_dm)),
+        stringsAsFactors = FALSE)
+      up_tab <- up_tab[up_tab$Freq > 0L, , drop = FALSE]
+      names(up_tab)[names(up_tab) == "Freq"] <- "n_candidates"
+      up_tab$LengthClass_dm <- as.integer(up_tab$LengthClass_dm)
+      all_unpriced[[i]] <- up_tab
+    }
+
+    # DP optimizer: only priced candidates enter.
+    dp_in <- priced[
+      !is.na(priced$PriceNOKperM3) & !is.na(priced$value_nok), , drop = FALSE]
+
+    if (nrow(dp_in) == 0L) {
+      all_tree_rows[[i]] <- make_tree_row(
+        "no_priced_candidates", "No priced candidates; all candidates unpriced")
+      next
+    }
+
+    t0_dp <- proc.time()
+    res <- tryCatch(
+      .optimize_dp_fast(dp_in),
+      error = function(e) {
+        warning(sprintf("Tree %s: optimizer error: %s", tid, conditionMessage(e)))
+        list(selected_logs = data.frame(), dp_best_value = 0, n_selected = 0L,
+             n_dp_candidates = nrow(dp_in), optimizer_status = "error",
+             optimizer_message = conditionMessage(e))
+      }
+    )
+    acc_dp_optim <- acc_dp_optim + .pt(t0_dp)
+
+    sel_vol <- if (res$n_selected > 0L)
+      sum(res$selected_logs$price_volume_m3, na.rm = TRUE) else 0
+    # Commercial volume under bark (the NOK/m3 denominator) per selected log.
+    if (res$n_selected > 0L)
+      res$selected_logs$commercial_volume_m3 <- commercial_volume_ub(
+        pv$diameterPosition, pv$DiameterValueUB, res$selected_logs)
+    com_vol <- if (res$n_selected > 0L)
+      sum(res$selected_logs$commercial_volume_m3) else 0
+
+    all_tree_rows[[i]] <- data.frame(
+      plot_id           = as.character(tmeta$plot_id),
+      treid             = tid,
+      species_group     = pv$species_group,
+      dbh_cm            = as.numeric(tmeta$dbh_cm),
+      height_m          = as.numeric(tmeta$height_m),
+      n_logs_selected   = res$n_selected,
+      total_value_nok   = res$dp_best_value,
+      total_volume_m3   = sel_vol,
+      commercial_volume_m3 = com_vol,
+      nok_per_m3        = if (com_vol > 0) res$dp_best_value / com_vol else NA_real_,
+      optimizer_status  = res$optimizer_status,
+      optimizer_message = res$optimizer_message,
+      height_source     = as.character(tmeta$height_source %||% NA_character_),
+      stringsAsFactors  = FALSE
+    )
+
+    if (res$n_selected > 0L) {
+      sel <- res$selected_logs
+      sel$plot_id <- as.character(tmeta$plot_id)
+      all_selected[[i]] <- sel
+    }
+  }   # end per-tree loop
+
+  # ---- 10. Assemble tree_summary ---------------------------------------------
+  t0_summary <- proc.time()
+  tree_summary_raw <- do.call(
+    rbind, Filter(Negate(is.null), all_tree_rows)) %||% .empty_tree_summary()
+
+  tree_summary <- .rename_to_github(tree_summary_raw)
+  .assert_no_plot_id(tree_summary, "tree_summary")
+
+  # ---- 11. Assemble selected_logs_all ----------------------------------------
+  sel_list   <- Filter(Negate(is.null), all_selected)
+  n_trees_with_logs <- length(sel_list)
+
+  required_log_cols <- c("plot_id", "treid", "species_group",
+                         "ProductKey", "ProductType",
+                         "StartPos", "StopPos", "LogLength", "LengthClass_dm",
+                         "price_volume_m3", "PriceNOKperM3", "value_nok",
+                         "PriceDiameterClass_cm_uncapped",
+                         "PriceDiameterClass_cm_used",
+                         "TopDiameter_ob", "TopDiameter_ub",
+                         "commercial_volume_m3")
+
+  if (length(sel_list) > 0L) {
+    sel_all_raw <- do.call(rbind, sel_list)
+    # Keep only required columns (drop TopDiameter, ButtDiameter, eligible, etc.)
+    avail_cols <- intersect(required_log_cols, names(sel_all_raw))
+    sel_all_raw <- sel_all_raw[, avail_cols, drop = FALSE]
+    # Rename plot_id -> plot_id_github
+    selected_logs_all <- .rename_to_github(sel_all_raw)
+  } else {
+    selected_logs_all <- .empty_selected_logs()
+  }
+  .assert_no_plot_id(selected_logs_all, "selected_logs_all")
+
+  # ---- 12. NOK per m3 of commercial volume under bark ----------------------
+  per_m3 <- summarise_per_m3(selected_logs_all, tree_summary)
+  per_m3_summary       <- per_m3$summary
+  per_m3_by_assortment <- per_m3$by_assortment
+
+  # ---- 13. product_summary ----------------------------------------------------
+  if (nrow(selected_logs_all) > 0L) {
+    prd_keys <- unique(selected_logs_all$ProductKey)
+    prod_summary <- do.call(rbind, lapply(prd_keys, function(pk) {
+      rows  <- selected_logs_all[selected_logs_all$ProductKey == pk, , drop = FALSE]
+      pt    <- if ("ProductType" %in% names(rows)) rows$ProductType[1L] else NA_character_
+      t_vol <- sum(rows$price_volume_m3, na.rm = TRUE)
+      t_val <- sum(rows$value_nok, na.rm = TRUE)
+      data.frame(
+        ProductKey            = pk,
+        ProductType           = pt,
+        n_logs                = nrow(rows),
+        total_volume_m3       = round(t_vol, 5),
+        total_value_nok       = round(t_val, 2),
+        mean_value_nok_per_m3 = if (t_vol > 0) round(t_val / t_vol, 2) else NA_real_,
+        stringsAsFactors      = FALSE
+      )
+    }))
+  } else {
+    prod_summary <- data.frame(
+      ProductKey = character(0), ProductType = character(0),
+      n_logs = integer(0), total_volume_m3 = numeric(0),
+      total_value_nok = numeric(0), mean_value_nok_per_m3 = numeric(0),
+      stringsAsFactors = FALSE)
+  }
+
+  # ---- 14. unpriced_summary ---------------------------------------------------
+  up_list <- Filter(Negate(is.null), all_unpriced)
+  if (length(up_list) > 0L) {
+    up_all <- do.call(rbind, up_list)
+    up_agg <- aggregate(n_candidates ~ ProductKey + LengthClass_dm, data = up_all,
+                        FUN = sum)
+    up_agg <- up_agg[order(up_agg$ProductKey, up_agg$LengthClass_dm), ]
+    unpriced_summary <- up_agg
+  } else {
+    unpriced_summary <- .empty_unpriced_summary()
+  }
+
+  # ---- 15. zero_log_trees -----------------------------------------------------
+  if (nrow(tree_summary) > 0L) {
+    zl_rows <- tree_summary[tree_summary$n_logs_selected == 0L, , drop = FALSE]
+    zero_log_trees <- if (nrow(zl_rows) > 0L) {
+      zl_rows[, c("plot_id_github", "treid", "species_group", "dbh_cm",
+                  "height_m", "optimizer_status"), drop = FALSE]
+    } else {
+      data.frame(plot_id_github = character(0), treid = character(0),
+                 species_group = character(0), dbh_cm = numeric(0),
+                 height_m = numeric(0), optimizer_status = character(0),
+                 stringsAsFactors = FALSE)
+    }
+    names(zero_log_trees)[names(zero_log_trees) == "optimizer_status"] <- "reason"
+  } else {
+    zero_log_trees <- data.frame(
+      plot_id_github = character(0), treid = character(0),
+      species_group = character(0), dbh_cm = numeric(0),
+      height_m = numeric(0), reason = character(0),
+      stringsAsFactors = FALSE)
+  }
+  .assert_no_plot_id(zero_log_trees, "zero_log_trees")
+
+  t_summary <- .pt(t0_summary)
+  list(tree_summary = tree_summary, selected_logs_all = selected_logs_all,
+       per_m3_summary = per_m3_summary, per_m3_by_assortment = per_m3_by_assortment,
+       prod_summary = prod_summary, unpriced_summary = unpriced_summary,
+       zero_log_trees = zero_log_trees, n_trees_with_logs = n_trees_with_logs,
+       n_unpriced_total = n_unpriced_total, acc_cand_gen = acc_cand_gen,
+       acc_price_join = acc_price_join, acc_dp_optim = acc_dp_optim,
+       t_summary = t_summary)
+}
+
 #' Run the sampled-plot bucking pipeline.
 #'
 #' @param params Named list. Required: species_group, hogstkl, abonitet.
@@ -371,37 +678,10 @@ run_sampled_plot_bucking <- function(
   t_tree_filter <- .pt(t0_tree_filter)
 
   # ---- 6. Load products and price matrix -------------------------------------
-  t0_products_prices <- proc.time()
-  pd <- products       %||% load_products(root)
-  lc <- length_classes %||% load_length_classes(root)
-  if (!"LogLength_dm" %in% names(lc)) lc$LogLength_dm <- lc$LogLength / 10
-  prod_val <- validate_products(pd, lc)
-  if (!prod_val$ok)
-    stop("Product definitions invalid:\n",
-         paste0("  ", prod_val$errors, collapse = "\n"))
-
-  if (identical(price_matrix_path, "default_2021")) {
-    pm <- load_price_matrix_long(root)
-  } else if (grepl("\\.rds$", price_matrix_path, ignore.case = TRUE)) {
-    pm <- readRDS(price_matrix_path)
-    pm <- as.data.frame(pm)
-  } else {
-    pm <- as.data.frame(readr::read_csv(price_matrix_path, show_col_types = FALSE))
-  }
-
-  val_result <- validate_price_matrix_against_products(pd, lc, pm)
-  fail_rows  <- val_result$checks[val_result$checks$result == "FAIL", ]
-  if (nrow(fail_rows) > 0L)
-    stop("Price matrix validation FAILED:\n",
-         paste0("  ", fail_rows$check, ": ", fail_rows$detail, collapse = "\n"))
-
-  price_review_items <- val_result$checks$check[val_result$checks$result == "REVIEW"]
-  price_val_checks   <- val_result$checks
-
-  # Price lookup tables, built once (R/helpers_valuation.R; also used for
-  # scenario re-pricing, so runs and comparisons share one lookup).
-  price_lookup <- build_price_lookup(pm)
-  t_products_prices <- .pt(t0_products_prices)
+  pp <- .load_products_prices(price_matrix_path, root, products, length_classes)
+  pd <- pp$pd; lc <- pp$lc; price_lookup <- pp$lookup
+  price_val_checks <- pp$checks; price_review_items <- pp$review
+  t_products_prices <- pp$secs
 
   # ---- 7. Build tree_data metadata lookup -----------------------------------
   # tree_data: needed for metadata lookups inside the per-tree loop.
@@ -410,6 +690,7 @@ run_sampled_plot_bucking <- function(
                                 "species_group", "dbh_cm", "height_m"),
                            drop = FALSE]
   names(tree_data)[names(tree_data) == "plot_id_github"] <- "plot_id"
+  tree_data$height_source <- "NFI"   # tree lists: helpers_heights.R
 
   # ---- 8. Load precomputed taper profiles from partitioned cache -------------
   t0_taper_profiles <- proc.time()
@@ -492,258 +773,15 @@ run_sampled_plot_bucking <- function(
     height_m = numeric(0), error_message = character(0),
     stringsAsFactors = FALSE)
 
-  # Fast tree-metadata lookup by treid.
-  td_list <- setNames(
-    lapply(seq_len(nrow(tree_data)), function(i) tree_data[i, , drop = FALSE]),
-    tree_data$treid)
-
-  # ---- 9. Per-tree candidate generation, pricing, and optimization ----------
-  all_selected  <- vector("list", n_trees_in_optim)
-  all_tree_rows <- vector("list", n_trees_in_optim)
-  all_unpriced  <- vector("list", n_trees_in_optim)
-  n_unpriced_total <- 0L
-  # Per-stage accumulators (seconds, summed across all trees).
-  acc_cand_gen   <- 0
-  acc_price_join <- 0
-  acc_dp_optim   <- 0
-
-  for (i in seq_len(n_trees_in_optim)) {
-
-    tid  <- tree_ids_valid[i]
-    pv   <- pvs[[tid]]
-    tmeta <- td_list[[tid]]
-
-    if (is.null(tmeta)) next   # should not happen
-
-    # Helper: build a no-logs tree row with a given status.
-    make_tree_row <- function(status, msg) {
-      data.frame(
-        plot_id          = as.character(tmeta$plot_id),
-        treid            = tid,
-        species_group    = pv$species_group,
-        dbh_cm           = as.numeric(tmeta$dbh_cm),
-        height_m         = as.numeric(tmeta$height_m),
-        n_logs_selected  = 0L,
-        total_value_nok  = 0,
-        total_volume_m3  = 0,
-        commercial_volume_m3 = 0,
-        nok_per_m3       = NA_real_,
-        optimizer_status  = status,
-        optimizer_message = msg,
-        stringsAsFactors = FALSE
-      )
-    }
-
-    # Generate all candidate log combinations.
-    t0_cand <- proc.time()
-    cands_raw <- tryCatch(
-      generate_candidate_logs_one_tree(pv, pd, lc, stump_cm, step_cm),
-      error = function(e) {
-        warning(sprintf("Tree %s: candidate generation error: %s",
-                        tid, conditionMessage(e)))
-        NULL
-      }
-    )
-    acc_cand_gen <- acc_cand_gen + .pt(t0_cand)
-
-    if (is.null(cands_raw) || nrow(cands_raw) == 0L) {
-      all_tree_rows[[i]] <- make_tree_row(
-        "no_candidates", "Candidate generation returned 0 rows")
-      next
-    }
-
-    # Keep only technically eligible candidates with valid volume.
-    elig <- cands_raw[
-      cands_raw$eligible & !is.na(cands_raw$price_volume_m3), , drop = FALSE]
-
-    if (nrow(elig) == 0L) {
-      all_tree_rows[[i]] <- make_tree_row(
-        "no_candidates", "No eligible candidates after eligibility filter")
-      next
-    }
-
-    # Add PriceDiameterClass_cm_uncapped and PriceDiameterClass_cm_used.
-    t0_join <- proc.time()
-    # Per-product cap: the largest class of each product's matrix.
-    elig <- prepare_price_join_keys(elig, price_lookup)
-
-    # Look up prices (shared lookup, R/helpers_valuation.R).
-    elig$PriceNOKperM3 <- lookup_prices(elig, price_lookup)
-    priced           <- elig
-    priced$value_nok <- priced$price_volume_m3 * priced$PriceNOKperM3
-    acc_price_join <- acc_price_join + .pt(t0_join)
-
-    # Track unpriced candidates compactly (ProductKey x LengthClass_dm counts).
-    unpriced_rows <- priced[is.na(priced$PriceNOKperM3), , drop = FALSE]
-    n_unpriced_total <- n_unpriced_total + nrow(unpriced_rows)
-    if (nrow(unpriced_rows) > 0L) {
-      up_tab <- as.data.frame(
-        table(ProductKey     = unpriced_rows$ProductKey,
-              LengthClass_dm = as.character(unpriced_rows$LengthClass_dm)),
-        stringsAsFactors = FALSE)
-      up_tab <- up_tab[up_tab$Freq > 0L, , drop = FALSE]
-      names(up_tab)[names(up_tab) == "Freq"] <- "n_candidates"
-      up_tab$LengthClass_dm <- as.integer(up_tab$LengthClass_dm)
-      all_unpriced[[i]] <- up_tab
-    }
-
-    # DP optimizer: only priced candidates enter.
-    dp_in <- priced[
-      !is.na(priced$PriceNOKperM3) & !is.na(priced$value_nok), , drop = FALSE]
-
-    if (nrow(dp_in) == 0L) {
-      all_tree_rows[[i]] <- make_tree_row(
-        "no_priced_candidates", "No priced candidates; all candidates unpriced")
-      next
-    }
-
-    t0_dp <- proc.time()
-    res <- tryCatch(
-      .optimize_dp_fast(dp_in),
-      error = function(e) {
-        warning(sprintf("Tree %s: optimizer error: %s", tid, conditionMessage(e)))
-        list(selected_logs = data.frame(), dp_best_value = 0, n_selected = 0L,
-             n_dp_candidates = nrow(dp_in), optimizer_status = "error",
-             optimizer_message = conditionMessage(e))
-      }
-    )
-    acc_dp_optim <- acc_dp_optim + .pt(t0_dp)
-
-    sel_vol <- if (res$n_selected > 0L)
-      sum(res$selected_logs$price_volume_m3, na.rm = TRUE) else 0
-    # Commercial volume under bark (the NOK/m3 denominator) per selected log.
-    if (res$n_selected > 0L)
-      res$selected_logs$commercial_volume_m3 <- commercial_volume_ub(
-        pv$diameterPosition, pv$DiameterValueUB, res$selected_logs)
-    com_vol <- if (res$n_selected > 0L)
-      sum(res$selected_logs$commercial_volume_m3) else 0
-
-    all_tree_rows[[i]] <- data.frame(
-      plot_id           = as.character(tmeta$plot_id),
-      treid             = tid,
-      species_group     = pv$species_group,
-      dbh_cm            = as.numeric(tmeta$dbh_cm),
-      height_m          = as.numeric(tmeta$height_m),
-      n_logs_selected   = res$n_selected,
-      total_value_nok   = res$dp_best_value,
-      total_volume_m3   = sel_vol,
-      commercial_volume_m3 = com_vol,
-      nok_per_m3        = if (com_vol > 0) res$dp_best_value / com_vol else NA_real_,
-      optimizer_status  = res$optimizer_status,
-      optimizer_message = res$optimizer_message,
-      stringsAsFactors  = FALSE
-    )
-
-    if (res$n_selected > 0L) {
-      sel <- res$selected_logs
-      sel$plot_id <- as.character(tmeta$plot_id)
-      all_selected[[i]] <- sel
-    }
-  }   # end per-tree loop
-
-  # ---- 10. Assemble tree_summary ---------------------------------------------
-  t0_summary <- proc.time()
-  tree_summary_raw <- do.call(
-    rbind, Filter(Negate(is.null), all_tree_rows)) %||% .empty_tree_summary()
-
-  tree_summary <- .rename_to_github(tree_summary_raw)
-  .assert_no_plot_id(tree_summary, "tree_summary")
-
-  # ---- 11. Assemble selected_logs_all ----------------------------------------
-  sel_list   <- Filter(Negate(is.null), all_selected)
-  n_trees_with_logs <- length(sel_list)
-
-  required_log_cols <- c("plot_id", "treid", "species_group",
-                         "ProductKey", "ProductType",
-                         "StartPos", "StopPos", "LogLength", "LengthClass_dm",
-                         "price_volume_m3", "PriceNOKperM3", "value_nok",
-                         "PriceDiameterClass_cm_uncapped",
-                         "PriceDiameterClass_cm_used",
-                         "TopDiameter_ob", "TopDiameter_ub",
-                         "commercial_volume_m3")
-
-  if (length(sel_list) > 0L) {
-    sel_all_raw <- do.call(rbind, sel_list)
-    # Keep only required columns (drop TopDiameter, ButtDiameter, eligible, etc.)
-    avail_cols <- intersect(required_log_cols, names(sel_all_raw))
-    sel_all_raw <- sel_all_raw[, avail_cols, drop = FALSE]
-    # Rename plot_id -> plot_id_github
-    selected_logs_all <- .rename_to_github(sel_all_raw)
-  } else {
-    selected_logs_all <- .empty_selected_logs()
-  }
-  .assert_no_plot_id(selected_logs_all, "selected_logs_all")
-
-  # ---- 12. NOK per m3 of commercial volume under bark ----------------------
-  per_m3 <- summarise_per_m3(selected_logs_all, tree_summary)
-  per_m3_summary       <- per_m3$summary
-  per_m3_by_assortment <- per_m3$by_assortment
-
-  # ---- 13. product_summary ----------------------------------------------------
-  if (nrow(selected_logs_all) > 0L) {
-    prd_keys <- unique(selected_logs_all$ProductKey)
-    prod_summary <- do.call(rbind, lapply(prd_keys, function(pk) {
-      rows  <- selected_logs_all[selected_logs_all$ProductKey == pk, , drop = FALSE]
-      pt    <- if ("ProductType" %in% names(rows)) rows$ProductType[1L] else NA_character_
-      t_vol <- sum(rows$price_volume_m3, na.rm = TRUE)
-      t_val <- sum(rows$value_nok, na.rm = TRUE)
-      data.frame(
-        ProductKey            = pk,
-        ProductType           = pt,
-        n_logs                = nrow(rows),
-        total_volume_m3       = round(t_vol, 5),
-        total_value_nok       = round(t_val, 2),
-        mean_value_nok_per_m3 = if (t_vol > 0) round(t_val / t_vol, 2) else NA_real_,
-        stringsAsFactors      = FALSE
-      )
-    }))
-  } else {
-    prod_summary <- data.frame(
-      ProductKey = character(0), ProductType = character(0),
-      n_logs = integer(0), total_volume_m3 = numeric(0),
-      total_value_nok = numeric(0), mean_value_nok_per_m3 = numeric(0),
-      stringsAsFactors = FALSE)
-  }
-
-  # ---- 14. unpriced_summary ---------------------------------------------------
-  up_list <- Filter(Negate(is.null), all_unpriced)
-  if (length(up_list) > 0L) {
-    up_all <- do.call(rbind, up_list)
-    up_agg <- aggregate(n_candidates ~ ProductKey + LengthClass_dm, data = up_all,
-                        FUN = sum)
-    up_agg <- up_agg[order(up_agg$ProductKey, up_agg$LengthClass_dm), ]
-    unpriced_summary <- up_agg
-  } else {
-    unpriced_summary <- .empty_unpriced_summary()
-  }
-
-  # ---- 15. zero_log_trees -----------------------------------------------------
-  if (nrow(tree_summary) > 0L) {
-    zl_rows <- tree_summary[tree_summary$n_logs_selected == 0L, , drop = FALSE]
-    zero_log_trees <- if (nrow(zl_rows) > 0L) {
-      zl_rows[, c("plot_id_github", "treid", "species_group", "dbh_cm",
-                  "height_m", "optimizer_status"), drop = FALSE]
-    } else {
-      data.frame(plot_id_github = character(0), treid = character(0),
-                 species_group = character(0), dbh_cm = numeric(0),
-                 height_m = numeric(0), optimizer_status = character(0),
-                 stringsAsFactors = FALSE)
-    }
-    names(zero_log_trees)[names(zero_log_trees) == "optimizer_status"] <- "reason"
-  } else {
-    zero_log_trees <- data.frame(
-      plot_id_github = character(0), treid = character(0),
-      species_group = character(0), dbh_cm = numeric(0),
-      height_m = numeric(0), reason = character(0),
-      stringsAsFactors = FALSE)
-  }
-  .assert_no_plot_id(zero_log_trees, "zero_log_trees")
+  # ---- 9-15. Bucking and result tables (.buck_profiles()) --------------------
+  core <- .buck_profiles(pvs, tree_data, pd, lc, price_lookup, stump_cm, step_cm)
+  for (.n in names(core)) assign(.n, core[[.n]])
+  rm(.n)
 
   # ---- 16. Diagnostics --------------------------------------------------------
   n_zero_log <- if (nrow(tree_summary) > 0L)
     sum(tree_summary$n_logs_selected == 0L) else 0L
 
-  t_summary      <- .pt(t0_summary)
   elapsed_secs   <- as.numeric((proc.time() - t_start)["elapsed"])
 
   # Assemble stage timings data.frame.
@@ -812,5 +850,120 @@ run_sampled_plot_bucking <- function(
     label                   = paste("Results describe the selected trees only.",
                                     "Values are NOK per m\u00b3 of commercial volume under bark."),
     elapsed_seconds         = elapsed_secs
+  )
+}
+
+
+#' Buck an uploaded tree list (Phase 5).
+#'
+#' @param prepared Result of prepare_tree_list() (R/helpers_tree_list.R):
+#'   validated trees with heights (measured or imputed) and height_source.
+#'   Trees outside taperNOR's range are already flagged (in_range = FALSE)
+#'   and are not bucked.
+#' @param price_matrix_path,root,products,length_classes As for
+#'   run_sampled_plot_bucking().
+#' @param params Optional list stored in the result (e.g. file name).
+#' @return The same structure as run_sampled_plot_bucking(), with
+#'   tree_source = "tree_list", the height summary (heights) and the
+#'   excluded trees. plot_id_github holds the user's plot_id.
+run_tree_list_bucking <- function(prepared,
+                                  price_matrix_path = "default_2021",
+                                  root = get_root_dir(),
+                                  products = NULL,
+                                  length_classes = NULL,
+                                  params = list()) {
+  t_start <- proc.time()
+  if (!isTRUE(prepared$ok)) stop("The tree list did not pass validation.")
+  stump_cm <- as.integer(params$stump_height_cm   %||% 10L)
+  step_cm  <- as.integer(params$start_pos_step_cm %||% 10L)
+
+  # Trees within taperNOR's range (others are reported as excluded).
+  t0_tree_filter <- proc.time()
+  trees <- prepared$trees[prepared$trees$in_range, , drop = FALSE]
+  tree_data <- data.frame(plot_id = trees$plot_id, treid = trees$treid, sesong = NA,
+                          species_group = trees$species_group, dbh_cm = trees$dbh_cm,
+                          height_m = trees$height_m, height_source = trees$height_source,
+                          stringsAsFactors = FALSE)
+  t_tree_filter <- .pt(t0_tree_filter)
+
+  pp <- .load_products_prices(price_matrix_path, root, products, length_classes)
+
+  # taperNOR at run time (no cache for uploaded trees).
+  t0_taper <- proc.time()
+  profiles <- generate_taper_profiles_for_trees(tree_data, quiet = TRUE)
+  ok <- attr(profiles, "profile_ok")
+  profile_failures <- .rename_to_github(data.frame(
+    plot_id = tree_data$plot_id[!ok], treid = tree_data$treid[!ok],
+    species_group = tree_data$species_group[!ok], dbh_cm = tree_data$dbh_cm[!ok],
+    height_m = tree_data$height_m[!ok],
+    error_message = attr(profiles, "profile_errors")[!ok], stringsAsFactors = FALSE))
+  t_taper <- .pt(t0_taper)
+  t0_conv <- proc.time()
+  pvs <- profiles_to_profile_vectors(profiles)
+  t_conv <- .pt(t0_conv)
+  t0_ub <- proc.time()
+  bark_model <- get_bark_model()
+  pvs <- lapply(pvs, add_under_bark_profile, model = bark_model)
+  t_ub <- .pt(t0_ub)
+
+  core <- .buck_profiles(pvs, tree_data[ok, , drop = FALSE], pp$pd, pp$lc, pp$lookup,
+                         stump_cm, step_cm)
+  elapsed <- as.numeric((proc.time() - t_start)["elapsed"])
+  stage_timings <- data.frame(
+    stage = c("load_data", "filter_stratum_and_sample_plots", "tree_filtering",
+              "load_products_and_prices", "load_precomputed_taper_profiles",
+              "profile_vector_conversion", "under_bark_profiles", "candidate_generation",
+              "price_joining", "dp_optimization", "summary_assembly", "total"),
+    elapsed_seconds = round(c(0, 0, t_tree_filter, pp$secs, t_taper, t_conv, t_ub,
+                              core$acc_cand_gen, core$acc_price_join, core$acc_dp_optim,
+                              core$t_summary, elapsed), 3),
+    stringsAsFactors = FALSE)
+  plots <- sort(unique(as.character(trees$plot_id[!is.na(trees$plot_id)])))
+  n_zero_log <- sum(core$tree_summary$n_logs_selected == 0L)
+
+  excluded <- prepared$excluded
+  excluded <- .rename_to_github(excluded[, c("plot_id", "treid", "species_group", "dbh_cm",
+                                             "height_m", "height_source", "excluded_reason"),
+                                         drop = FALSE])
+  for (x in list(core$tree_summary, core$selected_logs_all, core$per_m3_summary,
+                 core$per_m3_by_assortment, core$zero_log_trees, profile_failures, excluded))
+    .assert_no_plot_id(x, "tree list result")
+
+  list(
+    run_id                  = paste0("treelist_", format(Sys.time(), "%Y%m%d_%H%M%S")),
+    tree_source             = "tree_list",
+    params                  = utils::modifyList(list(species_group = paste(
+                                sort(unique(trees$species_group)), collapse = " + ")), params),
+    n_eligible_plots        = length(plots),
+    n_plots_sampled         = length(plots),
+    n_trees_total           = nrow(trees),
+    n_trees_with_logs       = core$n_trees_with_logs,
+    selected_logs_all       = core$selected_logs_all,
+    tree_summary            = core$tree_summary,
+    per_m3_summary          = core$per_m3_summary,
+    per_m3_by_assortment    = core$per_m3_by_assortment,
+    sampled_plot_ids        = plots,
+    product_summary         = core$prod_summary,
+    unpriced_summary        = core$unpriced_summary,
+    zero_log_trees          = core$zero_log_trees,
+    price_validation_checks = pp$checks,
+    profile_failures        = profile_failures,
+    heights                 = prepared$heights,
+    height_warnings         = prepared$warnings,
+    excluded_trees          = excluded,
+    diagnostics             = list(
+      n_trees_in_list                   = nrow(prepared$trees),
+      n_trees_excluded_out_of_range     = nrow(excluded),
+      n_trees_entering_optimizer        = length(pvs),
+      taper_source                      = "taperNOR at run time",
+      bark_model                        = getOption("apter.bark_model", DEFAULT_BARK_MODEL),
+      n_zero_log_trees                  = n_zero_log,
+      n_unpriced_candidates             = core$n_unpriced_total,
+      price_review_items                = pp$review,
+      elapsed_seconds                   = elapsed,
+      stage_timings                     = stage_timings),
+    label                   = paste("Results describe the uploaded trees only.",
+                                    "Values are NOK per m\u00b3 of commercial volume under bark."),
+    elapsed_seconds         = elapsed
   )
 }

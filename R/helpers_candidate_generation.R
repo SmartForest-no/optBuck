@@ -142,7 +142,10 @@ generate_candidate_logs_one_tree <- function(pv,
 
   # Profile vectors
   diam_pos <- as.integer(pv$diameterPosition)   # cm (sorted ascending)
-  h_cm     <- as.integer(pv$height_cm)
+  # Logs end within the profile: a height that is not a whole decimetre
+  # (e.g. an imputed 11.296 m) has a profile ending at 11.2 m, below
+  # round(height * 100). NFI heights are whole decimetres: no change there.
+  h_cm     <- min(as.integer(pv$height_cm), max(diam_pos))
   step_int <- as.integer(start_pos_step_cm)
 
   # One diameter series (over or under bark): interpolation function
