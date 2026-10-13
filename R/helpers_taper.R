@@ -250,19 +250,32 @@ profiles_to_profile_vectors <- function(profiles,
   pvs      <- vector("list", length(tree_ids))
   names(pvs) <- tree_ids
 
+  # Row indices per tree in one pass (split() keeps the original row order),
+  # and the columns pulled out once: a per-tree scan of the whole table was
+  # quadratic in the number of trees.
+  rows_by_tree <- split(seq_len(nrow(profiles)),
+                        factor(as.character(profiles$treid), levels = tree_ids))
+  plot_col <- profiles$plot_id
+  sp_col   <- profiles$species_group
+  dbh_col  <- profiles$DBH
+  h_col    <- profiles$height_m
+  pos_col  <- profiles$diameterPosition
+  dv_col   <- profiles$DiameterValue
+
   for (tid in tree_ids) {
-    rows <- profiles[profiles$treid == tid, ]
-    rows <- rows[order(rows$diameterPosition), ]
+    ii <- rows_by_tree[[tid]]
+    ii <- ii[order(pos_col[ii])]
+    i1 <- ii[1L]
 
     pvs[[tid]] <- list(
       treid            = tid,
-      plot_id          = as.character(rows$plot_id[1L] %||% NA_character_),
-      species_group    = rows$species_group[1L],
-      DBH              = rows$DBH[1L],
-      height_m         = rows$height_m[1L],
-      height_cm        = as.integer(round(rows$height_m[1L] * 100)),
-      diameterPosition = as.integer(rows$diameterPosition),
-      DiameterValue    = as.numeric(rows$DiameterValue)
+      plot_id          = as.character(plot_col[i1] %||% NA_character_),
+      species_group    = sp_col[i1],
+      DBH              = dbh_col[i1],
+      height_m         = h_col[i1],
+      height_cm        = as.integer(round(h_col[i1] * 100)),
+      diameterPosition = as.integer(pos_col[ii]),
+      DiameterValue    = as.numeric(dv_col[ii])
     )
   }
   pvs

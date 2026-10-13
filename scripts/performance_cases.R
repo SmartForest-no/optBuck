@@ -85,6 +85,37 @@ perf_cases <- function(root, tree_list_sizes = c(100L, 1000L)) {
   out
 }
 
+#' Result tables compared with the main baseline, and their sort keys (the
+#' backend's row order on main follows arrow's read order).
+PERF_TABLE_KEYS <- list(
+  selected_logs_all    = c("plot_id_github", "treid", "StartPos"),
+  tree_summary         = c("plot_id_github", "treid"),
+  per_m3_summary       = "scope",
+  per_m3_by_assortment = c("scope", "assortment"),
+  product_summary      = "ProductKey",
+  unpriced_summary     = c("ProductKey", "LengthClass_dm"),
+  zero_log_trees       = c("plot_id_github", "treid"))
+
+.perf_sorted <- function(d, k) {
+  d <- d[do.call(order, unname(as.list(d[k]))), , drop = FALSE]
+  rownames(d) <- NULL
+  d
+}
+
+#' Compare a run with a baseline case, table by table, after sorting rows.
+#'
+#' @return Named character vector per table: "identical", "equal within
+#'   1e-12 (sums over trees in another order)" or "DIFFERS".
+perf_compare <- function(r, b) {
+  vapply(names(PERF_TABLE_KEYS), function(k) {
+    a <- .perf_sorted(r[[k]], PERF_TABLE_KEYS[[k]])
+    e <- .perf_sorted(b[[k]], PERF_TABLE_KEYS[[k]])
+    if (identical(a, e)) "identical"
+    else if (isTRUE(all.equal(a, e, tolerance = 1e-12))) "equal within 1e-12"
+    else "DIFFERS"
+  }, character(1))
+}
+
 #' Run one case with the backend runners (extra arguments, e.g. workers or
 #' cache, are passed on).
 perf_run_case <- function(case, root, ...) {
