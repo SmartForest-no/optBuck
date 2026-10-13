@@ -52,6 +52,10 @@
 #      is edited (reset), "Scenario prices changed since last run" shows on
 #      the Run card and the Scenario comparison tab
 # 19.  Total browser runtime under 180 s (REVIEW if above)
+# 20.  Custom assortment (Phase 4b): added through the Add assortment form
+#      (spruce poles, scenario only, grid at 2000 NOK/m3) -> listed in
+#      tbl_assortments and in the matrix choices; a comparison run shows
+#      'poles' in the per-m3 comparison, without error notifications
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -319,7 +323,8 @@ browser_checks <- c(
   "Check 16: Per m3 tab renders; Trees card expands; no per-ha text",
   "Check 17: Price-matrix editor: grids side by side, highlights, reset",
   "Check 18: Stale-scenario notice after editing prices",
-  "Check 19: Browser runtime under 180 s")
+  "Check 19: Browser runtime under 180 s",
+  "Check 20: Custom assortment added in the UI runs in the comparison")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -584,9 +589,52 @@ if (!browser_ok) {
     rec(browser_checks[13], if (ok17) PASS else FAIL, det17)
     rec(browser_checks[14], if (ok18) PASS else FAIL, det18)
 
+    # 20. custom assortment through the form, then a comparison run
+    asm_err <- tryCatch({
+      app$set_inputs(main_nav = "Prices and assortments")
+      app$click("asm_add")
+      app$wait_for_idle()
+      app$set_inputs(asm_name = "Poles", asm_class = "poles", asm_species = "spruce",
+                     asm_use_in = "scenario", asm_min_top = 12, asm_max_top = 30,
+                     asm_lengths = "600;800;1000",
+                     asm_method = "All diameters (solid volume)",
+                     asm_price_type = "matrix", asm_price = 2000, wait_ = FALSE)
+      app$click("asm_save")
+      app$wait_for_idle()
+      ""
+    }, error = function(e) conditionMessage(e))
+    n_asm   <- n_tbl_rows(app, "tbl_assortments")
+    asm_txt <- txt(app, "#tbl_assortments")
+    pm_opts <- app$get_js(paste0(
+      "(function(){ var s = document.getElementById('pm_id');",
+      " return s && s.selectize ? Object.keys(s.selectize.options).join(',')",
+      " : Array.from(s.options).map(function(o){ return o.value; }).join(','); })()"))
+    shoot20 <- tryCatch({ app$get_screenshot(file.path(shot_dir, "07_assortments.png")); TRUE },
+                        error = function(e) FALSE)
+    run20_err <- tryCatch({
+      app$set_inputs(main_nav = "Simulator")
+      # Check 18 left this tab open: setting it again changes no output, so
+      # don't wait for one (the driver would wait out its full timeout).
+      app$set_inputs(result_tabs = "Scenario comparison", wait_ = FALSE)
+      app$click("run_btn")
+      app$wait_for_idle(timeout = 120 * 1000)
+      ""
+    }, error = function(e) conditionMessage(e))
+    cmp20  <- txt(app, "#tbl_cmp_per_m3")
+    nerr20 <- n_err_notif(app)
+    ok20 <- !nzchar(asm_err) && !nzchar(run20_err) && n_asm == 1L &&
+      grepl("Poles", asm_txt, fixed = TRUE) &&
+      grepl("spruce_poles", pm_opts, fixed = TRUE) &&
+      grepl("poles", cmp20, fixed = TRUE) && nerr20 == 0L
+    rec(browser_checks[16], if (ok20) PASS else FAIL,
+        sprintf("assortment rows %d | matrix choices: %s | 'poles' in per-m3 comparison: %s | error notifications: %d%s",
+                n_asm, pm_opts, grepl("poles", cmp20, fixed = TRUE), nerr20,
+                paste0(if (nzchar(asm_err)) paste(" | form error:", asm_err) else "",
+                       if (nzchar(run20_err)) paste(" | run error:", run20_err) else "")))
+
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[2:14])
+    for (ck in browser_checks[c(2:14, 16)])
       rec(ck, FAIL, "skipped: app did not start")
   }
 

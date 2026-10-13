@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: tie-breaking and price-matrix scenarios
-  Run: 2026-10-13 10:57:31.042654
+  Run: 2026-10-13 12:01:47.21616
 ============================================================= 
 
 --- 01. Synthetic ties ---
@@ -27,15 +27,15 @@
   [PASS  ] Check 05: Long upload, unknown product -> rejected | ok=FALSE | errors: Unknown ProductKey: birch_sawlog
   [PASS  ] Check 05: Long upload, unknown length -> rejected | ok=FALSE | errors: Length class(es) not in LengthClasses: pine_sawlog 33 dm
   [PASS  ] Check 05: Long upload, duplicate key -> rejected | ok=FALSE | errors: Duplicated price key(s): 1, e.g. pine_sawlog 31 13.
-  [PASS  ] Check 05: Long upload, diameter class 60 cm -> accepted with a warning | ok=TRUE | warnings: 1 sawlog row(s) with diameter classes outside 12-50 cm; they are never used in pricing.
+  [PASS  ] Check 05: Long upload, diameter class 60 cm -> accepted with a cap warning | ok=TRUE | warnings: spruce_sawlog: largest diameter class is 60 cm (default 50 cm); larger logs are priced at 60 cm.
 
 --- 06. Wide-layout upload validation ---
   [PASS  ] Check 06a: Valid wide CSV replaces only its own matrix | ok=TRUE layout=wide ids=spruce_sawlog | spruce cells changed 351, pine 0, flat 0
   [PASS  ] Check 06: Wide upload, non-numeric length header -> rejected | ok=FALSE | errors: spruce_sawlog: header must be numeric length classes (dm); found 'x37'.
   [PASS  ] Check 06: Wide upload, length not in LengthClasses -> rejected | ok=FALSE | errors: Length class(es) not in LengthClasses: spruce_sawlog 36 dm
-  [PASS  ] Check 06: Wide upload, unknown matrix name -> rejected | ok=FALSE | errors: Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a sawlog matrix name (spruce_sawlog / pine_sawlog) in the top-left cell.
+  [PASS  ] Check 06: Wide upload, unknown matrix name -> rejected | ok=FALSE | errors: Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell.
   [PASS  ] Check 06: Wide upload, non-numeric cell -> rejected | ok=FALSE | errors: spruce_sawlog: non-numeric price in 1 cell(s), e.g. '4o5' at 20 cm / 43 dm.
-  [PASS  ] Check 06: Wide upload, unrecognised layout -> rejected | ok=FALSE | errors: Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a sawlog matrix name (spruce_sawlog / pine_sawlog) in the top-left cell.
+  [PASS  ] Check 06: Wide upload, unrecognised layout -> rejected | ok=FALSE | errors: Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell.
   [PASS  ] Check 06: Wide xlsx with an unknown sheet name -> rejected | ok=FALSE | errors: Unknown matrix 'birch_sawlog' (expected one of: spruce_sawlog, pine_sawlog).
 
 --- 07. Pattern comparison, synthetic ---

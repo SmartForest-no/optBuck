@@ -38,7 +38,11 @@ APTER_CHART <- list(
   # Assortments in the stem diagram (categorical slots 1-3; validated on the
   # white surface: CVD and normal-vision pass; waste aqua is below 3:1, so
   # every log carries a text label and the legend names each colour).
-  assortment = c(sawlog = "#2a78d6", pulpwood = "#eb6834", waste = "#1baf7a")
+  assortment = c(sawlog = "#2a78d6", pulpwood = "#eb6834", waste = "#1baf7a"),
+  # Custom assortment classes (Phase 4b): categorical slots 4-8 of the same
+  # validated palette, in fixed order, given to the classes in a diagram by
+  # name (apter_stem_compare()); beyond five, the neutral fill + label.
+  assortment_extra = c("#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948")
 )
 
 

@@ -118,7 +118,11 @@ server <- function(input, output, session) {
     # Map user-facing inputs (HKL group, county) -> backend params
     params     <- build_run_params(input)
     started_at <- Sys.time()   # for the run step list
-    pm_at_run  <- scenario_pm() # scenario in effect at this Run (used by result_s2)
+    # Products and prices in effect at this Run, for both runs (result_s2
+    # uses the scenario's); later edits wait for the next Run.
+    inp_def <- run_inputs("default")
+    inp_scn <- run_inputs("scenario")
+    state   <- pm_state()
 
     withProgress(message = "Preparing inputs...", value = 0, {
       incProgress(0.10, detail = "Loading price matrix and products")
@@ -126,17 +130,26 @@ server <- function(input, output, session) {
         incProgress(0.15, detail = "Sampling plots and loading taper profiles")
         Sys.sleep(0)  # yield to allow UI refresh
         incProgress(0.20, detail = "Running bucking optimizer...")
-        res <- run_sampled_plot_bucking(
-          params            = params,
-          price_matrix_path = "default_2021",
-          root              = ROOT
-        )
+        res <- if (!inp_def$custom) {
+          run_sampled_plot_bucking(
+            params            = params,
+            price_matrix_path = "default_2021",
+            root              = ROOT)
+        } else {
+          # Custom assortments used in the default run (Phase 4b).
+          path <- write_scenario_pm(inp_def$pm)
+          on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
+          run_sampled_plot_bucking(params = params, price_matrix_path = path,
+                                   root = ROOT, products = inp_def$pd,
+                                   length_classes = inp_def$lc)
+        }
         incProgress(0.45, detail = "Summarising results")
         Sys.sleep(0)
         incProgress(0.10, detail = "Rendering outputs")
-        res$started_at   <- started_at
-        res$price_matrix <- APP_PM_DEFAULT
-        res$scenario_pm  <- pm_at_run
+        res$started_at      <- started_at
+        res$price_matrix    <- if (inp_def$custom) inp_def$pm else APP_PM_DEFAULT
+        res$scenario_inputs <- inp_scn
+        res$state           <- state
         res
       }, error = function(e) {
         showNotification(
@@ -151,21 +164,23 @@ server <- function(input, output, session) {
 
   # ---- Comparison: S2 reactive, renders ------------------------------------
 
-  # Scenario run: same trees, the scenario matrix in effect when Run was
-  # clicked (result()$scenario_pm). Later edits take effect at the next Run;
-  # until then a notice says the prices changed (scenario_stale()).
+  # Scenario run: same trees, the scenario products and prices in effect
+  # when Run was clicked (result()$scenario_inputs). Later edits take effect
+  # at the next Run; until then a notice says the prices changed
+  # (scenario_stale()).
   result_s2 <- reactive({
     req(isTRUE(input$compare_on), !is.null(result()))
     params <- isolate(build_run_params(input))
-    pm     <- result()$scenario_pm
-    path   <- write_scenario_pm(pm)
+    inp    <- result()$scenario_inputs
+    path   <- write_scenario_pm(inp$pm)
     on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
     withProgress(message = "Running scenario prices...", value = 0.5, {
       tryCatch({
         r <- run_sampled_plot_bucking(params = params, price_matrix_path = path,
-                                      root = ROOT)
-        r$price_matrix    <- pm
-        r$n_cells_changed <- pm_n_diff(APP_PM_DEFAULT, pm)
+                                      root = ROOT, products = inp$pd,
+                                      length_classes = inp$lc)
+        r$price_matrix    <- inp$pm
+        r$n_cells_changed <- pm_n_diff(result()$price_matrix, inp$pm)
         r
       }, error = function(e) {
         showNotification(paste0("Scenario error: ", conditionMessage(e)),
@@ -175,10 +190,10 @@ server <- function(input, output, session) {
     })
   })
 
-  # TRUE when the scenario matrix was edited after the last run.
+  # TRUE when prices or custom assortments were edited after the last run.
   scenario_stale <- reactive({
     r <- if (input$run_btn > 0L) result() else NULL
-    !is.null(r) && !identical(scenario_pm(), r$scenario_pm)
+    !is.null(r) && !identical(pm_state(), r$state)
   })
   stale_notice <- function() {
     if (!isTRUE(input$compare_on) || !scenario_stale()) return(NULL)
@@ -632,9 +647,45 @@ server <- function(input, output, session) {
   })))
 
   # ---- Price-matrix editor (R/helpers_price_matrix.R) ---------------------------
+  # Two price sets: default_pm() (the 2021 default plus default-side prices
+  # of custom assortments; base prices read-only) and scenario_pm(). Each
+  # holds prices for the products of its own run only.
+  default_pm  <- reactiveVal(APP_PM_DEFAULT)
   scenario_pm <- reactiveVal(APP_PM_DEFAULT)
-  pm_tick     <- reactiveVal(0L)     # re-render the scenario grid
+  custom_defs <- reactiveVal(empty_assortment_defs())   # Phase 4b assortments
+  custom_keys <- reactive(assortment_keys(custom_defs()))
+  pm_tick     <- reactiveVal(0L)     # re-render the grids
   pm_msg      <- reactiveVal(NULL)   # last upload / reset / edit message
+  asm_msg     <- reactiveVal(NULL)   # last assortment add / edit / upload message
+
+  # Everything that changes a run; a run stores it to detect stale results.
+  pm_state <- reactive(list(custom_defs(), default_pm(), scenario_pm()))
+
+  # Products, length classes and prices of one run (base + custom by UseIn).
+  run_inputs <- function(run) {
+    p  <- products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), run)
+    pm <- pm_minimal(if (run == "default") default_pm() else scenario_pm())
+    list(pd = p$pd, lc = p$lc, pm = pm[pm$ProductKey %in% p$pd$ProductKey, , drop = FALSE],
+         custom = nrow(p$pd) > nrow(APP_PRODUCTS))
+  }
+  # Drop prices of products not in the run (e.g. after a flat reset).
+  keep_run_keys <- function(pm, run)
+    pm[pm$ProductKey %in% products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), run)$pd$ProductKey,
+       , drop = FALSE]
+  pm_has <- function(pm, id) if (identical(id, PM_FLAT_ID)) any(is.na(pm$LengthClass_dm))
+                             else id %in% pm$ProductKey[!is.na(pm$LengthClass_dm)]
+
+  # Matrix choices follow the custom assortments (initial choices: setup.R).
+  pm_ids <- reactive({
+    ids <- unique(c(pm_matrix_ids(default_pm()), pm_matrix_ids(scenario_pm())))
+    c(setdiff(ids, PM_FLAT_ID), PM_FLAT_ID)
+  })
+  observeEvent(pm_ids(), {
+    ids <- pm_ids(); sel <- isolate(input$pm_id)
+    updateSelectInput(session, "pm_id",
+                      choices = setNames(ids, vapply(ids, pm_matrix_label, character(1))),
+                      selected = if (isTRUE(sel %in% ids)) sel else ids[1L])
+  }, ignoreInit = TRUE)
 
   pm_widget <- function(grid, id, read_only, renderer, def = NULL, interp = NULL) {
     w <- rhandsontable(grid, rowHeaders = rownames(grid), readOnly = read_only,
@@ -646,30 +697,49 @@ server <- function(input, output, session) {
     w
   }
 
+  # Default grid: base prices read-only; custom assortments' rows editable.
   output$pm_default <- renderRHandsontable({
-    id <- input$pm_id; req(id)
-    g  <- pm_to_grid(APP_PM_DEFAULT, id)
+    pm_tick(); id <- input$pm_id; req(id)
+    dpm <- isolate(default_pm()); req(pm_has(dpm, id))
+    g  <- pm_to_grid(dpm, id)
     interp <- if (identical(id, PM_FLAT_ID))
       matrix(FALSE, nrow(g), ncol(g)) else
       outer(rownames(g), colnames(g), function(d, l)
         paste(id, l, d) %in% APP_PM_INTERP_KEYS)
-    pm_widget(g, id, TRUE, PM_INTERP_RENDERER, interp = unname(interp))
+    custom <- if (identical(id, PM_FLAT_ID)) rownames(g) %in% custom_keys()
+              else rep(id %in% custom_keys(), nrow(g))
+    w <- pm_widget(g, id, !any(custom), PM_INTERP_RENDERER, interp = unname(interp))
+    if (any(custom)) for (i in which(!custom)) w <- hot_row(w, i, readOnly = TRUE)
+    w
+  })
+  output$pm_default_note <- renderUI({
+    id <- input$pm_id; req(id)
+    if (!pm_has(default_pm(), id))
+      div(class = "note-muted", "Not used in the default run.")
+    else if (id %in% custom_keys() || (identical(id, PM_FLAT_ID) &&
+                                       any(custom_keys() %in% default_pm()$ProductKey)))
+      div(class = "note-muted", "Custom assortment prices are editable here.")
   })
 
   output$pm_scenario <- renderRHandsontable({
     pm_tick(); id <- input$pm_id; req(id)
-    pm_widget(pm_to_grid(isolate(scenario_pm()), id), id, FALSE, PM_DIFF_RENDERER,
-              def = unname(as.matrix(pm_to_grid(APP_PM_DEFAULT, id))))
+    spm <- isolate(scenario_pm()); req(pm_has(spm, id))
+    pm_widget(pm_to_grid(spm, id), id, FALSE, PM_DIFF_RENDERER,
+              def = unname(pm_default_aligned(default_pm(), spm, id)))
+  })
+  output$pm_scenario_note <- renderUI({
+    id <- input$pm_id; req(id)
+    if (!pm_has(scenario_pm(), id)) div(class = "note-muted", "Not used in the scenario run.")
   })
 
-  # Edits in the scenario grid. The matrix id travels with the widget, so a
-  # stale grid from the previously shown matrix is never written elsewhere.
-  observeEvent(input$pm_scenario, {
-    x  <- input$pm_scenario
+  # Edits in a grid. The matrix id travels with the widget, so a stale grid
+  # from the previously shown matrix is never written elsewhere. In the
+  # default grid only custom assortments' prices change.
+  apply_grid_edit <- function(x, pmv, only_keys = NULL) {
     if (is.null(x$changes$changes)) return()            # load, not an edit
     id <- x$params$matrix_id %||% isolate(input$pm_id)
     g  <- hot_to_r(x)
-    ref <- pm_to_grid(isolate(scenario_pm()), id)
+    ref <- pm_to_grid(isolate(pmv()), id)
     if (!identical(dim(g), dim(ref))) return()
     rownames(g) <- rownames(ref); colnames(g) <- colnames(ref)
     if (any(as.matrix(g) < 0, na.rm = TRUE)) {
@@ -677,20 +747,32 @@ server <- function(input, output, session) {
       pm_tick(pm_tick() + 1L)
       return()
     }
-    scenario_pm(pm_from_grid(g, id, isolate(scenario_pm())))
-  })
+    if (!is.null(only_keys) && identical(id, PM_FLAT_ID)) {
+      fixed <- !rownames(g) %in% only_keys
+      g[fixed, ] <- ref[fixed, ]
+    } else if (!is.null(only_keys) && !id %in% only_keys) return()
+    pmv(pm_from_grid(g, id, isolate(pmv())))
+  }
+  observeEvent(input$pm_scenario, apply_grid_edit(input$pm_scenario, scenario_pm))
+  observeEvent(input$pm_default,
+               apply_grid_edit(input$pm_default, default_pm, only_keys = isolate(custom_keys())))
 
   observeEvent(input$pm_reset, {
     id <- input$pm_id
-    scenario_pm(pm_reset(scenario_pm(), APP_PM_DEFAULT, id))
+    if (!pm_has(default_pm(), id) || !pm_has(scenario_pm(), id)) {
+      pm_msg(list(type = "error", text = sprintf(
+        "%s is priced in one run only; there is no default to reset to.", pm_matrix_label(id))))
+      return()
+    }
+    scenario_pm(keep_run_keys(pm_reset(scenario_pm(), default_pm(), id), "scenario"))
     pm_tick(pm_tick() + 1L)
     pm_msg(list(type = "ok", text = sprintf("%s reset to the default.", pm_matrix_label(id))))
   })
 
   observeEvent(input$pm_upload, {
     f <- input$pm_upload; req(f)
-    res <- apply_price_upload(f$datapath, f$name, scenario_pm(), APP_PM_DEFAULT,
-                              APP_PRODUCTS, APP_LC)
+    p <- products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), "scenario")
+    res <- apply_price_upload(f$datapath, f$name, scenario_pm(), default_pm(), p$pd, p$lc)
     if (isTRUE(res$ok)) {
       scenario_pm(res$pm)
       pm_tick(pm_tick() + 1L)
@@ -705,37 +787,221 @@ server <- function(input, output, session) {
 
   output$pm_status <- renderUI({
     req(input$pm_id)
-    n_all <- pm_n_diff(APP_PM_DEFAULT, scenario_pm())
-    n_now <- sum(pm_diff_mask(APP_PM_DEFAULT, scenario_pm(), input$pm_id))
+    n_all <- pm_n_diff(default_pm(), scenario_pm())
+    n_now <- if (pm_has(default_pm(), input$pm_id) && pm_has(scenario_pm(), input$pm_id))
+      sum(pm_diff_mask(default_pm(), scenario_pm(), input$pm_id)) else 0L
     div(class = "pm-status",
         tags$strong(sprintf("%d cell(s) differ from the default", n_all)),
         sprintf(" (%d in this matrix).", n_now))
   })
 
-  output$pm_upload_msg <- renderUI({
-    m <- pm_msg(); if (is.null(m)) return(NULL)
+  msg_ui <- function(m) {
+    if (is.null(m)) return(NULL)
     tagList(
       div(class = if (identical(m$type, "error")) "pm-msg-error" else "pm-msg-ok", m$text),
       if (length(m$warnings) > 0L)
         div(class = "pm-msg-warn", paste("Warning:", m$warnings, collapse = "\n")))
-  })
+  }
+  output$pm_upload_msg <- renderUI(msg_ui(pm_msg()))
 
+  # Templates hold the scenario run's products, filled with default prices
+  # where there are any.
+  template_pm <- reactive({
+    keys <- products_for_run(APP_PRODUCTS, APP_LC, custom_defs(), "scenario")$pd$ProductKey
+    d <- pm_minimal(default_pm()); s <- pm_minimal(scenario_pm())
+    d <- d[d$ProductKey %in% keys, , drop = FALSE]
+    pm_minimal(rbind(d, s[s$ProductKey %in% setdiff(keys, d$ProductKey), , drop = FALSE]))
+  })
   output$dl_template_wide <- downloadHandler(
     filename = function() "apter_price_template_wide.xlsx",
-    content  = function(file) pm_template_wide(APP_PM_DEFAULT, file))
+    content  = function(file) pm_template_wide(template_pm(), file))
   output$dl_template_long <- downloadHandler(
     filename = function() "apter_price_template_long.csv",
-    content  = function(file) pm_template_long(APP_PM_DEFAULT, file))
+    content  = function(file) pm_template_long(template_pm(), file))
   output$dl_scenario <- downloadHandler(
     filename = function() "apter_scenario_prices.csv",
     content  = function(file) pm_export(scenario_pm(), file))
 
   output$scenario_sidebar <- renderUI({
-    n <- pm_n_diff(APP_PM_DEFAULT, scenario_pm())
+    n <- pm_n_diff(default_pm(), scenario_pm())
+    k <- nrow(custom_defs())
     div(class = "note-muted",
-        sprintf("Scenario: %d price cell(s) differ from the default.", n), br(),
+        sprintf("Scenario: %d price cell(s) differ from the default.", n),
+        if (k > 0L) tagList(br(), sprintf("%d custom assortment(s).", k)), br(),
         actionLink("go_prices", "Edit scenario prices"))
   })
   observeEvent(input$go_prices, nav_select("main_nav", "Prices and assortments"))
+
+
+  # ---- Custom assortments (Phase 4b) ------------------------------------------
+  USE_IN_LABELS <- c(both = "Default and scenario", default = "Default only",
+                     scenario = "Scenario only")
+
+  output$tbl_assortments <- renderReactable(apter_reactable(local({
+    d <- custom_defs()
+    if (nrow(d) == 0L)
+      return(data.frame(Message = "No custom assortments. Add one, or upload an assortments file.",
+                        stringsAsFactors = FALSE))
+    rng <- function(lo, hi) sprintf("%s–%s", ifelse(is.na(lo), 0, lo),
+                                    ifelse(is.finite(hi), hi, "∞"))
+    data.frame(Name = d$Name, Class = d$Class, Species = d$Species,
+               `Top (cm)` = rng(d$MinTopDiameter_cm, d$MaxTopDiameter_cm),
+               `Butt (cm)` = rng(d$MinButtDiameter_cm, d$MaxButtDiameter_cm),
+               `Lengths (cm)` = d$AllowedLengths_cm, Priority = d$Priority,
+               `Under bark` = d$DiameterUnderBark,
+               `Dt below cut (cm)` = d$DiameterTopPosition_cm,
+               `Volume method` = d$VolumeDiameterCategory,
+               Rounding = d$VolumeDiameterAdjustment, Pricing = d$PriceType,
+               `Used in` = unname(USE_IN_LABELS[d$UseIn]),
+               check.names = FALSE, stringsAsFactors = FALSE)
+  })))
+
+  observeEvent(custom_defs(), {
+    n <- custom_defs()$Name
+    updateSelectInput(session, "asm_pick", choices = n,
+                      selected = if (isTRUE(isolate(input$asm_pick) %in% n)) isolate(input$asm_pick) else n[1L])
+  })
+
+  asm_editing  <- reactiveVal(NULL)   # Name of the assortment being edited; NULL = new
+  asm_form_err <- reactiveVal(NULL)
+  output$asm_form_msg <- renderUI({
+    e <- asm_form_err(); if (is.null(e)) return(NULL)
+    div(class = "pm-msg-error", paste(e, collapse = "\n"))
+  })
+
+  asm_modal <- function(d = NULL) {
+    v <- function(n, default) {
+      x <- if (is.null(d)) NULL else d[[n]]
+      if (is.null(x) || length(x) == 0L || is.na(x)) default else x
+    }
+    fin <- function(n) { x <- v(n, NA); if (is.finite(x)) x else NA }
+    modalDialog(
+      title = if (is.null(d)) "Add assortment" else paste("Edit", d$Name),
+      size = "l", easyClose = FALSE,
+      layout_columns(col_widths = c(6, 6),
+        textInput("asm_name", "Name", v("Name", "")),
+        textInput("asm_class", "Assortment class (groups species in the Total results)",
+                  v("Class", "")),
+        selectInput("asm_species", "Species",
+                    c("Spruce and pine" = "both", "Spruce" = "spruce", "Pine" = "pine"),
+                    v("Species", "both")),
+        selectInput("asm_use_in", "Used in", setNames(names(USE_IN_LABELS), USE_IN_LABELS),
+                    v("UseIn", "scenario")),
+        numericInput("asm_min_top", "Min top diameter (cm)", v("MinTopDiameter_cm", 0), min = 0),
+        numericInput("asm_max_top", "Max top diameter (cm; empty = none)", fin("MaxTopDiameter_cm"), min = 0),
+        numericInput("asm_min_butt", "Min butt diameter (cm)", v("MinButtDiameter_cm", 0), min = 0),
+        numericInput("asm_max_butt", "Max butt diameter (cm; empty = none)", fin("MaxButtDiameter_cm"), min = 0),
+        textInput("asm_lengths", "Allowed lengths (cm, e.g. 400;430;460)", v("AllowedLengths_cm", "")),
+        numericInput("asm_priority", "Priority in ties (1 = highest; sawlog 1, pulpwood 2)",
+                     v("Priority", 1)),
+        selectInput("asm_method", "Price-volume method", VOLUME_METHODS,
+                    v("VolumeDiameterCategory", "Top cylinder")),
+        selectInput("asm_adjust", "Top diameter for volume",
+                    c("As measured" = "None", "Rounded down to whole cm" = VOLUME_ROUND_DOWN_CM),
+                    v("VolumeDiameterAdjustment", "None")),
+        numericInput("asm_dtp", "Top diameter measured (cm below the cut; Norwegian rule: 10)",
+                     v("DiameterTopPosition_cm", 0), min = 0, step = 10),
+        checkboxInput("asm_ub", "Diameters under bark", v("DiameterUnderBark", TRUE)),
+        radioButtons("asm_price_type", "Pricing",
+                     c("Grid (length × diameter class)" = "matrix", "Flat price" = "flat"),
+                     v("PriceType", "matrix")),
+        numericInput("asm_price", "Starting price (NOK/m³)", 500, min = 0),
+        numericInput("asm_max_class",
+                     "Largest diameter class (cm; grid without a max top diameter)", NA, min = 1)
+      ),
+      div(class = "note-muted",
+          "Saving sets this assortment's prices to the starting price; edit them in the price matrices.",
+          " The largest diameter class of a grid is its price cap: larger logs are priced at it."),
+      uiOutput("asm_form_msg"),
+      footer = tagList(modalButton("Cancel"),
+                       actionButton("asm_save", "Save", class = "btn-primary")))
+  }
+
+  observeEvent(input$asm_add, {
+    asm_editing(NULL); asm_form_err(NULL); showModal(asm_modal())
+  })
+  observeEvent(input$asm_edit, {
+    d <- custom_defs(); i <- match(input$asm_pick, d$Name); req(!is.na(i))
+    asm_editing(d$Name[i]); asm_form_err(NULL); showModal(asm_modal(d[i, , drop = FALSE]))
+  })
+
+  # Replace the prices of `drop` keys; add `new` rows where the run uses them.
+  replace_prices <- function(pm, drop, new, use_in, run) {
+    m <- pm_minimal(pm); m <- m[!m$ProductKey %in% drop, , drop = FALSE]
+    if (!is.null(new) && use_in %in% c("both", run)) m <- pm_minimal(rbind(m, new))
+    m
+  }
+
+  observeEvent(input$asm_save, {
+    num <- function(x) if (is.null(x) || length(x) == 0L || is.na(x)) NA_real_ else as.numeric(x)
+    or  <- function(x, y) if (is.na(x)) y else x
+    na_if_blank <- function(x) { x <- trimws(x %||% ""); if (nzchar(x)) x else NA }
+    name <- trimws(input$asm_name %||% "")
+    def <- .type_assortment_defs(data.frame(
+      Name = name, Class = or(na_if_blank(input$asm_class), assortment_slug(name)),
+      Species = input$asm_species,
+      MinTopDiameter_cm = or(num(input$asm_min_top), 0),
+      MaxTopDiameter_cm = or(num(input$asm_max_top), Inf),
+      MinButtDiameter_cm = or(num(input$asm_min_butt), 0),
+      MaxButtDiameter_cm = or(num(input$asm_max_butt), Inf),
+      AllowedLengths_cm = input$asm_lengths, Priority = num(input$asm_priority),
+      DiameterUnderBark = isTRUE(input$asm_ub),
+      DiameterTopPosition_cm = or(num(input$asm_dtp), 0),
+      VolumeDiameterCategory = input$asm_method,
+      VolumeDiameterAdjustment = input$asm_adjust, PriceType = input$asm_price_type,
+      UseIn = input$asm_use_in, stringsAsFactors = FALSE))
+    old  <- custom_defs()
+    prev <- if (is.null(asm_editing())) old[0, , drop = FALSE]
+            else old[old$Name == asm_editing(), , drop = FALSE]
+    defs <- rbind(old[!old$Name %in% prev$Name, , drop = FALSE], def)
+    v <- validate_assortment_defs(defs, APP_PRODUCTS, APP_LC)
+    price <- num(input$asm_price)
+    errs <- c(v$errors, if (is.na(price) || price < 0) "Give a starting price of 0 NOK/m³ or more.")
+    new <- if (length(errs) == 0L)
+      tryCatch(pm_new_assortment_prices(def, price, num(input$asm_max_class)),
+               error = function(e) conditionMessage(e))
+    if (is.character(new)) errs <- c(errs, new)
+    if (length(errs) > 0L) { asm_form_err(errs); return() }
+
+    drop <- union(assortment_keys(prev), unique(new$ProductKey))
+    default_pm(replace_prices(default_pm(), drop, new, def$UseIn, "default"))
+    scenario_pm(replace_prices(scenario_pm(), drop, new, def$UseIn, "scenario"))
+    custom_defs(defs)
+    pm_tick(pm_tick() + 1L)
+    removeModal()
+    asm_msg(list(type = "ok", warnings = v$warnings, text = sprintf(
+      "%s %s (%s). Its prices are in the matrix list below.",
+      if (nrow(prev) > 0L) "Saved" else "Added", name, USE_IN_LABELS[[def$UseIn]])))
+  })
+
+  observeEvent(input$asm_remove, {
+    d <- custom_defs(); i <- match(input$asm_pick, d$Name); req(!is.na(i))
+    keys <- assortment_keys(d[i, , drop = FALSE])
+    default_pm(replace_prices(default_pm(), keys, NULL, "both", "default"))
+    scenario_pm(replace_prices(scenario_pm(), keys, NULL, "both", "scenario"))
+    custom_defs(d[-i, , drop = FALSE])
+    pm_tick(pm_tick() + 1L)
+    asm_msg(list(type = "ok", text = sprintf("Removed %s.", d$Name[i])))
+  })
+
+  output$dl_assortments <- downloadHandler(
+    filename = function() "apter_assortments.xlsx",
+    content  = function(file) assortments_export(custom_defs(), default_pm(), scenario_pm(), file))
+
+  observeEvent(input$asm_upload, {
+    f <- input$asm_upload; req(f)
+    res <- assortments_import(f$datapath, APP_PRODUCTS, APP_LC, default_pm(), scenario_pm())
+    if (isTRUE(res$ok)) {
+      custom_defs(res$defs); default_pm(res$default_pm); scenario_pm(res$scenario_pm)
+      pm_tick(pm_tick() + 1L)
+      asm_msg(list(type = "ok", warnings = res$warnings, text = sprintf(
+        "Loaded %s: %d custom assortment(s) with their default and scenario prices.",
+        f$name, nrow(res$defs))))
+    } else {
+      asm_msg(list(type = "error", text = paste(
+        c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
+    }
+  })
+  output$asm_msg <- renderUI(msg_ui(asm_msg()))
 
 }  # end server

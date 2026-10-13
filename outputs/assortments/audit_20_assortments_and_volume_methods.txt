@@ -1,0 +1,72 @@
+============================================================= 
+  Audit: custom assortments and volume methods
+  Run: 2026-10-13 12:04:51.134915
+============================================================= 
+
+--- 01-03. Formula methods by hand ---
+  [PASS  ] Check 01: Top cylinder, Dt 187.6 rounded to 180 mm, L 400 cm = 0.10179 m3 | got 0.10179
+  [PASS  ] Check 02: Top (frustum 1 cm/m): Dt 200, L 400 = 0.15247; Dt 187.6 rounded = 0.12608 m3 | got 0.15247 and 0.12608
+  [PASS  ] Check 03: Calculated Norwegian mid, Dt 187.6, L 400 = 3.14/4*(18.5+2)^2*40/100 dm3 = 0.13196 m3 (always floors Dt) | got 0.13196 m3 (adjustment None: 0.13196); official 131.9585 dm3; optBuck as it was: 0.13657 (+3.5 %)
+
+--- 04. Solid volume = sum of top-diameter cylinders ---
+  [PASS  ] Check 04: Solid volume of [10, 410] cm on the cone equals the explicit cylinder sum | hand 0.37995050, price_volume_m3 0.37995050, section_volume_fun 0.37995050
+
+--- 05. Methods through generate_candidate_logs_one_tree() ---
+  [PASS  ] Check 05a: Candidate price volume equals the hand value for all four methods (4 m log from 10 cm, Dt_ub 308 mm) | Top cylinder 0.28274/0.28274 | Top 0.32212/0.32212 | Calculated Norwegian mid 0.33166/0.33166 | All diameters (solid volume) 0.37995/0.37995
+  [PASS  ] Check 05b: DiameterTopPosition = 10 reads Dt 10 cm below the cut (310 mm): top diameter, price class 31, volume | TopDiameter 310.0 mm, class 31, volume 0.35239 (want 0.35239)
+
+--- 06-07. Custom assortment wins / does not win ---
+  [PASS  ] Check 06: Poles at 3000 NOK/m3 (eligible on the cone) are selected; both optimizers agree | 10 1010 spruce_poles; 1010 1350 spruce_sawlog; 1350 1700 spruce_pulpwood
+  [PASS  ] Check 07a: Poles at 1 NOK/m3 are not selected; both optimizers agree | 10 500 spruce_sawlog; 1300 1700 spruce_pulpwood; 500 990 spruce_sawlog; 990 1300 spruce_sawlog
+  [PASS  ] Check 07b: Poles outside their butt limit are never selected, even at 1e6 NOK/m3; optimizers agree | 10 500 spruce_sawlog; 1300 1700 spruce_pulpwood; 500 990 spruce_sawlog; 990 1300 spruce_sawlog
+
+--- 08. Default products unchanged ---
+  [PASS  ] Check 08a: Backend results for 3 strata identical to the pre-Phase-4b baseline | baseline from commit e8b1f05 | spruce: 765 logs; pine: 855 logs; both: 506 logs
+  [PASS  ] Check 08b: Default sawlog candidate volumes equal the old top-cylinder formula (taperNOR spruce 30 cm / 22 m) | 1593 sawlog candidates, 1026 eligible
+
+--- 09. validate_price_matrix_against_products() with custom assortments ---
+  [PASS  ] Check 09a: Default + custom flat (poles) + custom matrix (large sawlog, both species) passes
+  [PASS  ] Check 09b: Custom assortment without a price FAILs | spruce_poles has a price entry
+  [PASS  ] Check 09c: Custom matrix assortment also given a flat price FAILs | Products priced as their PriceType says
+
+--- 10. validate_products() / validate_assortment_defs(): broken definitions ---
+  [PASS  ] Check 10: unknown species -> rejected | Species must be spruce, pine or both: Poles
+  [PASS  ] Check 10: no lengths -> rejected | Allowed lengths must be whole cm, e.g. 310;340: Poles
+  [PASS  ] Check 10: length not 10 cm -> rejected | spruce_poles: lengths must be positive multiples of 10 cm
+  [PASS  ] Check 10: min > max top -> rejected | MaxTopDiameter must be >= MinTopDiameter: spruce_poles
+  [PASS  ] Check 10: min > max butt -> rejected | MaxButtDiameter must be >= MinButtDiameter: spruce_poles
+  [PASS  ] Check 10: unknown method -> rejected | VolumeDiameterCategory must be one of: Top cylinder; Top; All diameters (solid volume); Calculated Norwegian mid: spruce_poles
+  [PASS  ] Check 10: solid + rounding -> rejected | solid volume is never rounded; use VolumeDiameterAdjustment = None: spruce_poles
+  [PASS  ] Check 10: class waste -> rejected | ProductType 'waste' is reserved for the base waste products: spruce_poles
+  [PASS  ] Check 10: bad PriceType -> rejected | PriceType must be 'matrix' or 'flat': spruce_poles
+  [PASS  ] Check 10: top position >= log -> rejected | spruce_poles: DiameterTopPosition (600 cm) must be shorter than the shortest log (600 cm)
+  [PASS  ] Check 10: top position not 10 -> rejected | DiameterTopPosition must be a non-negative multiple of 10 cm: spruce_poles
+  [PASS  ] Check 10: bad UseIn -> rejected | UseIn must be one of both/default/scenario: Poles
+  [PASS  ] Check 10: duplicate name -> rejected | Duplicated assortment name: Poles
+  [PASS  ] Check 10: clash with base -> rejected | Assortment name clashes with a base product: spruce_sawlog / Duplicated ProductKey: spruce_sawlog
+  [PASS  ] Check 10: valid definitions (poles, large sawlog) -> accepted
+
+--- 11. Upload / download round trips ---
+  [PASS  ] Check 11a: Assortments xlsx export -> import: definitions, default and scenario prices identical
+  [PASS  ] Check 11b: Scenario long CSV with custom keys -> accepted, custom prices kept
+  [PASS  ] Check 11c: Wide CSV grid for a custom matrix -> accepted, edited cell applied | cell 999
+
+--- 12. Per-product price-diameter cap ---
+  [PASS  ] Check 12a: Custom matrix up to 70 cm prices a 65 cm log in class 65 and a 75 cm log in 70 | prices 1065, 1070 (want 1065, 1070); cap 70
+  [PASS  ] Check 12b: Default spruce sawlog still caps at 50: a 55 cm log is priced at class 50 | price 471, class-50 price 471
+  [PASS  ] Check 12c: Re-pricing under a matrix ending at 60 cm uses that matrix's cap (65 and 75 -> 60) | prices 1060, 1060
+
+--- 13. Comparison, scenario-only assortment (backend runs) ---
+  [PASS  ] Check 13a: Every tree using the scenario-only assortment counts as changed | 46 trees use spruce_poles; 46 changed in total
+  [PASS  ] Check 13b: Per-m3 shows 'poles' in Total and 'spruce_poles' within spruce (and in the comparison, 0 in default) | Total poles share 0.814
+  [PASS  ] Check 13c: Commercial volume of a fixed pattern does not depend on the volume method (price volumes do) | commercial 0.50954 m3; price volumes Top cylinder 0.33846, Top 0.41989, All diameters (solid volume) 0.50954, Calculated Norwegian mid 0.40989
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 38
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/assortments/audit_20_assortments_and_volume_methods.csv

@@ -266,6 +266,14 @@ apter_barplot <- function(vals, col, main, ylab, fmt = format) {
 #' @param title    Plot title.
 apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   ch  <- APTER_CHART
+  # Custom assortment classes take the extra slots by name, so a class has
+  # the same colour in both bars.
+  extra <- sort(setdiff(unique(as.character(c(logs_default$ProductType,
+                                              logs_scenario$ProductType))),
+                        names(ch$assortment)))
+  extra <- extra[seq_len(min(length(extra), length(ch$assortment_extra)))]
+  ch$assortment <- c(ch$assortment,
+                     setNames(ch$assortment_extra[seq_along(extra)], extra))
   old <- apter_par(mar = c(3.5, 6.5, 3, 1)); on.exit(graphics::par(old))
   x_max <- max(c(height_m, logs_default$StopPos / 100, logs_scenario$StopPos / 100), na.rm = TRUE)
   graphics::plot(NA, xlim = c(0, x_max), ylim = c(0.4, 2.9), axes = FALSE,

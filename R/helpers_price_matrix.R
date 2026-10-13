@@ -131,6 +131,8 @@ pm_from_grid <- function(grid, id, pm) {
 }
 
 #' Logical matrix (grid shape): TRUE where scenario differs from default.
+#' In the flat table, products with no default price (custom assortments
+#' used in the scenario only) have nothing to differ from: FALSE.
 pm_diff_mask <- function(default, scenario, id) {
   a <- as.matrix(pm_to_grid(default, id)); b <- as.matrix(pm_to_grid(scenario, id))
   if (!identical(dim(a), dim(b)) || !identical(dimnames(a), dimnames(b))) {
@@ -138,10 +140,31 @@ pm_diff_mask <- function(default, scenario, id) {
     a <- a[rownames(b)[rownames(b) %in% rownames(a)],
            colnames(b)[colnames(b) %in% colnames(a)], drop = FALSE]
     out <- matrix(TRUE, nrow(b), ncol(b), dimnames = dimnames(b))
+    if (identical(id, PM_FLAT_ID)) out[!rownames(b) %in% rownames(a), ] <- FALSE
     out[rownames(a), colnames(a)] <- !mapply(.same_price, a, b[rownames(a), colnames(a)])
     return(out)
   }
   matrix(!mapply(.same_price, a, b), nrow(a), ncol(a), dimnames = dimnames(a))
+}
+
+#' The default grid laid over the scenario grid's rows and columns, for the
+#' editor's highlighting (cells are matched by class, not position). Cells
+#' the default lacks are NA (so a filled scenario cell shows as differing);
+#' flat rows without a default take the scenario value (no highlight). With
+#' no default matrix at all, the scenario grid itself (nothing highlighted).
+pm_default_aligned <- function(default, scenario, id) {
+  b <- as.matrix(pm_to_grid(scenario, id))
+  if (!identical(id, PM_FLAT_ID) &&
+      !id %in% default$ProductKey[.is_matrix_row(default)]) return(b)
+  a <- as.matrix(pm_to_grid(default, id))
+  out <- matrix(NA_real_, nrow(b), ncol(b), dimnames = dimnames(b))
+  r <- intersect(rownames(b), rownames(a)); k <- intersect(colnames(b), colnames(a))
+  out[r, k] <- a[r, k]
+  if (identical(id, PM_FLAT_ID)) {
+    new <- !rownames(b) %in% rownames(a)
+    out[new, ] <- b[new, ]
+  }
+  out
 }
 
 .same_price <- function(x, y) (is.na(x) && is.na(y)) ||
