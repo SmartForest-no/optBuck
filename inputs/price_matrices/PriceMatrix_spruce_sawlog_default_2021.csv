@@ -1,352 +1,352 @@
 PriceScenario,ProductKey,ProductName,ProductType,species_group,VolumeDiameterCategory,PriceType,LengthClass_dm,LengthClass_cm,PriceDiameterClass_cm,PriceDiameterClass_mm,PriceNOKperM3,PriceSource,PriceSourceFile,Notes
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,12,120,422,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,12,120,431,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,12,120,440,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,12,120,440,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,12,120,462,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,12,120,462,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,12,120,523,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,12,120,538,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,12,120,545,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,13,130,424,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,13,130,434,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,13,130,444,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,13,130,444,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,13,130,466,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,13,130,466,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,13,130,528,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,13,130,543,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,13,130,550,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,14,140,426,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,14,140,437,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,14,140,448,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,14,140,448,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,14,140,470,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,14,140,470,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,14,140,533,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,14,140,548,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,14,140,555,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,15,150,430,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,15,150,441,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,15,150,452,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,15,150,452,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,15,150,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,15,150,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,15,150,538,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,15,150,554,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,15,150,561,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,16,160,432,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,16,160,444,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,16,160,456,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,16,160,456,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,16,160,479,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,16,160,479,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,16,160,543,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,16,160,559,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,16,160,566,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,17,170,437,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,17,170,448,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,17,170,459,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,17,170,459,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,17,170,483,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,17,170,483,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,17,170,548,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,17,170,564,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,17,170,572,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,18,180,439,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,18,180,451,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,18,180,463,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,18,180,463,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,18,180,487,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,18,180,487,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,18,180,553,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,18,180,570,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,18,180,577,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,19,190,443,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,19,190,455,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,19,190,467,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,19,190,467,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,19,190,491,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,19,190,491,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,19,190,558,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,19,190,575,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,19,190,583,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,20,200,445,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,20,200,458,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,20,200,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,20,200,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,20,200,496,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,20,200,496,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,20,200,563,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,20,200,581,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,20,200,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,21,210,450,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,21,210,462,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,21,210,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,21,210,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,21,210,500,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,21,210,500,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,21,210,568,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,21,210,586,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,21,210,594,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,22,220,452,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,22,220,465,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,22,220,478,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,22,220,478,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,22,220,504,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,22,220,504,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,22,220,573,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,22,220,591,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,22,220,599,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,23,230,456,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,23,230,469,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,23,230,482,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,23,230,482,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,23,230,508,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,23,230,508,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,23,230,578,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,23,230,597,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,23,230,605,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,24,240,458,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,24,240,472,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,24,240,486,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,24,240,486,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,24,240,513,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,24,240,513,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,24,240,583,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,24,240,602,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,24,240,610,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,25,250,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,25,250,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,25,250,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,25,250,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,25,250,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,25,250,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,25,250,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,25,250,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,25,250,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,26,260,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,26,260,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,26,260,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,26,260,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,26,260,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,26,260,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,26,260,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,26,260,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,26,260,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,27,270,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,27,270,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,27,270,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,27,270,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,27,270,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,27,270,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,27,270,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,27,270,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,27,270,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,28,280,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,28,280,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,28,280,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,28,280,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,28,280,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,28,280,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,28,280,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,28,280,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,28,280,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,29,290,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,29,290,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,29,290,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,29,290,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,29,290,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,29,290,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,29,290,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,29,290,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,29,290,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,30,300,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,30,300,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,30,300,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,30,300,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,30,300,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,30,300,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,30,300,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,30,300,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,30,300,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,31,310,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,31,310,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,31,310,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,31,310,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,31,310,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,31,310,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,31,310,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,31,310,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,31,310,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,32,320,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,32,320,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,32,320,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,32,320,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,32,320,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,32,320,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,32,320,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,32,320,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,32,320,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,33,330,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,33,330,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,33,330,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,33,330,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,33,330,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,33,330,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,33,330,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,33,330,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,33,330,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,34,340,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,34,340,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,34,340,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,34,340,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,34,340,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,34,340,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,34,340,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,34,340,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,34,340,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,35,350,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,35,350,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,35,350,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,35,350,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,35,350,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,35,350,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,35,350,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,35,350,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,35,350,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,36,360,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,36,360,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,36,360,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,36,360,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,36,360,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,36,360,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,36,360,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,36,360,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,36,360,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,37,370,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,37,370,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,37,370,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,37,370,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,37,370,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,37,370,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,37,370,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,37,370,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,37,370,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,38,380,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,38,380,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,38,380,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,38,380,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,38,380,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,38,380,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,38,380,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,38,380,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,38,380,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,39,390,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,39,390,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,39,390,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,40,400,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,40,400,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,40,400,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,41,410,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,41,410,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,41,410,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,42,420,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,42,420,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,42,420,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,43,430,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,43,430,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,43,430,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,44,440,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,44,440,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,44,440,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,45,450,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,45,450,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,45,450,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,46,460,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,46,460,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,46,460,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,47,470,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,47,470,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,47,470,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,48,480,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,48,480,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,48,480,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,49,490,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,49,490,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,49,490,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,31,310,50,500,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,34,340,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,37,370,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,40,400,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,43,430,50,500,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,46,460,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,49,490,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,52,520,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
-default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top,matrix,55,550,50,500,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,12,120,422,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,12,120,431,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,12,120,440,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,12,120,440,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,12,120,462,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,12,120,462,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,12,120,523,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,12,120,538,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,12,120,545,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,13,130,424,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,13,130,434,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,13,130,444,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,13,130,444,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,13,130,466,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,13,130,466,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,13,130,528,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,13,130,543,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,13,130,550,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,14,140,426,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,14,140,437,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,14,140,448,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,14,140,448,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,14,140,470,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,14,140,470,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,14,140,533,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,14,140,548,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,14,140,555,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,15,150,430,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,15,150,441,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,15,150,452,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,15,150,452,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,15,150,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,15,150,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,15,150,538,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,15,150,554,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,15,150,561,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,16,160,432,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,16,160,444,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,16,160,456,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,16,160,456,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,16,160,479,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,16,160,479,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,16,160,543,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,16,160,559,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,16,160,566,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,17,170,437,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,17,170,448,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,17,170,459,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,17,170,459,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,17,170,483,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,17,170,483,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,17,170,548,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,17,170,564,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,17,170,572,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,18,180,439,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,18,180,451,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,18,180,463,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,18,180,463,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,18,180,487,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,18,180,487,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,18,180,553,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,18,180,570,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,18,180,577,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,19,190,443,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,19,190,455,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,19,190,467,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,19,190,467,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,19,190,491,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,19,190,491,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,19,190,558,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,19,190,575,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,19,190,583,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,20,200,445,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,20,200,458,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,20,200,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,20,200,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,20,200,496,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,20,200,496,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,20,200,563,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,20,200,581,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,20,200,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,21,210,450,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,21,210,462,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,21,210,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,21,210,474,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,21,210,500,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,21,210,500,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,21,210,568,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,21,210,586,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,21,210,594,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,22,220,452,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,22,220,465,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,22,220,478,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,22,220,478,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,22,220,504,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,22,220,504,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,22,220,573,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,22,220,591,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,22,220,599,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,23,230,456,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,23,230,469,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,23,230,482,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,23,230,482,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,23,230,508,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,23,230,508,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,23,230,578,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,23,230,597,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,23,230,605,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,24,240,458,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,24,240,472,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,24,240,486,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,24,240,486,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,24,240,513,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,24,240,513,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,24,240,583,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,24,240,602,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,24,240,610,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,25,250,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,25,250,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,25,250,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,25,250,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,25,250,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,25,250,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,25,250,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,25,250,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,25,250,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,26,260,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,26,260,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,26,260,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,26,260,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,26,260,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,26,260,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,26,260,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,26,260,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,26,260,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,27,270,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,27,270,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,27,270,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,27,270,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,27,270,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,27,270,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,27,270,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,27,270,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,27,270,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,28,280,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,28,280,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,28,280,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,28,280,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,28,280,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,28,280,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,28,280,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,28,280,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,28,280,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,29,290,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,29,290,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,29,290,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,29,290,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,29,290,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,29,290,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,29,290,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,29,290,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,29,290,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,30,300,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,30,300,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,30,300,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,30,300,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,30,300,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,30,300,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,30,300,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,30,300,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,30,300,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,31,310,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,31,310,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,31,310,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,31,310,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,31,310,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,31,310,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,31,310,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,31,310,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,31,310,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,32,320,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,32,320,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,32,320,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,32,320,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,32,320,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,32,320,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,32,320,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,32,320,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,32,320,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,33,330,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,33,330,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,33,330,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,33,330,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,33,330,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,33,330,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,33,330,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,33,330,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,33,330,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,34,340,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,34,340,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,34,340,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,34,340,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,34,340,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,34,340,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,34,340,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,34,340,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,34,340,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,35,350,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,35,350,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,35,350,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,35,350,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,35,350,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,35,350,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,35,350,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,35,350,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,35,350,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,36,360,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,36,360,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,36,360,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,36,360,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,36,360,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,36,360,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,36,360,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,36,360,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,36,360,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,37,370,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,37,370,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,37,370,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,37,370,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,37,370,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,37,370,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,37,370,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,37,370,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,37,370,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,38,380,463,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,38,380,476,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,38,380,489,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,38,380,490,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,38,380,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,38,380,517,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,38,380,588,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,38,380,607,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,38,380,616,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,39,390,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,39,390,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,39,390,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,39,390,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,40,400,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,40,400,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,40,400,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,40,400,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,41,410,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,41,410,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,41,410,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,41,410,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,42,420,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,42,420,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,42,420,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,42,420,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,43,430,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,43,430,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,43,430,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,43,430,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,44,440,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,44,440,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,44,440,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,44,440,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,45,450,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,45,450,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,45,450,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,45,450,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,46,460,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,46,460,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,46,460,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,46,460,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,47,470,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,47,470,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,47,470,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,47,470,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,48,480,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,48,480,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,48,480,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,48,480,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,49,490,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,49,490,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,49,490,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,49,490,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,31,310,50,500,371,Interpolated,NA,Interpolated: 2x34dm - 37dm (extrapolated stepwise trend); not in original source spreadsheet
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,34,340,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,37,370,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,40,400,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,43,430,50,500,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,46,460,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,49,490,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,52,520,50,500,371,PriceMatrixGran,PriceMatrixGran.xlsx,NA
+default_2021,spruce_sawlog,Spruce sawlog,sawlog,spruce,Top cylinder,matrix,55,550,50,500,471,PriceMatrixGran,PriceMatrixGran.xlsx,NA

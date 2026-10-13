@@ -8,7 +8,8 @@
 #   - Loading PriceMatrix_long
 #   - Querying which sawlog lengths are supported / unsupported
 #   - Validating price matrix completeness against ProductData and LengthClasses
-#   - Capping price-diameter classes at the matrix maximum for price lookup
+#   - Capping price-diameter classes at each product's matrix maximum for
+#     price lookup (per product since Phase 4b)
 #   - Preparing price-join key columns on a candidates data frame
 #
 # Scope limitations (intentional):
@@ -19,7 +20,8 @@
 #   - Missing prices are NEVER silently treated as zero.
 #
 # Accepted assumptions (see CLAUDE.md):
-#   MAX_PRICE_DIAMETER_CLASS_CM = 50
+#   Price-diameter cap = largest class of the product's matrix (50 for the
+#   default 2021 matrices)
 #   PriceDiameterClass_cm_uncapped stores the original (unmodified) value.
 #   PriceDiameterClass_cm_used   stores the capped value used for price lookup.
 #
@@ -38,9 +40,12 @@ if (!exists("%||%", mode = "function")) {
   `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1L && is.na(a))) b else a
 }
 
-#' Default maximum price-diameter class (cm) used for price lookup.
-#' Candidates with PriceDiameterClass_cm above this value are capped for
-#' price lookup only. The physical top diameter is NOT changed.
+#' Price-diameter cap (cm) of the default 2021 matrices, whose largest class
+#' is 50. Since Phase 4b (2026-10-13) the cap is per product: the largest
+#' class of the product's own matrix (build_price_lookup()); this constant
+#' is the fallback for flat products and for cap_price_diameter_class().
+#' Capping applies to price lookup only; the physical top diameter is NOT
+#' changed.
 DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
 
 #' Default price scenario name.
@@ -153,9 +158,10 @@ get_unsupported_sawlog_lengths <- function(lc, pm) {
   if (!"LengthClass_dm" %in% names(pm))
     stop("PriceMatrix_long must have a LengthClass_dm column.")
 
-  # Work only on sawlog products that have length-dependent pricing
+  # Work only on products with length-dependent (matrix) pricing: base
+  # sawlogs and matrix-priced custom assortments (Phase 4b).
   sawlog_keys <- intersect(
-    unique(lc$ProductKey[grepl("sawlog", lc$ProductKey)]),
+    unique(lc$ProductKey),
     unique(pm$ProductKey[!is.na(pm$LengthClass_dm)]))
 
   if (length(sawlog_keys) == 0L) {
@@ -180,7 +186,8 @@ get_unsupported_sawlog_lengths <- function(lc, pm) {
       LogLength_dm      = all_dm,
       in_length_classes = all_dm %in% lc_dm,
       in_price_matrix   = all_dm %in% pm_dm,
-      is_known_31dm_gap = (all_dm == 31L),
+      # The known gap is the base sawlogs' 31 dm class only.
+      is_known_31dm_gap = (all_dm == 31L) & pk %in% c("spruce_sawlog", "pine_sawlog"),
       stringsAsFactors  = FALSE
     )
   })
@@ -227,8 +234,18 @@ validate_price_matrix_against_products <- function(pd, lc, pm) {
   unsup_all   <- get_unsupported_sawlog_lengths(lc, pm)
   unsupported <- unsup_all[unsup_all$in_length_classes & !unsup_all$in_price_matrix, ]
 
-  # 1. All active sawlog products have at least one priced length
-  active_saw <- c("spruce_sawlog", "pine_sawlog")
+  # Products by price type (ProductData$PriceType, Phase 4b; files without
+  # the column: sawlogs are matrix-priced, the rest flat).
+  pd_type <- if (is.null(pd)) character(0)
+    else if ("PriceType" %in% names(pd)) as.character(pd$PriceType)
+    else ifelse(pd$ProductType == "sawlog", "matrix", "flat")
+  pd_keys <- if (is.null(pd)) character(0) else as.character(pd$ProductKey)
+  pm_keys <- unique(pm$ProductKey)
+  pm_matrix_keys <- unique(pm$ProductKey[!is.na(pm$LengthClass_dm)])
+  pm_flat_keys   <- unique(pm$ProductKey[is.na(pm$LengthClass_dm)])
+
+  # 1. All matrix-priced products have at least one priced length
+  active_saw <- pd_keys[pd_type == "matrix"]
   for (pk in active_saw) {
     priced_lengths <- supported$LengthClass_dm[supported$ProductKey == pk]
     add_check(
@@ -242,20 +259,33 @@ validate_price_matrix_against_products <- function(pd, lc, pm) {
     )
   }
 
-  # 2. Flat-priced products (pulpwood, waste) have a price row
-  flat_keys <- c("spruce_pulpwood", "pine_pulpwood", "spruce_waste", "pine_waste")
-  pm_keys   <- unique(pm$ProductKey)
+  # 2. Flat-priced products (pulpwood, waste, flat custom assortments) have
+  #    a price row
+  flat_keys <- pd_keys[pd_type == "flat"]
   for (pk in flat_keys) {
     in_pm <- pk %in% pm_keys
     has_price <- in_pm && any(!is.na(pm$PriceNOKperM3[pm$ProductKey == pk]))
+    # Base products: REVIEW as before; a custom assortment without a price
+    # could never be selected, so it FAILs (Phase 4b).
+    is_base <- pk %in% c("spruce_pulpwood", "pine_pulpwood", "spruce_waste", "pine_waste")
     add_check(
       sprintf("%s has a price entry", pk),
-      if (has_price) "PASS" else "REVIEW",
+      if (has_price) "PASS" else if (is_base) "REVIEW" else "FAIL",
       if (has_price) "price present"
       else if (!in_pm) "product absent from PriceMatrix_long"
       else "all PriceNOKperM3 are NA"
     )
   }
+
+  # 2b. Each product is priced one way only, the way ProductData says.
+  wrong_way <- c(intersect(pd_keys[pd_type == "matrix"], pm_flat_keys),
+                 intersect(pd_keys[pd_type == "flat"], pm_matrix_keys))
+  if (length(wrong_way) > 0L || any(!pd_type %in% c("matrix", "flat")))
+    add_check(
+      "Products priced as their PriceType says",
+      "FAIL",
+      sprintf("matrix product with a flat price, or flat product with matrix rows: %s",
+              paste(unique(wrong_way), collapse = ", ")))
 
   # 3. No negative prices
   neg_rows <- pm[!is.na(pm$PriceNOKperM3) & pm$PriceNOKperM3 < 0, ]
@@ -299,12 +329,8 @@ validate_price_matrix_against_products <- function(pd, lc, pm) {
             else "")
   )
 
-  # Collect missing products (active but absent from pm entirely)
-  missing_products <- setdiff(
-    if (!is.null(pd)) pd$ProductKey[pd$ProductKey %in%
-      c("spruce_sawlog","spruce_pulpwood","spruce_waste",
-        "pine_sawlog","pine_pulpwood","pine_waste")] else character(0),
-    pm_keys)
+  # Collect missing products (in ProductData but absent from pm entirely)
+  missing_products <- setdiff(pd_keys, pm_keys)
 
   list(
     checks           = do.call(rbind, checks),
@@ -342,10 +368,13 @@ cap_price_diameter_class <- function(x, max_class_cm = DEFAULT_MAX_PRICE_DIAMETE
 #'
 #' Postcondition:
 #'   - PriceDiameterClass_cm_uncapped = original PriceDiameterClass_cm (unchanged)
-#'   - PriceDiameterClass_cm_used     = capped at max_price_diameter_class_cm
+#'   - PriceDiameterClass_cm_used     = capped: per product at the largest
+#'     class of its matrix when a price lookup is given (Phase 4b), else at
+#'     one fixed cap
 #'
-#' @param candidates              data.frame with a PriceDiameterClass_cm column.
-#' @param max_price_diameter_class_cm  Cap value in cm (default: 50).
+#' @param candidates data.frame with ProductKey and PriceDiameterClass_cm.
+#' @param max_price_diameter_class_cm A build_price_lookup() result (per-
+#'   product caps; the backend) or a fixed cap in cm (default 50).
 #' @return candidates with two new columns appended.
 prepare_price_join_keys <- function(candidates,
                                     max_price_diameter_class_cm =
@@ -357,8 +386,10 @@ prepare_price_join_keys <- function(candidates,
     as.integer(candidates$PriceDiameterClass_cm)
 
   candidates$PriceDiameterClass_cm_used <-
-    cap_price_diameter_class(candidates$PriceDiameterClass_cm,
-                             max_class_cm = max_price_diameter_class_cm)
+    if (is.list(max_price_diameter_class_cm))
+      price_class_used(candidates, max_price_diameter_class_cm)
+    else cap_price_diameter_class(candidates$PriceDiameterClass_cm,
+                                  max_class_cm = max_price_diameter_class_cm)
 
   candidates
 }
@@ -366,43 +397,76 @@ prepare_price_join_keys <- function(candidates,
 
 #' Price lookup tables for one PriceMatrix_long (built once per matrix).
 #'
-#' Sawlog (matrix) rows have a LengthClass_dm and are keyed by
+#' Matrix rows have a LengthClass_dm and are keyed by
 #' "ProductKey|LengthClass_dm|PriceDiameterClass_cm"; flat rows (pulpwood,
-#' waste) have no LengthClass_dm and are keyed by ProductKey (first row wins
-#' if a key is duplicated).
+#' waste, flat custom assortments) have no LengthClass_dm and are keyed by
+#' ProductKey (first row wins if a key is duplicated).
+#'
+#' Per-product price-diameter cap (Phase 4b, 2026-10-13): a matrix product's
+#' cap is the largest PriceDiameterClass_cm in its own matrix (50 for the
+#' default 2021 matrices). Flat products keep DEFAULT_MAX_PRICE_DIAMETER_
+#' CLASS_CM for the informational PriceDiameterClass_cm_used column; it does
+#' not affect their price.
 #'
 #' @param pm PriceMatrix_long data.frame.
-#' @return list(saw = named numeric, flat = named numeric).
+#' @return list(saw = named numeric, flat = named numeric, matrix_keys,
+#'   max_class = named integer, ProductKey -> cap in cm).
 build_price_lookup <- function(pm) {
   saw  <- pm[!is.na(pm$LengthClass_dm), , drop = FALSE]
   flat <- pm[is.na(pm$LengthClass_dm), , drop = FALSE]
   flat <- flat[!duplicated(flat$ProductKey), , drop = FALSE]
+  saw_cls <- suppressWarnings(as.integer(saw$PriceDiameterClass_cm))
+  max_class <- if (nrow(saw) > 0L)
+    tapply(saw_cls, as.character(saw$ProductKey), max, na.rm = TRUE) else integer(0)
   list(
     saw  = setNames(as.numeric(saw$PriceNOKperM3),
                     paste(saw$ProductKey, saw$LengthClass_dm,
                           saw$PriceDiameterClass_cm, sep = "|")),
     flat = setNames(as.numeric(flat$PriceNOKperM3),
-                    as.character(flat$ProductKey)))
+                    as.character(flat$ProductKey)),
+    matrix_keys = unique(as.character(saw$ProductKey)),
+    max_class   = setNames(as.integer(max_class), names(max_class)))
+}
+
+#' The price-diameter class used for lookup: the uncapped class, capped at
+#' the product's largest matrix class (see build_price_lookup()). The
+#' physical diameter is never changed.
+#'
+#' @param logs   data.frame with ProductKey and PriceDiameterClass_cm_uncapped
+#'               (or PriceDiameterClass_cm).
+#' @param lookup build_price_lookup() result.
+#' @return Integer vector.
+price_class_used <- function(logs, lookup) {
+  col <- intersect(c("PriceDiameterClass_cm_uncapped", "PriceDiameterClass_cm",
+                     "PriceDiameterClass_cm_used"), names(logs))
+  if (length(col) == 0L) stop("logs need a PriceDiameterClass_cm column.")
+  raw <- logs[[col[1L]]]
+  cap <- unname(lookup$max_class[as.character(logs$ProductKey)])
+  cap[is.na(cap)] <- DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM
+  pmin(as.integer(raw), as.integer(cap))
 }
 
 #' Price (NOK/m3) for each log or candidate. NA where the matrix has no price.
 #'
 #' The single price lookup used by the backend run and by scenario re-pricing
-#' (helpers_comparison.R). Sawlogs use PriceDiameterClass_cm_used (the capped
-#' class from prepare_price_join_keys()).
+#' (helpers_comparison.R). A product is matrix-priced if the matrix has
+#' length-class rows for it; its class is capped at that matrix's largest
+#' class (price_class_used()), so re-pricing under another matrix uses that
+#' matrix's cap.
 #'
 #' @param logs   data.frame with ProductKey, LengthClass_dm and
-#'               PriceDiameterClass_cm_used.
+#'               PriceDiameterClass_cm_uncapped (or PriceDiameterClass_cm).
 #' @param lookup build_price_lookup() result, or a PriceMatrix_long.
 lookup_prices <- function(logs, lookup) {
   if (is.data.frame(lookup)) lookup <- build_price_lookup(lookup)
   price  <- rep(NA_real_, nrow(logs))
-  is_saw <- grepl("sawlog", logs$ProductKey, ignore.case = TRUE)
-  if (any(is_saw))
+  is_saw <- as.character(logs$ProductKey) %in% lookup$matrix_keys
+  if (any(is_saw)) {
+    cls <- price_class_used(logs[is_saw, , drop = FALSE], lookup)
     price[is_saw] <- lookup$saw[paste(logs$ProductKey[is_saw],
                                       logs$LengthClass_dm[is_saw],
-                                      logs$PriceDiameterClass_cm_used[is_saw],
-                                      sep = "|")]
+                                      cls, sep = "|")]
+  }
   if (any(!is_saw))
     price[!is_saw] <- lookup$flat[as.character(logs$ProductKey[!is_saw])]
   unname(price)

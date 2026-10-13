@@ -10,14 +10,20 @@
 #   - Price-diameter capping is NOT done here; it belongs in helpers_valuation.R
 #     (via prepare_price_join_keys()).  This helper outputs
 #     PriceDiameterClass_cm = floor(TopDiameter/10) — the raw, uncapped value.
-#   - Volume formula:
-#       "Top" (sawlog): cylinder at top diameter — pi * r_mm^2 * L_cm / 1e8,
-#                       top diameter rounded down to cm; volume rounded to 5
-#                       decimals.
-#       Other types   : Apter's solid volume (section_volume_fun() in
-#                       helpers_commercial_volume.R, shared with the NOK/m3
-#                       denominator): 10 cm cylinders, each at the diameter at
-#                       the top of its section; not rounded (2026-10-12).
+#   - Price volume per product (Phase 4b, 2026-10-13): price_volume_m3() in
+#     helpers_volume_methods.R, by ProductData$VolumeDiameterCategory:
+#       "Top cylinder" (default sawlogs): cylinder at the top diameter,
+#                       rounded down to cm; volume rounded to 5 decimals.
+#       "Top"         : frustum, 1 cm/m taper.
+#       "Calculated Norwegian mid".
+#       "All diameters (solid volume)" (default pulpwood, waste): Apter's
+#                       solid volume (section_volume_fun(), shared with the
+#                       NOK/m3 denominator); not rounded (2026-10-12).
+#   - Measuring top diameter: read DiameterTopPosition cm below the cut (0
+#     for the default products, i.e. at the cut). It drives the top limits,
+#     the price-diameter class and the price volume.
+#   - Products per species come from ProductData (species_products()), so
+#     custom assortments are generated like the base products.
 #   - Bark (2026-10-12): products with DiameterUnderBark = TRUE use the
 #     under-bark profile (pv$DiameterValueUB, helpers_bark.R) for butt/top
 #     diameter, eligibility limits, price-diameter class and price volume,
@@ -48,6 +54,11 @@ if (!exists("add_under_bark_profile", mode = "function"))
 if (!exists("section_volume_fun", mode = "function"))
   source(file.path(dirname(sys.frame(1L)$ofile %||% "."),
                    "helpers_commercial_volume.R"))
+if (!exists("price_volume_m3", mode = "function"))
+  source(file.path(dirname(sys.frame(1L)$ofile %||% "."),
+                   "helpers_volume_methods.R"))
+if (!exists("species_products", mode = "function"))
+  source(file.path(dirname(sys.frame(1L)$ofile %||% "."), "helpers_products.R"))
 
 #' Default stump height in cm (stump = first possible start position).
 CAND_STUMP_HEIGHT_CM <- 10L
@@ -64,19 +75,17 @@ CAND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
 # Species × product filtering
 # ------------------------------------------------------------------------------
 
-#' Active product keys for each supported species group.
-#' Must match ACTIVE_PRODUCT_KEYS in helpers_products.R.
-.SPECIES_PRODUCTS <- list(
-  spruce = c("spruce_sawlog", "spruce_pulpwood", "spruce_waste"),
-  pine   = c("pine_sawlog",   "pine_pulpwood",   "pine_waste")
-)
-
 #' Return the product keys applicable to a given species group.
 #'
 #' @param species_group "spruce" or "pine".
-#' @return Character vector of ProductKey values, or NULL if unknown species.
-products_for_species <- function(species_group) {
-  .SPECIES_PRODUCTS[[species_group]]
+#' @param ProductData   ProductData; NULL gives the base products of
+#'   ACTIVE_PRODUCT_KEYS (helpers_products.R).
+#' @return Character vector of ProductKey values, or NULL if none.
+products_for_species <- function(species_group, ProductData = NULL) {
+  pks <- if (is.null(ProductData))
+    ACTIVE_PRODUCT_KEYS[startsWith(ACTIVE_PRODUCT_KEYS, paste0(species_group, "_"))]
+  else species_products(ProductData, species_group)
+  if (length(pks) == 0L) NULL else pks
 }
 
 
@@ -120,7 +129,7 @@ generate_candidate_logs_one_tree <- function(pv,
   sg       <- pv$species_group
   plot_id  <- pv$plot_id
 
-  pks <- products_for_species(sg)
+  pks <- products_for_species(sg, ProductData)
   if (is.null(pks) || length(pks) == 0L)
     stop(sprintf("Tree %s: no products configured for species_group '%s'.",
                  tree_id, sg))
@@ -206,11 +215,12 @@ generate_candidate_logs_one_tree <- function(pv,
     # Butt diameter at start position (mm)
     combos$ButtDiameter <- ser$fun(combos$start_pos)
 
-    # Top diameter at stop position minus a small offset (avoid 0 at apex)
-    # Using stop_pos - DiameterTopPosition (=0 in script 11, i.e. at stop_pos)
-    combos$TopDiameter  <- ser$fun(combos$stop_pos)
-    top_ob <- ser_ob$fun(combos$stop_pos)
-    top_ub <- if (!is.null(ser_ub)) ser_ub$fun(combos$stop_pos) else NA_real_
+    # Measuring top diameter: DiameterTopPosition cm below the cut (0 for the
+    # default products, as in script 11, i.e. at stop_pos).
+    top_pos <- combos$stop_pos - as.numeric(prow$DiameterTopPosition %||% 0)
+    combos$TopDiameter  <- ser$fun(top_pos)
+    top_ob <- ser_ob$fun(top_pos)
+    top_ub <- if (!is.null(ser_ub)) ser_ub$fun(top_pos) else NA_real_
 
     # Eligibility flags
     e_len  <- combos$log_len  >= (prow$MinLength  %||% 0L) &
@@ -221,32 +231,18 @@ generate_candidate_logs_one_tree <- function(pv,
               combos$ButtDiameter <= (prow$MaxButtDiameter %||% Inf)
     eligible <- e_len & e_top & e_butt
 
-    # Price volume
-    # For "Top" products, apply VolumeDiameterAdjustment if specified.
-    top_d_vol <- if (!is.null(prow$VolumeDiameterAdjustment) &&
-                     !is.na(prow$VolumeDiameterAdjustment) &&
-                     prow$VolumeDiameterAdjustment ==
-                       "Measured diameter rounded downwards to cm") {
-      floor(combos$TopDiameter / 10) * 10
-    } else {
-      combos$TopDiameter
-    }
-
-    is_top <- !is.null(prow$VolumeDiameterCategory) &&
-      !is.na(prow$VolumeDiameterCategory) &&
-      prow$VolumeDiameterCategory == "Top"
-    if (is_top) {
-      r_mm      <- top_d_vol / 2
-      price_vol <- ifelse(
-        eligible & !is.na(r_mm) & r_mm > 0,
-        pi * r_mm^2 * combos$log_len / 1e8,
-        NA_real_)
-    } else {
-      price_vol <- ifelse(
-        eligible,
-        ser$solid_vol(combos$start_pos, combos$stop_pos),
-        NA_real_)
-    }
+    # Price volume by the product's volume method (helpers_volume_methods.R);
+    # NA for ineligible candidates.
+    price_vol <- ifelse(
+      eligible,
+      price_volume_m3(method     = prow$VolumeDiameterCategory,
+                      top_d_mm   = combos$TopDiameter,
+                      length_cm  = combos$log_len,
+                      start_pos  = combos$start_pos,
+                      stop_pos   = combos$stop_pos,
+                      solid_vol  = ser$solid_vol,
+                      adjustment = prow$VolumeDiameterAdjustment),
+      NA_real_)
 
     # LengthClass in dm
     len_dm <- as.integer(combos$log_len / 10L)
@@ -267,7 +263,7 @@ generate_candidate_logs_one_tree <- function(pv,
       TopDiameter          = round(combos$TopDiameter, 1),
       ButtDiameter         = round(combos$ButtDiameter, 1),
       eligible             = eligible,
-      price_volume_m3      = if (is_top) round(price_vol, 5) else price_vol,
+      price_volume_m3      = price_vol,
       LengthClass_dm       = len_dm,
       PriceDiameterClass_cm = diam_class_raw,   # uncapped; rename in valuation
       TopDiameter_ob       = round(top_ob, 1),

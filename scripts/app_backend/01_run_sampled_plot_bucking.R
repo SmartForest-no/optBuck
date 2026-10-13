@@ -16,8 +16,12 @@
 #   - plot_id_github is renamed to plot_id before all helper calls, and
 #     renamed back before any data is returned. No returned object contains
 #     a column named plot_id.
-#   - Price join is done manually (sawlogs by 3 keys; non-sawlogs by 1 key)
-#     because no single helper function covers the full join.
+#   - Prices come from lookup_prices() (R/helpers_valuation.R): matrix
+#     products by 3 keys, flat products by 1 key; each matrix product's
+#     price-diameter class is capped at its matrix's largest class.
+#   - Products (Phase 4b): `products` / `length_classes` give the run's
+#     product set (base products plus custom assortments); NULL loads the
+#     default files. validate_products() errors stop the run.
 #   - Data is loaded from data_processed_github/ by default.
 #   - This script never writes output files.
 #   - Bark (2026-10-12): profiles are over bark (taperNOR cache); an
@@ -66,7 +70,8 @@ suppressPackageStartupMessages({
   d
 })
 
-for (.h in c("helpers_paths", "helpers_products", "helpers_valuation",
+for (.h in c("helpers_paths", "helpers_volume_methods", "helpers_products",
+             "helpers_valuation",
              "helpers_taper", "helpers_bark", "helpers_commercial_volume",
              "helpers_candidate_generation", "helpers_dp_optimizer",
              "helpers_price_matrix", "helpers_comparison")) {
@@ -79,7 +84,7 @@ rm(.h, src)
 # ---- constants ---------------------------------------------------------------
 BACKEND_MIN_DBH_CM               <- 5.0
 BACKEND_MIN_HEIGHT_M             <- 4.5
-BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
+BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap per product (Phase 4b)
 
 # ---- internal utilities ------------------------------------------------------
 
@@ -263,7 +268,9 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
 run_sampled_plot_bucking <- function(
     params,
     price_matrix_path = "default_2021",
-    root = get_root_dir()) {
+    root = get_root_dir(),
+    products = NULL,
+    length_classes = NULL) {
 
   t_start <- proc.time()
 
@@ -365,8 +372,13 @@ run_sampled_plot_bucking <- function(
 
   # ---- 6. Load products and price matrix -------------------------------------
   t0_products_prices <- proc.time()
-  pd <- load_products(root)
-  lc <- load_length_classes(root)
+  pd <- products       %||% load_products(root)
+  lc <- length_classes %||% load_length_classes(root)
+  if (!"LogLength_dm" %in% names(lc)) lc$LogLength_dm <- lc$LogLength / 10
+  prod_val <- validate_products(pd, lc)
+  if (!prod_val$ok)
+    stop("Product definitions invalid:\n",
+         paste0("  ", prod_val$errors, collapse = "\n"))
 
   if (identical(price_matrix_path, "default_2021")) {
     pm <- load_price_matrix_long(root)
@@ -552,7 +564,8 @@ run_sampled_plot_bucking <- function(
 
     # Add PriceDiameterClass_cm_uncapped and PriceDiameterClass_cm_used.
     t0_join <- proc.time()
-    elig <- prepare_price_join_keys(elig, BACKEND_MAX_PRICE_DIAMETER_CLASS_CM)
+    # Per-product cap: the largest class of each product's matrix.
+    elig <- prepare_price_join_keys(elig, price_lookup)
 
     # Look up prices (shared lookup, R/helpers_valuation.R).
     elig$PriceNOKperM3 <- lookup_prices(elig, price_lookup)
