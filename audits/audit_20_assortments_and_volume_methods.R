@@ -46,6 +46,12 @@
 #      it count as changed; per-m3 shows the class in Total and the
 #      ProductKey within spruce; commercial volume of a fixed pattern does
 #      not depend on the volume method
+# 14.  Editing an assortment keeps prices: after renaming it, dropping a
+#      length, adding a length and raising the max class, every cell that
+#      still exists keeps its default and its scenario price, new cells get
+#      the starting price, removed cells are dropped; a flat price survives a
+#      length change, a newly added species starts fresh, flat -> grid keeps
+#      nothing
 #
 # Verdict : PASS / ACCEPTED WITH REVIEW / FAIL (helpers_audit.R)
 #
@@ -491,6 +497,60 @@ rec("Check 13c: Commercial volume of a fixed pattern does not depend on the volu
         abs(cv_a[1] - sv(10, 610)) <= TOL) PASS else FAIL,
     sprintf("commercial %.5f m3; price volumes %s", cv_a[1],
             paste(sprintf("%s %.5f", names(vm13), vm13), collapse = ", ")))
+
+
+# ==============================================================================
+# Check 14: editing an assortment keeps the prices of cells that still exist
+# ==============================================================================
+section("14. Editing an assortment keeps existing prices")
+
+old14 <- defs9[2, ]                                   # large sawlog, both, 30-70 cm, 400;500
+start14 <- pm_new_assortment_prices(old14, 700)
+setp <- function(pm, k, l, d, p) {
+  pm$PriceNOKperM3[pm$ProductKey == k & pm$LengthClass_dm == l & pm$PriceDiameterClass_cm == d] <- p
+  pm
+}
+def14 <- setp(start14, "spruce_large_sawlog", 40L, 35L, 811)
+scn14 <- setp(setp(start14, "spruce_large_sawlog", 40L, 35L, 911), "pine_large_sawlog", 50L, 45L, 922)
+# Edit: renamed, 500 cm dropped, 600 cm added, max top 70 -> 75 cm.
+new14 <- mk_def(Name = "Big sawlog", Class = "large sawlog", Species = "both",
+                MinTopDiameter_cm = 30, MaxTopDiameter_cm = 75, AllowedLengths_cm = "400;600",
+                VolumeDiameterCategory = "Top", VolumeDiameterAdjustment = VOLUME_ROUND_DOWN_CM,
+                PriceType = "matrix")
+cells14 <- pm_new_assortment_prices(new14, 650)
+kd <- pm_keep_assortment_prices(cells14, def14, old14, new14)
+ks <- pm_keep_assortment_prices(cells14, scn14, old14, new14)
+at <- function(pm, k, l, d) pm$PriceNOKperM3[pm$ProductKey == k & pm$LengthClass_dm %in% l &
+                                             pm$PriceDiameterClass_cm %in% d]
+n_kept_want <- 2L * 41L                               # 2 species x classes 30-70 at 40 dm
+ok14a <- identical(at(kd, "spruce_big_sawlog", 40L, 35L), 811) &&
+  identical(at(ks, "spruce_big_sawlog", 40L, 35L), 911) &&
+  identical(at(kd, "pine_big_sawlog", 40L, 50L), 700) &&      # kept cell, unedited
+  identical(at(ks, "spruce_big_sawlog", 60L, 35L), 650) &&    # new length
+  identical(at(kd, "pine_big_sawlog", 40L, 73L), 650) &&      # new diameter class
+  !any(kd$LengthClass_dm == 50L | ks$LengthClass_dm == 50L) && # removed length dropped
+  identical(attr(kd, "n_kept"), n_kept_want) && identical(attr(ks, "n_kept"), n_kept_want) &&
+  nrow(kd) == 2L * 46L * 2L
+rec("Check 14a: Edited grid (renamed, a length removed and one added, max class raised) keeps default and scenario prices of existing cells; new cells at the starting price; removed cells dropped",
+    if (ok14a) PASS else FAIL,
+    sprintf("spruce 40/35: default %s (want 811), scenario %s (want 911); new 60 dm %s, new 73 cm %s (want 650); kept %s/%s of %d (want %d each); 50 dm rows left: %d",
+            at(kd, "spruce_big_sawlog", 40L, 35L), at(ks, "spruce_big_sawlog", 40L, 35L),
+            at(ks, "spruce_big_sawlog", 60L, 35L), at(kd, "pine_big_sawlog", 40L, 73L),
+            attr(kd, "n_kept"), attr(ks, "n_kept"), nrow(kd), n_kept_want,
+            sum(kd$LengthClass_dm == 50L | ks$LengthClass_dm == 50L, na.rm = TRUE)))
+
+flat_old <- mk_def()                                  # spruce poles, flat
+flat_pm  <- pm_new_assortment_prices(flat_old, 900); flat_pm$PriceNOKperM3 <- 950
+flat_new <- mk_def(AllowedLengths_cm = "600;700", Species = "both")
+kf <- pm_keep_assortment_prices(pm_new_assortment_prices(flat_new, 500), flat_pm, flat_old, flat_new)
+km <- pm_keep_assortment_prices(pm_new_assortment_prices(mk_def(PriceType = "matrix"), 500),
+                                flat_pm, flat_old, mk_def(PriceType = "matrix"))
+ok14b <- identical(at(kf, "spruce_poles", NA, NA), 950) && identical(at(kf, "pine_poles", NA, NA), 500) &&
+  identical(attr(km, "n_kept"), 0L) && all(km$PriceNOKperM3 == 500)
+rec("Check 14b: Flat price kept when lengths change; a new species gets the starting price; flat -> grid keeps no cells",
+    if (ok14b) PASS else FAIL,
+    sprintf("spruce %s (want 950), pine %s (want 500); flat->grid kept %s",
+            at(kf, "spruce_poles", NA, NA), at(kf, "pine_poles", NA, NA), attr(km, "n_kept")))
 
 
 # ==============================================================================

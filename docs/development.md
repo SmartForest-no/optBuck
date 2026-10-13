@@ -20,8 +20,8 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | App backend | Audit 16 PASS (15/15), including fast vs. reference optimizer equivalence |
 | Bark model and NOK/m³ denominator | Audit 18 PASS (13/13): barkNOR wrapper, B ≥ 0 floor, swappable model, synthetic stems, price independence |
 | Tie-breaking and price scenarios | Audit 19 PASS (25/25): synthetic ties, order independence, matrix helpers, long and wide uploads, pattern comparison |
-| Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (38/38): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline, validation, upload round trips, per-product price cap |
-| Shiny app (v1, Release 0.2.0) | Audit 17 PASS (25/25), headless shinytest2 smoke test with screenshots, including a custom assortment added through the form |
+| Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline, validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
+| Shiny app (v1, Release 0.2.0) | Audit 17 PASS (25/25), headless shinytest2 smoke test with screenshots, including a custom assortment added and edited through the form |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
 (`scripts/97_fill_31dm_sawlog_price_gap.R`). Rows are flagged

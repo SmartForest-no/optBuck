@@ -905,12 +905,15 @@ server <- function(input, output, session) {
         radioButtons("asm_price_type", "Pricing",
                      c("Grid (length × diameter class)" = "matrix", "Flat price" = "flat"),
                      v("PriceType", "matrix")),
-        numericInput("asm_price", "Starting price (NOK/m³)", 500, min = 0),
+        numericInput("asm_price", "Starting price for new cells (NOK/m³)", 500, min = 0),
         numericInput("asm_max_class",
                      "Largest diameter class (cm; grid without a max top diameter)", NA, min = 1)
       ),
       div(class = "note-muted",
-          "Saving sets this assortment's prices to the starting price; edit them in the price matrices.",
+          if (is.null(d)) "A new assortment starts at the starting price in every cell; edit the prices in the price matrices."
+          else paste("Saving keeps the default and scenario prices of every cell that still exists",
+                     "(same species, diameter class and length; a flat price stays if pricing stays flat).",
+                     "New cells get the starting price; cells no longer in the grid are dropped."),
           " The largest diameter class of a grid is its price cap: larger logs are priced at it."),
       uiOutput("asm_form_msg"),
       footer = tagList(modalButton("Cancel"),
@@ -963,15 +966,28 @@ server <- function(input, output, session) {
     if (is.character(new)) errs <- c(errs, new)
     if (length(errs) > 0L) { asm_form_err(errs); return() }
 
+    # An edit keeps the prices of cells that still exist, per run; new cells
+    # get the starting price and removed cells are dropped.
     drop <- union(assortment_keys(prev), unique(new$ProductKey))
-    default_pm(replace_prices(default_pm(), drop, new, def$UseIn, "default"))
-    scenario_pm(replace_prices(scenario_pm(), drop, new, def$UseIn, "scenario"))
+    keep <- function(pm) if (nrow(prev) == 0L) new
+                         else pm_keep_assortment_prices(new, pm, prev, def)
+    new_d <- keep(default_pm()); new_s <- keep(scenario_pm())
+    default_pm(replace_prices(default_pm(), drop, new_d, def$UseIn, "default"))
+    scenario_pm(replace_prices(scenario_pm(), drop, new_s, def$UseIn, "scenario"))
     custom_defs(defs)
     pm_tick(pm_tick() + 1L)
     removeModal()
-    asm_msg(list(type = "ok", warnings = v$warnings, text = sprintf(
-      "%s %s (%s). Its prices are in the matrix list below.",
-      if (nrow(prev) > 0L) "Saved" else "Added", name, USE_IN_LABELS[[def$UseIn]])))
+    runs <- intersect(c("default", "scenario"),
+                      if (def$UseIn == "both") c("default", "scenario") else def$UseIn)
+    kept <- vapply(runs, function(r) attr(if (r == "default") new_d else new_s, "n_kept") %||% 0L,
+                   integer(1))
+    asm_msg(list(type = "ok", warnings = v$warnings, text = if (nrow(prev) == 0L)
+      sprintf("Added %s (%s). Its prices are in the matrix list below.",
+              name, USE_IN_LABELS[[def$UseIn]])
+      else sprintf(
+        "Saved %s (%s): of %d price cell(s), %s; new cells at the starting price.",
+        name, USE_IN_LABELS[[def$UseIn]], nrow(new),
+        paste(sprintf("%d kept in the %s", kept, runs), collapse = ", "))))
   })
 
   observeEvent(input$asm_remove, {

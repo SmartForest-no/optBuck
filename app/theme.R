@@ -38,11 +38,14 @@ APTER_CHART <- list(
   # Assortments in the stem diagram (categorical slots 1-3; validated on the
   # white surface: CVD and normal-vision pass; waste aqua is below 3:1, so
   # every log carries a text label and the legend names each colour).
-  assortment = c(sawlog = "#2a78d6", pulpwood = "#eb6834", waste = "#1baf7a"),
-  # Custom assortment classes (Phase 4b): categorical slots 4-8 of the same
-  # validated palette, in fixed order, given to the classes in a diagram by
-  # name (apter_stem_compare()); beyond five, the neutral fill + label.
-  assortment_extra = c("#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948")
+  assortment = c(sawlog = "#2a78d6", pulpwood = "#eb6834", waste = "#1baf7a")
+  # Custom assortment classes (Phase 4b) fold into the neutral fill and are
+  # named by their label. In the stem diagram any two products can touch, so
+  # the palette is checked on all pairs (dataviz validator in headless Chrome,
+  # 2026-10-13): only these three slots pass; adding any of slots 4-8 fails
+  # (e.g. green vs orange protan dE 3.2, red vs orange normal dE 7.1). The
+  # neutral #52514e against the three passes CVD (dE 9.2) and normal vision
+  # (dE 21.8); it is grey by design, the "other" fold.
 )
 
 

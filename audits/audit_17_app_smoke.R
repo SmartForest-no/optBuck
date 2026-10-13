@@ -54,7 +54,9 @@
 # 19.  Total browser runtime under 180 s (REVIEW if above)
 # 20.  Custom assortment (Phase 4b): added through the Add assortment form
 #      (spruce poles, scenario only, grid at 2000 NOK/m3) -> listed in
-#      tbl_assortments and in the matrix choices; a comparison run shows
+#      tbl_assortments and in the matrix choices; editing it (one length
+#      replaced) reports the scenario's 38 remaining cells kept; a comparison
+#      run shows
 #      'poles' in the per-m3 comparison, without error notifications
 #
 # Verdict :
@@ -601,8 +603,15 @@ if (!browser_ok) {
                      asm_price_type = "matrix", asm_price = 2000, wait_ = FALSE)
       app$click("asm_save")
       app$wait_for_idle()
+      # Edit it (one length replaced): prices of remaining cells are kept.
+      app$click("asm_edit")
+      app$wait_for_idle()
+      app$set_inputs(asm_lengths = "600;800;1200", wait_ = FALSE)
+      app$click("asm_save")
+      app$wait_for_idle()
       ""
     }, error = function(e) conditionMessage(e))
+    edit_msg <- txt(app, "#asm_msg")
     n_asm   <- n_tbl_rows(app, "tbl_assortments")
     asm_txt <- txt(app, "#tbl_assortments")
     pm_opts <- app$get_js(paste0(
@@ -623,12 +632,14 @@ if (!browser_ok) {
     cmp20  <- txt(app, "#tbl_cmp_per_m3")
     nerr20 <- n_err_notif(app)
     ok20 <- !nzchar(asm_err) && !nzchar(run20_err) && n_asm == 1L &&
+      grepl("Saved Poles (Scenario only): ", edit_msg, fixed = TRUE) &&
+      grepl("38 kept in the scenario", edit_msg, fixed = TRUE) &&
       grepl("Poles", asm_txt, fixed = TRUE) &&
       grepl("spruce_poles", pm_opts, fixed = TRUE) &&
       grepl("poles", cmp20, fixed = TRUE) && nerr20 == 0L
     rec(browser_checks[16], if (ok20) PASS else FAIL,
-        sprintf("assortment rows %d | matrix choices: %s | 'poles' in per-m3 comparison: %s | error notifications: %d%s",
-                n_asm, pm_opts, grepl("poles", cmp20, fixed = TRUE), nerr20,
+        sprintf("assortment rows %d | after edit: '%s' | matrix choices: %s | 'poles' in per-m3 comparison: %s | error notifications: %d%s",
+                n_asm, trimws(edit_msg), pm_opts, grepl("poles", cmp20, fixed = TRUE), nerr20,
                 paste0(if (nzchar(asm_err)) paste(" | form error:", asm_err) else "",
                        if (nzchar(run20_err)) paste(" | run error:", run20_err) else "")))
 

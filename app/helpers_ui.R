@@ -266,14 +266,11 @@ apter_barplot <- function(vals, col, main, ylab, fmt = format) {
 #' @param title    Plot title.
 apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   ch  <- APTER_CHART
-  # Custom assortment classes take the extra slots by name, so a class has
-  # the same colour in both bars.
-  extra <- sort(setdiff(unique(as.character(c(logs_default$ProductType,
-                                              logs_scenario$ProductType))),
-                        names(ch$assortment)))
-  extra <- extra[seq_len(min(length(extra), length(ch$assortment_extra)))]
-  ch$assortment <- c(ch$assortment,
-                     setNames(ch$assortment_extra[seq_along(extra)], extra))
+  # Custom assortment classes share the neutral fill (see theme.R: only three
+  # categorical colours pass when any two products can touch); their label
+  # names the class.
+  types  <- unique(as.character(c(logs_default$ProductType, logs_scenario$ProductType)))
+  custom <- length(setdiff(types, names(ch$assortment))) > 0L
   old <- apter_par(mar = c(3.5, 6.5, 3, 1)); on.exit(graphics::par(old))
   x_max <- max(c(height_m, logs_default$StopPos / 100, logs_scenario$StopPos / 100), na.rm = TRUE)
   graphics::plot(NA, xlim = c(0, x_max), ylim = c(0.4, 2.9), axes = FALSE,
@@ -291,16 +288,20 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
     fill[is.na(fill)] <- ch$neutral
     graphics::rect(l$StartPos / 100, y - 0.32, l$StopPos / 100, y + 0.32,
                    col = fill, border = ch$surface, lwd = 2)
+    is_custom <- !as.character(l$ProductType) %in% names(ch$assortment)
     lab <- ifelse(is.na(l$LengthClass_dm), "", paste0(l$LengthClass_dm))
-    wide <- (l$StopPos - l$StartPos) / 100 > x_max / 25
+    lab[is_custom] <- paste(l$ProductType[is_custom], lab[is_custom])
+    wide <- (l$StopPos - l$StartPos) / 100 > x_max / 25 * ifelse(is_custom, 3, 1)
     graphics::text(((l$StartPos + l$StopPos) / 200)[wide], y, lab[wide],
                    col = "#FFFFFF", cex = 0.75, font = 2)
   }
   draw(logs_default, 2); draw(logs_scenario, 1)
+  leg <- c(ch$assortment, if (custom) c("custom assortments" = ch$neutral))
   graphics::legend("top", horiz = TRUE, bty = "n", inset = c(0, -0.02),
-                   legend = names(ch$assortment), fill = ch$assortment,
+                   legend = names(leg), fill = leg,
                    border = NA, text.col = ch$ink, cex = 0.8, xpd = TRUE)
-  graphics::mtext("Labels: log length (dm)", side = 3, line = 0.1, adj = 1,
+  graphics::mtext(if (custom) "Labels: log length (dm); custom: class and length"
+                  else "Labels: log length (dm)", side = 3, line = 0.1, adj = 1,
                   col = ch$muted, cex = 0.7)
 }
 

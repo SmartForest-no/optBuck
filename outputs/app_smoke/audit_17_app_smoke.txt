@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-13 12:00:02.862485
+  Run: 2026-10-13 12:20:37.250225
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpSuEdZo/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpWaIRMh/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -23,7 +23,7 @@
 --- 05-16. Browser checks ---
   [PASS  ] Check 05: AppDriver starts the app | app started
   [PASS  ] Check 06: Simulator run_status idle and title contains 'Apter' | run_status: 'Select parameters and click Run optimizer.' | title: 'Apter — Bucking simulator (v1)'
-  [PASS  ] Check 07: Main run completes without error notification | run_status: 'Run complete in 7.6 s  |  5 plot(s)  |  113 trees  |  334 selected logs  |  ID: sampled_20261013_120022' | error notifications: 0
+  [PASS  ] Check 07: Main run completes without error notification | run_status: 'Run complete in 7.6 s  |  5 plot(s)  |  113 trees  |  334 selected logs  |  ID: sampled_20261013_122057' | error notifications: 0
   [PASS  ] Check 08: summary_cards non-empty and tbl_products has rows | summary_cards chars: 335 | tbl_products rows: 2
   [PASS  ] Check 09: Scenario comparison 'same' samples the same plots | cmp_status: 'Comparison complete. Same plots sampled in both scenarios.'
   [PASS  ] Check 10: Uploaded scenario runs; comparison, pattern line and stem diagram render | status after upload: '351 cell(s) differ from the default
@@ -36,10 +36,10 @@
   [PASS  ] Check 15: Screenshots saved for visual review | 6 of 6 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
   [PASS  ] Check 16: Per m3 tab renders; Trees card expands; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 10 | log detail shown: TRUE | per-ha text hits: 0
   [PASS  ] Check 17: Price-matrix editor: grids side by side, highlights, reset | grids side by side: TRUE | highlighted cells after upload: 270 | after reset: '0 cell(s) differ from the default
-   (0 in this matrix).', highlighted 0 | upload message: 'Loaded filea0142dbc6dea.csv (wide layout): replaced Spruce sawlog.'
+   (0 in this matrix).', highlighted 0 | upload message: 'Loaded file8ae055537f3e.csv (wide layout): replaced Spruce sawlog.'
   [PASS  ] Check 18: Stale-scenario notice after editing prices | before edit: '' | after reset, Run card: 'Scenario prices changed since last run; run again to update.' | comparison tab: 'Scenario prices changed since last run; run again to update.'
-  [PASS  ] Check 20: Custom assortment added in the UI runs in the comparison | assortment rows 1 | matrix choices: spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | 'poles' in per-m3 comparison: TRUE | error notifications: 0
-  [PASS  ] Check 19: Browser runtime under 180 s | browser checks took 84.4 s (threshold: 180 s)
+  [PASS  ] Check 20: Custom assortment added in the UI runs in the comparison | assortment rows 1 | after edit: 'Saved Poles (Scenario only): of 57 price cell(s), 38 kept in the scenario; new cells at the starting price.' | matrix choices: spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | 'poles' in per-m3 comparison: TRUE | error notifications: 0
+  [PASS  ] Check 19: Browser runtime under 180 s | browser checks took 82.2 s (threshold: 180 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

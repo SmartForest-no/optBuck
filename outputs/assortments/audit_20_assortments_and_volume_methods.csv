@@ -37,3 +37,5 @@ Check 12c: Re-pricing under a matrix ending at 60 cm uses that matrix's cap (65 
 Check 13a: Every tree using the scenario-only assortment counts as changed,PASS,46 trees use spruce_poles; 46 changed in total
 "Check 13b: Per-m3 shows 'poles' in Total and 'spruce_poles' within spruce (and in the comparison, 0 in default)",PASS,Total poles share 0.814
 Check 13c: Commercial volume of a fixed pattern does not depend on the volume method (price volumes do),PASS,"commercial 0.50954 m3; price volumes Top cylinder 0.33846, Top 0.41989, All diameters (solid volume) 0.50954, Calculated Norwegian mid 0.40989"
+"Check 14a: Edited grid (renamed, a length removed and one added, max class raised) keeps default and scenario prices of existing cells; new cells at the starting price; removed cells dropped",PASS,"spruce 40/35: default 811 (want 811), scenario 911 (want 911); new 60 dm 650, new 73 cm 650 (want 650); kept 82/82 of 184 (want 82 each); 50 dm rows left: 0"
+Check 14b: Flat price kept when lengths change; a new species gets the starting price; flat -> grid keeps no cells,PASS,"spruce 950 (want 950), pine 500 (want 500); flat->grid kept 0"

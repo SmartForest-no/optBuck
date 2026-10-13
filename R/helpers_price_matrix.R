@@ -576,6 +576,33 @@ pm_new_assortment_prices <- function(def, price, max_class_cm = NA) {
 }
 
 
+#' Keep existing prices when an assortment is edited.
+#'
+#' `new` holds the edited assortment's cells at the starting price
+#' (pm_new_assortment_prices()). Every cell that existed before the edit (same
+#' species, length class and diameter class; for a flat price, same species)
+#' takes its price from `pm`; new cells keep the starting price. Cells that no
+#' longer exist are not in `new`, so they are dropped. Matching is by species,
+#' so renaming an assortment keeps its prices.
+#'
+#' @param new     Long minimal rows of the edited assortment.
+#' @param pm      The run's current price matrix (default or scenario).
+#' @param old_def,new_def The definition before and after the edit.
+#' @return `new` with carried-over prices; attribute "n_kept" = cells kept.
+pm_keep_assortment_prices <- function(new, pm, old_def, new_def) {
+  old_r <- custom_assortment_rows(old_def)$pd
+  new_r <- custom_assortment_rows(new_def)$pd
+  old_key <- setNames(old_r$ProductKey, old_r$species_group)[
+    new_r$species_group[match(new$ProductKey, new_r$ProductKey)]]
+  old <- pm_minimal(pm)
+  hit <- match(paste(old_key, new$LengthClass_dm, new$PriceDiameterClass_cm),
+               paste(old$ProductKey, old$LengthClass_dm, old$PriceDiameterClass_cm))
+  new$PriceNOKperM3[!is.na(hit)] <- old$PriceNOKperM3[hit[!is.na(hit)]]
+  attr(new, "n_kept") <- sum(!is.na(hit))
+  new
+}
+
+
 #' Custom ProductKeys of a definition table.
 assortment_keys <- function(defs) {
   if (is.null(defs) || nrow(defs) == 0L) return(character(0))

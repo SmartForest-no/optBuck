@@ -103,7 +103,9 @@ assortment has:
   in the scenario only shows what adding the assortment changes.
 
 New assortments appear in the price editor next to the base products, and
-their default prices can be edited there. Assortments are shown in the
+their default prices can be edited there. Editing an assortment keeps the
+prices of every grid cell that still exists; new cells start at the
+starting price. Assortments are shown in the
 results as their own class, and always count as saleable volume. Stems are
 assumed free of defects; no quality restrictions are applied. Assortments,
 with their default and scenario prices, can be downloaded and uploaded as
