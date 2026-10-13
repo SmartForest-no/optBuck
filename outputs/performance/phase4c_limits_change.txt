@@ -1,0 +1,47 @@
+Phase 4c default diameter limits: results against the baselines
+Run: 2026-10-13 18:41:43, 15 workers
+
+                  case trees trees_changed logs_before logs_after logs_removed
+            nfi_spruce   339             6         765        765           22
+              nfi_pine   255             0         855        855            0
+              nfi_both   194             0         506        506            0
+                 tl100   100             0         322        322            0
+                tl1000  1000             0        3329       3329            0
+            tl1000_scn  1000             0        3325       3325            0
+  tl100_custom_default   100             0         267        267            0
+ tl100_custom_scenario   100             0         311        311            0
+        audit20_spruce   339             6         765        765           22
+          audit20_pine   255             0         855        855            0
+          audit20_both   194             0         506        506            0
+ logs_added nok_per_m3_before nok_per_m3_after delta_nok_per_m3
+         22            387.90           388.41             0.51
+          0            360.68           360.68             0.00
+          0            372.64           372.64             0.00
+          0            383.19           383.19             0.00
+          0            384.51           384.51             0.00
+          0            408.76           408.76             0.00
+          0            715.93           715.93             0.00
+          0            507.31           507.31             0.00
+         22            387.90           388.41             0.51
+          0            360.68           360.68             0.00
+          0            372.64           372.64             0.00
+
+By assortment (rows that changed):
+           case  scope      assortment nok_per_m3_before nok_per_m3_after
+     nfi_spruce  Total        pulpwood             44.77            45.12
+     nfi_spruce  Total          sawlog            343.13           343.29
+     nfi_spruce spruce spruce_pulpwood             44.77            45.12
+     nfi_spruce spruce   spruce_sawlog            343.13           343.29
+ audit20_spruce  Total        pulpwood             44.77            45.12
+ audit20_spruce  Total          sawlog            343.13           343.29
+ audit20_spruce spruce spruce_pulpwood             44.77            45.12
+ audit20_spruce spruce   spruce_sawlog            343.13           343.29
+ delta_nok_per_m3 share_pct_before share_pct_after
+             0.34            17.22           17.35
+             0.17            82.78           82.65
+             0.34            17.22           17.35
+             0.17            82.78           82.65
+             0.34            17.22           17.35
+             0.17            82.78           82.65
+             0.34            17.22           17.35
+             0.17            82.78           82.65

@@ -37,7 +37,7 @@ args <- commandArgs(trailingOnly = TRUE)
 extra <- if (length(args) > 0L) list(workers = as.integer(args[1L])) else list()
 
 b <- readRDS(file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds"))
-cases <- perf_cases(root_dir)
+cases <- perf_cases(root_dir, limits = "pre_phase4c")   # the baseline predates Phase 4c
 all_ok <- TRUE
 for (nm in names(cases)) {
   t0 <- proc.time()

@@ -1,0 +1,9 @@
+case,scope,assortment,nok_per_m3_before,nok_per_m3_after,delta_nok_per_m3,share_pct_before,share_pct_after
+nfi_spruce,Total,pulpwood,44.77,45.12,0.34,17.22,17.35
+nfi_spruce,Total,sawlog,343.13,343.29,0.17,82.78,82.65
+nfi_spruce,spruce,spruce_pulpwood,44.77,45.12,0.34,17.22,17.35
+nfi_spruce,spruce,spruce_sawlog,343.13,343.29,0.17,82.78,82.65
+audit20_spruce,Total,pulpwood,44.77,45.12,0.34,17.22,17.35
+audit20_spruce,Total,sawlog,343.13,343.29,0.17,82.78,82.65
+audit20_spruce,spruce,spruce_pulpwood,44.77,45.12,0.34,17.22,17.35
+audit20_spruce,spruce,spruce_sawlog,343.13,343.29,0.17,82.78,82.65

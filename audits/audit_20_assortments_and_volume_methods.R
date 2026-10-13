@@ -29,7 +29,8 @@
 #  8.  Default products unchanged: backend results for audit 16's three
 #      strata equal the pre-Phase-4b baseline (outputs/assortments/
 #      baseline_phase4b_default.rds; rows sorted, since arrow returns the
-#      taper cache in no fixed order); default sawlog candidate volumes
+#      taper cache in no fixed order; run with the pre-Phase-4c base
+#      products, pre_phase4c_limits()); default sawlog candidate volumes
 #      equal the old top-cylinder formula on a taperNOR stem
 #  9.  validate_price_matrix_against_products(): default + custom matrix +
 #      custom flat passes; a custom key without a price, or priced both
@@ -284,7 +285,10 @@ if (!file.exists(base_path)) {
                 unpriced_summary = c("ProductKey", "LengthClass_dm"))
   det <- character(0); ok8 <- TRUE
   for (n in setdiff(names(b), "meta")) {
-    r <- run_sampled_plot_bucking(b$meta$strata[[n]], "default_2021", root_dir)
+    # The baseline predates the Phase 4c diameter limits: run with the
+    # pre-Phase-4c base products, so that nothing else may differ.
+    r <- run_sampled_plot_bucking(b$meta$strata[[n]], "default_2021", root_dir,
+                                  products = pre_phase4c_limits(load_products(root_dir)))
     # Phase 5 added tree_summary$height_source ("NFI" for NFI trees); the
     # baseline predates it, so it is checked separately and left out here.
     if (!all(r$tree_summary$height_source == "NFI")) {

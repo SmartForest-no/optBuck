@@ -21,7 +21,9 @@
 #  5.  Every case of scripts/performance_cases.R equals the main baseline
 #      (outputs/performance/baseline_main_3fa0a9d.rds, taken on 3fa0a9d
 #      before the phase; rows sorted, since main bucked trees in arrow's
-#      read order; identical, or within 1e-12 for sums over trees)
+#      read order; identical, or within 1e-12 for sums over trees). All
+#      cases run with the pre-Phase-4c base products (pre_phase4c_limits():
+#      the baseline predates the Phase 4c diameter limits)
 #  6.  workers = 1 runs in this process: no future plan is set
 #  7.  The app's background job (app/helpers_jobs.R, run_job_async()) gives
 #      the same results as the backend runner, as a comparison
@@ -90,7 +92,10 @@ cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
 N_WORKERS <- min(15L, max(2L, parallel::detectCores() - 1L))
 TABLES <- names(PERF_TABLE_KEYS)
-cases  <- perf_cases(root_dir)
+# Phase 4c changed the default diameter limits; the baseline predates them,
+# so every case runs with the pre-Phase-4c base products (scripts/
+# phase4c_limits_change_report.R reports what the new limits change).
+cases  <- perf_cases(root_dir, limits = "pre_phase4c")
 base   <- readRDS(file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds"))
 
 # Result tables identical, unsorted; names of the tables that differ.

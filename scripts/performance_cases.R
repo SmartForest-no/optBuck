@@ -24,8 +24,13 @@ PERF_NFI_STRATA <- list(
 #' scenario_pm: default 2021 prices with spruce sawlog +10 % and pine
 #' pulpwood +50 NOK/m3. Custom assortments: one per UseIn value, so a
 #' default/scenario pair has products only in A, only in B, and in both.
-perf_case_inputs <- function(root) {
+#'
+#' limits = "pre_phase4c" gives the base products their limits before Phase
+#' 4c (no maximum diameters; pre_phase4c_limits()), as in the main baseline.
+perf_case_inputs <- function(root, limits = c("current", "pre_phase4c")) {
+  limits <- match.arg(limits)
   pd0 <- load_products(root); lc0 <- load_length_classes(root)
+  if (limits == "pre_phase4c") pd0 <- pre_phase4c_limits(pd0)
   pm0 <- pm_minimal(load_price_matrix_long(root))
 
   scn <- pm0
@@ -64,15 +69,17 @@ perf_case_inputs <- function(root) {
                              pm_new_assortment_prices(defs[3, ], 800)))
   pm_scn <- pm_minimal(rbind(scn, pm_new_assortment_prices(defs[2, ], 750),
                              pm_new_assortment_prices(defs[3, ], 850)))
-  list(pm0 = pm0, scenario_pm = scn, defs = defs,
+  list(pm0 = pm0, scenario_pm = scn, defs = defs, pd0 = pd0, lc0 = lc0, limits = limits,
        custom_default = list(pd = p_def$pd, lc = p_def$lc, pm = pm_def),
        custom_scenario = list(pd = p_scn$pd, lc = p_scn$lc, pm = pm_scn))
 }
 
 #' Named list of cases. Each: source ("nfi" or "list"), params or n_trees,
-#' pm (NULL = default 2021), pd/lc (NULL = default products).
-perf_cases <- function(root, tree_list_sizes = c(100L, 1000L)) {
-  inp <- perf_case_inputs(root)
+#' pm (NULL = default 2021), pd/lc (NULL = default products). With limits =
+#' "pre_phase4c" every case carries the pre-Phase-4c base products.
+perf_cases <- function(root, tree_list_sizes = c(100L, 1000L),
+                       limits = c("current", "pre_phase4c")) {
+  inp <- perf_case_inputs(root, match.arg(limits))
   out <- list()
   for (nm in names(PERF_NFI_STRATA))
     out[[paste0("nfi_", nm)]] <- list(source = "nfi", params = PERF_NFI_STRATA[[nm]])
@@ -82,6 +89,10 @@ perf_cases <- function(root, tree_list_sizes = c(100L, 1000L)) {
     out$tl1000_scn <- list(source = "list", n_trees = 1000L, pm = inp$scenario_pm)
   out$tl100_custom_default  <- c(list(source = "list", n_trees = 100L), inp$custom_default)
   out$tl100_custom_scenario <- c(list(source = "list", n_trees = 100L), inp$custom_scenario)
+  if (inp$limits == "pre_phase4c")
+    for (nm in names(out)) if (is.null(out[[nm]]$pd)) {
+      out[[nm]]$pd <- inp$pd0; out[[nm]]$lc <- inp$lc0
+    }
   out
 }
 

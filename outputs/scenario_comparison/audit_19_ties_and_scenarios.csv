@@ -14,6 +14,7 @@ Check 02: Row permutations never change the pattern (both optimizers),PASS,30 tr
 "Check 05: Long upload, unknown product -> rejected",PASS,ok=FALSE | errors: Unknown ProductKey: birch_sawlog
 "Check 05: Long upload, unknown length -> rejected",PASS,ok=FALSE | errors: Length class(es) not in LengthClasses: pine_sawlog 33 dm
 "Check 05: Long upload, duplicate key -> rejected",PASS,"ok=FALSE | errors: Duplicated price key(s): 1, e.g. pine_sawlog 31 13."
+"Check 05: Long upload, class gap -> rejected",PASS,ok=FALSE | errors: Diameter classes must be consecutive whole cm (no gaps): spruce_sawlog
 "Check 05: Long upload, diameter class 60 cm -> accepted with a cap warning",PASS,ok=TRUE | warnings: spruce_sawlog: largest diameter class is 60 cm (default 50 cm); larger logs are priced at 60 cm.
 Check 06a: Valid wide CSV replaces only its own matrix,PASS,"ok=TRUE layout=wide ids=spruce_sawlog | spruce cells changed 351, pine 0, flat 0"
 "Check 06: Wide upload, non-numeric length header -> rejected",PASS,ok=FALSE | errors: spruce_sawlog: header must be numeric length classes (dm); found 'x37'.
@@ -23,4 +24,4 @@ Check 06a: Valid wide CSV replaces only its own matrix,PASS,"ok=TRUE layout=wide
 "Check 06: Wide upload, unrecognised layout -> rejected",PASS,"ok=FALSE | errors: Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell."
 Check 06: Wide xlsx with an unknown sheet name -> rejected,PASS,"ok=FALSE | errors: Unknown matrix 'birch_sawlog' (expected one of: spruce_sawlog, pine_sawlog)."
 Check 07: Tie-only difference not counted; value and volume changes counted,PASS,T1 changed=FALSE tie=TRUE | T2 changed=TRUE (gain 10.00) | T3 changed=TRUE (volume diff 0.010)
-Check 08: Scenario run re-prices exactly; changes have reasons; self-compare is 0,PASS,"137 trees | changed 6, tie-only 0 | re-price max |diff| 0.0e+00 NOK | every change has a reason: TRUE | self-compare changed 0"
+Check 08: Scenario run re-prices exactly; changes have reasons; self-compare is 0,PASS,"137 trees | changed 7, tie-only 0 | re-price max |diff| 0.0e+00 NOK | every change has a reason: TRUE | self-compare changed 0"

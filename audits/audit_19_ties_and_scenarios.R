@@ -20,8 +20,9 @@
 #  4.  Templates and export round-trip through upload: wide xlsx, long CSV,
 #      exported scenario
 #  5.  Long-layout upload errors: missing column, negative, non-numeric,
-#      unknown product, unknown length, duplicate key -> rejected with a
-#      specific message; a 60 cm class -> accepted with a cap warning (Phase 4b)
+#      unknown product, unknown length, duplicate key, a gap in the diameter
+#      classes (Phase 4c) -> rejected with a specific message; classes up to
+#      60 cm -> accepted with a cap warning (Phase 4b)
 #  6.  Wide-layout uploads: valid wide CSV (one grid) replaces only its own
 #      matrix; wrong headers (non-numeric length, length not in
 #      LengthClasses, unknown matrix name), a non-numeric cell and an
@@ -237,7 +238,11 @@ long_cases <- list(
                             pat = "Unknown ProductKey"),
   "unknown length"   = list(mod = function(d) { d$LengthClass_dm[d$ProductKey == "pine_sawlog"][1] <- 33L; d },
                             pat = "not in LengthClasses"),
-  "duplicate key"    = list(mod = function(d) rbind(d, d[3, ]), pat = "Duplicated price key"))
+  "duplicate key"    = list(mod = function(d) rbind(d, d[3, ]), pat = "Duplicated price key"),
+  # Phase 4c: diameter classes are consecutive (rows removed at the ends only).
+  "class gap"        = list(mod = function(d) d[!(d$ProductKey == "spruce_sawlog" &
+                                                    d$PriceDiameterClass_cm %in% 20), ],
+                            pat = "consecutive whole cm"))
 for (nm in names(long_cases)) {
   u <- try_long(long_cases[[nm]]$mod)
   hit <- any(grepl(long_cases[[nm]]$pat, u$errors, fixed = TRUE))
@@ -245,11 +250,13 @@ for (nm in names(long_cases)) {
       if (!isTRUE(u$ok) && hit) PASS else FAIL,
       sprintf("ok=%s | errors: %s", isTRUE(u$ok), paste(u$errors, collapse = " / ")))
 }
-u_w60 <- try_long(function(d) rbind(d, transform(
-  d[d$ProductKey == "spruce_sawlog" & d$PriceDiameterClass_cm == 50 & d$LengthClass_dm == 55, ],
-  PriceDiameterClass_cm = 60L)))
-# Phase 4b: the largest class is the product's price cap, so a 60 cm class
-# is used; the warning says the cap moved from the default's 50 cm.
+u_w60 <- try_long(function(d) {
+  top <- d[d$ProductKey == "spruce_sawlog" & d$PriceDiameterClass_cm == 50, ]
+  rbind(d, do.call(rbind, lapply(51:60, function(k) transform(top, PriceDiameterClass_cm = k))))
+})
+# Phase 4b: the largest class is the product's price cap, so classes up to
+# 60 cm (no gaps, Phase 4c) are used; the warning says the cap moved from
+# the default's 50 cm.
 rec("Check 05: Long upload, diameter class 60 cm -> accepted with a cap warning",
     if (isTRUE(u_w60$ok) && any(grepl("spruce_sawlog: largest diameter class is 60 cm (default 50 cm)",
                                       u_w60$warnings, fixed = TRUE))) PASS else FAIL,

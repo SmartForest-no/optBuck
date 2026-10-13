@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: tie-breaking and price-matrix scenarios
-  Run: 2026-10-13 16:48:47.417057
+  Run: 2026-10-13 18:17:50.681399
 ============================================================= 
 
 --- 01. Synthetic ties ---
@@ -27,6 +27,7 @@
   [PASS  ] Check 05: Long upload, unknown product -> rejected | ok=FALSE | errors: Unknown ProductKey: birch_sawlog
   [PASS  ] Check 05: Long upload, unknown length -> rejected | ok=FALSE | errors: Length class(es) not in LengthClasses: pine_sawlog 33 dm
   [PASS  ] Check 05: Long upload, duplicate key -> rejected | ok=FALSE | errors: Duplicated price key(s): 1, e.g. pine_sawlog 31 13.
+  [PASS  ] Check 05: Long upload, class gap -> rejected | ok=FALSE | errors: Diameter classes must be consecutive whole cm (no gaps): spruce_sawlog
   [PASS  ] Check 05: Long upload, diameter class 60 cm -> accepted with a cap warning | ok=TRUE | warnings: spruce_sawlog: largest diameter class is 60 cm (default 50 cm); larger logs are priced at 60 cm.
 
 --- 06. Wide-layout upload validation ---
@@ -42,12 +43,12 @@
   [PASS  ] Check 07: Tie-only difference not counted; value and volume changes counted | T1 changed=FALSE tie=TRUE | T2 changed=TRUE (gain 10.00) | T3 changed=TRUE (volume diff 0.010)
 
 --- 08. Backend scenario run ---
-  [PASS  ] Check 08: Scenario run re-prices exactly; changes have reasons; self-compare is 0 | 137 trees | changed 6, tie-only 0 | re-price max |diff| 0.0e+00 NOK | every change has a reason: TRUE | self-compare changed 0
+  [PASS  ] Check 08: Scenario run re-prices exactly; changes have reasons; self-compare is 0 | 137 trees | changed 7, tie-only 0 | re-price max |diff| 0.0e+00 NOK | every change has a reason: TRUE | self-compare changed 0
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 25
+1   PASS 26
 
   Verdict: PASS 
 ============================================================= 
