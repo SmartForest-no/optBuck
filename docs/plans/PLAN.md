@@ -105,6 +105,14 @@ sensitivity tool below is still to be confirmed.
 
 ## Phase 5: tree list import
 
+**Done (2026-10-13).** `R/helpers_tree_list.R` (read, validate, template),
+`R/helpers_heights.R` (fieldPlot with ≥ 10 measured heights per species,
+FinnHoyde calibrated with 1–9, uncalibrated with none; height source per
+tree), `run_tree_list_bucking()` in the backend, app tree-source switch;
+audit 21 and audit 17 check 21. fieldPlot's `predictMissingHeights()` fails
+on absent species and its timeout never interrupts nlme: Apter wraps
+`fitHD_Plot()` / `fitHD()` instead (fixes reported to Lennart).
+
 - Add a data-source switch with two options: NFI tree sample or uploaded tree list.
 - Required columns: `tree_id`, `species` (spruce/pine), `dbh` in cm. Optional: `height` in m, `plot_id`.
 - Apply taperNOR, then run the existing candidate and DP pipeline.
@@ -141,5 +149,5 @@ After each phase, update the README and CLAUDE.md, including the accepted assump
 
 1. **Bark (decided 2026-10-12, implemented in Phase 3).** All stem profiles are assumed over bark: taperNOR output, uploaded tree lists, and imported stem profiles (e.g. from harvester data). Default bark model: `taperNOR::barkNOR()` along the whole stem, as a swappable helper (`R/helpers_bark.R`). Price lookup uses the top diameter under bark; product limits and price volume are under bark too (`DiameterUnderBark = TRUE`, as optBuck's `buckStem`).
 2. **barkNOR negative pine bark (open; ask the taperNOR authors).** barkNOR's pine coefficients give negative double bark near the top of larger pines (d below about 0.33·dbh − 2.4 cm). Apter floors B at 0 as a provisional fix. Ask the authors whether this is intended or whether the 2023 paper's coefficients differ.
-3. **Height imputation.** References and code for the Norwegian height models, and the function from Lennart's package for partial heights.
+3. **Height imputation (resolved 2026-10-13, Phase 5).** fieldPlot for species with ≥ 10 measured heights; FinnHoyde reference curves calibrated to 1–9 measured heights (NFI tariff ratio), uncalibrated without heights.
 4. **Sensitivity tool.** Is the price sensitivity tool in phase 4b wanted? If a matrix optimiser is wanted instead, what should it optimise towards?

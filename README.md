@@ -31,8 +31,49 @@ The name comes from the Norwegian *aptering* (bucking).
 | Source | Status |
 |--------|--------|
 | **NFI sample trees.** Spruce and pine from the Norwegian National Forest Inventory, selected by species, maturity class, site class and county. Results describe the selected trees only. | Available |
-| **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. | Planned |
+| **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
+
+### Tree lists
+
+Choose *Uploaded tree list* in the Simulator and drop a CSV or xlsx file
+with one row per tree (a template can be downloaded there):
+
+| Column | Content |
+|--------|---------|
+| `tree_id` | Required. Unique within its plot (or within the file if there are no plots) |
+| `species` | Required. `spruce` or `pine` |
+| `dbh` | Required. Diameter at breast height over bark, in cm |
+| `height` | Optional. Tree height in m; leave empty where not measured |
+| `plot_id` | Optional. Groups trees for the height model |
+
+The file is checked before a run. Missing columns, non-numeric or missing
+values, duplicated tree IDs, unknown species and zero or negative sizes are
+errors. Likely unit errors (a dbh that looks like mm, a height that looks
+like dm), implausible height/diameter ratios and trees outside the taper
+model's range are warnings. Values are never converted between units. Trees
+below 5 cm dbh or 4.5 m height are not bucked, as for NFI trees; they are
+listed under Diagnostics.
+
+**Missing heights** are estimated per species, and every tree reports which
+method gave its height:
+
+- **10 or more measured heights:** a height-diameter model fitted to your
+  trees with [fieldPlot](https://github.com/lennartnoordermeer/fieldPlot)
+  (Näslund's model with a plot effect; within a plot that has measured
+  heights the plot's curve is used, elsewhere the species curve).
+- **1 to 9 measured heights:** the NFI reference height curve (FinnHoyde),
+  calibrated to your measured trees: it is multiplied by the ratio of their
+  measured heights to the curve's heights at their diameters, as in the NFI
+  tariff method. A ratio below 0.7 or above 1.3 is reported.
+- **No measured heights:** the NFI reference height curve (FinnHoyde)
+  uncalibrated. These are **average curves that do not depend on site**, so
+  heights can be biased for your trees; the app shows a warning.
+
+FinnHoyde curves (d in cm, h in m): spruce, d < 15: 1.3 + 0.6·d (Eid & Fitje
+1993); d ≥ 15: −14.17 + 20.86·log10(d) (Fitje & Vestjordet 1977). Pine,
+d < 10: 1.3 + 0.65456·d (Eid & Fitje 1993); 10 ≤ d < 35: 0.39 + 0.852·d −
+0.010644·d² (Vestjordet 1968); d ≥ 35: 13.35 + 0.107·d (Eid & Fitje 1993).
 
 ---
 
@@ -181,8 +222,9 @@ Requirements: R and these packages:
 install.packages(c("shiny", "bslib", "reactable", "rhandsontable", "readxl",
                    "writexl", "arrow", "dplyr", "readr"))
 
-# taperNOR is not on CRAN:
+# taperNOR and fieldPlot are not on CRAN:
 devtools::install_git("https://github.com/SmartForest-no/taperNOR")
+remotes::install_github("lennartnoordermeer/fieldPlot")   # height models for tree lists (uses nlme)
 ```
 
 Start the app from the project folder:
@@ -210,4 +252,9 @@ Repository layout, tests and the data pipeline are described in
 ## Acknowledgement
 
 Apter is developed by NIBIO within SFI SmartForest (smartforest.no), funded by the
-Research Council of Norway (grant no. 309671).
+Research Council of Norway (RCN project no. 309671).
+
+Stem profiles come from [taperNOR](https://github.com/SmartForest-no/taperNOR).
+Heights of uploaded trees are estimated with
+[fieldPlot](https://github.com/lennartnoordermeer/fieldPlot) (Lennart
+Noordermeer).

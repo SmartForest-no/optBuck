@@ -17,9 +17,9 @@ Apter is a bucking simulator: given a spruce or pine stem's taper profile
 (`taperNOR`) and a set of product/price definitions, a backward-induction DP
 optimizer finds the cutting pattern that maximizes total timber value. It is
 for comparing price matrices and planning bucking, not an inventory or
-estimation tool. Trees currently come from a sanitized NFI sample; uploaded
-tree lists and stem profiles are planned. A Shiny app (`app/`) exposes the
-pipeline.
+estimation tool. Trees come from a sanitized NFI sample or an uploaded tree
+list (Phase 5); stem profile import is planned. A Shiny app (`app/`) exposes
+the pipeline.
 
 ## Domain terms (Norwegian NFI)
 
@@ -54,11 +54,14 @@ pipeline.
 | NOK/m³ denominator | commercial volume under bark: 10 cm cylinders over non-waste logs, each using the under-bark diameter at the top of its section; excludes bark, stump, waste and the top above the last merchantable log; independent of prices and product volume rules. Assortment contribution = assortment value ÷ the scope's commercial volume; each species uses its own denominator | `R/helpers_commercial_volume.R`; audit 18 |
 | Max price-diameter class | per product: the largest `PriceDiameterClass_cm` in that product's matrix in the run's price matrix (50 cm for the default 2021 matrices); logs above it are priced at that class — physical diameter is never changed. Applied inside `lookup_prices()`, so re-pricing under another matrix uses that matrix's cap (amendment, 2026-10-13) | `build_price_lookup()` / `price_class_used()` in `helpers_valuation.R`; audit 20 check 12 |
 | Waste price | 0 NOK/m³, intentional (accepted 2026-10-12) | price matrix; audit 14 check 18 |
+| Tree-list heights | measured heights kept exactly. Missing heights per species: **≥ 10 measured** (`HEIGHT_MIN_MEASURED_PER_SPECIES`; 10 chosen from a synthetic test, 49/50 fits within 2 m) → fieldPlot `fitHD_Plot()` (Näslund, plot random effect; plot-level prediction where the plot has measured heights of the species, else the species curve `level = 0`), `fitHD()` (nls) with < 2 plots, an error or the time limit; **1–9** → FinnHoyde × ratio, ratio = Σh_measured / ΣFinnHoyde(d) over that species' measured trees (NFI tariff method; warning outside 0.7–1.3); **none** → FinnHoyde uncalibrated with the site-independence warning. Each tree reports `height_source` (NFI trees: "NFI") (decided 2026-10-13) | `R/helpers_heights.R`; audit 21 checks 1–4 |
+| FinnHoyde curves | spruce d < 15: 1.3 + 0.6d (Eid & Fitje 1993), d ≥ 15: −14.17 + 20.86·log10(d) (Fitje & Vestjordet 1977); pine d < 10: 1.3 + 0.65456d (Eid & Fitje 1993), 10 ≤ d < 35: 0.39 + 0.852d − 0.010644d² (Vestjordet 1968), d ≥ 35: 13.35 + 0.107d (Eid & Fitje 1993); d cm, h m | `finnhoyde_height()`; audit 21 check 1 |
+| nlme time limit | 30 s per species fit (`HEIGHT_FIT_TIMEOUT_S`), enforced by Apter with `setTimeLimit()`; fieldPlot's own `timeout` is passed as `Inf` because it never interrupts nlme. fitHD_Plot() catches the time-limit error and returns its nls fallback, so a timeout is recognised by elapsed time | `R/helpers_heights.R`; audit 21 check 4 |
 
 ## Known out-of-scope items (don't assume these are bugs)
 
-- No HPR/StanForD import — all trees come from NFI data (tree lists and
-  stem profiles are planned, phases 5–6)
+- No HPR/StanForD import — trees come from NFI data or uploaded tree lists
+  (stem profile import is planned, phase 6)
 - No per-ha, plot-level, stratum or NFI-expansion outputs: results describe
   the selected trees only (plots are only how NFI trees are sampled). Never
   reintroduce per-ha values; audits 16 (check 10) and 17 (check 16) fail on them
@@ -152,6 +155,19 @@ still out of bounds.
   products only. Never test a product's kind by its key name (no
   `grepl("sawlog")`): matrix vs. flat comes from matrix rows / `PriceType`,
   species products from `species_products()`.
+- **Tree lists (Phase 5):** `R/helpers_tree_list.R` (`read_tree_list()`,
+  `prepare_tree_list()`: validation, heights, taperNOR range) and
+  `run_tree_list_bucking()` in the backend, which shares the per-tree core
+  `.buck_profiles()` with `run_sampled_plot_bucking()` and runs taperNOR at
+  run time. The tree key is `plot_id/tree_id` (or `tree_id`); the user's own
+  plot ID goes in the `plot_id_github` column so the comparison and app code
+  stay shared (it is the user's data, not an NFI plot ID). Stem-profile ends:
+  candidates never end past the profile (heights that are not whole dm).
+- **fieldPlot is a dependency, not vendored.** Use only its exported
+  `fitHD_Plot()` / `fitHD()` through `impute_heights()`. Don't call
+  `predictMissingHeights()`: it always fits species codes 1–3 and errors
+  when one is absent (confirmed 2026-10-13; reported to Lennart with the
+  timeout issue).
 - **Default-results baseline:** `outputs/assortments/baseline_phase4b_default.rds`
   (from `scripts/phase4b_save_default_baseline.R`, taken on e8b1f05) is what
   audit 20 check 8 compares against; never regenerate it on later code.
