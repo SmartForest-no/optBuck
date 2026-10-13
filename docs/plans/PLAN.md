@@ -103,6 +103,18 @@ sensitivity tool below is still to be confirmed.
   - **Reconcile "solid volume".** Apter's solid volume (pulpwood/waste price volume and the denominator) is 10 cm cylinders at each section's under-bark **top** diameter, not rounded, via `section_volume_fun()` (decided 2026-10-12). optBuck's "All diameters (solid volume)" is a different variant: it sums cylinders over every diameter from start to stop inclusive (one section too many), and rounds diameters down to cm before subtracting bark. Reconcile the two when adding per-product volume methods; keep the denominator on Apter's rule.
 - **Proposed extension (confirm with Lennart before building).** A sensitivity tool that shows how cutting patterns and NOK/m³ respond to changing a price cell or assortment by ±x %. It would also show which cells actually affect the bucking. Building a full price-matrix optimiser would need an explicit objective (e.g. target volume shares per assortment), which Lennart must define first.
 
+## Phase 4c: comparison interface (A and B)
+
+Planned (decided 2026-10-13). Replaces the "Compare with scenario prices" checkbox and the `UseIn` field of custom assortments.
+
+- Columns A and B are both editable and uploadable. A starts from the 2021 prices, with a reset button.
+- Each assortment in B is "same as A", "own prices" or "not used".
+- A comparison runs when B differs from A; the checkbox is removed.
+- Removing an assortment removes its rules and matrices together, on either side. This replaces `UseIn`.
+- Removing a base product gives a warning.
+
+The backend already prices both runs from one candidate pass (Performance phase), so a comparison costs little more than one run.
+
 ## Phase 5: tree list import
 
 **Done (2026-10-13).** `R/helpers_tree_list.R` (read, validate, template),
@@ -137,9 +149,14 @@ Validation results are shown in a panel before the user runs the model. Errors b
 
 ## Performance
 
-- Parallelise the per-tree optimisation (`future` / `future.apply` or `mirai`, with a configurable number of workers).
-- Run long jobs with `shiny::ExtendedTask`, so the UI stays responsive and shows progress.
-- Benchmark on the remote desktop and record timings.
+**Done (2026-10-13).** Results are identical to main before the phase (baseline `outputs/performance/baseline_main_3fa0a9d.rds`; audit 22). A 1000-tree list on 15 workers: 3.4 s for a run, 4.4 s for a comparison (main: about 50 s and 100 s). Timings and the profile are in [docs/development.md](../development.md#performance).
+
+- Profiled first (`scripts/performance_profile.R`): candidate generation 40 %, DP 32 %, data.frame overhead most of the rest; profile conversion was quadratic in the number of trees.
+- Vectorised bucking core (`R/helpers_bucking_core.R`): candidates, pricing and DP on plain vectors, result rows only for the selected logs.
+- A comparison prices both runs from one candidate pass, in memory (custom assortments with `UseIn` default/scenario keep working). No cache between runs (decided 2026-10-13).
+- Per-tree parallelism (`R/helpers_parallel.R`): `future` multisession workers (Windows and Linux), option `apter.workers` (default cores − 1), trees in chunks, combined in a fixed order.
+- App: runs are `shiny::ExtendedTask`s with progress per chunk; Run is disabled while one runs.
+- Not done: Rcpp (not needed, below 10 s for a 1000-tree comparison).
 
 ## Documentation
 

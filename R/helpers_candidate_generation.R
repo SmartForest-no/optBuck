@@ -6,7 +6,11 @@
 #           helpers_taper.R.
 #
 # Design notes:
-#   - Fully vectorised approach via expand.grid() (same as 11_run_bucking…R).
+#   - Vectorised: start positions x lengths per product with rep() (the
+#     expand.grid() order of 11_run_bucking…R), product parameters per
+#     species built once (.candidate_plan()), diameters read from the 10 cm
+#     grid. .candidate_columns() is the engine; the backend asks for the
+#     usable candidates only (Performance phase, 2026-10-13).
 #   - Price-diameter capping is NOT done here; it belongs in helpers_valuation.R
 #     (via prepare_price_join_keys()).  This helper outputs
 #     PriceDiameterClass_cm = floor(TopDiameter/10) — the raw, uncapped value.

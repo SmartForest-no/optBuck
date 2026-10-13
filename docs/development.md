@@ -22,7 +22,8 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Tie-breaking and price scenarios | Audit 19 PASS (25/25): synthetic ties, order independence, matrix helpers, long and wide uploads, pattern comparison |
 | Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline, validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
 | Tree lists and height imputation (Phase 5) | Audit 21 PASS (28/28): FinnHoyde curves and calibration by hand, fieldPlot wrapper (single species, time limit), validation of broken files, NFI trees as a tree list give identical results, end-to-end runs |
-| Shiny app (v1, Release 0.2.0) | Audit 17 PASS (26/26), headless shinytest2 smoke test with screenshots, including a custom assortment added and edited through the form and an uploaded tree list |
+| Shiny app (v1, Release 0.2.0) | Audit 17 PASS (27/27), headless shinytest2 smoke test with screenshots, including a custom assortment added and edited through the form, an uploaded tree list, and Run disabled with progress while a run task runs |
+| Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase, the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
 (`scripts/97_fill_31dm_sawlog_price_gap.R`). Rows are flagged
@@ -43,6 +44,8 @@ app/                        Shiny app, files sourced explicitly by app.R
                             reactable tables, base-R plot styling
   helpers_validation.R      Inputs -> backend params; stratum plot counts
   helpers_upload.R          Writes the scenario price matrix for the comparison run
+  helpers_jobs.R            Runs as background jobs: promise chain over the workers
+                            (shiny::ExtendedTask), progress per chunk
   app_ui.R                  `ui`: page_navbar with Home, Simulator, Prices and assortments
                             (not ui.R: Shiny treats ui.R + app.R as two app formats)
   app_server.R              `server`
@@ -60,6 +63,9 @@ R/                          Core engine helpers
   helpers_taper.R           Taper profiles (wraps taperNOR)
   helpers_candidate_generation.R  Candidate log geometry, eligibility and volume
   helpers_dp_optimizer.R    Reference dynamic-programming bucking optimizer
+  helpers_bucking_core.R    Backend per-tree core: candidates, pricing and DP on vectors,
+                            one candidate pass for the runs of a comparison
+  helpers_parallel.R        Workers (apter.workers), chunks, futures; the core shipped to workers
   helpers_bark.R            Swappable bark model (default taperNOR::barkNOR, B >= 0 floor)
   helpers_commercial_volume.R  NOK/m3 denominator and per-m3 summaries
   helpers_price_matrix.R    Price-matrix scenarios: grids, diff, reset, upload (long/wide), templates;
@@ -77,6 +83,7 @@ audits/
   audit_19_ties_and_scenarios.R              Tie-breaking, price-matrix scenarios, pattern comparison
   audit_20_assortments_and_volume_methods.R  Volume methods, custom assortments, per-product price cap
   audit_21_tree_lists_and_heights.R          Tree lists, height imputation, tree-list runs
+  audit_22_performance_equivalence.R         Workers, chunking, comparisons, main baseline, app jobs
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -85,6 +92,12 @@ scripts/
   99_cleanup_project_structure.R          One-off post-prototype cleanup (already run)
   run_prototype_00_prepare_nfi_data.R     Runs the frozen Oracle extraction under the current root
   phase4b_save_default_baseline.R         Saved the pre-Phase-4b default results (run once on e8b1f05; do not rerun)
+  performance_save_main_baseline.R        Saved main's results before the Performance phase (run once on 3fa0a9d; do not rerun)
+  performance_tree_lists.R                Seeded synthetic tree lists (100, 1000, 5000 trees)
+  performance_cases.R                     Run cases shared by the baseline, check, benchmark and audit 22
+  performance_check.R                     Quick check of every case against the main baseline
+  performance_profile.R                   Per-tree stage profile (step 1 of the phase)
+  performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   app_backend/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
     01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer): NFI
@@ -112,6 +125,7 @@ outputs/
   scenario_comparison/      Audit 19 results
   assortments/              Audit 20 results and the pre-Phase-4b default-results baseline
   tree_lists/               Audit 21 results
+  performance/              Audit 22 results, main baseline, profile and benchmarks
   app_cache/                Taper profile cache (local, regenerated by app_backend/00)
   stratum_availability/     Species/hogstkl/abonitet/fylnr combinations with enough plots
 
@@ -186,7 +200,7 @@ REVIEW, or FAIL. Re-run audits 14–17 at the end of every development phase.
 
 ```r
 install.packages(c("arrow", "readr", "dplyr", "shiny", "bslib", "reactable",
-                   "rhandsontable", "readxl", "writexl"))
+                   "rhandsontable", "readxl", "writexl", "future", "promises", "later"))
 devtools::install_git("https://github.com/SmartForest-no/taperNOR")
 remotes::install_github("lennartnoordermeer/fieldPlot")   # tree-list heights (nlme)
 # Audit 17 only:
@@ -206,9 +220,80 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 19 — ties and scenarios | `Rscript audits/audit_19_ties_and_scenarios.R` | readxl, writexl; taper profile cache |
 | 20 — assortments and volume methods | `Rscript audits/audit_20_assortments_and_volume_methods.R` | readxl, writexl, taperNOR; taper profile cache; `outputs/assortments/baseline_phase4b_default.rds` |
 | 21 — tree lists and heights | `Rscript audits/audit_21_tree_lists_and_heights.R` | fieldPlot, nlme, taperNOR, readxl; taper profile cache (check 6) |
+| 22 — performance equivalence | `Rscript audits/audit_22_performance_equivalence.R` | future, promises, later, taperNOR; taper profile cache; `outputs/performance/baseline_main_3fa0a9d.rds`; uses up to 15 workers |
 
-Audit 16 checks 14–15 compare the app's `.optimize_dp_fast()` against the
+Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
+data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
+that `.optimize_dp_fast()` and the backend's own result agree with the
 reference `optimize_one_tree_dp()` on every tree of three backend runs.
+
+---
+
+## Performance
+
+The Performance phase (2026-10-13) changed how the backend computes, not
+what: every result equals main before the phase (audit 22 check 5; baseline
+`outputs/performance/baseline_main_3fa0a9d.rds`, never regenerated).
+
+**Where the time went (main, 1000 trees, one core).** 47.5 s in the per-tree
+loop: candidate generation 40 % (19 ms/tree), DP 32 % (15 ms/tree), data.frame
+subsetting for the eligibility filter and DP input 16 %, pricing 8 %.
+taperNOR took 1.7 s and profile conversion 3.8 s (quadratic: one scan of the
+profile table per tree). About 12,800 candidates per tree, 11,700 of them
+eligible, for 3.3 selected logs. Profile: `scripts/performance_profile.R`,
+summary in `outputs/performance/profile_summary.txt`.
+
+**What changed.**
+
+- `profiles_to_profile_vectors()` splits the table once (3.5 s → 0.06 s).
+- Bucking core on plain vectors (`R/helpers_bucking_core.R`):
+  - product parameters per species built once per run;
+  - candidates generated with `rep()`, diameters read from the 10 cm grid, only usable candidates kept, with five columns;
+  - pricing through `.price_vectors()`, the engine of `lookup_prices()`;
+  - the DP on vectors (`.dp_select()`; `.optimize_dp_fast()` wraps it);
+  - result rows built only for the selected logs.
+- Comparisons: the runners take `scenario = list(price_matrix_path, products, length_classes)`. Both runs are priced from one candidate pass for the union of their products, and the scenario's result is returned as `$scenario`. Runs whose shared products are defined differently get separate passes. There is no cache between runs.
+- Runners are prepare → buck → finish jobs (`prepare_*_job()`, `buck_job()`, `finish_job()`). Trees are bucked in `treid` order.
+- Workers (`R/helpers_parallel.R`):
+  - `future` multisession (PSOCK, no forking: Windows and Linux).
+  - Trees are split into contiguous chunks and combined in chunk order, so results do not depend on the number of workers or the chunking.
+  - Each chunk gets the bucking core as one environment (helper files sourced with parent `package:stats`, and the caller's `%||%`), so workers need no setup.
+  - taperNOR for tree lists is chunked the same way.
+- App (`app/helpers_jobs.R`):
+  - a run is a promise chain run by a `shiny::ExtendedTask`, with progress per chunk;
+  - Run is disabled while a task runs;
+  - futures are queued and polled with `later`, because `promises::future_promise()` 1.3.2 calls the plan function directly, which future ≥ 1.40 rejects.
+
+**Options.**
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `apter.workers` | `parallel::detectCores() - 1` | Parallel workers. 1 runs in the calling process without `future`. |
+| `apter.chunk_size` | `max(25, ceiling(n / (4 × workers)))` | Trees per chunk |
+
+The `cores − 1` default assumes **one** R process on the machine. On a
+multi-user server with several R processes (e.g. several app processes, or
+an app plus batch jobs), set `apter.workers` so that processes × workers ≤
+cores. One app process starts its workers once (`app/setup.R`) and shares
+them between its sessions.
+
+**Benchmarks** (`scripts/performance_benchmark.R`, remote desktop: Windows
+Server 2022, 16 cores, R 4.5.1, 2026-10-13). Synthetic tree lists, wall-clock
+seconds of `run_tree_list_bucking()` including taperNOR, warm workers; single
+run at the default 2021 prices, comparison with a changed scenario matrix.
+Starting the pool takes 1.3–1.7 s, once per R process.
+
+| Trees | Mode | 1 worker | 4 workers | 15 workers |
+|------:|------|---------:|----------:|-----------:|
+| 100 | single run | 1.6 | 0.8 | 0.8 |
+| 100 | comparison | 2.5 | 1.1 | 1.1 |
+| 1000 | single run | 14.9 | 5.3 | 3.4 |
+| 1000 | comparison | 22.5 | 8.2 | 4.4 |
+| 5000 | single run | 73.5 | 25.4 | 11.2 |
+| 5000 | comparison | 111.3 | 38.4 | 15.8 |
+
+For reference, main before the phase: 1000 trees about 51–56 s for a run
+and about 110 s for a comparison (two runs), on one core.
 
 ---
 

@@ -136,9 +136,19 @@ still out of bounds.
   `NFIBUCK_ROOT` / `nfibuck.root` are no longer read. The app exports the
   resolved root as `APTER_ROOT` so the backend agrees. Scripts that run
   before `R/helpers_paths.R` is sourced carry an inline copy of this logic.
-- The app runs `.optimize_dp_fast()` (backend), not the reference
+- The backend runs the vectorised DP `.dp_select()` (`R/helpers_bucking_core.R`;
+  `.optimize_dp_fast()` is its data.frame wrapper), not the reference
   `optimize_one_tree_dp()`; audit 16 checks 14-15 and audit 19 assert they
-  agree exactly, including tie-breaking.
+  agree exactly, including tie-breaking (audit 16 also compares the backend's
+  own per-tree result).
+- **Performance (2026-10-13):**
+  - **Bucking core.** `R/helpers_bucking_core.R` is the per-tree core of both runners: candidates (`.candidate_columns(usable_only = TRUE)`), pricing (`.price_vectors()`, the engine of `lookup_prices()`) and the DP, all on plain vectors.
+  - **Comparisons.** The runners take `scenario =`. Both runs are priced from one candidate pass for the union of their products, in memory, and the scenario comes back as `$scenario`. There is no cache between runs (decided 2026-10-13).
+  - **Jobs.** Runners are `prepare_*_job()` → `buck_job()` → `finish_job()`. `R/helpers_parallel.R` splits trees into chunks on `future` multisession workers (`apter.workers`, default cores − 1; `apter.chunk_size`).
+  - **App.** It runs jobs as `ExtendedTask`s (`app/helpers_jobs.R`). Its own future queue polls with `later`; don't use `promises::future_promise()`, which breaks with future ≥ 1.40.
+  - **Rule: results must not depend on the number of workers or on chunking** (identical, not just equal; audit 22). Trees are bucked in `treid` order; per-tree code must stay free of RNG and global state.
+  - **Multi-user servers.** The cores − 1 default assumes one R process. On a server with several R processes, set `apter.workers` so that processes × workers ≤ cores.
+  - **Main baseline.** `outputs/performance/baseline_main_3fa0a9d.rds` holds main's results before the phase; never regenerate it.
 - **Price scenarios (Phase 4a):** `R/helpers_price_matrix.R` (grids in the
   source layout: diameter rows × length columns; diff, reset, upload with
   automatic long/wide detection, validation, templates, export) and
@@ -158,8 +168,9 @@ still out of bounds.
 - **Tree lists (Phase 5):** `R/helpers_tree_list.R` (`read_tree_list()`,
   `prepare_tree_list()`: validation, heights, taperNOR range) and
   `run_tree_list_bucking()` in the backend, which shares the per-tree core
-  `.buck_profiles()` with `run_sampled_plot_bucking()` and runs taperNOR at
-  run time. The tree key is `plot_id/tree_id` (or `tree_id`); the user's own
+  (`buck_job()` / `finish_job()`, `R/helpers_bucking_core.R`) with
+  `run_sampled_plot_bucking()` and runs taperNOR at run time (in chunks on
+  the workers). The tree key is `plot_id/tree_id` (or `tree_id`); the user's own
   plot ID goes in the `plot_id_github` column so the comparison and app code
   stay shared (it is the user's data, not an NFI plot ID). Stem-profile ends:
   candidates never end past the profile (heights that are not whole dm).
