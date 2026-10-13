@@ -147,16 +147,12 @@ for (nm in names(cases)) {
 # ==============================================================================
 section("02. Order independence")
 
-E_cap <- new.env(); E_cap$sets <- list()
-.fast_orig <- .optimize_dp_fast
-.optimize_dp_fast <- function(valued_candidates) {
-  if (length(E_cap$sets) < 30L) E_cap$sets[[length(E_cap$sets) + 1L]] <- valued_candidates
-  .fast_orig(valued_candidates)
-}
-invisible(run_sampled_plot_bucking(
+# Real priced candidate sets: the first 30 trees of a run, rebuilt with the
+# per-tree data.frame pipeline (audit_dp_inputs(), R/helpers_audit.R).
+E_cap <- new.env()
+E_cap$sets <- unname(head(audit_dp_inputs(
   list(species_group = "both", hogstkl = c(41L, 42L), abonitet = c(14L, 17L),
-       n_plots = 5L, seed = 11L), root = root_dir))
-.optimize_dp_fast <- .fast_orig; rm(.fast_orig)
+       n_plots = 5L, seed = 11L), root_dir)$dp_in, 30L))
 
 set.seed(19)
 n_bad <- 0L; n_runs <- 0L

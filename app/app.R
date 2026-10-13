@@ -19,6 +19,7 @@
 #           www/                  apter.css, icon, self-hosted fonts (OFL)
 #           helpers_validation.R  inputs -> backend params, stratum counts
 #           helpers_upload.R      writes the scenario price matrix for the run
+#           helpers_jobs.R        runs as background jobs (ExtendedTask, workers)
 #           app_ui.R / app_server.R  `ui` and `server` (not ui.R/server.R,
 #                                    which Shiny treats as a separate app format)
 #
@@ -47,7 +48,7 @@ source(file.path(ROOT, "scripts", "app_backend",
 
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
-             "helpers_upload.R", "app_ui.R", "app_server.R")) {
+             "helpers_upload.R", "helpers_jobs.R", "app_ui.R", "app_server.R")) {
   source(file.path(APP_DIR, .f), local = TRUE)
 }
 rm(.f)

@@ -71,3 +71,10 @@ RESULTS_LABEL <- paste(
 
 # ---- release version (repo-root VERSION file; shown in the footer) ------------
 APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))
+
+# ---- parallel workers (R/helpers_parallel.R) ---------------------------------
+# Started once per app process and shared by all sessions; runs are
+# background tasks on them (helpers_jobs.R). Option apter.workers sets the
+# number (default detectCores() - 1, meant for one R process per machine).
+APP_WORKERS <- apter_workers()
+.ensure_plan(APP_WORKERS)

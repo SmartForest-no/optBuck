@@ -184,3 +184,37 @@ write_audit_outputs <- function(results, audit_csv, log_path) {
   cat(sprintf("\n[%s] Audit complete.\n", verdict))
   invisible(verdict)
 }
+
+
+# ------------------------------------------------------------------------------
+# Optimizer audits: priced DP inputs per tree
+# ------------------------------------------------------------------------------
+
+#' Every tree's priced DP input, built with the per-tree data.frame pipeline
+#' (generate_candidate_logs_one_tree() -> eligible with a price volume ->
+#' prepare_price_join_keys() -> lookup_prices() -> value_nok), with the
+#' backend's own run of the same trees (in this process, workers = 1).
+#' Audits 16 and 19 solve these inputs with .optimize_dp_fast() and the
+#' reference optimize_one_tree_dp() and compare with the backend's result.
+#' Needs the backend (scripts/app_backend/01_run_sampled_plot_bucking.R).
+#'
+#' @param params Sampled-run params (run_sampled_plot_bucking()).
+#' @param root   Project root.
+#' @return list(dp_in = named list (treid) of priced candidate data.frames,
+#'   trees without priced candidates left out; result = the backend result).
+audit_dp_inputs <- function(params, root, price_matrix_path = "default_2021") {
+  job <- prepare_sampled_job(params, price_matrix_path, root)
+  res <- finish_job(job, buck_job(job, workers = 1L))
+  pp  <- job$pps[[1L]]
+  dp <- lapply(job$pvs, function(pv) {
+    c0 <- generate_candidate_logs_one_tree(pv, pp$pd, pp$lc, job$stump_cm, job$step_cm)
+    e  <- c0[c0$eligible & !is.na(c0$price_volume_m3), , drop = FALSE]
+    if (nrow(e) == 0L) return(NULL)
+    e <- prepare_price_join_keys(e, pp$lookup)
+    e$PriceNOKperM3 <- lookup_prices(e, pp$lookup)
+    e$value_nok     <- e$price_volume_m3 * e$PriceNOKperM3
+    e <- e[!is.na(e$PriceNOKperM3) & !is.na(e$value_nok), , drop = FALSE]
+    if (nrow(e) == 0L) NULL else e
+  })
+  list(dp_in = dp[!vapply(dp, is.null, logical(1))], result = res)
+}

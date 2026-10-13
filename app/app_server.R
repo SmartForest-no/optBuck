@@ -54,6 +54,16 @@ server <- function(input, output, session) {
     if (input$run_btn == 0L)
       return(div(class = "status-idle",
                  "Select parameters and click Run optimizer."))
+    if (task_busy()) {
+      p <- run_progress()
+      if (is.null(p)) return(div(class = "status-running", "Starting run..."))
+      known <- !is.na(p$total) && p$total > 0L
+      return(div(class = "status-running",
+                 if (known) sprintf("%s: %d / %d", p$what, p$done, p$total) else p$what,
+                 if (known) div(class = "run-progress",
+                                div(class = "run-progress-bar",
+                                    style = sprintf("width: %.0f%%", 100 * p$done / p$total)))))
+    }
     r <- result()
     if (is.null(r))
       return(div(class = "status-error",
@@ -176,67 +186,79 @@ server <- function(input, output, session) {
     filename = function() "apter_tree_list_template.csv",
     content  = function(file) tree_list_template(file))
 
-  # One backend run on the selected tree source.
-  run_trees <- function(src, params, tl, path, pd, lc) {
-    if (identical(src, "list"))
-      run_tree_list_bucking(tl, price_matrix_path = path, root = ROOT, products = pd,
-                            length_classes = lc, params = list(file = tl$file))
-    else run_sampled_plot_bucking(params = params, price_matrix_path = path, root = ROOT,
-                                  products = pd, length_classes = lc)
-  }
+  # ---- Runs as background tasks (helpers_jobs.R) ---------------------------
+  # The backend runs on the workers (R/helpers_parallel.R) as an
+  # ExtendedTask: the app stays responsive, the run status shows progress
+  # and Run is disabled while a task is running.
+  run_progress <- reactiveVal(NULL)
+  progress_cb  <- function(done, total, what)
+    run_progress(list(done = done, total = total, what = what))
 
-  # Backend call with multi-stage progress indicator
-  result <- eventReactive(input$run_btn, {
+  # A task: one job (spec, see run_job_async()); `extra` is added to the
+  # result. Errors are notified and give NULL; temporary price files go.
+  job_task <- function(label) ExtendedTask$new(function(spec, extra) {
+    p <- promises::then(run_job_async(spec, progress_cb), function(res) {
+      for (n in names(extra)) res[[n]] <- extra[[n]]
+      res
+    })
+    p <- promises::catch(p, function(e) {
+      showNotification(paste0(label, conditionMessage(e)), type = "error",
+                       duration = NULL, session = session)
+      NULL
+    })
+    promises::finally(p, function() unlink(spec$files))
+  })
+  run_task <- job_task("Backend error: ")
+  scn_task <- job_task("Scenario error: ")
+  task_busy <- reactive(run_task$status() == "running" || scn_task$status() == "running")
+  observe(updateActionButton(session, "run_btn", disabled = task_busy()))
+
+  # Run: the default run, and the scenario run on the same trees when
+  # comparing (one candidate pass for both; the backend's `scenario`).
+  run_rejected <- reactiveVal(FALSE)
+  observeEvent(input$run_btn, {
     src <- if (identical(input$tree_source, "list")) "list" else "nfi"
     tl  <- if (src == "list") tl_prepared() else NULL
     if (src == "list" && !isTRUE(tl$ok)) {
       showNotification("Upload a tree list that passes the checks first.",
                        type = "error", duration = 8)
-      return(NULL)
+      run_rejected(TRUE)
+      return()
     }
     if (src == "nfi") req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
+    run_rejected(FALSE)
 
-    # Map user-facing inputs (HKL group, county) -> backend params
-    params     <- if (src == "nfi") build_run_params(input) else list()
-    started_at <- Sys.time()   # for the run step list
     # Products and prices in effect at this Run, for both runs (result_s2
     # uses the scenario's); later edits wait for the next Run.
     inp_def <- run_inputs("default")
     inp_scn <- run_inputs("scenario")
-    state   <- pm_state()
+    files   <- character(0)
+    # Custom assortments used in the default run (Phase 4b): its own matrix.
+    def_path <- "default_2021"
+    if (inp_def$custom) { def_path <- write_scenario_pm(inp_def$pm); files <- def_path }
+    scenario <- NULL
+    if (isTRUE(input$compare_on)) {
+      scn_path <- write_scenario_pm(inp_scn$pm); files <- c(files, scn_path)
+      scenario <- list(price_matrix_path = scn_path, products = inp_scn$pd,
+                       length_classes = inp_scn$lc)
+    }
+    spec <- list(src = src, params = if (src == "nfi") build_run_params(input) else list(),
+                 tl = tl, list_params = list(file = tl$file), path = def_path,
+                 pd = if (inp_def$custom) inp_def$pd else NULL,
+                 lc = if (inp_def$custom) inp_def$lc else NULL,
+                 scenario = scenario, files = files)
+    run_progress(NULL)
+    run_task$invoke(spec, list(
+      tree_source_input = src, tree_list_input = tl,
+      started_at      = Sys.time(),   # for the run step list
+      price_matrix    = if (inp_def$custom) inp_def$pm else APP_PM_DEFAULT,
+      scenario_inputs = inp_scn, state = pm_state(),
+      spec            = spec[c("src", "params", "tl", "list_params")]))
+  })
 
-    withProgress(message = "Preparing inputs...", value = 0, {
-      incProgress(0.10, detail = "Loading price matrix and products")
-      r <- tryCatch({
-        incProgress(0.15, detail = "Sampling plots and loading taper profiles")
-        Sys.sleep(0)  # yield to allow UI refresh
-        incProgress(0.20, detail = "Running bucking optimizer...")
-        res <- if (!inp_def$custom) {
-          run_trees(src, params, tl, "default_2021", NULL, NULL)
-        } else {
-          # Custom assortments used in the default run (Phase 4b).
-          path <- write_scenario_pm(inp_def$pm)
-          on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
-          run_trees(src, params, tl, path, inp_def$pd, inp_def$lc)
-        }
-        res$tree_source_input <- src
-        res$tree_list_input   <- tl
-        incProgress(0.45, detail = "Summarising results")
-        Sys.sleep(0)
-        incProgress(0.10, detail = "Rendering outputs")
-        res$started_at      <- started_at
-        res$price_matrix    <- if (inp_def$custom) inp_def$pm else APP_PM_DEFAULT
-        res$scenario_inputs <- inp_scn
-        res$state           <- state
-        res
-      }, error = function(e) {
-        showNotification(
-          paste0("Backend error: ", conditionMessage(e)),
-          type = "error", duration = NULL)
-        NULL
-      })
-      r
-    })
+  result <- reactive({
+    if (run_rejected()) return(NULL)
+    run_task$result()
   })
 
 
@@ -245,26 +267,33 @@ server <- function(input, output, session) {
   # Scenario run: same trees, the scenario products and prices in effect
   # when Run was clicked (result()$scenario_inputs). Later edits take effect
   # at the next Run; until then a notice says the prices changed
-  # (scenario_stale()).
+  # (scenario_stale()). Ticked before Run, it comes with the run; ticked
+  # afterwards, it runs as its own task on the run's trees.
+  scn_for <- reactiveVal(NULL)   # run_id the scenario task was started for
+  observe({
+    req(isTRUE(input$compare_on))
+    r <- result(); req(!is.null(r), is.null(r$scenario))
+    if (identical(isolate(scn_for()), r$run_id)) return()
+    scn_for(r$run_id)
+    inp  <- r$scenario_inputs
+    path <- write_scenario_pm(inp$pm)
+    spec <- c(r$spec, list(path = path, pd = inp$pd, lc = inp$lc, scenario = NULL,
+                           files = path))
+    run_progress(NULL)
+    scn_task$invoke(spec, list())
+  })
+
   result_s2 <- reactive({
-    req(isTRUE(input$compare_on), !is.null(result()))
-    params <- isolate(build_run_params(input))
-    inp    <- result()$scenario_inputs
-    path   <- write_scenario_pm(inp$pm)
-    on.exit(tryCatch(file.remove(path), error = function(e) NULL), add = TRUE)
-    withProgress(message = "Running scenario prices...", value = 0.5, {
-      tryCatch({
-        r <- run_trees(result()$tree_source_input, params, result()$tree_list_input,
-                       path, inp$pd, inp$lc)
-        r$price_matrix    <- inp$pm
-        r$n_cells_changed <- pm_n_diff(result()$price_matrix, inp$pm)
-        r
-      }, error = function(e) {
-        showNotification(paste0("Scenario error: ", conditionMessage(e)),
-                         type = "error", duration = NULL)
-        NULL
-      })
-    })
+    req(isTRUE(input$compare_on))
+    r <- result(); req(!is.null(r))
+    s <- if (!is.null(r$scenario)) r$scenario else {
+      req(identical(scn_for(), r$run_id))
+      scn_task$result()
+    }
+    req(!is.null(s))
+    s$price_matrix    <- r$scenario_inputs$pm
+    s$n_cells_changed <- pm_n_diff(r$price_matrix, r$scenario_inputs$pm)
+    s
   })
 
   # TRUE when prices or custom assortments were edited after the last run.

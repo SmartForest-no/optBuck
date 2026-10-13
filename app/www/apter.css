@@ -157,6 +157,10 @@ details.apter-card { margin-bottom: 16px; }
 .status-idle  { color: var(--apter-muted); font-style: italic; padding: 4px 0; }
 .status-done  { color: var(--apter-success); font-weight: 500; padding: 4px 0; }
 .status-error { color: var(--apter-danger); font-weight: 500; padding: 4px 0; white-space: pre-wrap; }
+.status-running { color: var(--apter-accent); font-weight: 500; padding: 4px 0; }
+/* Run progress (background job): track and bar. */
+.run-progress { height: 6px; margin-top: 6px; border-radius: 3px; background: var(--apter-secondary); overflow: hidden; }
+.run-progress-bar { height: 100%; background: var(--apter-accent); transition: width 0.3s ease; }
 .note-error { color: var(--apter-danger); }
 .note-warn  { color: var(--apter-warning); }
 .note-ok    { color: var(--apter-success); }

@@ -2,7 +2,7 @@ check,result,detail
 Check 01: shinytest2 + chromote installed and Chrome found,PASS,Chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
 Check 02: Split app files exist,PASS,all 11 present in app/; no ui.R/server.R/global.R
 Check 03a: Env unset -> resolves to project root,PASS,resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-Check 03b: APTER_ROOT = temp dir -> clear error,PASS,"error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpqGHHip/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp(""app"") from the project root."
+Check 03b: APTER_ROOT = temp dir -> clear error,PASS,"error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpyoL3qB/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp(""app"") from the project root."
 Check 03c: APTER_ROOT = project root -> resolves,PASS,resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 Check 04a: write_scenario_pm() writes a scenario that uploads back unchanged,PASS,upload ok: TRUE | identical: TRUE | cells differing from default: 702
 Check 04b: build_run_params() maps HKL groups and county,PASS,"HKL '4' -> 41,42; '__all__' -> NULL; HKL '3','5' -> 31,32,51,52; fylnr '03' -> 03"
@@ -10,7 +10,8 @@ Check 04c: count_eligible_plots() matches direct filter,PASS,"HKL4/ab17/all: 248
 Check 04d: Editor matrices and interpolated 31 dm cells,PASS,"matrices: spruce_sawlog, pine_sawlog, flat_prices | interpolated cells: 78 (all 31 dm: TRUE)"
 Check 05: AppDriver starts the app,PASS,app started
 Check 06: Simulator run_status idle and title contains 'Apter',PASS,run_status: 'Select parameters and click Run optimizer.' | title: 'Apter — Bucking simulator (v1)'
-Check 07: Main run completes without error notification,PASS,run_status: 'Run complete in 7.8 s  |  5 plot(s)  |  113 trees  |  334 selected logs  |  ID: sampled_20261013_131433' | error notifications: 0
+Check 07: Main run completes without error notification,PASS,run_status: 'Run complete in 3.1 s  |  5 plot(s)  |  113 trees  |  334 selected logs  |  ID: sampled_20261013_161406' | error notifications: 0
+Check 22: Run is disabled and progress shown while a run task runs,PASS,"during the run: Run disabled TRUE, status 'Sampling plots and loading taper profiles' | after: Run enabled TRUE"
 Check 08: summary_cards non-empty and tbl_products has rows,PASS,summary_cards chars: 335 | tbl_products rows: 2
 Check 09: Scenario comparison 'same' samples the same plots,PASS,cmp_status: 'Comparison complete. Same plots sampled in both scenarios.'
 "Check 10: Uploaded scenario runs; comparison, pattern line and stem diagram render",PASS,"status after upload: '351 cell(s) differ from the default
@@ -23,10 +24,10 @@ Check 14: Selected logs table is paginated,PASS,page info: '1 - 10 of 334' | sel
 Check 15: Screenshots saved for visual review,PASS,6 of 6 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
 Check 16: Per m3 tab renders; Trees card expands; no per-ha text,PASS,per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 10 | log detail shown: TRUE | per-ha text hits: 0
 "Check 17: Price-matrix editor: grids side by side, highlights, reset",PASS,"grids side by side: TRUE | highlighted cells after upload: 270 | after reset: '0 cell(s) differ from the default
-   (0 in this matrix).', highlighted 0 | upload message: 'Loaded filee0ec3a4818f.csv (wide layout): replaced Spruce sawlog.'"
+   (0 in this matrix).', highlighted 0 | upload message: 'Loaded file53f854491aea.csv (wide layout): replaced Spruce sawlog.'"
 Check 18: Stale-scenario notice after editing prices,PASS,"before edit: '' | after reset, Run card: 'Scenario prices changed since last run; run again to update.' | comparison tab: 'Scenario prices changed since last run; run again to update.'"
 Check 20: Custom assortment added in the UI runs in the comparison,PASS,"assortment rows 1 | after edit: 'Saved Poles (Scenario only): of 57 price cell(s), 38 kept in the scenario; new cells at the starting price.' | matrix choices: spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | 'poles' in per-m3 comparison: TRUE | error notifications: 0"
-"Check 21: Uploaded tree list validates, runs and reports height sources",PASS,"panel: 'filee0ec1fa75ee8.csv: 12 trees, 12 within taperNOR's range.
-Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). The' | status: 'Run complete in 1.1 s  |  2 plot(s)  |  12 trees  |  43 selected logs  |  ID: treelist_20261013_131544' | banner: 'Heights: 
+"Check 21: Uploaded tree list validates, runs and reports height sources",PASS,"panel: 'file53f82074cdf.csv: 12 trees, 12 within taperNOR's range.
+Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). Thes' | status: 'Run complete in 0.7 s  |  2 plot(s)  |  12 trees  |  43 selected logs  |  ID: treelist_20261013_161433' | banner: 'Heights: 
   Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height_source column: TRUE | error notifications: 0"
-Check 19: Browser runtime under 180 s,PASS,browser checks took 90.5 s (threshold: 180 s)
+Check 19: Browser runtime under 180 s,PASS,browser checks took 47.0 s (threshold: 180 s)

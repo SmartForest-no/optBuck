@@ -62,10 +62,15 @@
 #      upload the template -> validation panel lists 12 trees and the height
 #      methods; Run -> the FinnHoyde height banner shows and the Trees table
 #      has a Height_source column; no error notifications
+# 22.  Background runs (Performance phase): right after Run is clicked the
+#      button is disabled and the run status shows the task's progress; once
+#      the run is complete Run is enabled again (REVIEW if the run finished
+#      before the driver could look). Runs are ExtendedTasks, so the checks
+#      above wait for the task (wait_run()), not only for Shiny to be idle.
 #
 # Verdict :
 #   PASS                   -- all checks pass
-#   ACCEPTED WITH REVIEW   -- only the runtime check is REVIEW
+#   ACCEPTED WITH REVIEW   -- only the runtime check (19) or check 22 is REVIEW
 #   FAIL                   -- missing dependencies, files, wrong helper
 #                             results, app start failure or a failed run
 #
@@ -331,7 +336,8 @@ browser_checks <- c(
   "Check 18: Stale-scenario notice after editing prices",
   "Check 19: Browser runtime under 180 s",
   "Check 20: Custom assortment added in the UI runs in the comparison",
-  "Check 21: Uploaded tree list validates, runs and reports height sources")
+  "Check 21: Uploaded tree list validates, runs and reports height sources",
+  "Check 22: Run is disabled and progress shown while a run task runs")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -402,6 +408,17 @@ if (!browser_ok) {
                      bs_ver, isTRUE(inter_loaded), n_gfonts)
     shoot(app, "01_home")
 
+    # Runs are background tasks (ExtendedTask, Performance phase): after the
+    # click, wait until the run status shows no running task and Run is
+    # enabled again (wait_for_idle() alone returns while the task runs).
+    wait_run <- function(app, timeout = 120 * 1000) {
+      app$wait_for_idle(timeout = timeout)
+      app$wait_for_js(paste0(
+        "!document.querySelector('#run_status .status-running') && ",
+        "!document.getElementById('run_btn').disabled"), timeout = timeout)
+      app$wait_for_idle(timeout = timeout)
+    }
+
     # 06. idle state and title (outputs on hidden pages don't render)
     app$set_inputs(main_nav = "Simulator")
     st0   <- txt(app, "#run_status")
@@ -412,14 +429,20 @@ if (!browser_ok) {
         sprintf("run_status: '%s' | title: '%s'", st0, title))
 
     # 07. main run
+    busy_disabled <- NA; busy_status <- ""
     run_err <- tryCatch({
       # spruce / HKL 4 are the defaults: no output changes, so don't wait.
       app$set_inputs(species_group = "spruce", hkl_group = "4", wait_ = FALSE)
       app$set_inputs(abonitet = "17", n_plots = "5", seed = 42)
       app$click("run_btn")
+      # 22. While the task runs: Run disabled, progress in the run status.
       app$wait_for_idle(timeout = 120 * 1000)
+      busy_disabled <- isTRUE(app$get_js("document.getElementById('run_btn').disabled"))
+      busy_status   <- txt(app, "#run_status")
+      wait_run(app)
       ""
     }, error = function(e) conditionMessage(e))
+    after_enabled <- !isTRUE(app$get_js("document.getElementById('run_btn').disabled"))
     st1  <- txt(app, "#run_status")
     nerr <- n_err_notif(app)
     ok7  <- !nzchar(run_err) && grepl("Run complete", st1, fixed = TRUE) &&
@@ -427,6 +450,13 @@ if (!browser_ok) {
     rec(browser_checks[3], if (ok7) PASS else FAIL,
         sprintf("run_status: '%s' | error notifications: %d%s", st1, nerr,
                 if (nzchar(run_err)) paste(" | driver error:", run_err) else ""))
+    # REVIEW, not FAIL, if the run had already finished when the driver looked.
+    rec(browser_checks[18],
+        if (isTRUE(busy_disabled) && !grepl("Run complete", busy_status) && after_enabled) PASS
+        else if (!isTRUE(busy_disabled) && grepl("Run complete", busy_status) && after_enabled) REVIEW
+        else FAIL,
+        sprintf("during the run: Run disabled %s, status '%s' | after: Run enabled %s",
+                isTRUE(busy_disabled), trimws(busy_status), after_enabled))
     n_steps_done <- app$get_js(
       "document.querySelectorAll('#run_steps .step-icon:not(.is-pending)').length")
     n_steps      <- app$get_js("document.querySelectorAll('#run_steps .step-row').length")
@@ -451,7 +481,7 @@ if (!browser_ok) {
       app$set_inputs(compare_on = TRUE, wait_ = FALSE)
       app$set_inputs(result_tabs = "Scenario comparison")
       app$click("run_btn")
-      app$wait_for_idle(timeout = 120 * 1000)
+      wait_run(app)
       ""
     }, error = function(e) conditionMessage(e))
     cmp <- txt(app, "#cmp_status")
@@ -485,7 +515,7 @@ if (!browser_ok) {
     run10_err <- tryCatch({
       app$set_inputs(main_nav = "Simulator")
       app$click("run_btn")
-      app$wait_for_idle(timeout = 120 * 1000)
+      wait_run(app)
       ""
     }, error = function(e) conditionMessage(e))
     n_delta   <- n_tbl_rows(app, "tbl_cmp_delta")
@@ -631,7 +661,7 @@ if (!browser_ok) {
       # don't wait for one (the driver would wait out its full timeout).
       app$set_inputs(result_tabs = "Scenario comparison", wait_ = FALSE)
       app$click("run_btn")
-      app$wait_for_idle(timeout = 120 * 1000)
+      wait_run(app)
       ""
     }, error = function(e) conditionMessage(e))
     cmp20  <- txt(app, "#tbl_cmp_per_m3")
@@ -663,7 +693,7 @@ if (!browser_ok) {
     run21_err <- tryCatch({
       app$set_inputs(compare_on = FALSE, wait_ = FALSE)
       app$click("run_btn")
-      app$wait_for_idle(timeout = 120 * 1000)
+      wait_run(app)
       app$set_inputs(result_tabs = "Per m³", wait_ = FALSE)
       app$wait_for_idle()
       app$run_js(paste0(
@@ -693,7 +723,7 @@ if (!browser_ok) {
 
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:14, 16, 17)])
+    for (ck in browser_checks[c(2:14, 16:18)])
       rec(ck, FAIL, "skipped: app did not start")
   }
 

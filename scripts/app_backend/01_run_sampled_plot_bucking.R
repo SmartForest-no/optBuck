@@ -674,12 +674,25 @@ run_tree_list_bucking <- function(prepared,
   finish_job(job, buck_job(job, workers))
 }
 
+#' The trees of a prepared tree list that are bucked (within taperNOR's
+#' range), in the backend's tree_data layout (plot_id = the user's plot).
+tree_list_tree_data <- function(prepared) {
+  trees <- prepared$trees[prepared$trees$in_range, , drop = FALSE]
+  data.frame(plot_id = trees$plot_id, treid = trees$treid, sesong = NA,
+             species_group = trees$species_group, dbh_cm = trees$dbh_cm,
+             height_m = trees$height_m, height_source = trees$height_source,
+             stringsAsFactors = FALSE)
+}
+
 #' The preparation part of run_tree_list_bucking(): taperNOR profiles, under
 #' bark, products and prices. Returns a job for buck_job() / finish_job().
+#' `workers`: taperNOR in chunks on that many workers; `profiles`: the
+#' taperNOR profiles of tree_list_tree_data(prepared), already computed (the
+#' app does this asynchronously).
 prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
                                   root = get_root_dir(), products = NULL,
                                   length_classes = NULL, params = list(),
-                                  scenario = NULL, workers = 1L) {
+                                  scenario = NULL, workers = 1L, profiles = NULL) {
   t_start <- Sys.time()
   if (!isTRUE(prepared$ok)) stop("The tree list did not pass validation.")
   stump_cm <- as.integer(params$stump_height_cm   %||% 10L)
@@ -687,18 +700,16 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
 
   # Trees within taperNOR's range (others are reported as excluded).
   t0_tree_filter <- proc.time()
-  trees <- prepared$trees[prepared$trees$in_range, , drop = FALSE]
-  tree_data <- data.frame(plot_id = trees$plot_id, treid = trees$treid, sesong = NA,
-                          species_group = trees$species_group, dbh_cm = trees$dbh_cm,
-                          height_m = trees$height_m, height_source = trees$height_source,
-                          stringsAsFactors = FALSE)
+  trees     <- prepared$trees[prepared$trees$in_range, , drop = FALSE]
+  tree_data <- tree_list_tree_data(prepared)
   t_tree_filter <- .pt(t0_tree_filter)
 
   pps <- .load_runs(price_matrix_path, root, products, length_classes, scenario)
 
   # taperNOR at run time (no cache for uploaded trees).
   t0_taper <- proc.time()
-  profiles <- .taper_profiles_parallel(tree_data, workers)   # helpers_parallel.R
+  # The app computes the profiles beforehand (in chunks, asynchronously).
+  if (is.null(profiles)) profiles <- .taper_profiles_parallel(tree_data, workers)
   ok <- attr(profiles, "profile_ok")
   profile_failures <- .rename_to_github(data.frame(
     plot_id = tree_data$plot_id[!ok], treid = tree_data$treid[!ok],

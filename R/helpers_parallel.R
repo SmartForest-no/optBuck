@@ -73,43 +73,66 @@ apter_workers <- function() {
   e
 }
 
-#' Start one future per chunk of a job's trees (R/helpers_bucking_core.R's
-#' .buck_trees() on that chunk). future() waits for a free worker when all
-#' are busy; collect the results with future::value() in chunk order.
-.chunk_futures <- function(job, workers, chunk_size = .chunk_size(length(job$pvs), workers)) {
-  .ensure_plan(workers)
-  core <- .core_env()
+#' Chunk tasks: the expression a worker evaluates and, per chunk, its
+#' globals. Scripts run them as futures (.chunk_futures(), waiting for a free
+#' worker); the app runs the same tasks as promises (app/helpers_jobs.R).
+#'
+#' Bucking: R/helpers_bucking_core.R's .buck_trees() on a chunk of a job's
+#' trees. Taper: generate_taper_profiles_for_trees() (R/helpers_taper.R) on
+#' a chunk of tree_data.
+.BUCK_CHUNK_EXPR  <- quote(core$.buck_trees(pv_c, td_c, prep, stump, step))
+.TAPER_CHUNK_EXPR <- quote(core$generate_taper_profiles_for_trees(td_c, quiet = TRUE))
+
+.buck_chunk_globals <- function(job, workers,
+                                chunk_size = .chunk_size(length(job$pvs), workers)) {
+  core   <- .core_env()
   td_ids <- as.character(job$tree_data$treid)
   lapply(.chunks(length(job$pvs), chunk_size), function(ix) {
     pv_c <- job$pvs[ix]
-    td_c <- job$tree_data[td_ids %in% names(pv_c), , drop = FALSE]
-    future::future(
-      core$.buck_trees(pv_c, td_c, prep, stump, step),
-      globals = list(core = core, pv_c = pv_c, td_c = td_c, prep = job$prep,
-                     stump = job$stump_cm, step = job$step_cm),
-      packages = character(0), seed = NULL)
+    list(core = core, pv_c = pv_c,
+         td_c = job$tree_data[td_ids %in% names(pv_c), , drop = FALSE],
+         prep = job$prep, stump = job$stump_cm, step = job$step_cm)
   })
 }
 
-#' taperNOR profiles for a tree list (generate_taper_profiles_for_trees(),
-#' R/helpers_taper.R) in chunks on the workers. Profiles are computed per
-#' tree, so the chunks bound in order hold the same profiles, flags and
-#' error messages as one call.
+.taper_chunk_globals <- function(tree_data, workers,
+                                 chunk_size = .chunk_size(nrow(tree_data), workers)) {
+  core <- .core_env()
+  lapply(.chunks(nrow(tree_data), chunk_size), function(ix)
+    list(core = core, td_c = tree_data[ix, , drop = FALSE]))
+}
+
+#' A future for one chunk task.
+.chunk_future <- function(expr, globals)
+  future::future(expr, substitute = FALSE, globals = globals,
+                 packages = character(0), seed = NULL)
+
+#' Start one future per chunk of a job's trees; future() waits for a free
+#' worker when all are busy. Collect with future::value() in chunk order.
+.chunk_futures <- function(job, workers, chunk_size = .chunk_size(length(job$pvs), workers)) {
+  .ensure_plan(workers)
+  lapply(.buck_chunk_globals(job, workers, chunk_size), function(g)
+    .chunk_future(.BUCK_CHUNK_EXPR, g))
+}
+
+#' taperNOR profiles for a tree list in chunks on the workers. Profiles are
+#' computed per tree, so the chunks bound in order (.combine_taper()) hold
+#' the same profiles, flags and error messages as one call.
 .taper_profiles_parallel <- function(tree_data, workers,
                                      chunk_size = .chunk_size(nrow(tree_data), workers)) {
   if (workers <= 1L || nrow(tree_data) == 0L)
     return(generate_taper_profiles_for_trees(tree_data, quiet = TRUE))
   .ensure_plan(workers)
-  core <- .core_env()
-  fs <- lapply(.chunks(nrow(tree_data), chunk_size), function(ix) {
-    td_c <- tree_data[ix, , drop = FALSE]
-    future::future(core$generate_taper_profiles_for_trees(td_c, quiet = TRUE),
-                   globals = list(core = core, td_c = td_c),
-                   packages = character(0), seed = NULL)
-  })
-  parts <- lapply(fs, future::value)
-  rows  <- Filter(function(p) nrow(p) > 0L, parts)
-  out   <- if (length(rows) > 0L) do.call(rbind, rows) else data.frame()
+  fs <- lapply(.taper_chunk_globals(tree_data, workers, chunk_size), function(g)
+    .chunk_future(.TAPER_CHUNK_EXPR, g))
+  .combine_taper(lapply(fs, future::value))
+}
+
+#' Bind taperNOR chunk results in order (attributes profile_ok and
+#' profile_errors as one generate_taper_profiles_for_trees() call).
+.combine_taper <- function(parts) {
+  rows <- Filter(function(p) nrow(p) > 0L, parts)
+  out  <- if (length(rows) > 0L) do.call(rbind, rows) else data.frame()
   attr(out, "profile_ok")     <- unlist(lapply(parts, attr, "profile_ok"))
   attr(out, "profile_errors") <- unlist(lapply(parts, attr, "profile_errors"))
   out

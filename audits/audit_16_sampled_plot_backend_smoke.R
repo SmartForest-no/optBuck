@@ -24,9 +24,11 @@
 # 11.  Price validation contains no FAIL rows
 # 12.  profile_failures == 0 rows (or REVIEW if failures occurred)
 # 13.  Runtime is under 120 seconds (REVIEW if above but run completed)
-# 14.  The app's .optimize_dp_fast() matches the reference
-#      optimize_one_tree_dp() on every tree: dp_best_value within 1e-8 and
-#      equal n_selected. Trees come from three shimmed backend runs:
+# 14.  .optimize_dp_fast() and the backend (the vectorised core, Performance
+#      phase) match the reference optimize_one_tree_dp() on every tree:
+#      value within 1e-8 and equal n_selected. Each tree's priced input is
+#      rebuilt with the per-tree data.frame pipeline (audit_dp_inputs(),
+#      R/helpers_audit.R) for three strata:
 #      spruce and pine (HKL 41/42, abonitet 14/17, 25 plots, seed 42) and
 #      "both" (same strata, 10 plots, seed 7). (added 2026-10-12)
 # 15.  Same runs: identical cutting pattern (StartPos, StopPos, ProductKey).
@@ -453,40 +455,23 @@ if (!is.null(smoke_result) && !is.na(smoke_time)) {
 # ==============================================================================
 # Checks 14-15: fast optimizer == reference optimizer
 # ==============================================================================
-# The app runs .optimize_dp_fast() (backend), not optimize_one_tree_dp()
-# (R/helpers_dp_optimizer.R). Shim the fast optimizer in the global env so
-# every tree's real priced dp_in is also solved by the reference, then
-# restore it. Runs after check 13 so the smoke runtime is unaffected.
+# The backend runs the vectorised DP (.dp_select(), R/helpers_bucking_core.R;
+# .optimize_dp_fast() is its data.frame wrapper), not optimize_one_tree_dp()
+# (R/helpers_dp_optimizer.R). Each tree's priced input is rebuilt with the
+# per-tree data.frame pipeline (audit_dp_inputs()) and solved by both; the
+# backend's own result for the tree must agree. Runs after check 13 so the
+# smoke runtime is unaffected.
 cat("\n--- 14-15. Fast vs reference optimizer ---\n",
     file = audit_txt, append = TRUE)
 cat("\n--- 14-15. Fast vs reference optimizer ---\n")
 
-eq_check_14 <- "Check 14: .optimize_dp_fast() value and n_selected match reference"
-eq_check_15 <- "Check 15: .optimize_dp_fast() cutting pattern matches reference"
+eq_check_14 <- "Check 14: .optimize_dp_fast() and the backend match the reference: value and n_selected"
+eq_check_15 <- "Check 15: .optimize_dp_fast() and the backend match the reference: cutting pattern"
 
 if (source_ok && exists(".optimize_dp_fast", mode = "function")) {
-  E_eq <- new.env(parent = emptyenv())
-  E_eq$rows <- list()
-
-  .cut_pattern <- function(res) {
-    sl <- res$selected_logs
+  .cut_pattern <- function(sl) {
     if (!is.data.frame(sl) || nrow(sl) == 0L) return(character(0))
     sort(paste(sl$StartPos, sl$StopPos, sl$ProductKey, sep = "|"))
-  }
-
-  .fast_impl <- .optimize_dp_fast
-  .optimize_dp_fast <- function(valued_candidates) {
-    f <- .fast_impl(valued_candidates)
-    r <- tryCatch(optimize_one_tree_dp(valued_candidates),
-                  error = function(e) NULL)
-    E_eq$rows[[length(E_eq$rows) + 1L]] <- data.frame(
-      ref_ok        = !is.null(r),
-      value_diff    = if (is.null(r)) NA_real_
-                      else abs(f$dp_best_value - r$dp_best_value),
-      n_sel_match   = !is.null(r) && f$n_selected == r$n_selected,
-      pattern_match = !is.null(r) && identical(.cut_pattern(f), .cut_pattern(r)),
-      stringsAsFactors = FALSE)
-    f
   }
 
   eq_settings <- list(
@@ -497,12 +482,34 @@ if (source_ok && exists(".optimize_dp_fast", mode = "function")) {
     list(species_group = "both",   hogstkl = c(41L, 42L),
          abonitet = c(14L, 17L), n_plots = 10L, seed = 7L)
   )
-  eq_errors <- character(0)
+  # Every tree's priced DP input, rebuilt with the per-tree data.frame
+  # pipeline (audit_dp_inputs(), R/helpers_audit.R), solved by the fast and
+  # the reference optimizer; both compared with the backend's own result for
+  # the tree (the vectorised core, R/helpers_bucking_core.R).
+  eq_errors <- character(0); rows <- list()
   t_eq <- proc.time()
   for (s in eq_settings) {
     err <- tryCatch({
-      run_sampled_plot_bucking(params = s, price_matrix_path = "default_2021",
-                               root = root_dir)
+      a <- audit_dp_inputs(s, root_dir)
+      ts <- a$result$tree_summary; sl <- a$result$selected_logs_all
+      for (tid in names(a$dp_in)) {
+        x <- a$dp_in[[tid]]
+        f <- .optimize_dp_fast(x)
+        r <- tryCatch(optimize_one_tree_dp(x), error = function(e) NULL)
+        b_val <- ts$total_value_nok[ts$treid == tid]
+        b_pat <- .cut_pattern(sl[sl$treid == tid, , drop = FALSE])
+        rows[[length(rows) + 1L]] <- data.frame(
+          ref_ok        = !is.null(r),
+          value_diff    = if (is.null(r)) NA_real_
+                          else abs(f$dp_best_value - r$dp_best_value),
+          n_sel_match   = !is.null(r) && f$n_selected == r$n_selected,
+          pattern_match = !is.null(r) &&
+            identical(.cut_pattern(f$selected_logs), .cut_pattern(r$selected_logs)),
+          backend_value_diff = if (is.null(r) || length(b_val) != 1L) NA_real_
+                               else abs(b_val - r$dp_best_value),
+          backend_pattern_match = !is.null(r) && identical(b_pat, .cut_pattern(r$selected_logs)),
+          stringsAsFactors = FALSE)
+      }
       ""
     }, error = function(e) conditionMessage(e))
     if (nzchar(err))
@@ -510,34 +517,33 @@ if (source_ok && exists(".optimize_dp_fast", mode = "function")) {
   }
   t_eq <- as.numeric((proc.time() - t_eq)["elapsed"])
 
-  # Restore the backend's fast optimizer.
-  .optimize_dp_fast <- .fast_impl
-  rm(.fast_impl)
-
-  eq <- if (length(E_eq$rows) > 0L) do.call(rbind, E_eq$rows) else
+  eq <- if (length(rows) > 0L) do.call(rbind, rows) else
     data.frame(ref_ok = logical(0), value_diff = numeric(0),
-               n_sel_match = logical(0), pattern_match = logical(0))
+               n_sel_match = logical(0), pattern_match = logical(0),
+               backend_value_diff = numeric(0), backend_pattern_match = logical(0))
   n_trees    <- nrow(eq)
-  value_ok   <- eq$ref_ok & !is.na(eq$value_diff) & eq$value_diff <= 1e-8
+  value_ok   <- eq$ref_ok & !is.na(eq$value_diff) & eq$value_diff <= 1e-8 &
+                !is.na(eq$backend_value_diff) & eq$backend_value_diff <= 1e-8
   n_val_bad  <- sum(!(value_ok & eq$n_sel_match))
-  n_pat_tie  <- sum(value_ok & eq$n_sel_match & !eq$pattern_match)
+  n_pat_tie  <- sum(value_ok & eq$n_sel_match & !(eq$pattern_match & eq$backend_pattern_match))
 
   rec(eq_check_14,
       if (length(eq_errors) == 0L && n_trees > 0L && n_val_bad == 0L) PASS
       else FAIL,
-      sprintf("%d trees compared over %d runs (%.1f s); %d mismatch(es); max |value diff| = %.2e%s",
+      sprintf("%d trees compared over %d runs (%.1f s); %d mismatch(es); max |value diff| fast %.2e, backend %.2e%s",
               n_trees, length(eq_settings), t_eq, n_val_bad,
               if (n_trees > 0L) max(c(0, eq$value_diff), na.rm = TRUE) else NA_real_,
+              if (n_trees > 0L) max(c(0, eq$backend_value_diff), na.rm = TRUE) else NA_real_,
               if (length(eq_errors) > 0L)
                 paste(" | run errors:", paste(eq_errors, collapse = "; "))
               else ""))
-  n_pat_diff <- sum(!eq$pattern_match)
+  n_pat_diff <- sum(!(eq$pattern_match & eq$backend_pattern_match))
   rec(eq_check_15,
       if (n_trees == 0L || n_val_bad > 0L || n_pat_diff > 0L) FAIL else PASS,
       if (n_val_bad > 0L)
         sprintf("value/n_selected mismatches in %d tree(s); see check 14", n_val_bad)
       else
-        sprintf("%d of %d trees differ in cutting pattern (%d of them at equal value)",
+        sprintf("%d of %d trees differ in cutting pattern (fast or backend vs reference; %d of them at equal value)",
                 n_pat_diff, n_trees, n_pat_tie))
 } else {
   rec(eq_check_14, FAIL, "backend not sourced; .optimize_dp_fast() unavailable")
