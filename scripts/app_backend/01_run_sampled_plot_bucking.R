@@ -670,7 +670,7 @@ run_tree_list_bucking <- function(prepared,
                                   scenario = NULL,
                                   workers = apter_workers()) {
   job <- prepare_tree_list_job(prepared, price_matrix_path, root, products,
-                               length_classes, params, scenario)
+                               length_classes, params, scenario, workers)
   finish_job(job, buck_job(job, workers))
 }
 
@@ -679,7 +679,7 @@ run_tree_list_bucking <- function(prepared,
 prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
                                   root = get_root_dir(), products = NULL,
                                   length_classes = NULL, params = list(),
-                                  scenario = NULL) {
+                                  scenario = NULL, workers = 1L) {
   t_start <- Sys.time()
   if (!isTRUE(prepared$ok)) stop("The tree list did not pass validation.")
   stump_cm <- as.integer(params$stump_height_cm   %||% 10L)
@@ -698,7 +698,7 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
 
   # taperNOR at run time (no cache for uploaded trees).
   t0_taper <- proc.time()
-  profiles <- generate_taper_profiles_for_trees(tree_data, quiet = TRUE)
+  profiles <- .taper_profiles_parallel(tree_data, workers)   # helpers_parallel.R
   ok <- attr(profiles, "profile_ok")
   profile_failures <- .rename_to_github(data.frame(
     plot_id = tree_data$plot_id[!ok], treid = tree_data$treid[!ok],
