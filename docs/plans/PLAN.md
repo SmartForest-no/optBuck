@@ -1,170 +1,118 @@
-# Apter (formerly nfiBuck) development plan
+# Apter development plan
 
-Plan dated 2026-10-12. Work through one phase per session. Start each phase in plan mode, show the plan to Lennart before editing, and re-run audits 14, 15, 16 (and new audits) at the end of each phase. Do not edit `scripts/prototype_reference/` or `audits/prototype_reference/` (audit 14 checks 19–20).
+Updated 2026-10-13. Replaces the previous PLAN.md and supersedes docs/plans/phase0.md (and any other files in docs/plans/). Detailed conventions live in CLAUDE.md; developer details, audits and benchmarks in docs/development.md.
 
-## Scope decisions (2026-10-12)
+Working rules: one phase per session, plan mode first, show the plan to Lennart before editing, work on a branch off main, re-run all audits at the end of a phase, and don't merge or push until Lennart says so. Never edit `scripts/prototype_reference/` or `audits/prototype_reference/`. When a convention is undecided, follow optBuck (SmartForest-no/optBuck) unless it conflicts with a decision in this file or CLAUDE.md.
 
-- Apter is a tool for improving bucking and price matrices. It is not an inventory or estimation tool.
-- Remove everything related to stratum estimation, per-ha values, plot scaling, ha-expansion and NFI expansion factors. This was never in scope. Remove it from the code, UI, README and CLAUDE.md, including the "Recommended next steps" section of the README.
-- NFI trees remain one possible tree source: a sample of trees selected by species, hogstkl, abonitet and fylnr. Results describe the selected trees only.
-- Species: Norway spruce and Scots pine only.
-- Audit 14 REVIEW item (zero-priced waste) is accepted as intentional. Record this in the audit output and documentation.
-- Non-monotonic stem profiles are valid input and must not trigger warnings or errors.
-- Deployment target: NIBIO server with many cores. Testing happens on the remote desktop, which also has many cores. Per-tree optimisation must run in parallel.
+## Scope
 
-## Value denominator (NOK/m³)
+- Apter is a general bucking simulator for Norway spruce and Scots pine, for industry partners: compare and improve price matrices and plan bucking. It is not an inventory or estimation tool, and NFI is not emphasised.
+- Tree sources: NFI sample trees, uploaded tree lists, and (Phase 6) uploaded stem profiles. Results describe the selected trees only. No per-ha, plot-level or stratum outputs.
+- Values are NOK per m³ of commercial solid volume under bark (definition in CLAUDE.md).
+- Deployment: NIBIO Linux server with many cores; testing on Lennart's remote desktop.
 
-All values are reported per m³ of commercial solid volume under bark:
+## Done
 
-- **Commercial stem:** the parts of the stem allocated to non-waste products. This excludes bark, the top above the last merchantable log, stump, and removed waste sections.
-- **Volume:** the sum of 10 cm cylinders along the commercial stem. Each cylinder uses the under-bark diameter at the top of its 10 cm section.
-- The denominator is independent of how individual products are priced or measured. For example, a sawlog volume based on its top diameter does not change the denominator.
-- Report NOK/m³ in total and by assortment (assortment value divided by the same total commercial volume), plus the volume share by assortment.
+| Phase | Content |
+|---|---|
+| 0 | Housekeeping: root resolution, app split, smoke audit (17) |
+| 1 | Rename nfiBuck → Apter; partner-facing README |
+| 2 | Appearance (bslib, reactable, self-hosted fonts) |
+| 3 | Under-bark diameters (barkNOR, B ≥ 0 floor), NOK/m³ denominator, shared solid-volume rule |
+| 4a | Deterministic tie-breaking; price-matrix editor; comparison with cutting-pattern changes |
+| 4b | Custom assortments; per-product volume methods (StanForD, Norwegian mid per Målereglement 2026); per-product price cap |
+| 5 | Tree-list import; height imputation (fieldPlot, calibrated/uncalibrated FinnHoyde) |
+| Performance | Shared candidate pass, vectorisation, parallel workers, ExtendedTask; `or_default()` |
 
-Implemented in Phase 3 (2026-10-12): under-bark diameters from `taperNOR::barkNOR()` (`R/helpers_bark.R`), the denominator in `R/helpers_commercial_volume.R`. Each species uses its own denominator.
+## Phase 4c: interface redesign
 
-## Phase 0: housekeeping
+Results for identical inputs must stay identical to main, except for the intended change from the new diameter limits (3a). Report that change against the performance baseline.
 
-1. List all TODO/FIXME/XXX comments and unfinished items in the repo. Report the status of `scripts/app_backend/02_benchmark_dp_optimizer_alternatives.R`: whether it was concluded, and which optimizer variant the app uses. Present the list to Lennart for triage. Do not act on it.
-2. Replace the hardcoded root-path fallback in `app/app.R`. Use `NFIBUCK_ROOT` → `APTER_ROOT`, otherwise the app directory's parent.
-3. Split `app/app.R` into sourced files: `app/ui.R`, `app/server.R`, plus helpers for upload and validation. Keep `shiny::runApp("app")` working. Update the CLAUDE.md architecture note.
-4. Add a headless app smoke test (`shinytest2`) as a new audit.
+### 1. Look (palette "Forest & sand")
 
-## Phase 1: rename to Apter
+- Forest green `#3F6E58` is the only strong colour: logo, primary buttons, active tab, status icons. Secondary buttons `#EAE5DC`. Neutrals unchanged (page `#F9F8F6`, text `#161513`, muted `#6F6A66`, lines `#E4E1DD`).
+- Assortment chart colours: sawlog `#3F6E58`, pulpwood `#C9A97A`, waste `#A39E98`. Custom assortments stay grey with their name on the log. Re-run the colour-blindness check via chromote; adjust shades only if needed.
+- Logo: remove the semicircle at the bottom. Keep the current tapered stem (broader at the base than at the top) and the cut marks.
+- Stripe: plain diagonal bands without dots, in `#8A8580`, `#D9CDB8`, `#C2B59F`, `#E8E0D2`, `#3F6E58`.
+- Remove the release footer (VERSION may stay internal).
 
-- Rename the repo, R files, environment variables, app title, README, CLAUDE.md, audit labels and output folder names wherever they say nfiBuck.
-- Exceptions: frozen prototype scripts and audits keep their content. Old output files that audits compare against may keep their names if renaming would break regression checks. List any such exceptions.
-- Give Lennart a short checklist for his local PC: renaming the GitHub repo, `git remote set-url`, local folder name, `.Renviron` variable names, and Oracle-dependent scripts.
+### 2. Navigation
 
-## Phase 2: appearance
+- Remove the Home page, including the tree-source tiles and AVAILABLE/PLANNED labels.
+- Two tabs, in this order: **Assortments and prices** (opens first) and **Simulator**.
 
-Model the look on NIBIO's ForestSens (Oracle APEX Redwood style). Screenshots are kept in `docs/design_reference/`; ask Lennart to add them.
+### 3. Assortments and prices
 
-- Use `bslib` (Bootstrap 5) with a custom theme. Use no default Shiny styling.
-- Warm off-white page background, white cards with subtle shadow and rounded corners, and a slim light-grey top bar with the app name on the left.
-- A home/landing view with an app icon, the "Apter" title and a decorative banner strip.
-- Card headers with plain dark text. Read-only fields shown as labelled boxes with dashed borders, small grey labels and larger values.
-- Clean tables with light row separators and pagination text at the bottom right, like "1 - 2".
-- Run status displayed as step lists with check icons, DONE status and timestamps.
-- Font: a free substitute such as Inter, since Oracle Sans is not freely licensed.
-- Restyle selectize inputs, buttons, file inputs and tabs explicitly. Avoid sliders where numeric inputs or selects work.
-- Footer showing the release version.
+**3a. Assortments** (replaces "Product definitions" and "Custom assortments")
 
-## Phase 3: per m³ outputs
+- One table for all assortments. Base products (spruce/pine sawlog, pulpwood, waste) are edited and removed exactly like custom ones, through one form in the app; "Reset to defaults" restores the base set.
+- Visible columns: Assortment (one name), Type, Species, Min/Max top diameter (cm), Max butt diameter (cm), Min/Max length (cm), Length step (cm), Volume method, Diameter rounding. "No limit" is shown as "–", never "Infinity".
+- Hidden (kept internally where needed): ProductKey (generated from name and species), species_group, DiameterSource, VolumeLengthCategory (no effect in Apter), DiameterUnderBark (always TRUE), DiameterTopPosition (set in the form only), Priority.
+- Priority is needed by the tie rule. Derive it automatically: matrix-priced 1, flat-priced commercial 2, waste 99.
+- AllowAsFirstLog / AllowAsTopLog: remove from code and data if always TRUE and unused; otherwise keep hidden and report.
+- Default diameter limits under bark, from optBuck's example.hpr (`DiameterClassMAX`, `DiameterMAXButt`):
 
-- Implement under-bark diameters (see open questions) and the commercial-volume denominator defined above, as a tested helper function.
-- Replace all per-ha and plot-level outputs with NOK/m³ outputs: total, by assortment, and by species. Show tree-level detail on demand.
-- Add audit checks:
-  - Manual verification of the denominator on a few synthetic stems.
-  - Waste and top sections excluded from the denominator.
-  - Denominator unchanged when prices change.
+  | Assortment | Max top (cm) | Max butt (cm) |
+  |---|---|---|
+  | Spruce sawlog | 60 | 65 |
+  | Pine sawlog | 50 | 60 |
+  | Spruce and pine pulpwood | 70 | 70 |
+  | Waste | – | – |
 
-## Phase 4: price matrices and assortments
+  Minimum top diameters stay as they are. Report how many logs and how much NOK/m³ change against the baseline.
+- Remove the explanatory note.
 
-Split into two parts (decided 2026-10-12): 4a first, 4b later.
+**3b. Length and diameter classes**
 
-## Phase 4a: matrix comparison
+- Remove the section, including the 31 dm interpolation note and the italic marking of interpolated cells (the data stay).
+- Sawlog lengths and diameter classes come from the columns and rows of each assortment's price matrix (single source). Flat-priced assortments use min/max length and length step. LengthClasses is derived from these, never edited separately.
 
-**Done (2026-10-12).** Tie-breaking in `R/helpers_dp_optimizer.R` and the fast optimizer; editor and uploads in `R/helpers_price_matrix.R`; comparison in `R/helpers_comparison.R`; audit 19. Upload and templates support the wide source layout (xlsx, CSV) as well as long.
+**3c. Price matrices**
 
-Replace the current price-scenario options (base / multiplier / uploaded). The multiplier inputs are removed; the side-by-side comparison replaces them.
+- Heading "Price matrices". No explanatory notes.
+- Two columns, **A** and **B**, both editable. A starts from the 2021 prices; each side has "Reset to 2021 prices", "Upload price matrix" (xlsx/csv, wide or long, as now) and download.
+- Each assortment in B is "Same as A" (default, shown greyed), "Own prices" or "Not used". Removing an assortment (3a) removes it from both sides.
+- Rows (top-diameter classes) and columns (lengths) can be added and removed. A removed column means that length is not allowed. Rows can only be removed at the ends, so there are no gaps.
+- Minimal axis label on the grids: "Top diameter (cm) × length (dm), NOK/m³ under bark".
+- Cells in B that differ from A stay highlighted, without a text note.
 
-1. **Deterministic tie-breaking in the optimizer (first).** Treat totals within a tolerance as equal and apply a documented rule, such as preferring fewer cuts. The fast and reference optimizers must stay identical (audit 16 checks 14–15). Phase 3's audit 18 found 34 of 137 spruce trees switching between equal-value patterns when all prices were scaled ×1.5 (e.g. different splits of the same flat-priced pulpwood stretch; exact ties since pulpwood volume is the unrounded solid-volume rule).
-2. **Side-by-side price matrix comparison.** For each species × assortment, show the default matrix (read-only) and the scenario matrix side by side. The scenario matrix can be edited in place (`rhandsontable`).
-   - Cells that differ from the default are highlighted.
-   - "Reset to default" works per matrix.
-   - Drag-and-drop upload replaces the scenario matrix. Uploads are validated against the `PriceMatrix_long` schema, and an import template can be downloaded.
-   - Scenarios can be downloaded as CSV.
-3. **Default vs. scenario results.** NOK/m³ total and by assortment, volume shares by assortment, and the change in cutting patterns. Example stems show the bucking under both matrices.
-   - **Cutting-pattern changes count only differences that change value or volume**, so equal-value ties are not shown as changes.
+**3d.** Remove "Notes and limitations".
 
-## Phase 4b: assortments and volume methods
+### 4. Simulator
 
-**Done (2026-10-13).** Volume methods in `R/helpers_volume_methods.R`
-(`Top cylinder`, the former sawlog "Top"; `Top` frustum at 1 cm/m; Apter's
-solid volume; Norwegian mid after the Målereglement for skogsvirke 2026,
-4.1.3–4.1.4, with 3.14); custom assortments in `R/helpers_products.R` and
-`R/helpers_price_matrix.R`, each used in the default run, the scenario run or
-both; per-product price-diameter cap (the largest class of the product's
-matrix, 50 for the defaults); app card on the Prices page; audit 20, and
-audit 17 check 20. Default results are identical to the pre-Phase-4b
-baseline. Quality restrictions are out of scope (stems defect-free). The
-sensitivity tool below is still to be confirmed.
+Sidebar:
+- Remove the random seed input (fixed at 42, hidden) and "Plots to sample" (fixed at 200; strata with fewer plots use all of them).
+- Remove the comparison checkbox and scenario lines. A comparison runs automatically when B differs from A; otherwise a single run with A.
+- Remove the notes under Run (eligible plots, "Selection OK", HKL 1–2, county filtering). Keep real validation errors and warnings (tree lists, height warnings).
 
-- **Custom assortments.** Users can add assortments (e.g. poles, large-diameter sawlogs, small sawlogs, special timber) with:
-  - Species
-  - Minimum and maximum top diameter
-  - Allowed lengths
-  - Quality restrictions, if supported
-  - A price matrix
+Results area (right side shows results only):
+- Remove the Run details and Run steps cards. Keep a progress indicator while running.
+- Remove all trees-only and bark notes.
+- One results card with tabs: Summary, Per m³, Products, Selected logs, Price matrix comparison (shown only when B differs from A).
+- Summary, without repetition or notes: run time, plots, trees, trees with logs, logs, commercial volume (m³ u.b.), total value (NOK), NOK per m³, price volume (m³).
+- Remove the Diagnostics tab. Trees excluded from a tree list are listed in the validation panel.
 
-  These are added to the product definitions and validated with `validate_price_matrix_against_products()`.
-- **Volume calculation method per product.** Make the price-volume method selectable per product, following the StanForD volume categories as implemented in optBuck (`PriceVolumeCalc()`): e.g. top cylinder (current default for sawlogs), frustum, all diameters (solid volume), calculated Norwegian mid, with the matching volume-diameter and volume-length rules. **Frustum taper is 1 cm per metre** (decided 2026-10-12). optBuck's `PriceVolumeCalc.R` currently uses `LogLength * 0.01`, which is a bug (should be `0.1`, since diameters are in mm and LogLength in cm); Lennart is fixing it in optBuck. Use 1 cm/m here regardless. The commercial-volume denominator does not depend on this choice.
-  - **Reconcile "solid volume".** Apter's solid volume (pulpwood/waste price volume and the denominator) is 10 cm cylinders at each section's under-bark **top** diameter, not rounded, via `section_volume_fun()` (decided 2026-10-12). optBuck's "All diameters (solid volume)" is a different variant: it sums cylinders over every diameter from start to stop inclusive (one section too many), and rounds diameters down to cm before subtracting bark. Reconcile the two when adding per-product volume methods; keep the denominator on Apter's rule.
-- **Proposed extension (confirm with Lennart before building).** A sensitivity tool that shows how cutting patterns and NOK/m³ respond to changing a price cell or assortment by ±x %. It would also show which cells actually affect the bucking. Building a full price-matrix optimiser would need an explicit objective (e.g. target volume shares per assortment), which Lennart must define first.
+### 5. Terminology
 
-## Phase 4c: comparison interface (A and B)
+"Default" and "scenario" become **A** and **B** wherever a user sees them: UI, downloads, file names, README. Internal names may stay; rename only if cheap and safe, in a separate commit.
 
-Planned (decided 2026-10-13). Replaces the "Compare with scenario prices" checkbox and the `UseIn` field of custom assortments.
+### 6. Audits and docs
 
-- Columns A and B are both editable and uploadable. A starts from the 2021 prices, with a reset button.
-- Each assortment in B is "same as A", "own prices" or "not used".
-- A comparison runs when B differs from A; the checkbox is removed.
-- Removing an assortment removes its rules and matrices together, on either side. This replaces `UseIn`.
-- Removing a base product gives a warning.
-
-The backend already prices both runs from one candidate pass (Performance phase), so a comparison costs little more than one run.
-
-## Phase 5: tree list import
-
-**Done (2026-10-13).** `R/helpers_tree_list.R` (read, validate, template),
-`R/helpers_heights.R` (fieldPlot with ≥ 10 measured heights per species,
-FinnHoyde calibrated with 1–9, uncalibrated with none; height source per
-tree), `run_tree_list_bucking()` in the backend, app tree-source switch;
-audit 21 and audit 17 check 21. fieldPlot's `predictMissingHeights()` fails
-on absent species and its timeout never interrupts nlme: Apter wraps
-`fitHD_Plot()` / `fitHD()` instead (fixes reported to Lennart).
-
-- Add a data-source switch with two options: NFI tree sample or uploaded tree list.
-- Required columns: `tree_id`, `species` (spruce/pine), `dbh` in cm. Optional: `height` in m, `plot_id`.
-- Apply taperNOR, then run the existing candidate and DP pipeline.
-- **Height imputation.** If no heights or too few heights are given, use Norwegian height models. If some heights are given, use Lennart's own R package. Lennart will provide references and code. Until then, require heights and leave a clear placeholder function.
-- Provide a downloadable import template.
+- Update audit 17 for the new layout and add checks: no Home, A editable, B states, adding/removing rows and columns, automatic comparison when B differs, no "default"/"scenario" in the UI.
+- All other audits pass; the only expected result change comes from the new diameter limits.
+- Update README, CLAUDE.md and docs/development.md. Screenshots of both tabs for review before merging.
 
 ## Phase 6: stem profile import
 
-- Long format: `tree_id`, `species`, `height` in m along the stem, `diameter` in cm.
-- Bark status is declared by the user (see open questions).
-- Interpolate the profile to the 10 cm DP grid and feed it directly into candidate generation, bypassing taperNOR.
-- Allow non-monotonic profiles.
-- Provide a downloadable import template.
+- Long format (CSV or xlsx): `tree_id`, `species` (spruce/pine), `height` (m along the stem), `diameter` (cm, over bark), optional `plot_id`. Downloadable template. Reading StanForD .hpr files is out of scope.
+- Profiles are over bark. Under-bark diameters with barkNOR (B ≥ 0 floor); dbh is read from the profile at 1.3 m.
+- Interpolate to the 10 cm grid and feed the profiles straight into candidate generation, bypassing taperNOR.
+- Non-monotonic profiles are valid: no warnings or errors for local diameter increases.
+- Validation: errors for missing columns, non-numeric values, missing IDs, unknown species, non-positive values, duplicated heights within a tree. Warnings for likely unit errors (state the suspected unit; never convert silently), profiles with very few points or large height gaps, and profiles that don't reach 1.3 m.
 
-## Validation layer (shared by phases 4–6)
+## Later and open items
 
-Validation results are shown in a panel before the user runs the model. Errors block the run; warnings do not.
-
-- **Errors:** missing required columns, non-numeric values, missing IDs, unknown species, negative or zero dimensions, duplicated heights within a tree, a price matrix that does not match the product definitions.
-- **Warnings:** likely unit errors (state the suspected unit, e.g. a dbh median above 100 suggests mm, a height median above 60 suggests dm), implausible h/d ratios, profiles with very few points or large height gaps, trees outside the taper model's data range, and price matrices with gaps or implausible values. Do not convert units silently.
-- Add an audit with deliberately broken test files for each check.
-
-## Performance
-
-**Done (2026-10-13).** Results are identical to main before the phase (baseline `outputs/performance/baseline_main_3fa0a9d.rds`; audit 22). A 1000-tree list on 15 workers: 3.4 s for a run, 4.4 s for a comparison (main: about 50 s and 100 s). Timings and the profile are in [docs/development.md](../development.md#performance).
-
-- Profiled first (`scripts/performance_profile.R`): candidate generation 40 %, DP 32 %, data.frame overhead most of the rest; profile conversion was quadratic in the number of trees.
-- Vectorised bucking core (`R/helpers_bucking_core.R`): candidates, pricing and DP on plain vectors, result rows only for the selected logs.
-- A comparison prices both runs from one candidate pass, in memory (custom assortments with `UseIn` default/scenario keep working). No cache between runs (decided 2026-10-13).
-- Per-tree parallelism (`R/helpers_parallel.R`): `future` multisession workers (Windows and Linux), option `apter.workers` (default cores − 1), trees in chunks, combined in a fixed order.
-- App: runs are `shiny::ExtendedTask`s with progress per chunk; Run is disabled while one runs.
-- Not done: Rcpp (not needed, below 10 s for a 1000-tree comparison).
-
-## Documentation
-
-After each phase, update the README and CLAUDE.md, including the accepted assumptions, out-of-scope items and data formats.
-
-## Open questions for Lennart
-
-1. **Bark (decided 2026-10-12, implemented in Phase 3).** All stem profiles are assumed over bark: taperNOR output, uploaded tree lists, and imported stem profiles (e.g. from harvester data). Default bark model: `taperNOR::barkNOR()` along the whole stem, as a swappable helper (`R/helpers_bark.R`). Price lookup uses the top diameter under bark; product limits and price volume are under bark too (`DiameterUnderBark = TRUE`, as optBuck's `buckStem`).
-2. **barkNOR negative pine bark (open; ask the taperNOR authors).** barkNOR's pine coefficients give negative double bark near the top of larger pines (d below about 0.33·dbh − 2.4 cm). Apter floors B at 0 as a provisional fix. Ask the authors whether this is intended or whether the 2023 paper's coefficients differ.
-3. **Height imputation (resolved 2026-10-13, Phase 5).** fieldPlot for species with ≥ 10 measured heights; FinnHoyde reference curves calibrated to 1–9 measured heights (NFI tariff ratio), uncalibrated without heights.
-4. **Sensitivity tool.** Is the price sensitivity tool in phase 4b wanted? If a matrix optimiser is wanted instead, what should it optimise towards?
+- **Sensitivity tool** (undecided): show how cutting patterns and NOK/m³ respond to ±x % changes in a price cell or assortment. A price-matrix optimiser would need an explicit objective (e.g. target volume shares), to be defined by Lennart first.
+- **Negative pine bark in barkNOR:** the B ≥ 0 floor is provisional; ask the taperNOR authors whether the pine behaviour near the top is intended and whether Hansen et al. (2023) refitted the coefficients.
+- **fieldPlot fixes** (Lennart's package, separate session): loop over species present; error handling around the fitHD() fallback; a working timeout; species curve for plots without heights; nlme:: calls; README install URL. Apter's wrapper works around these meanwhile.
+- **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores.
