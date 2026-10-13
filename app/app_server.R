@@ -364,9 +364,14 @@ server <- function(input, output, session) {
   is_flat <- function(id) identical(id, PM_FLAT_ID)
   flat_keys <- reactive({ d <- asm_defs(); assortment_table_keys(d)[d$PriceType == "flat"] })
 
+  # The flat table is as tall as its rows, with readable product names.
+  grid_height <- function(id, n) if (is_flat(id)) 34 + 24 * n else 520
   pm_widget <- function(grid, id, read_only, renderer = NULL, def = NULL) {
     w <- rhandsontable(grid, rowHeaders = rownames(grid), readOnly = read_only,
-                       height = 520, stretchH = "all", matrix_id = id, def = def)
+                       colHeaders = if (is_flat(id)) "NOK/m³" else colnames(grid),
+                       rowHeaderWidth = if (is_flat(id)) 150 else 50,
+                       height = grid_height(id, nrow(grid)), stretchH = "all",
+                       matrix_id = id, def = def)
     w <- hot_cols(w, renderer = renderer, columnSorting = FALSE)
     w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
     if (!read_only) w <- hot_validate_numeric(w, cols = seq_len(ncol(grid)), min = 0)
@@ -378,7 +383,7 @@ server <- function(input, output, session) {
     pm_tick(); id <- input$pm_id; req(id, id %in% pm_ids())
     a <- isolate(pm_a())
     g <- if (is_flat(id)) {
-      f <- pm_to_grid(a, PM_FLAT_ID); f[rownames(f) %in% isolate(flat_keys()), , drop = FALSE]
+      f <- pm_to_grid(a, PM_FLAT_ID); f[isolate(flat_keys()), , drop = FALSE]   # table order, as in B
     } else pm_to_grid(a, id)
     pm_widget(g, id, FALSE, PM_PLAIN_RENDERER)
   })
@@ -396,11 +401,12 @@ server <- function(input, output, session) {
       price <- ifelse(s == "own", pb[k, 1], ifelse(s == "same", pa[k, 1], NA_real_))
       g <- data.frame(B = unname(B_STATES[s]), PriceNOKperM3 = price, row.names = k,
                       stringsAsFactors = FALSE)
-      w <- rhandsontable(g, rowHeaders = k, height = 520, stretchH = "all", matrix_id = id,
+      w <- rhandsontable(g, rowHeaders = k, colHeaders = c("B", "NOK/m³"), rowHeaderWidth = 150,
+                         height = grid_height(id, length(k)), stretchH = "all", matrix_id = id,
                          def = unname(cbind(NA, pa[k, 1])))
       w <- hot_col(w, "B", type = "dropdown", source = unname(B_STATES), strict = TRUE,
                    allowInvalid = FALSE)
-      w <- hot_col(w, "PriceNOKperM3", renderer = PM_DIFF_RENDERER)
+      w <- hot_col(w, "NOK/m³", renderer = PM_DIFF_RENDERER)
       w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
       for (i in which(s != "own")) w <- hot_cell(w, i, 2, readOnly = TRUE)
       return(w)
@@ -444,7 +450,7 @@ server <- function(input, output, session) {
     id <- or_default(x$params$matrix_id, isolate(input$pm_id))
     g  <- hot_to_r(x)
     ref <- pm_to_grid(isolate(pmv()), id)
-    if (is_flat(id)) ref <- ref[rownames(ref) %in% rownames(g), , drop = FALSE]
+    if (is_flat(id)) ref <- ref[isolate(flat_keys()), , drop = FALSE]   # the grid's row order
     if (!identical(dim(g), dim(ref))) return()
     rownames(g) <- rownames(ref); colnames(g) <- colnames(ref)
     if (any(as.matrix(g) < 0, na.rm = TRUE)) {

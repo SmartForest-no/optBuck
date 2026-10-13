@@ -15,7 +15,8 @@ pm_side <- function(side) {
   div(class = "pm-grid",
     div(class = "section-hdr", side),
     if (side == "B") uiOutput("pm_b_state_ui"),
-    div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark"),
+    conditionalPanel("input.pm_id != 'flat_prices'",
+      div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark")),
     uiOutput(paste0("pm_", s, "_note")),
     if (side == "B") conditionalPanel("output.pm_b_shown", rHandsontableOutput("pm_b"))
     else rHandsontableOutput("pm_a"),

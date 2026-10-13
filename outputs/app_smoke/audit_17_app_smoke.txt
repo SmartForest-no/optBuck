@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-13 18:36:43.08238
+  Run: 2026-10-13 18:47:02.021402
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpkxUKVn/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpwLUR2Y/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -32,17 +32,17 @@
   [PASS  ] Check 13: Summary shows the nine fields; no Diagnostics tab | labels: 'Run time|Plots|Trees|Trees with logs|Logs|Commercial volume (m³ u.b.)|Total value (NOK)|NOK per m³|Price volume (m³)' | plots: '5' | Diagnostics tabs: 0
   [PASS  ] Check 14: Selected logs table is paginated | page info: '1 - 10 of 334' | logs in run: 334
   [PASS  ] Check 15: Per m3 tab renders; Trees card expands; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 10 | log detail shown: TRUE | per-ha text hits: 0
-  [PASS  ] Check 16: Comparison runs automatically when B differs | status: 'B differs from A: runs compare A and B.' | B state: 'own' | highlighted B cells: 252, cells differing in B's download: 351 | upload: 'B: loaded filec9047c4c70df.csv (wide layout): Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
+  [PASS  ] Check 16: Comparison runs automatically when B differs | status: 'B differs from A: runs compare A and B.' | B state: 'own' | highlighted B cells: 252, cells differing in B's download: 351 | upload: 'B: loaded file874c7f17533d.csv (wide layout): Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
   [PASS  ] Check 17: B 'Not used' drops the product from B's run | B flat table after the edit: [["Not used",null],["Same as A",250],["Same as A",0],["Same as A",0]] (B differs from A: runs compare A and B.
  B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | spruce pulpwood value A 1291.94, B 0 | error notifications: 0
   [PASS  ] Check 18: Stale notice after a price edit | after runs: '' / '' | after resetting B: 'Prices or assortments changed since this run.'
   [PASS  ] Check 19: No 'default'/'scenario' in the page text | none found
   [PASS  ] Check 20: Custom assortment added, edited, run, kept by Reset to defaults, removed | add: 'Added Spruce poles.', rows 7, matrix choices spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove: rows 6
-  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'filec9045a0134.csv: 12 trees, 12 within taperNOR's range.
-Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These' | banner: 'Heights: 
+  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'file874c6605419e.csv: 12 trees, 12 within taperNOR's range.
+Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). The' | banner: 'Heights: 
   Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height_source column: TRUE | error notifications: 0
   [PASS  ] Check 22: Screenshots saved for review | 7 of 7 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
-  [PASS  ] Check 23: Browser runtime under 240 s | browser checks took 180.5 s (threshold: 240 s)
+  [PASS  ] Check 23: Browser runtime under 240 s | browser checks took 185.2 s (threshold: 240 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
