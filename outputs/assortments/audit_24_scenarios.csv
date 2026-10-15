@@ -1,0 +1,11 @@
+check,result,detail
+"Check 01: Rounding per volume method, flat lengths every 10 cm, user types never waste",PASS,"rounding: Top cylinder = Measured diameter rounded downwards to cm; Top = Measured diameter rounded downwards to cm; All diameters (solid volume) = None; Calculated Norwegian mid = Measured diameter rounded downwards to cm | poles lengths: 41 (800-1200) | custom types: waste_commercial, poles"
+"Check 02: B-only assortment in B's table and prices, not in A; B differs",PASS,"B keys: spruce_sawlog, spruce_pulpwood, pine_sawlog, pine_pulpwood, spruce_waste, pine_waste, spruce_poles | B differs: TRUE"
+Check 03: A rule change alone makes B differ (comparison); only that field marked,PASS,B differs: TRUE (prices alone: FALSE) | changed fields: MinTopDiameter_cm | prices equal A: TRUE
+"Check 04: Assortment removed from B only: not in B, still in A; B differs",PASS,"B keys: spruce_sawlog, spruce_pulpwood, pine_sawlog, spruce_waste, pine_waste | A only: pine_pulpwood | B differs: TRUE"
+"Check 05: With every assortment 'same', B equals A (own rows and prices ignored)",PASS,table equal: TRUE | prices equal: TRUE | B differs: FALSE
+"Check 06: Comparison runs B's own rules: min top 14 cm, B-only poles, no pine pulpwood",PASS,"A = single run: TRUE | spruce sawlogs < 14 cm top u.b.: A 22, B 0 | poles in B: 30 | pine pulpwood: A 52, B 0"
+Check 07: Waste renamed 'Residue' (type stays waste): per-tree results unchanged,PASS,trees identical: TRUE | per-m3 summary identical: TRUE | price volume equal: TRUE | residue priority 99: TRUE
+"Check 08: Demo B uploaded to B: spruce sawlog own (rules and prices), rest same",PASS,"assortments: spruce_sawlog own, spruce_pulpwood same, pine_sawlog same, pine_pulpwood same, spruce_waste same, pine_waste same | prices: spruce_sawlog own, spruce_pulpwood same, pine_sawlog same, pine_pulpwood same, spruce_waste same, pine_waste same | B in effect equals the file: TRUE"
+Check 09: Demo scenario files import; demo price files upload; B differs,PASS,"scenario A TRUE, B TRUE | prices A TRUE (equal to defaults TRUE), B TRUE | B differs: TRUE | errors: "
+"Check 10: Demo tree list prepares (2 plots, spruce and pine, heights imputed) and a comparison runs",PASS,"ok TRUE | trees 40 | heights: spruce fieldPlot, pine FinnHoyde (calibrated, n = 4) | comparison ran: TRUE | value A 5633, B 5713 NOK"

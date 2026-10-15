@@ -15,25 +15,31 @@ write_price_file <- function(pm) {
 }
 
 
-#' Merge an uploaded price file into price set A or B and check the result.
+#' Merge an uploaded price file into scenario A or B and check the result.
 #'
 #' A wide upload replaces only the matrices it contains (and the flat prices
 #' of the products in its flat_prices sheet); a long upload replaces the
 #' whole set. In B the uploaded products get "Own prices"; after a long
-#' upload, products missing from the file are "Not used" in B.
+#' upload, A's products missing from the file are not used in B.
 #'
 #' @param side "A" or "B".
-#' @param defs Assortment table; pm_a, pm_b, state: the current price sets.
-#' @return list(ok, pm (the side's new prices), state (B states), layout,
-#'   ids, errors, warnings).
-upload_price_set <- function(path, filename, side = c("A", "B"), defs, pm_a, pm_b, state) {
+#' @param defs_a A's assortment table; pm_a, pm_b, state: prices and B's
+#'   price states; defs_b_own, b_asm: B's own rows and assortment states
+#'   (Phase 4d; b_defs()).
+#' @return list(ok, pm (the side's new prices), state, b_asm, layout, ids,
+#'   errors, warnings).
+upload_price_set <- function(path, filename, side = c("A", "B"), defs_a, pm_a, pm_b, state,
+                             defs_b_own = NULL, b_asm = NULL) {
   side <- match.arg(side)
+  if (is.null(b_asm)) b_asm <- setNames(rep("same", nrow(defs_a)), assortment_table_keys(defs_a))
+  defs <- if (side == "A") defs_a else b_defs(defs_a, defs_b_own, b_asm)
   keys <- assortment_table_keys(defs)
-  cur  <- if (side == "A") pm_minimal(pm_a) else pm_b_effective(pm_a, pm_b, state)
+  cur  <- if (side == "A") pm_minimal(pm_a)
+          else b_set(defs_a, pm_a, pm_b, state, defs_b_own, b_asm)$pm
   up <- read_price_matrix_upload(path, filename, cur,
                                  matrix_keys = keys[defs$PriceType == "matrix"])
-  out <- list(ok = FALSE, pm = NULL, state = state, layout = up$layout, ids = up$ids,
-              errors = up$errors, warnings = character(0))
+  out <- list(ok = FALSE, pm = NULL, state = state, b_asm = b_asm, layout = up$layout,
+              ids = up$ids, errors = up$errors, warnings = character(0))
   if (length(up$errors) > 0L) return(out)
 
   long <- identical(up$layout, "long")
@@ -47,25 +53,36 @@ upload_price_set <- function(path, filename, side = c("A", "B"), defs, pm_a, pm_
   }
   unknown <- setdiff(new_keys, keys)
   if (length(unknown) > 0L) {
-    out$errors <- paste("Not in the assortment table:", paste(unknown, collapse = ", "),
-                        "(add the assortment first).")
+    out$errors <- sprintf("Not in Scenario %s: %s (add the assortment first).", side,
+                          paste(unknown, collapse = ", "))
     return(out)
   }
 
   if (side == "A") {
     v <- check_price_set(defs, cand)
   } else {
-    st <- state
-    st[intersect(new_keys, names(st))] <- "own"
-    if (long) st[setdiff(names(st), new_keys)] <- "none"
+    st <- state; asm <- b_asm
+    st[new_keys] <- "own"
+    if (long) {
+      gone <- setdiff(keys, new_keys)
+      b_only <- setdiff(gone, assortment_table_keys(defs_a))
+      if (length(b_only) > 0L) {
+        out$errors <- paste("Missing prices for assortments only in Scenario B:",
+                            paste(b_only, collapse = ", "))
+        return(out)
+      }
+      st[gone] <- "none"; asm[gone] <- "none"
+    }
     # The file's own rows first (non-numeric cells etc.), then B as a whole.
     v <- check_price_set(defs[keys %in% new_keys, , drop = FALSE],
                          cand[cand$ProductKey %in% new_keys, , drop = FALSE])
     if (!isTRUE(v$ok)) { out$errors <- v$errors; return(out) }
     cand_b <- pm_minimal(cand)
-    b <- b_set(defs, pm_a, cand_b, st)
+    own <- if (is.null(defs_b_own)) NULL else
+      defs_b_own[!assortment_table_keys(defs_b_own) %in% names(asm)[asm == "none"], , drop = FALSE]
+    b <- b_set(defs_a, pm_a, cand_b, st, own, asm)
     v <- check_price_set(b$defs, b$pm)
-    if (v$ok) { v$pm <- cand_b; out$state <- st }
+    if (v$ok) { v$pm <- cand_b; out$state <- st; out$b_asm <- asm }
   }
   out$ok <- isTRUE(v$ok); out$pm <- v$pm
   out$errors <- v$errors; out$warnings <- v$warnings

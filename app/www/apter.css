@@ -223,3 +223,32 @@ details.apter-card { margin-bottom: 16px; }
 .height-notice div { margin-top: 2px; }
 .tl-heights ul { padding-left: 18px; margin-bottom: 4px; font-size: 0.88rem; }
 #tl_validation .pm-msg-warn, #tl_validation .pm-msg-error { white-space: pre-wrap; font-size: 0.88rem; }
+
+/* ---- Phase 4d: scenarios, paged tables, progress ---------------------------------- */
+/* Assortment tables of Scenario B: equal to A greyed, differences highlighted. */
+.reactable .asm-same { color: var(--apter-muted); }
+.reactable .asm-bonly { background: #FBF3E6; }
+.reactable .asm-changed { }
+.reactable .asm-none { color: var(--apter-muted); font-style: italic; text-decoration: line-through; }
+.reactable .asm-diff { background: #FCE7C8; font-weight: 600; color: var(--apter-ink); }
+.scen-file { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 8px 0 4px; }
+.scen-file .shiny-input-container { flex: 1 1 260px; margin-bottom: 0; }
+.pm-toolbar .btn-sm { margin-bottom: 2px; }
+/* No blurred or darkened page behind the assortment dialog. */
+#shiny-modal-wrapper .modal, .modal-backdrop { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.modal-backdrop.show { opacity: 0.08; }
+/* Server-side pager. */
+.pager-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 8px; }
+.pager-bar .shiny-input-container { margin-bottom: 0; }
+.pager-info { color: var(--apter-muted); font-size: 0.82rem; min-width: 120px; text-align: center; }
+/* Progress bar of unknown length. */
+.run-progress-bar.is-indeterminate { width: 35%; animation: apter-indeterminate 1.3s ease-in-out infinite; }
+@keyframes apter-indeterminate { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+/* Content-sized tables can be narrower than the card. */
+.reactable { max-width: 100%; }
+.reactable .rt-tr-selected { background: #EEF3F0; }
+/* Full headers: wrap instead of truncating (columns are sized to content). */
+.reactable .rt-th, .reactable .rt-th-inner, .reactable .rt-th .rt-text-content {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+}
+.reactable .rt-th { display: flex; align-items: flex-end; }

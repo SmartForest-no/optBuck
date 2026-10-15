@@ -57,6 +57,18 @@ VOLUME_METHODS <- c("Top cylinder", "Top", "All diameters (solid volume)",
 VOLUME_ROUND_DOWN_CM <- "Measured diameter rounded downwards to cm"
 VOLUME_DIAMETER_ADJUSTMENTS <- c("None", VOLUME_ROUND_DOWN_CM)
 
+#' The diameter rounding of each volume method (Phase 4d: fixed per method,
+#' no longer a setting): Top cylinder, Top and Norwegian mid round down to
+#' whole cm; solid volume never rounds.
+volume_rounding <- function(method) {
+  ifelse(as.character(method) == "All diameters (solid volume)", "None", VOLUME_ROUND_DOWN_CM)
+}
+
+#' Short labels of the volume methods for compact tables.
+VOLUME_METHOD_SHORT <- c("Top cylinder" = "Top cylinder", "Top" = "Top (frustum)",
+                         "All diameters (solid volume)" = "Solid volume",
+                         "Calculated Norwegian mid" = "Norwegian mid")
+
 #' Frustum / Norwegian mid taper: 1 cm per metre = 0.1 mm per cm of length.
 VOLUME_TAPER_MM_PER_CM <- 0.1
 

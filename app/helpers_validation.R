@@ -14,8 +14,9 @@ selected_fylnr <- function(fylnr_sel) {
 
 #' Map sidebar inputs to the params list for run_sampled_plot_bucking().
 #'
-#' The number of plots and the seed are fixed (Phase 4c): APP_N_PLOTS (200,
-#' or APTER_N_PLOTS) and APP_SEED (42), from setup.R.
+#' NFI runs use all plots of the stratum (Phase 4d): APP_N_PLOTS is NA,
+#' unless the test-only APTER_N_PLOTS sets a number of plots to sample with
+#' APP_SEED (42); setup.R.
 #'
 #' @param input_list Shiny `input` (or a plain list) with species_group,
 #'   hkl_group, abonitet, fylnr_sel.
@@ -28,9 +29,29 @@ build_run_params <- function(input_list, hkl_map = HKL_MAP,
     hogstkl       = unlist(hkl_map[input_list$hkl_group]),
     abonitet      = as.integer(input_list$abonitet),
     fylnr         = selected_fylnr(input_list$fylnr_sel),
-    n_plots       = as.integer(n_plots),
+    all_plots     = is.na(n_plots),          # Phase 4d: every plot of the stratum
+    n_plots       = if (!is.na(n_plots)) as.integer(n_plots),
     seed          = as.integer(seed)
   )
+}
+
+
+#' Number of NFI trees in a selection (species group, raw hogstkl codes,
+#' abonitet, counties or NULL), before the backend's dbh/height checks.
+count_stratum_trees <- function(trees_meta, species_group, hkl_raw, abon, fyl) {
+  sg <- if (identical(species_group, "both")) c("spruce", "pine") else species_group
+  keep <- trees_meta$species_group %in% sg & trees_meta$hogstkl %in% hkl_raw &
+          trees_meta$abonitet %in% abon
+  if (!is.null(fyl)) keep <- keep & as.character(trees_meta$fylnr) %in% as.character(fyl)
+  sum(keep)
+}
+
+
+#' A rough run time (s) for n trees on `workers` workers (benchmarks,
+#' docs/development.md: about 30 trees/s per worker, 1.4 times longer for
+#' a comparison, plus loading).
+estimate_run_seconds <- function(n, workers, compare = FALSE) {
+  20 + n / (30 * max(1L, workers)) * (if (compare) 1.4 else 1)
 }
 
 

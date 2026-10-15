@@ -1,8 +1,8 @@
 # app/app.R
 #
-# Purpose : Shiny app for Apter, the bucking simulator.
+# Purpose : Shiny app for Apter, the bucking simulator (shown as "optBuck" in the app).
 #           Two tabs (Phase 4c): Assortments and prices (price sets A and B),
-#           Simulator (NFI sample or tree list; compares A and B when B differs).
+#           Simulator (NFI data or tree list; compares Scenarios A and B when B differs).
 #
 # Run     : from the project root,
 #             shiny::runApp("app")   or   shiny::runApp("app/app.R")
@@ -49,7 +49,8 @@ source(file.path(ROOT, "scripts", "app_backend",
 
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
-             "helpers_upload.R", "helpers_jobs.R", "app_ui.R", "app_server.R")) {
+             "helpers_upload.R", "helpers_jobs.R", "app_ui.R", "server_scenarios.R",
+             "app_server.R")) {
   source(file.path(APP_DIR, .f), local = TRUE)
 }
 rm(.f)

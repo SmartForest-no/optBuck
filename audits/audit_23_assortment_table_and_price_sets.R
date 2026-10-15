@@ -21,7 +21,7 @@
 #      waste 99, also for a custom flat assortment
 #  5.  Lengths: a matrix-priced product's are its matrix columns (a column
 #      removed is a length not allowed); a flat-priced product's are min..max
-#      by step
+#      by 10 cm (Phase 4d: no step setting)
 #  6.  Rows and columns: classes added and removed at the ends with the
 #      neighbour's prices; lengths added (nearest column's prices) and
 #      removed; the last class or length cannot be removed; a length that is
@@ -31,8 +31,9 @@
 #  8.  B states: b_differs() is FALSE for all "same" and for "own" copies of
 #      A, TRUE for "none", an "own" price change or an "own" row/column
 #      change; b_set() drops "none" products and takes A's rows for "same"
-#  9.  Assortment xlsx (assortment_table_export() -> _import()): table, A, B
-#      and states come back identical; an unknown state is refused
+#  9.  Scenario xlsx (Phase 4d: scenario_export() -> scenario_import(), one
+#      scenario per file): table and prices come back identical; a file
+#      without the assortments sheet is refused
 # 10.  Backend: A with the explicit table, products and price file gives
 #      results identical to the default run; a comparison where B drops
 #      31 dm from both sawlog matrices has no 31 dm logs in B and the same
@@ -154,9 +155,9 @@ custom <- .type_assortment_table(data.frame(
   Name = c("Poles", "Chips"), Type = c("poles", "chips"), Species = c("spruce", "pine"),
   MinTopDiameter_cm = c(12, 0), MaxTopDiameter_cm = c(30, Inf),
   MinButtDiameter_cm = 0, MaxButtDiameter_cm = Inf,
-  MinLength_cm = c(600, 200), MaxLength_cm = c(1000, 400), LengthStep_cm = c(200, 100),
+  MinLength_cm = c(600, 200), MaxLength_cm = c(1000, 400),
   DiameterTopPosition_cm = 0, VolumeDiameterCategory = "All diameters (solid volume)",
-  VolumeDiameterAdjustment = "None", PriceType = c("matrix", "flat"), stringsAsFactors = FALSE))
+  PriceType = c("matrix", "flat"), stringsAsFactors = FALSE))
 defs4 <- rbind(defs, custom)
 pm4 <- pm_minimal(rbind(pm0, pm_start_prices("spruce_poles", "matrix", 900, 12, 30, c(600, 800, 1000)),
                         pm_start_prices("pine_chips", "flat", 300)))
@@ -173,13 +174,13 @@ rec("Check 04: Priority matrix 1, flat 2, waste 99 (custom included)",
 section("05. Lengths")
 pm5 <- pm_remove_length(pm4, "spruce_poles", 80)
 l5 <- assortment_lengths(defs4, pm5)
-ok5 <- identical(l5$spruce_poles, c(600, 1000)) && identical(l5$pine_chips, c(200, 300, 400)) &&
+ok5 <- identical(l5$spruce_poles, c(600, 1000)) && identical(l5$pine_chips, seq(200, 400, by = 10)) &&
   identical(l5$spruce_sawlog, seq(310, 550, by = 30)) && identical(l5$spruce_pulpwood, seq(300, 550, by = 10))
 v5 <- check_price_set(defs4, pm5)
-rec("Check 05: Matrix lengths from the columns, flat lengths from min/max/step",
+rec("Check 05: Matrix lengths from the columns, flat lengths from min/max by 10 cm",
     ok(ok5 && isTRUE(v5$ok)),
-    sprintf("poles after removing 80 dm: %s | chips: %s | spruce sawlog: %d lengths | price set ok: %s",
-            paste(l5$spruce_poles, collapse = ","), paste(l5$pine_chips, collapse = ","),
+    sprintf("poles after removing 80 dm: %s | chips: %s-%s by 10 | spruce sawlog: %d lengths | price set ok: %s",
+            paste(l5$spruce_poles, collapse = ","), min(l5$pine_chips), max(l5$pine_chips),
             length(l5$spruce_sawlog), isTRUE(v5$ok)))
 
 
@@ -248,22 +249,19 @@ rec("Check 08: b_differs() and b_set()",
 
 
 # ==============================================================================
-section("09. Assortment xlsx round trip")
-st9 <- c(setNames(rep("same", length(keys)), keys), spruce_poles = "own", pine_chips = "none")
+section("09. Scenario xlsx round trip")
 f9 <- tempfile(fileext = ".xlsx")
-pm_b9 <- pm_b_copy_a(pm4, pm_b_px, "spruce_poles")   # B owns poles: it needs their prices
-assortment_table_export(defs4, pm4, pm_b9, st9, f9)
-im <- assortment_table_import(f9)
+scenario_export(defs4, pm4, f9)
+im <- scenario_import(f9)
 bad <- tempfile(fileext = ".xlsx")
-writexl::write_xlsx(list(assortments = defs4, prices_A = pm4, prices_B = pm4,
-                         B_states = data.frame(ProductKey = "spruce_poles", State = "maybe")), bad)
-im_bad <- assortment_table_import(bad)
-ok9 <- isTRUE(im$ok) && identical(im$defs, defs4) && identical(im$pm_a, pm4) &&
-  identical(im$pm_b, pm_b9) && identical(im$state, st9) && !isTRUE(im_bad$ok)
-rec("Check 09: Assortment xlsx export -> import",
-    ok(ok9), sprintf("ok %s | table %s | A %s | B %s | states %s | unknown state refused: %s ('%s')",
-                     isTRUE(im$ok), identical(im$defs, defs4), identical(im$pm_a, pm4),
-                     identical(im$pm_b, pm_b9), identical(im$state, st9),
+writexl::write_xlsx(list(prices = pm4), bad)
+im_bad <- scenario_import(bad)
+ok9 <- isTRUE(im$ok) && identical(im$defs, defs4) && identical(pm_minimal(im$pm), pm_minimal(pm4)) &&
+  !isTRUE(im_bad$ok)
+rec("Check 09: Scenario xlsx export -> import",
+    ok(ok9), sprintf("ok %s | table %s | prices %s | file without assortments refused: %s ('%s')",
+                     isTRUE(im$ok), identical(im$defs, defs4),
+                     identical(pm_minimal(im$pm), pm_minimal(pm4)),
                      !isTRUE(im_bad$ok), paste(im_bad$errors, collapse = "; ")))
 
 

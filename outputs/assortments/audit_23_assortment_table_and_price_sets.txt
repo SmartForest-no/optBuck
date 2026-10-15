@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: assortment table and price sets A and B
-  Run: 2026-10-13 18:42:52.018058
+  Run: 2026-10-15 10:30:25.036189
 ============================================================= 
 
 --- 01. Round trip of the base products ---
@@ -16,7 +16,7 @@
   [PASS  ] Check 04: Priority matrix 1, flat 2, waste 99 (custom included) | spruce_sawlog 1, spruce_pulpwood 2, pine_sawlog 1, pine_pulpwood 2, spruce_waste 99, pine_waste 99, spruce_poles 1, pine_chips 2
 
 --- 05. Lengths ---
-  [PASS  ] Check 05: Matrix lengths from the columns, flat lengths from min/max/step | poles after removing 80 dm: 600,1000 | chips: 200,300,400 | spruce sawlog: 9 lengths | price set ok: TRUE
+  [PASS  ] Check 05: Matrix lengths from the columns, flat lengths from min/max by 10 cm | poles after removing 80 dm: 600,1000 | chips: 200-400 by 10 | spruce sawlog: 9 lengths | price set ok: TRUE
 
 --- 06. Rows and columns ---
   [PASS  ] Check 06: Classes at the ends, lengths anywhere, neighbour prices, refusals | classes after adding: 11-51 | copies right: TRUE | back to the start: TRUE | refused: last_class ('A matrix needs at least one diameter class.'); last_length ('A matrix needs at least one length.'); existing ('Length 34 dm is already in the matrix.'); fraction ('A length is a positive whole number of dm.'); zero ('A length is a positive whole number of dm.')
@@ -27,8 +27,8 @@
 --- 08. B states ---
   [PASS  ] Check 08: b_differs() and b_set() | same FALSE, own_copy FALSE, none TRUE, own_price TRUE, own_axes TRUE | 'none' dropped: TRUE | 'same' uses A: TRUE | 'own' axes: 31 dm in B FALSE
 
---- 09. Assortment xlsx round trip ---
-  [PASS  ] Check 09: Assortment xlsx export -> import | ok TRUE | table TRUE | A TRUE | B TRUE | states TRUE | unknown state refused: TRUE ('B_states: State must be one of same, own, none.')
+--- 09. Scenario xlsx round trip ---
+  [PASS  ] Check 09: Scenario xlsx export -> import | ok TRUE | table TRUE | prices TRUE | file without assortments refused: TRUE ('The xlsx needs a sheet 'assortments' and the price sheets.')
 
 --- 10. Backend with explicit products and B's own lengths ---
   [PASS  ] Check 10: Explicit A equals the default run; B without 31 dm has no 31 dm logs | explicit = default: TRUE | comparison A = single run: TRUE | 31 dm sawlogs: A 29, B 0

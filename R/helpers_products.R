@@ -257,8 +257,8 @@ validate_products <- function(pd, lc = NULL) {
       "SpeciesGroupKey differs from species_group")
   bad(is.na(pd$ProductType) | !nzchar(trimws(as.character(pd$ProductType))),
       "ProductType (assortment class) is empty")
-  bad(!key %in% ACTIVE_PRODUCT_KEYS & as.character(pd$ProductType) == "waste",
-      "ProductType 'waste' is reserved for the base waste products")
+  # (Phase 4d) A renamed base waste row keeps type "waste" under a new key;
+  # custom assortments never get it (custom_type(); validate_assortment_defs()).
   bad(!pd$VolumeDiameterCategory %in% VOLUME_METHODS,
       sprintf("VolumeDiameterCategory must be one of: %s", paste(VOLUME_METHODS, collapse = "; ")))
   adj <- ifelse(is.na(pd$VolumeDiameterAdjustment), "None", as.character(pd$VolumeDiameterAdjustment))
@@ -422,7 +422,10 @@ pre_phase4c_limits <- function(pd) {
 # DiameterUnderBark (always TRUE), DiameterSource and Priority (derived:
 # matrix-priced 1, flat-priced commercial 2, waste 99). A matrix-priced
 # product's lengths are the columns of the run's price matrix; a flat-priced
-# product's are MinLength_cm..MaxLength_cm by LengthStep_cm.
+# product's are MinLength_cm..MaxLength_cm by 10 cm (Phase 4d: no step
+# setting). Diameter rounding follows the volume method (volume_rounding()).
+# Type (ProductType) is hidden: base rows keep theirs (a renamed base waste
+# row stays waste); user-added rows are always commercial (custom_type()).
 # custom_assortment_rows() / products_for_run() above are the Phase 4b
 # definition format, kept for the performance cases and audit 20.
 
@@ -430,8 +433,17 @@ pre_phase4c_limits <- function(pd) {
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
-  "LengthStep_cm", "DiameterTopPosition_cm", "VolumeDiameterCategory",
-  "VolumeDiameterAdjustment", "PriceType")
+  "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType")
+
+#' Length step (cm) of flat-priced assortments (Phase 4d: fixed).
+FLAT_LENGTH_STEP_CM <- 10
+
+#' The hidden Type of a user-added assortment: the slug of its name, never
+#' the reserved "waste" (user-added assortments are always commercial).
+custom_type <- function(name) {
+  s <- vapply(name, assortment_slug, character(1), USE.NAMES = FALSE)
+  ifelse(s == "waste", "waste_commercial", s)
+}
 
 #' Priority in ties, derived from pricing and type.
 derived_priority <- function(price_type, product_type) {
@@ -449,7 +461,11 @@ assortment_table_keys <- function(defs) {
 # Column types of an assortment table.
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
-                                          "VolumeDiameterAdjustment", "PriceType"))
+                                          "PriceType"))
+  # Files without the hidden Type: rows are user assortments (commercial).
+  if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
+  no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
+  d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
   for (n in setdiff(ASSORTMENT_TABLE_COLS, num)) d[[n]] <- as.character(d[[n]])
   d <- d[, ASSORTMENT_TABLE_COLS, drop = FALSE]
@@ -467,16 +483,14 @@ defs_from_products <- function(pd) {
     Name = nm, Type = pd$ProductType, Species = sp,
     MinTopDiameter_cm = pd$MinTopDiameter / 10, MaxTopDiameter_cm = pd$MaxTopDiameter / 10,
     MinButtDiameter_cm = pd$MinButtDiameter / 10, MaxButtDiameter_cm = pd$MaxButtDiameter / 10,
-    MinLength_cm = pd$MinLength, MaxLength_cm = pd$MaxLength, LengthStep_cm = pd$LengthStep,
+    MinLength_cm = pd$MinLength, MaxLength_cm = pd$MaxLength,
     DiameterTopPosition_cm = pd$DiameterTopPosition,
     VolumeDiameterCategory = pd$VolumeDiameterCategory,
-    VolumeDiameterAdjustment = ifelse(is.na(pd$VolumeDiameterAdjustment), "None",
-                                      pd$VolumeDiameterAdjustment),
     PriceType = pd$PriceType, stringsAsFactors = FALSE))
 }
 
 #' Allowed lengths (cm) of each table row: the matrix columns in `pm` for
-#' matrix-priced rows, MinLength..MaxLength by LengthStep for flat ones.
+#' matrix-priced rows, MinLength..MaxLength by 10 cm for flat ones.
 #'
 #' @return Named list (ProductKey -> integer cm, ascending).
 assortment_lengths <- function(defs, pm) {
@@ -486,9 +500,9 @@ assortment_lengths <- function(defs, pm) {
       dm <- pm$LengthClass_dm[pm$ProductKey == keys[i] & !is.na(pm$LengthClass_dm)]
       return(sort(unique(as.numeric(dm) * 10)))
     }
-    lo <- defs$MinLength_cm[i]; hi <- defs$MaxLength_cm[i]; st <- defs$LengthStep_cm[i]
-    if (anyNA(c(lo, hi, st)) || st <= 0 || hi < lo) return(numeric(0))
-    seq(lo, hi, by = st)
+    lo <- defs$MinLength_cm[i]; hi <- defs$MaxLength_cm[i]
+    if (anyNA(c(lo, hi)) || hi < lo) return(numeric(0))
+    seq(lo, hi, by = FLAT_LENGTH_STEP_CM)
   }), keys)
 }
 
@@ -514,7 +528,7 @@ products_from_defs <- function(defs, pm) {
     VolumeDiameterCategory   = defs$VolumeDiameterCategory,
     VolumeLengthCategory     = ifelse(defs$PriceType == "matrix",
                                       "Length as defined in LengthClasses", "Physical length cm"),
-    VolumeDiameterAdjustment = defs$VolumeDiameterAdjustment,
+    VolumeDiameterAdjustment = volume_rounding(defs$VolumeDiameterCategory),
     DiameterTopPosition      = as.numeric(defs$DiameterTopPosition_cm),
     DiameterUnderBark        = rep(EXPECTED_DIAMETER_UNDER_BARK, nrow(defs)),
     DiameterSource           = rep(EXPECTED_DIAMETER_SOURCE, nrow(defs)),
@@ -560,7 +574,7 @@ validate_assortment_table <- function(defs, pm) {
   lens <- assortment_lengths(defs, pm)
   none <- lengths(lens) == 0L
   if (any(none))
-    err <- c(err, sprintf("No lengths (a flat price needs min length <= max length and a positive step; a grid needs length columns): %s",
+    err <- c(err, sprintf("No lengths (a flat price needs min length <= max length; a grid needs length columns): %s",
                           paste(keys[none], collapse = ", ")))
   if (length(err) > 0L) return(list(ok = FALSE, errors = err, warnings = character(0)))
   p <- products_from_defs(defs, pm)

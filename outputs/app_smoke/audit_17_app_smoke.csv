@@ -1,32 +1,33 @@
 check,result,detail
 Check 01: shinytest2 + chromote installed and Chrome found,PASS,Chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
-Check 02: Split app files exist,PASS,all 11 present in app/; no ui.R/server.R/global.R
+Check 02: Split app files exist,PASS,all 13 present in app/; no ui.R/server.R/global.R
 Check 03a: Env unset -> resolves to project root,PASS,resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-Check 03b: APTER_ROOT = temp dir -> clear error,PASS,"error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpwLUR2Y/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp(""app"") from the project root."
+Check 03b: APTER_ROOT = temp dir -> clear error,PASS,"error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpeUZXaU/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp(""app"") from the project root."
 Check 03c: APTER_ROOT = project root -> resolves,PASS,resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 Check 04a: write_price_file() + upload_price_set() round trip into A and B,PASS,"A: ok TRUE, identical TRUE | B: ok TRUE, states own, B differs TRUE"
-"Check 04b: build_run_params(): HKL groups, county, fixed 200 plots and seed 42",PASS,"HKL '4' -> 41,42; '__all__' -> NULL; plots 200, seed 42; HKL '3','5' -> 31,32,51,52; fylnr '03' -> 03"
+"Check 04b: build_run_params(): HKL groups, county, all plots (or APTER_N_PLOTS), seed 42",PASS,"HKL '4' -> 41,42; '__all__' -> NULL; all plots TRUE, seed 42; HKL '3','5' -> 31,32,51,52; fylnr '03' -> 03"
 Check 04c: count_eligible_plots() matches direct filter,PASS,"HKL4/ab17/all: 248 vs 248; HKL4/ab14,17/fylnr 03: 8 vs 8"
 Check 04d: Default assortment table gives the base products; matrix choices,PASS,"ProductData identical: TRUE | matrices: spruce_sawlog, pine_sawlog, flat_prices"
 Check 05: AppDriver starts the app,PASS,app started
-"Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, title",PASS,tabs: 'Assortments and prices|Simulator' | open: 'Assortments and prices' | Home/tiles/footer elements: 0 | stripe: 1 | title: 'Apter — Bucking simulator'
+"Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, optBuck, texts",PASS,tabs: 'Assortments and prices|Simulator' | open: 'Assortments and prices' | Home/tiles/footer elements: 0 | stripe: 1 | title: 'optBuck — Bucking simulator' | brand: 'optBuck' | 'NFI data': TRUE | '2021': FALSE | 'wide or long': FALSE
 Check 07: Bootstrap 5 and self-hosted Inter font loaded,PASS,Bootstrap 5.3.1 | Inter loaded: TRUE | Google Fonts links: 0
-"Check 08: Assortment table: base rows, visible columns, '–' for no limit",PASS,rows 6 | all visible columns: TRUE | '–' shown: TRUE | 'Inf' shown: FALSE
-Check 09: A editable; B 'Same as A' greyed and read-only,PASS,"A cells 261 (read-only 0) | B cells 261 (read-only 261, greyed 261)"
-Check 10: B states Own prices / Not used / Same as A,PASS,"own: 261 cells, read-only 0, status 'B equals A: runs use A only.' | none: 0 cells, note 'Not used in B.', status 'B differs from A: runs compare A and B.' | same: 'B equals A: runs use A only.'"
+"Check 08: Compact assortment table: base rows, columns, '–' for no limit",PASS,rows 6 | all visible columns: TRUE | '–' shown: TRUE | 'Inf' shown: FALSE
+Check 09: A editable; B 'Same as A' greyed and read-only,PASS,"A cells 234 (read-only 0) | B cells 234 (read-only 234, greyed 234)"
+Check 10: B states Own prices / Not used / Same as A,PASS,"own: 180 cells, read-only 0, status 'Scenario B equals A: runs use Scenario A only.' | none: 0 cells, note 'Not used in Scenario B.', status 'Scenario B differs from A: runs compare both scenarios.' | same: 'Scenario B equals A: runs use Scenario A only.'"
 Check 11: Diameter classes and lengths added and removed,PASS,classes 12-50 -> +larger 12-51 -> +smaller 11-51 -> back 12-50 | lengths 9 -> +58: 10 -> -58: 9
-"Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",PASS,"summary rendered: TRUE | comparison tab shown: FALSE | error notifications: 0 | during the run: Run disabled TRUE, status 'Sampling plots and loading taper profiles' | after: Run enabled TRUE"
+"Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",PASS,"summary rendered: TRUE | comparison tab shown: FALSE | error notifications: 0 | during the run: Run disabled TRUE, status 'Loading NFI data and taper profiles...' | after: Run enabled TRUE"
 Check 13: Summary shows the nine fields; no Diagnostics tab,PASS,labels: 'Run time|Plots|Trees|Trees with logs|Logs|Commercial volume (m³ u.b.)|Total value (NOK)|NOK per m³|Price volume (m³)' | plots: '5' | Diagnostics tabs: 0
-Check 14: Selected logs table is paginated,PASS,page info: '1 - 10 of 334' | logs in run: 334
-Check 15: Per m3 tab renders; Trees card expands; no per-ha text,PASS,per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 10 | log detail shown: TRUE | per-ha text hits: 0
-Check 16: Comparison runs automatically when B differs,PASS,"status: 'B differs from A: runs compare A and B.' | B state: 'own' | highlighted B cells: 252, cells differing in B's download: 351 | upload: 'B: loaded file874c7f17533d.csv (wide layout): Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0"
-Check 17: B 'Not used' drops the product from B's run,PASS,"B flat table after the edit: [[""Not used"",null],[""Same as A"",250],[""Same as A"",0],[""Same as A"",0]] (B differs from A: runs compare A and B.
- B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | spruce pulpwood value A 1291.94, B 0 | error notifications: 0"
-Check 18: Stale notice after a price edit,PASS,after runs: '' / '' | after resetting B: 'Prices or assortments changed since this run.'
-Check 19: No 'default'/'scenario' in the page text,PASS,none found
-"Check 20: Custom assortment added, edited, run, kept by Reset to defaults, removed",PASS,"add: 'Added Spruce poles.', rows 7, matrix choices spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove: rows 6"
-"Check 21: Uploaded tree list validates, runs and reports height sources",PASS,"panel: 'file874c6605419e.csv: 12 trees, 12 within taperNOR's range.
+"Check 14: Selected logs paged on the server, readable headers",PASS,page info: '1–25 of 334' | rows on the page: 25 | logs in run: 334 | headers: Plot|Tree|Species|Assortment|StartPos|StopPos|Length (cm)|Length class (dm)|Top Ø over bark (mm)|Top Ø under bark (mm)|Diameter class (cm)|Price class used (cm)|Price (NOK/m³)|Price volume (m³)|Commercial volume u.b. (m³)|Value (NOK)
+"Check 15: Per m3 tab renders; Trees card expands, a selected tree shows its logs; no per-ha text",PASS,per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 15 | log detail shown: TRUE | per-ha text hits: 0
+Check 16: Comparison runs automatically when B differs,PASS,"status: 'Scenario B differs from A: runs compare both scenarios.' | B state: 'own' | highlighted B cells: 234, cells differing in B's download: 351 | upload: 'Loaded file8cac16253b85.csv: Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0"
+Check 17: B 'Not used' drops the product from B's run,PASS,"B flat table after the edit: [[""Same as A"",250],[""Same as A"",0],[""Same as A"",0],[""Not used"",null]] (Scenario B differs from A: runs compare both scenarios.
+ B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | spruce pulpwood value A 1292, B 0 | error notifications: 0"
+Check 18: Stale notice after a price edit,PASS,after runs: '' / '' | after resetting B: 'Assortments or prices changed since this run.'
+Check 19: No 'default'/'price set' in the page text,PASS,none found
+"Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed",PASS,"form: removed fields present 0, backdrop filter 'none' | add: 'Added Spruce poles.', rows 7, matrix choices spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove from both: rows A 6, B 6"
+"Check 21: Uploaded tree list validates, runs and reports height sources",PASS,"panel: 'file8cac52b95cf9.csv: 12 trees, 12 within taperNOR's range.
 Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). The' | banner: 'Heights: 
-  Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height_source column: TRUE | error notifications: 0"
-Check 22: Screenshots saved for review,PASS,7 of 7 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
-Check 23: Browser runtime under 240 s,PASS,browser checks took 185.2 s (threshold: 240 s)
+  Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height source column: TRUE | error notifications: 0"
+"Check 24: Scenario B assortments: own rule, B-only, removed from B only, comparison, Make B equal to A",PASS,"start: 'Scenario B equals A: runs use Scenario A only.' | B rule: 'Scenario B differs from A: runs compare both scenarios.', highlighted cells 1, greyed cells 5 | B-only rows 1 (A rows 6) | removed from B: 'Not used' rows 1 (A rows 6) | comparison tab TRUE, poles in products TRUE | Make B equal to A: 'Scenario B equals A: runs use Scenario A only.'"
+Check 22: Screenshots saved for review,PASS,11 of 11 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
+Check 23: Browser runtime under 300 s,PASS,browser checks took 78.8 s (threshold: 300 s)
