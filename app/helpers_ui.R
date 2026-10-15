@@ -84,7 +84,7 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
     fullWidth       = FALSE,
     sortable        = sortable,
     pagination      = pagination,
-    showPagination  = TRUE,
+    showPagination  = pagination,
     showPageInfo    = TRUE,
     defaultPageSize = page_size,
     paginationType  = "simple",
@@ -254,12 +254,13 @@ apter_barplot <- function(vals, col, main, ylab, fmt = format) {
 #' @param a,b Numeric vectors (same order); labels: bar group labels.
 apter_barplot_ab <- function(a, b, labels, main, ylab, fmt = format) {
   ch  <- APTER_CHART
-  old <- apter_par(); on.exit(graphics::par(old))
+  old <- apter_par(mar = c(4, 6.5, 3, 1)); on.exit(graphics::par(old))
   m <- rbind(a, b); colnames(m) <- gsub(" ", "\n", labels)
   top <- max(m, 0, na.rm = TRUE)
   graphics::barplot(m, beside = TRUE, col = NA, border = NA, axes = FALSE,
                     ylim = c(0, if (top > 0) top * 1.18 else 1), las = 1, cex.names = 0.8,
-                    padj = 0.6, space = c(0, 0.9), main = main, ylab = ylab)
+                    padj = 0.6, space = c(0, 0.9), main = main, ylab = "")
+  graphics::mtext(ylab, side = 2, line = 5, col = ch$muted, cex = 0.8)
   graphics::abline(h = graphics::axTicks(2), col = ch$grid, lwd = 0.7)
   bp <- graphics::barplot(m, beside = TRUE, col = c(ch$series1, ch$series2),
                           border = ch$surface, lwd = 2, axes = FALSE, add = TRUE,
