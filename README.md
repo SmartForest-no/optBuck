@@ -6,7 +6,8 @@ definitions and price matrix. Use it to compare price matrices and to plan
 bucking: see how a change in prices or product specifications changes the
 logs that are cut and the value recovered.
 
-The name comes from the Norwegian *aptering* (bucking).
+The name comes from the Norwegian *aptering* (bucking). In the app itself
+the simulator appears as **optBuck**.
 
 ---
 
@@ -30,7 +31,7 @@ The name comes from the Norwegian *aptering* (bucking).
 
 | Source | Status |
 |--------|--------|
-| **NFI sample trees.** Spruce and pine from the Norwegian National Forest Inventory, selected by species, maturity class, site class and county. Results describe the selected trees only. | Available |
+| **NFI data.** Spruce and pine from the Norwegian National Forest Inventory: all trees on all plots of the selected species, maturity class, site class and county. Results describe the selected trees only. | Available |
 | **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
 
@@ -79,10 +80,11 @@ d < 10: 1.3 + 0.65456·d (Eid & Fitje 1993); 10 ≤ d < 35: 0.39 + 0.852·d −
 
 ## Assortments and prices
 
-The app opens on *Assortments and prices*. All assortments, the base set and
-any you add, are in one table and are edited, removed and added the same way.
-Apter ships with this base set and the 2021 price matrices for spruce and
-pine (diameters under bark):
+The app opens on *Assortments and prices*, with **Scenario A** on the left and
+**Scenario B** on the right (one above the other on narrow screens). Each
+scenario has its own assortments and its own price matrices. Apter ships
+with this base set and the 2021 price matrices for spruce and pine
+(diameters under bark); both scenarios start from it:
 
 | Assortment | Min top diameter | Max top diameter | Max butt diameter | Lengths |
 |------------|------------------|------------------|-------------------|---------|
@@ -92,26 +94,41 @@ pine (diameters under bark):
 | Waste (spruce, pine) | any | – | – | 0.1–6.0 m |
 
 The pulpwood prices in the base set are temporary flat values, and waste is
-priced at 0 NOK/m³. *Reset to defaults* restores the base set; assortments
-you added stay.
+priced at 0 NOK/m³. *Reset to defaults* restores Scenario A's base set;
+assortments you added stay.
 
-**Adding an assortment.** Add assortments such as poles, large-diameter or
-small sawlogs and special timber. Each assortment has a name, a type (its
-class in the results), a species (spruce, pine, or both, which adds one of
-each), minimum and maximum top and butt diameters (cm), where the top
-diameter is read (cm below the cut), a sale-volume method and diameter
-rounding (below), and its pricing: a price matrix, or one flat price over a
-range of lengths. Stems are assumed free of defects; no quality restrictions
-are applied. Assortments always count as saleable volume. The assortments,
-with both price sets, can be downloaded and uploaded as one xlsx file.
+**Assortments.** Each scenario lists its assortments in a compact table
+(assortment, species, top diameter, maximum butt diameter, lengths and
+volume method), with *Add*, *Edit* and *Remove*. The form also holds the
+minimum butt diameter, where the top diameter is read (cm below the cut)
+and the pricing: a price matrix, or one flat price over a range of lengths
+(every 10 cm). A matrix-priced assortment's lengths are its matrix columns.
+Diameter rounding follows the volume method (below). Add assortments such
+as poles, large-diameter or small sawlogs and special timber; *Spruce and
+pine* adds one of each. Stems are assumed free of defects; no quality
+restrictions are applied. Added assortments always count as saleable
+volume.
 
-**Price sets A and B.** Each price matrix is shown twice, as A and B, in the
-layout of the source price lists: top-diameter classes (cm) as rows and
-length classes (dm) as columns, in NOK/m³ under bark. A starts from the 2021
-prices. In B, each assortment is either *Same as A* (shown greyed), has its
-*Own prices*, or is *Not used*. Cells of B that differ from A are
-highlighted. Both sides can be edited, reset to the 2021 prices, uploaded and
-downloaded.
+**Scenario B.** B starts as a copy of A, and each of its assortments follows
+A until you edit it in B; from then on it is B's own, and changes in A no
+longer affect it. In B's table, assortments equal to A are greyed, changed
+values and assortments only in B are highlighted, and A's assortments that
+B does not use are listed as *Not used*. An assortment added in A is added
+to both scenarios; one added in B is in B only. *Remove* asks whether to
+remove it from this scenario only or from both. *Make equal to A* links one
+assortment to A again; *Make B equal to A* resets all of B.
+
+**Price matrices.** Under its assortments, each scenario shows its price
+matrices in the layout of the source price lists: top-diameter classes (cm)
+as rows and length classes (dm) as columns, in NOK/m³ under bark. In B,
+each assortment's prices are *Same as A* (shown greyed), *Own prices* (cells
+that differ from A are highlighted) or *Not used* (the assortment is left
+out of B). Both scenarios can be edited, reset, uploaded and downloaded.
+
+**Scenario files.** Each scenario can be downloaded and uploaded as one xlsx
+file with its assortments (sheet `assortments`) and its prices (one sheet
+per price matrix plus `flat_prices`). Uploading a file to B makes the
+assortments and prices that equal A follow A, and the rest B's own.
 
 A matrix's columns are the assortment's allowed lengths and its rows its
 top-diameter classes. Lengths can be added and removed (a removed length is
@@ -120,12 +137,13 @@ largest end, so there are no gaps. A log with a top diameter above the
 largest class is priced at that class (50 cm in the 2021 matrices); its
 physical diameter is not changed.
 
-**Uploading prices.** Drop a file on A's or B's upload box: wide (as in the
+**Uploading prices.** Price matrices can also be loaded on their own: drop a
+file on a scenario's price-matrix upload box, wide (as in the
 editor; xlsx with one sheet per price matrix plus `flat_prices`, or a CSV
 holding one matrix) or long (CSV or RDS, one row per price). The layout is
 detected automatically. A wide file replaces only the matrices it contains;
-in B, uploaded assortments get their own prices. A downloaded price set is a
-ready-made template. The long layout has these columns:
+in B, uploaded assortments get their own prices. A downloaded price matrix
+file is a ready-made template. The long layout has these columns:
 
 | Column | Content |
 |--------|---------|
@@ -145,10 +163,12 @@ Prices are never converted between units.
 
 ## Results
 
-In the *Simulator*, choose the trees and click *Run optimizer*. NFI runs
-sample up to 200 plots of the selected stratum (all plots if there are
-fewer), with a fixed random seed, so a run can be repeated. When B differs
-from A, the same trees are bucked under both price sets.
+In the *Simulator*, choose the trees and click *Run optimizer*. NFI runs use
+all plots of the selected stratum; for selections above 30,000 trees the
+app shows the number of trees and an estimated run time. A progress bar
+follows the run from loading the data to the summary. When Scenario B
+differs from A, in assortments or prices, the same trees are bucked under
+both scenarios. Each scenario's NOK/m³ uses its own commercial volume.
 
 All results describe the selected trees only. The headline figure is
 **NOK per m³ of commercial volume under bark**:
@@ -167,11 +187,13 @@ The results have these tabs:
 - **Summary:** run time, plots, trees, trees with logs, logs, commercial
   volume, total value, NOK per m³ and sale (price) volume
 - **Per m³:** NOK/m³ in total, per species and by assortment, and per-tree
-  results on demand with each tree's logs (position, length, product, top
+  results; select a tree to see its logs (position, length, assortment, top
   diameter over and under bark, price-diameter class, volumes and value)
-- **Products:** value and sale volume by product
-- **Selected logs:** every log cut
-- **Price matrix comparison** (when B differs from A): NOK/m³, value and
+- **Products:** value and sale volume by assortment; after a comparison,
+  for Scenario A and Scenario B side by side
+- **Selected logs:** every log cut, a page at a time, with a CSV download of
+  all logs
+- **Scenario comparison** (when B differs from A): NOK/m³, value and
   volume under A and B and the differences, the trees whose cutting pattern
   changed, and example stems bucked both ways. A tree counts as changed only
   if the change alters its value or volume; patterns that differ only
@@ -234,9 +256,20 @@ shiny::runApp("app")
 To start it from another folder, set the environment variable `APTER_ROOT`
 to the project folder first (for example in `~/.Renviron`).
 
-The NFI sample data used by the app are included in the repository in a
+The NFI data used by the app are included in the repository in a
 sanitized form, without plot locations or original plot IDs. No database
 access is needed.
+
+### Demo files
+
+The `demo/` folder has files to try the app with:
+
+| File | Content |
+|------|---------|
+| `scenario_A.xlsx` | Scenario A: the base assortments and prices (upload under Scenario A) |
+| `scenario_B.xlsx` | Scenario B: spruce sawlog with a 14 cm minimum top diameter instead of 12 cm, and spruce sawlog prices 8 % higher from 25 cm top diameter (upload under Scenario B) |
+| `prices_A.xlsx`, `prices_B.xlsx` | The same scenarios' price matrices only |
+| `tree_list_example.csv` | A tree list: two plots, spruce and pine, with some heights missing |
 
 ---
 
