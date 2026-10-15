@@ -260,3 +260,5 @@ details.apter-card { margin-bottom: 16px; }
 .navbar .navbar-logo-item { display: flex; align-items: center; padding: 0 4px; margin-left: auto; }
 /* Summary after a comparison: Scenario A and B side by side. */
 .summary-scen .section-hdr { margin-top: 12px; }
+/* Summary after a comparison: each scenario's four values as a 2 x 2 grid. */
+.ro-row.ro-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

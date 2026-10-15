@@ -191,15 +191,17 @@ The results have these tabs:
 
 - **Summary:** run time, plots, trees, trees with logs, logs, commercial
   volume, total value, NOK per m³ and sale (price) volume; after a
-  comparison, total value, commercial volume, NOK per m³ and price volume
-  for Scenario A and Scenario B side by side
+  comparison, run time, plots and trees once, then total value, commercial
+  volume, NOK per m³ and price volume for Scenario A and Scenario B side by
+  side
 - **Per m³:** NOK/m³ in total, per species and by assortment, and per-tree
   results; select a tree to see its logs (position, length, assortment, top
   diameter over and under bark, price-diameter class, volumes and value)
 - **Products:** value and sale volume by assortment; after a comparison,
   for Scenario A and Scenario B side by side
-- **Selected logs:** every log cut, a page at a time, with a CSV download of
-  all logs
+- **Selected logs:** a preview of the first 20 logs of Scenario A, and a
+  CSV download of every log cut (after a comparison, both scenarios, with a
+  Scenario column)
 - **Scenario comparison** (when B differs from A): NOK/m³, value and
   volume under A and B and the differences, the trees whose cutting pattern
   changed, and example stems bucked both ways. A tree counts as changed only

@@ -66,9 +66,11 @@
 # 13.  Summary shows the nine fields (run time, plots, trees, trees with
 #      logs, logs, commercial volume, total value, NOK per m3, price
 #      volume); no Diagnostics tab
-# 14.  Selected logs: server-side pages ("1–25 of N", N = logs); readable
+# 14.  Selected logs: a preview of Scenario A's first 20 logs (one-line
+#      label naming Scenario A, no sorting or paging controls); readable
 #      headers (Plot, StartPos, StopPos; no ProductType, plot_id_github or
-#      underscores)
+#      underscores); "Download all logs (CSV)" holds every log with a
+#      Scenario column (A)
 # 15.  Per m3 tab: tables render, the collapsed Trees card expands to tree
 #      rows, selecting a tree shows its logs below; no "per ha" /
 #      "ha-expanded" text
@@ -76,7 +78,10 @@
 #      wide CSV) -> differing cells highlighted in both grids, 351 cells
 #      differ in B's download; Run -> comparison tab shown, difference
 #      table, pattern line and stem diagram render, no error notification;
-#      the Summary shows the run once and Scenario A and B side by side
+#      the Summary shows the run once and Scenario A and B side by side,
+#      each as a 2 x 2 grid (value, commercial volume / NOK per m3, price
+#      volume); the logs CSV holds both scenarios (Scenario A and B, as
+#      many rows as each run's logs)
 # 17.  Spruce pulpwood removed from B only: the comparison run's B has no
 #      spruce pulpwood; "Make assortment equal to A" brings it back
 # 18.  Stale notice: absent right after a run; after a price edit,
@@ -364,7 +369,7 @@ browser_checks <- c(
   "Check 11: Diameter classes and lengths added and removed",
   "Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",
   "Check 13: Summary shows the nine fields; no Diagnostics tab",
-  "Check 14: Selected logs paged on the server, readable headers",
+  "Check 14: Selected logs preview (Scenario A, first 20), readable headers, CSV of all logs",
   "Check 15: Per m3 tab renders; Trees card expands, a selected tree shows its logs; no per-ha text",
   "Check 16: Comparison runs automatically when B differs",
   "Check 17: Assortment removed from B only drops it from B's run",
@@ -656,20 +661,30 @@ if (!browser_ok) {
       ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Logs'; });",
       " return f ? f.querySelector('.ro-value').textContent : ''; })()")))))
 
-    # 14. selected logs pagination
+    # 14. selected logs: preview of the first 20 and a CSV of all
+    read_logs_csv <- function(app) {
+      f <- tryCatch(app$get_download("dl_logs"), error = function(e) NULL)
+      if (is.null(f)) return(NULL)
+      utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+    }
     e14 <- try_drv({ app$set_inputs(result_tabs = "logs"); app$wait_for_idle() })
-    page_info <- txt(app, "#tbl_selected_logs_info")
+    note14 <- txt(app, "#logs_preview_note")
     hdr14 <- js(app, "Array.from(document.querySelectorAll('#tbl_selected_logs .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')")
     h14 <- strsplit(as.character(hdr14), "|", fixed = TRUE)[[1]]
     n_rows14 <- n_tbl_rows(app, "tbl_selected_logs")
-    ok14 <- !nzchar(e14) && !is.na(n_logs) &&
-      grepl(sprintf("^1–%d of %s$", min(25L, n_logs), format(n_logs, big.mark = ",")), trimws(page_info)) &&
-      identical(n_rows14, min(25L, n_logs)) &&
+    ctrl14 <- js(app, paste0("document.querySelectorAll('#tbl_selected_logs .rt-pagination, ",
+                             "#tbl_selected_logs [aria-sort], #tbl_selected_logs_sort, #tbl_selected_logs_next').length"))
+    csv14 <- read_logs_csv(app)
+    ok14 <- !nzchar(e14) && !is.na(n_logs) && identical(n_rows14, min(20L, n_logs)) &&
+      grepl("Scenario A", note14, fixed = TRUE) && identical(ctrl14, 0L) &&
       all(c("Plot", "StartPos", "StopPos", "Assortment") %in% h14) &&
-      !any(grepl("_", h14, fixed = TRUE)) && !any(c("ProductType", "ProductKey") %in% h14)
+      !any(grepl("_", h14, fixed = TRUE)) && !any(c("ProductType", "ProductKey") %in% h14) &&
+      !is.null(csv14) && identical(nrow(csv14), n_logs) && identical(unique(csv14$Scenario), "A") &&
+      all(c("Scenario", "Plot", "StartPos", "StopPos") %in% names(csv14))
     rec(browser_checks[10], if (ok14) PASS else FAIL,
-        sprintf("page info: '%s' | rows on the page: %s | logs in run: %s | headers: %s%s",
-                trimws(page_info), n_rows14, n_logs, hdr14, err_txt(e14)))
+        sprintf("label: '%s' | preview rows: %s | sorting/paging controls: %s | logs in run: %s | CSV rows %s, scenarios %s | headers: %s%s",
+                trimws(note14), n_rows14, ctrl14, n_logs, if (is.null(csv14)) NA else nrow(csv14),
+                if (is.null(csv14)) "" else paste(unique(csv14$Scenario), collapse = "/"), hdr14, err_txt(e14)))
 
     # 15. Per m3 tab and tree detail on demand
     e15 <- try_drv({ app$set_inputs(result_tabs = "per_m3"); app$wait_for_idle() })
@@ -724,6 +739,9 @@ if (!browser_ok) {
     sum16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .section-hdr, #summary_cards .ro-label'))",
                             ".map(function(e){ return e.textContent.trim(); }).join('|')"))
     shoot(app, "04b_summary_A_and_B")
+    grid16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .summary-scen .ro-row'))",
+                             ".map(function(r){ return getComputedStyle(r).gridTemplateColumns.split(' ').length; }).join(',')"))
+    csv16 <- read_logs_csv(app)
     exp16 <- paste(c("Run time", "Plots", "Trees", "Scenario A", "Total value (NOK)", "Commercial volume (m³ u.b.)",
                      "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
@@ -739,10 +757,14 @@ if (!browser_ok) {
       cmp_tab16 && isTRUE(n_delta >= 1L) &&
       grepl("trees changed their cutting pattern", pat_txt, fixed = TRUE) &&
       isTRUE(stem_img >= 1L) && identical(nerr16, 0L) && identical(sum16, exp16) &&
-      !nzchar(paste0(e16d, e16e))
+      !nzchar(paste0(e16d, e16e)) && identical(grid16, "2,2") &&
+      !is.null(csv16) && identical(sort(unique(csv16$Scenario)), c("A", "B")) &&
+      all(table(csv16$Scenario) > 0)
     rec(browser_checks[12], if (ok16) PASS else FAIL,
-        sprintf("summary: '%s' | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
-                sum16, n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
+        sprintf("summary: '%s' | grid columns per scenario: %s | logs CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
+                sum16, grid16,
+                if (is.null(csv16)) "none" else paste(sprintf("%s %d", names(table(csv16$Scenario)), table(csv16$Scenario)), collapse = ", "),
+                n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
                 trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16a, e16b, e16c)))
 
     # 17. Spruce pulpwood removed from B only

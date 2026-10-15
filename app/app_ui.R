@@ -143,7 +143,9 @@ simulator_page <- nav_panel(
       ),
 
       nav_panel("Selected logs", value = "logs",
-        paged_table_ui("tbl_selected_logs")
+        uiOutput("logs_preview_note"),
+        reactableOutput("tbl_selected_logs"),
+        downloadButton("dl_logs", "Download all logs (CSV)", class = "btn-secondary btn-sm")
       ),
 
       nav_panel("Scenario comparison", value = "comparison",

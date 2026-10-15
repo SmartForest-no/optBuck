@@ -138,7 +138,10 @@ still out of bounds.
   result tables), `apter_barplot()`, `apter_barplot_ab()`) in
   `app/helpers_ui.R`; `app/www/apter.js` shows the progress bar as soon as
   Run is clicked. After a comparison the Summary shows run time, plots and
-  trees once, then Scenario A and B side by side. The Summary's run time is
+  trees once, then Scenario A and B side by side, each as a 2 × 2 grid
+  (value, commercial volume / NOK per m³, price volume). Selected logs is a
+  preview (Scenario A's first 20 logs) plus `dl_logs`, a CSV of all logs
+  with a Scenario column (both scenarios after a comparison). The Summary's run time is
   the full time from clicking Run to the results (`elapsed_total_seconds`;
   the backend's `elapsed_seconds` counts only its own work). The SmartForest
   logo (`app/www/smartforest_logo.jpg`, `navbar_logo()`) sits at the right of

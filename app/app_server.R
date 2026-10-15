@@ -309,10 +309,11 @@ server <- function(input, output, session) {
         ro_field("Total value (NOK)", value(r)),
         ro_field("NOK per m³", nok(r)),
         ro_field("Price volume (m³)", pvol(r))))
-    # A comparison: the run once, then Scenario A (left) and B (right).
+    # A comparison: the run once, then Scenario A (left) and B (right), each
+    # a 2 x 2 grid: value and commercial volume, then NOK/m3 and price volume.
     scen <- function(title, x) div(class = "summary-scen",
       div(class = "section-hdr", title),
-      ro_field_row(
+      div(class = "ro-row ro-grid-2",
         ro_field("Total value (NOK)", value(x)),
         ro_field("Commercial volume (m³ u.b.)", vol(x)),
         ro_field("NOK per m³", nok(x)),
@@ -454,11 +455,29 @@ server <- function(input, output, session) {
 
 
   # ---- Selected logs ------------------------------------------------------------
-  logs_df <- reactive({
-    req(has_result()); readable_logs(result()$selected_logs_all)
+  # A short preview (Scenario A's first logs); all logs are a CSV download,
+  # with both scenarios and a Scenario column after a comparison.
+  LOG_PREVIEW_N <- 20L
+  output$logs_preview_note <- renderUI({
+    req(has_result()); n <- nrow(result()$selected_logs_all)
+    div(class = "note-muted", sprintf("Scenario A: the first %d of %s logs. Download all logs for the full table%s.",
+                                      min(LOG_PREVIEW_N, n), fmt_int(n),
+                                      if (compared()) " (both scenarios)" else ""))
   })
-  paged_table_server(input, output, session, "tbl_selected_logs", logs_df, page_size = 25L,
-                     filename = "optBuck_selected_logs.csv")
+  output$tbl_selected_logs <- renderReactable({
+    req(has_result()); sl <- result()$selected_logs_all
+    if (nrow(sl) == 0L) return(apter_reactable(data.frame(Message = "No selected logs.")))
+    apter_reactable(readable_logs(utils::head(sl, LOG_PREVIEW_N)), sortable = FALSE, pagination = FALSE)
+  })
+  output$dl_logs <- downloadHandler(
+    filename = function() "optBuck_selected_logs.csv",
+    content  = function(file) {
+      l <- cbind(Scenario = "A", readable_logs(result()$selected_logs_all), stringsAsFactors = FALSE)
+      if (compared())
+        l <- rbind(l, cbind(Scenario = "B", readable_logs(result_b()$selected_logs_all),
+                            stringsAsFactors = FALSE))
+      utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
+    })
 
 
   # ---- Scenario comparison (A vs B) ------------------------------------------
