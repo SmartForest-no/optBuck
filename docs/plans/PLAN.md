@@ -31,11 +31,10 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 Built on branch `scenarios-and-polish` after Phase 4c was merged. Results are identical to main except that NFI runs use all plots, and comparisons can use B's own assortments.
 
 1. **Scenarios A and B** cover assortments as well as prices. The Assortments and prices tab has two columns, Scenario A on the left and Scenario B on the right, which stack on narrow screens. Each column has a compact assortment table (Assortment, Species, Top Ø, Max butt Ø, Length, Volume method) with Add/Edit/Remove, and that scenario's price matrices below it.
-   - B is linked to A per assortment. An assortment follows A until it is edited in B; after that it is B's own and highlighted. Edits to A never change B's own assortments.
-   - Adding in A adds to both scenarios; adding in B adds to B only. Removing asks "this scenario only" or "both".
-   - "Make equal to A" works per assortment, and "Make B equal to A" for all of B.
-   - The price states (Same as A / Own prices / Not used) stay. "Not used" takes the assortment out of B.
-   - A comparison runs when B differs in assortments or prices. NOK/m³ per scenario uses that scenario's own commercial volume.
+   - The scenarios are independent (revised before merging): B starts as an exact copy of A, both sides are always editable, and nothing is greyed or linked. Differences are highlighted on both sides.
+   - "Make B equal to A" (right column) and "Make A equal to B" (left column) work for the whole scenario and per assortment (Assortments section), and for all prices and per matrix (Price matrices section).
+   - An assortment can be added to both scenarios or one, and removed from one scenario or both. Its price type (matrix or flat) is set per scenario. The matrix selectors are independent.
+   - No status notes. A comparison runs when A and B differ in assortments or prices. NOK/m³ per scenario uses that scenario's own commercial volume.
    - Each scenario has an xlsx upload and download (assortments plus price sheets), and price matrices load separately as before.
 2. **Simpler assortments.** No Type field: the product type stays hidden, base waste rows stay waste when renamed, and user-added assortments are always commercial. No Length step: flat-priced assortments use 10 cm steps, and matrix-priced ones take their lengths from the matrix columns. No Diameter rounding: it is fixed per volume method. The defaults give identical products. The dialog has no blurred backdrop.
 3. **Text.** The app shows "optBuck" (title, navbar, browser tab); the code and repository keep the name Apter. "2021" and "(wide or long)" are gone. "NFI sample" became "NFI data". The price reset button is "Reset prices".
@@ -47,6 +46,7 @@ Built on branch `scenarios-and-polish` after Phase 4c was merged. Results are id
 5. **Results tables.** Columns are sized to their content, and headers are readable and wrap. The Products tab has one Assortment column; after a comparison it shows grouped Scenario A / Scenario B charts. Selected logs has no ProductType and shows Plot, with StartPos and StopPos as they are.
 6. **Demo files** in `demo/`, from `scripts/make_demo_files.R`: both scenarios, both price files, and an example tree list.
 7. **Audits.** New audit 24 covers scenarios and the demo files. Audits 17 and 23 were updated.
+8. **Run time.** NFI taper profiles always come from the precomputed cache; taperNOR never runs for NFI trees. The ~2 min default-stratum comparison was mostly the per-tree cutting-pattern comparison (62 s). It is vectorised now (0.8 s, identical output); the bucking itself takes about 34 s on 15 workers.
 
 ## Phase 6: stem profile import
 

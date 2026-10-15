@@ -24,7 +24,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Tree lists and height imputation (Phase 5) | Audit 21 PASS (28/28): FinnHoyde curves and calibration by hand, fieldPlot wrapper (single species, time limit), validation of broken files, NFI trees as a tree list give identical results, end-to-end runs |
 | Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, Make B equal to A), Run disabled with progress while a run task runs |
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
-| Scenarios A and B (Phase 4d) | Audit 24 PASS (10/10): derived rounding/step/type, B-only assortment, B rule change alone makes B differ, removed from B only, Make equal to A, backend comparison with B's own rules, renamed Waste unchanged, scenario upload to B, demo files upload and run |
+| Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -48,7 +48,7 @@ app/                        Shiny app, files sourced explicitly by app.R
                             to content), server-side paged tables, base-R plots (A/B bars),
                             grid renderers; APP_DISPLAY_NAME ("optBuck")
   helpers_validation.R      Inputs -> backend params; stratum plot and tree counts; run-time estimate
-  helpers_upload.R          Price files for the runs; uploads merged into Scenario A or B
+  helpers_upload.R          Price files for the runs; a price upload merged into one scenario
   helpers_jobs.R            Runs as background jobs: promise chain over the workers
                             (shiny::ExtendedTask), progress per chunk
   app_ui.R                  `ui`: page_navbar with Assortments and prices, Simulator
@@ -77,8 +77,8 @@ R/                          Core engine helpers
   helpers_bark.R            Swappable bark model (default taperNOR::barkNOR, B >= 0 floor)
   helpers_commercial_volume.R  NOK/m3 denominator and per-m3 summaries
   helpers_price_matrix.R    Price matrices: grids, diff, rows/columns, upload (long/wide), export;
-                            Scenario B (b_defs(), b_set(), b_differs(), b_row_diff(),
-                            b_states_from()), check_price_set(), scenario xlsx I/O
+                            two scenarios (assortment_diff(), scenarios_differ(),
+                            copy_assortment(), copy_prices()), check_price_set(), scenario xlsx I/O
                             (scenario_export()/_import()); Phase 4b definition format (performance cases)
   helpers_comparison.R      A vs. B: pattern changes, NOK/m3 comparison
   helpers_heights.R         Height imputation for tree lists (fieldPlot wrapper, FinnHoyde curves)
@@ -390,8 +390,9 @@ These keep the old name on purpose:
   definition format (`custom_assortment_rows()`, `products_for_run()`, `UseIn`,
   explicit Priority) stays for `scripts/performance_cases.R` and audit 20, whose
   baselines depend on it.
-- **A and B.** B holds its own prices for every product and a state per product
-  (`same`, `own`, `none`). A run compares A and B when `b_differs()`. With the
+- **A and B.** B held its own prices for every product and a state per product
+  (`same`, `own`, `none`; replaced in Phase 4d by two independent scenarios and
+  `scenarios_differ()`). With the
   default table and 2021 prices, A runs through the default price file and
   products, as before; audit 23 check 10 shows the explicit path gives the same.
 - **Fixed sampling.** NFI runs used 200 plots and seed 42 (`app/setup.R`);
@@ -411,14 +412,15 @@ These keep the old name on purpose:
 
 ## Phase 4d: scenarios and polish
 
-- **Scenarios.** `app/server_scenarios.R` (`scenario_server()`) holds Scenario
-  A (`defs_a()`, `pm_a()`) and B: its assortment states (`b_asm()`: same / own
-  / none), its own rows (`b_own()`), its price states (`b_state()`) and own
-  prices (`pm_b()`). The pure helpers are in `R/helpers_price_matrix.R`, and
-  audit 24 tests them without Shiny. `set_b()` sets the four B values together
-  so they stay consistent: a key not in B has price state `none`, and a B-only
-  key has own prices. The backend needed no change: `.prepare_runs()` already
-  gives a key defined differently in A and B its own candidate pass.
+- **Scenarios.** `app/server_scenarios.R` (`scenario_server()`) holds two
+  independent scenarios, `sc$A` and `sc$B` (assortment table and prices
+  each). An earlier draft linked B to A per assortment; it was replaced
+  before merging. Now B starts as a copy, and "Make A equal to B" / "Make B
+  equal to A" copy from the other side (`copy_assortment()`,
+  `copy_prices()`). The helpers are in `R/helpers_price_matrix.R`, and audit
+  24 tests them without Shiny. The backend needed no change: `.prepare_runs()`
+  already gives a key defined differently in A and B (other rules or price
+  type) its own candidate pass.
 - **Hidden type.** `Type` stays in `ASSORTMENT_TABLE_COLS` and in the scenario
   xlsx, but it is never shown. Edits keep a row's type. New rows get
   `custom_type()`. `validate_products()` no longer reserves "waste" for the
@@ -438,6 +440,13 @@ These keep the old name on purpose:
   A tree's logs render only when the tree is selected. With all plots of the
   typical stratum (26,857 logs, comparison) every results tab renders in about
   1 s.
+- **Run time.** NFI runs never call taperNOR: all 93,607 bucked trees of
+  HKL 3–5 have a cached profile, and a missing one stops the run. Default-
+  stratum comparison (12,427 trees, 15 workers): loading 5.8 s, bucking
+  26.9 s, result tables 1.3 s, and a 2.5 s worker start once per app
+  process. The app's earlier ~2 min was mostly `compare_cutting_patterns()`
+  (61.7 s: a per-tree loop with a quadratic lookup). It is vectorised now
+  (0.8 s, identical output on all 12,427 trees).
 - **Progress.** `www/apter.js` draws an indeterminate bar on click. The server
   then reports stages: loading NFI data and taper profiles (indeterminate),
   taperNOR chunks (tree lists, 0–40 %), bucking, and summarising.

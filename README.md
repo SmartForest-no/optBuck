@@ -109,26 +109,29 @@ pine* adds one of each. Stems are assumed free of defects; no quality
 restrictions are applied. Added assortments always count as saleable
 volume.
 
-**Scenario B.** B starts as a copy of A, and each of its assortments follows
-A until you edit it in B; from then on it is B's own, and changes in A no
-longer affect it. In B's table, assortments equal to A are greyed, changed
-values and assortments only in B are highlighted, and A's assortments that
-B does not use are listed as *Not used*. An assortment added in A is added
-to both scenarios; one added in B is in B only. *Remove* asks whether to
-remove it from this scenario only or from both. *Make equal to A* links one
-assortment to A again; *Make B equal to A* resets all of B.
+**Two scenarios.** B starts as an exact copy of A; after that the two are
+independent and both can be edited. Values and rows that differ from the
+other scenario are highlighted on both sides, and an assortment that is
+missing on one side is listed there as *Not in A* or *Not in B*. Each
+assortment's pricing (price matrix or flat price) is set per scenario, so,
+for example, spruce pulpwood can have a price matrix in A and a flat price in
+B. *Make B equal to A* (right column) and *Make A equal to B* (left column)
+copy the other scenario: the whole scenario or one assortment in the
+Assortments section, and all prices or one price matrix in the Price
+matrices section. A new assortment can be added to both scenarios or to one;
+*Remove* asks whether to remove it from this scenario only or from both.
 
 **Price matrices.** Under its assortments, each scenario shows its price
 matrices in the layout of the source price lists: top-diameter classes (cm)
-as rows and length classes (dm) as columns, in NOK/m³ under bark. In B,
-each assortment's prices are *Same as A* (shown greyed), *Own prices* (cells
-that differ from A are highlighted) or *Not used* (the assortment is left
-out of B). Both scenarios can be edited, reset, uploaded and downloaded.
+as rows and length classes (dm) as columns, in NOK/m³ under bark. The two
+scenarios each have their own matrix selector. Cells that differ from the
+other scenario are highlighted. Both scenarios can be edited, reset,
+uploaded and downloaded.
 
 **Scenario files.** Each scenario can be downloaded and uploaded as one xlsx
 file with its assortments (sheet `assortments`) and its prices (one sheet
-per price matrix plus `flat_prices`). Uploading a file to B makes the
-assortments and prices that equal A follow A, and the rest B's own.
+per price matrix plus `flat_prices`). A file loaded into one scenario
+replaces that scenario's assortments and prices.
 
 A matrix's columns are the assortment's allowed lengths and its rows its
 top-diameter classes. Lengths can be added and removed (a removed length is
