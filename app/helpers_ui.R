@@ -19,6 +19,23 @@ navbar_brand <- function() {
 }
 
 
+#' Asset URL with a version tag (file modification time), so a browser never
+#' keeps an old copy of the stylesheet or script after an update.
+asset_url <- function(file) {
+  t <- file.mtime(file.path(APP_DIR, "www", file))
+  if (is.na(t)) file else sprintf("%s?v=%s", file, format(t, "%Y%m%d%H%M%S"))
+}
+
+#' SmartForest logo for the right end of the navbar: exactly as tall as the
+#' optBuck icon (26 px). The height is also set on the element itself, so the
+#' 2560 x 595 px image never shows at its natural size, even without the
+#' stylesheet.
+NAVBAR_ICON_PX <- 26L
+navbar_logo <- function()
+  tags$img(src = asset_url("smartforest_logo.jpg"), alt = "SmartForest", class = "navbar-logo",
+           height = NAVBAR_ICON_PX)
+
+
 # ---- cards ---------------------------------------------------------------------
 
 #' A card with a plain header. collapsible = TRUE renders a <details> card

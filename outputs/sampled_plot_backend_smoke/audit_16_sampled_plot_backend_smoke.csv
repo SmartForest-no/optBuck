@@ -1,7 +1,7 @@
 check,result,detail
 Check 01: Backend script exists,PASS,found: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/scripts/app_backend/01_run_sampled_plot_bucking.R
 Check 02: Backend sources without error,PASS,source() completed without error
-Check 03: Smoke call completes without error,PASS,completed in 4.3 s
+Check 03: Smoke call completes without error,PASS,completed in 4.4 s
 Check 04: Return object has all required names,PASS,all 19 required names present
 Check 05: n_plots_sampled,PASS,n_eligible=224  n_sampled=5  expected=5
 Check 06: No 'plot_id' column in any returned data.frame,PASS,no plot_id leakage detected
@@ -11,6 +11,6 @@ Check 09: NOK per m3 outputs present and consistent,PASS,total 382.7 NOK/m3 on 2
 Check 10: No per-ha or plot-level outputs; trees-only label,PASS,per-ha/plot names: none | label: 'Results describe the selected trees only. Values are NOK per m³ of commercial volume under bark.'
 Check 11: Price validation contains no FAIL rows,PASS,"0 FAIL, 1 REVIEW in price validation checks"
 Check 12: No taper profile failures,PASS,0 profile failure(s) in smoke run
-Check 13: Runtime under 120 s for n_plots=5,PASS,runtime: 4.3 s (threshold: 120 s)
-Check 14: .optimize_dp_fast() and the backend match the reference: value and n_selected,PASS,"788 trees compared over 3 runs (85.0 s); 0 mismatch(es); max |value diff| fast 0.00e+00, backend 0.00e+00"
+Check 13: Runtime under 120 s for n_plots=5,PASS,runtime: 4.4 s (threshold: 120 s)
+Check 14: .optimize_dp_fast() and the backend match the reference: value and n_selected,PASS,"788 trees compared over 3 runs (87.4 s); 0 mismatch(es); max |value diff| fast 0.00e+00, backend 0.00e+00"
 Check 15: .optimize_dp_fast() and the backend match the reference: cutting pattern,PASS,0 of 788 trees differ in cutting pattern (fast or backend vs reference; 0 of them at equal value)

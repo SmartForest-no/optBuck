@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-15 12:31:43.865764
+  Run: 2026-10-15 13:05:27.580394
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpczCyGw/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpktQJO4/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -22,7 +22,7 @@
 
 --- 05-23. Browser checks ---
   [PASS  ] Check 05: AppDriver starts the app | app started
-  [PASS  ] Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, optBuck, texts | tabs: 'Assortments and prices|Simulator' | open: 'Assortments and prices' | Home/tiles/footer elements: 0 | stripe: 1 | title: 'optBuck — Bucking simulator' | brand: 'optBuck' | intro line: TRUE | logo height: 28 px | 'NFI data': TRUE | '2021': FALSE | 'wide or long': FALSE
+  [PASS  ] Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, optBuck, texts | tabs: 'Assortments and prices|Simulator' | open: 'Assortments and prices' | Home/tiles/footer elements: 0 | stripe: 1 | title: 'optBuck — Bucking simulator' | brand: 'optBuck' | intro line: TRUE | logo height: 26 (1920 px: loaded,logo,icon,navbar,centre offset,height attr,width = 1,26,26,56,1,26,112; 700 px: 1,0,26,56,29,26,0) px | 'NFI data': TRUE | '2021': FALSE | 'wide or long': FALSE
   [PASS  ] Check 07: Bootstrap 5 and self-hosted Inter font loaded | Bootstrap 5.3.1 | Inter loaded: TRUE | Google Fonts links: 0
   [PASS  ] Check 08: Compact assortment table: base rows, columns, '–' for no limit | rows 6 | all visible columns: TRUE | '–' shown: TRUE | 'Inf' shown: FALSE | sortable headers: 0 | price copy buttons: 'Make matrix equal to B|Make matrix equal to A' (whole-scenario ones in prices: 0)
   [PASS  ] Check 09: Both scenarios editable, nothing greyed, no differences at the start | A cells 234 (read-only 0) | B cells 234 (read-only 0) | highlighted or greyed: 0 | B dropdown / status note: 0
@@ -32,17 +32,17 @@
   [PASS  ] Check 13: Summary shows the nine fields; no Diagnostics tab | labels: 'Run time|Plots|Trees|Trees with logs|Logs|Commercial volume (m³ u.b.)|Total value (NOK)|NOK per m³|Price volume (m³)' | plots: '5' | Diagnostics tabs: 0
   [PASS  ] Check 14: Selected logs paged on the server, readable headers | page info: '1–25 of 334' | rows on the page: 25 | logs in run: 334 | headers: Plot|Tree|Species|Assortment|StartPos|StopPos|Length (cm)|Length class (dm)|Top Ø over bark (mm)|Top Ø under bark (mm)|Diameter class (cm)|Price class used (cm)|Price (NOK/m³)|Price volume (m³)|Commercial volume u.b. (m³)|Value (NOK)
   [PASS  ] Check 15: Per m3 tab renders; Trees card expands, a selected tree shows its logs; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | tree rows: 15 | log detail shown: TRUE | per-ha text hits: 0
-  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded file838051441bc0.csv: Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
+  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded filef53479fb62df.csv: Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
   [PASS  ] Check 17: Assortment removed from B only drops it from B's run | 'Removed Spruce pulpwood from Scenario B.' (B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | spruce pulpwood value A 1292, B 0 | back in B after Make assortment equal to A: TRUE | error notifications: 0
   [PASS  ] Check 18: Stale notice after a price edit | after runs: '' / '' | after resetting B: 'Assortments or prices changed since this run.'
   [PASS  ] Check 19: No 'default'/'price set' in the page text | none found
   [PASS  ] Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed | form: removed fields present 0, backdrop filter 'none' | add: 'Added Spruce poles to both scenarios.', rows 7, matrix choices spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove from both: rows A 6, B 6
-  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'file8380e2217ca.csv: 12 trees, 12 within taperNOR's range.
+  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'filef53477923d6.csv: 12 trees, 12 within taperNOR's range.
 Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). Thes' | banner: 'Heights: 
   Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height source column: TRUE | error notifications: 0
   [PASS  ] Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, Make B equal to A | rows A: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | rows B: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | start marks 0 | B rule highlighted: A 1, B 1 | only in B: 1 (A shows 'Not in A': 1, A rows 7) | removed from B: 'Not in B' 1 | comparison tab TRUE, poles in products TRUE | Make A equal to B (prices): 'Prices equal to Scenario B: Spruce sawlog.' | after Make B equal to A: 0 marks
-  [PASS  ] Check 22: Screenshots saved for review | 13 of 13 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
-  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 206.2 s (threshold: 300 s)
+  [PASS  ] Check 22: Screenshots saved for review | 15 of 15 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
+  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 210.2 s (threshold: 300 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

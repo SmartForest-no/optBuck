@@ -27,7 +27,7 @@ the simulator appears as **optBuck**.
 
 ---
 
-## Tree sources
+## Data sources
 
 | Source | Status |
 |--------|--------|

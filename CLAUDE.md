@@ -138,8 +138,15 @@ still out of bounds.
   result tables), `apter_barplot()`, `apter_barplot_ab()`) in
   `app/helpers_ui.R`; `app/www/apter.js` shows the progress bar as soon as
   Run is clicked. After a comparison the Summary shows run time, plots and
-  trees once, then Scenario A and B side by side. The SmartForest logo
-  (`app/www/smartforest_logo.jpg`) sits at the right of the navbar. Palette
+  trees once, then Scenario A and B side by side. The Summary's run time is
+  the full time from clicking Run to the results (`elapsed_total_seconds`;
+  the backend's `elapsed_seconds` counts only its own work). The SmartForest
+  logo (`app/www/smartforest_logo.jpg`, `navbar_logo()`) sits at the right of
+  the navbar, exactly as tall as the optBuck icon (26 px, also set as the
+  img height attribute so it never shows at its natural 2560 px).
+  `asset_url()` adds a version tag to `apter.css`/`apter.js` so browsers do
+  not keep stale copies. The sidebar says "Data source" (input id
+  `tree_source` unchanged). Palette
   "Forest & sand" (Phase 4c): forest green is the only strong colour. Two
   tabs, Assortments and prices (first) and Simulator; no Home, footer, Run
   details/steps, Diagnostics or explanatory notes (keep real errors and

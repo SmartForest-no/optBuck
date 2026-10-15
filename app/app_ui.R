@@ -75,7 +75,7 @@ simulator_sidebar <- sidebar(
   width = 320,
 
   div(class = "sidebar-heading", "Trees"),
-  radioButtons("tree_source", "Tree source",
+  radioButtons("tree_source", "Data source",
                c("NFI data" = "nfi", "Uploaded tree list" = "list"), selected = "nfi"),
   conditionalPanel("input.tree_source == 'nfi'",
     selectInput("species_group", "Species group",
@@ -184,14 +184,14 @@ ui <- page_navbar(
   selected     = "prices",
   header = tagList(
     tags$head(
-      tags$link(rel = "stylesheet", href = "apter.css"),
+      tags$link(rel = "stylesheet", href = asset_url("apter.css")),
       tags$link(rel = "icon", type = "image/svg+xml", href = "apter-icon.svg"),
-      tags$script(src = "apter.js")
+      tags$script(src = asset_url("apter.js"))
     ),
     banner_strip()
   ),
   prices_page,
   simulator_page,
   nav_spacer(),
-  nav_item(tags$img(src = "smartforest_logo.jpg", alt = "SmartForest", class = "navbar-logo"))
+  nav_item(div(class = "navbar-logo-item", navbar_logo()))
 )

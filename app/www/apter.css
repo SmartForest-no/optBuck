@@ -256,7 +256,7 @@ details.apter-card { margin-bottom: 16px; }
 /* Intro line on the Assortments and prices tab. */
 .page-intro { color: var(--apter-ink); margin: 0 0 12px; font-size: 0.95rem; }
 /* SmartForest logo at the right of the navbar, the height of the nav links. */
-.navbar-logo { height: 28px; width: auto; display: block; }
-.navbar .nav-item:has(.navbar-logo) { display: flex; align-items: center; padding: 0 4px; }
+.navbar-logo { height: 26px; max-height: 26px; width: auto; max-width: 160px; display: block; }
+.navbar .navbar-logo-item { display: flex; align-items: center; padding: 0 4px; margin-left: auto; }
 /* Summary after a comparison: Scenario A and B side by side. */
 .summary-scen .section-hdr { margin-top: 12px; }

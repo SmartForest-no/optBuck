@@ -124,6 +124,9 @@ server <- function(input, output, session) {
   run_task <- ExtendedTask$new(function(spec, extra) {
     p <- promises::then(run_job_async(spec, progress_cb), function(res) {
       for (n in names(extra)) res[[n]] <- extra[[n]]
+      # The Summary's run time: from clicking Run to the results (the
+      # backend's elapsed_seconds counts only its own work).
+      res$elapsed_total_seconds <- as.numeric(difftime(Sys.time(), extra$t_click, units = "secs"))
       res
     })
     p <- promises::catch(p, function(e) {
@@ -141,6 +144,7 @@ server <- function(input, output, session) {
   run_rejected <- reactiveVal(FALSE)
   run_src      <- reactiveVal("nfi")
   observeEvent(input$run_btn, {
+    t_click <- Sys.time()
     reject <- function(msg) {
       session$sendCustomMessage("apter_progress_clear", TRUE)
       showNotification(msg, type = "error", duration = 10); run_rejected(TRUE)
@@ -184,7 +188,7 @@ server <- function(input, output, session) {
                       what = if (src == "nfi") "Loading NFI data and taper profiles"
                              else "Taper profiles"))
     run_task$invoke(spec, list(price_matrix = a, price_matrix_b = if (compare) b$pm,
-                               state = sc$pm_state()))
+                               state = sc$pm_state(), t_click = t_click))
   })
 
   result <- reactive({
@@ -296,7 +300,7 @@ server <- function(input, output, session) {
                                 nsmall = 2, big.mark = ",")
     if (!compared())
       return(ro_field_row(
-        ro_field("Run time", sprintf("%.1f s", r$elapsed_seconds)),
+        ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
         ro_field("Plots", fmt_int(r$n_plots_sampled)),
         ro_field("Trees", fmt_int(r$n_trees_total)),
         ro_field("Trees with logs", fmt_int(r$n_trees_with_logs)),
@@ -315,7 +319,7 @@ server <- function(input, output, session) {
         ro_field("Price volume (m³)", pvol(x))))
     tagList(
       ro_field_row(
-        ro_field("Run time", sprintf("%.1f s", r$elapsed_seconds)),
+        ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
         ro_field("Plots", fmt_int(r$n_plots_sampled)),
         ro_field("Trees", fmt_int(r$n_trees_total))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),

@@ -36,7 +36,11 @@
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
 #      release footer; the stripe is shown; the window title and the
 #      navbar say "optBuck"; the intro line above the scenarios and the
-#      SmartForest logo in the navbar are shown; "NFI data"; no "2021" (as a number on its own;
+#      SmartForest logo in the navbar are shown; the logo, measured in
+#      headless Chrome, is as tall as the optBuck icon (26 px), not taller
+#      than the navbar, on one line with the brand and the tabs at 1920 px,
+#      and the navbar stays one bar at 700 px (screenshots of the navbar at
+#      both widths); "Data source", not "Tree source"; "NFI data"; no "2021" (as a number on its own;
 #      grid headers run together) or "(wide or long)"
 #  7.  Theme: Bootstrap 5 loaded, self-hosted Inter font loaded, no Google
 #      Fonts request
@@ -458,8 +462,36 @@ if (!browser_ok) {
     texts6 <- paste(body0, labels6)
     intro6 <- grepl("Define two scenarios with assortments and prices. optBuck finds the optimal bucking",
                     body0, fixed = TRUE)
-    logo6 <- js(app, paste0("(function(){ var i = document.querySelector('.navbar img.navbar-logo');",
-                            " return i && i.complete && i.naturalWidth > 0 ? Math.round(i.getBoundingClientRect().height) : 0; })()"))
+    # The logo measured in the browser: height, the brand icon's height, the
+    # navbar's height and whether logo and brand sit on one line.
+    geom <- function(app) js(app, paste0(
+      "(function(){ var n = document.querySelector('.navbar'), i = document.querySelector('.navbar img.navbar-logo'),",
+      " b = document.querySelector('.navbar-brand img'); if (!n || !i || !b) return 'missing';",
+      " var ri = i.getBoundingClientRect(), rb = b.getBoundingClientRect(), rn = n.getBoundingClientRect();",
+      " return [i.complete && i.naturalWidth > 0 ? 1 : 0, Math.round(ri.height), Math.round(rb.height),",
+      " Math.round(rn.height), Math.round(Math.abs((ri.top + ri.height / 2) - (rb.top + rb.height / 2))),",
+      " i.getAttribute('height'), Math.round(ri.width)].join(','); })()"))
+    shot_nav <- function(app, name) {
+      f <- file.path(shot_dir, paste0(name, ".png"))
+      ok <- tryCatch({ app$get_screenshot(f, selector = ".navbar"); file.exists(f) }, error = function(e) FALSE)
+      if (ok) shots <<- c(shots, f)
+    }
+    e6 <- try_drv({ app$set_window_size(width = 1920, height = 1000); app$wait_for_idle() })
+    g1920 <- strsplit(as.character(geom(app)), ",")[[1]]
+    shot_nav(app, "00a_navbar_1920")
+    e6b <- try_drv({ app$set_window_size(width = 700, height = 1000); app$wait_for_idle() })
+    g700 <- strsplit(as.character(geom(app)), ",")[[1]]
+    shot_nav(app, "00b_navbar_700")
+    e6c <- try_drv({ app$set_window_size(width = 1400, height = 1000); app$wait_for_idle() })
+    gi <- function(g, k) suppressWarnings(as.integer(g[k]))
+    # 1920: loaded, 26 px like the icon, inside the navbar, centred with the brand.
+    logo_ok <- length(g1920) == 7L && identical(gi(g1920, 1), 1L) && identical(gi(g1920, 2), gi(g1920, 3)) &&
+      isTRUE(gi(g1920, 2) <= gi(g1920, 4)) && isTRUE(gi(g1920, 5) <= 4L) && identical(g1920[6], "26") &&
+      isTRUE(gi(g1920, 4) <= 80L)
+    # 700: the navbar collapses; it must stay one bar (the logo hidden in the
+    # collapsed menu or at most icon height).
+    narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
+    logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
     ok6 <- identical(tabs, "Assortments and prices|Simulator") &&
       identical(active, "Assortments and prices") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
@@ -468,10 +500,14 @@ if (!browser_ok) {
       grepl("NFI data", texts6, fixed = TRUE) && !grepl("NFI sample", texts6, fixed = TRUE) &&
       !grepl("(^|[^0-9.])2021([^0-9]|$)", texts6) && !grepl("wide or long", texts6, fixed = TRUE) &&
       !grepl("runs use Scenario A only|runs compare both", texts6) &&
-      intro6 && isTRUE(logo6 > 0L && logo6 <= 40L)
+      intro6 && logo_ok && narrow_ok && !nzchar(paste0(e6, e6b, e6c)) &&
+      grepl("Data source", texts6, fixed = TRUE) && !grepl("Tree source", texts6, fixed = TRUE)
     rec(browser_checks[2], if (ok6) PASS else FAIL,
         sprintf("tabs: '%s' | open: '%s' | Home/tiles/footer elements: %s | stripe: %s | title: '%s' | brand: '%s' | intro line: %s | logo height: %s px | 'NFI data': %s | '2021': %s | 'wide or long': %s",
-                tabs, active, n_old, stripe, title, brand, intro6, logo6, grepl("NFI data", texts6, fixed = TRUE),
+                tabs, active, n_old, stripe, title, brand, intro6,
+                sprintf("%s (1920 px: loaded,logo,icon,navbar,centre offset,height attr,width = %s; 700 px: %s)",
+                        logo6, paste(g1920, collapse = ","), paste(g700, collapse = ",")),
+                grepl("NFI data", texts6, fixed = TRUE),
                 grepl("(^|[^0-9.])2021([^0-9]|$)", texts6), grepl("wide or long", texts6, fixed = TRUE)))
     bs_ver <- js(app, "typeof bootstrap !== 'undefined' ? bootstrap.Tooltip.VERSION : ''")
     inter_loaded <- js(app, paste0(
@@ -914,8 +950,8 @@ if (!browser_ok) {
                 n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
-    rec(browser_checks[18], if (length(shots) == 13L) PASS else REVIEW,
-        sprintf("%d of 13 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[18], if (length(shots) == 15L) PASS else REVIEW,
+        sprintf("%d of 15 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
     for (ck in browser_checks[c(2:18, 20)]) rec(ck, FAIL, "skipped: app did not start")
