@@ -288,22 +288,38 @@ server <- function(input, output, session) {
   output$summary_cards <- renderUI({
     if (input$run_btn == 0L) return(div(class = "note-muted", "No run yet."))
     req(has_result()); r <- result()
-    tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-    ro_field_row(
-      ro_field("Run time", sprintf("%.1f s", r$elapsed_seconds)),
-      ro_field("Plots", fmt_int(r$n_plots_sampled)),
-      ro_field("Trees", fmt_int(r$n_trees_total)),
-      ro_field("Trees with logs", fmt_int(r$n_trees_with_logs)),
-      ro_field("Logs", fmt_int(nrow(r$selected_logs_all))),
-      ro_field("Commercial volume (m³ u.b.)", format(round(tot$commercial_volume_m3, 2), nsmall = 2,
-                                                     big.mark = ",")),
-      ro_field("Total value (NOK)", fmt_int(sum(r$selected_logs_all$value_nok, na.rm = TRUE))),
-      ro_field("NOK per m³",
-               if (is.na(tot$nok_per_m3)) "–" else format(round(tot$nok_per_m3, 1), nsmall = 1)),
-      ro_field("Price volume (m³)",
-               format(round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 2), nsmall = 2,
-                      big.mark = ","))
-    )
+    tot <- function(r) r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
+    vol   <- function(r) format(round(tot(r)$commercial_volume_m3, 2), nsmall = 2, big.mark = ",")
+    value <- function(r) fmt_int(sum(r$selected_logs_all$value_nok, na.rm = TRUE))
+    nok   <- function(r) { x <- tot(r)$nok_per_m3; if (is.na(x)) "–" else format(round(x, 1), nsmall = 1) }
+    pvol  <- function(r) format(round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 2),
+                                nsmall = 2, big.mark = ",")
+    if (!compared())
+      return(ro_field_row(
+        ro_field("Run time", sprintf("%.1f s", r$elapsed_seconds)),
+        ro_field("Plots", fmt_int(r$n_plots_sampled)),
+        ro_field("Trees", fmt_int(r$n_trees_total)),
+        ro_field("Trees with logs", fmt_int(r$n_trees_with_logs)),
+        ro_field("Logs", fmt_int(nrow(r$selected_logs_all))),
+        ro_field("Commercial volume (m³ u.b.)", vol(r)),
+        ro_field("Total value (NOK)", value(r)),
+        ro_field("NOK per m³", nok(r)),
+        ro_field("Price volume (m³)", pvol(r))))
+    # A comparison: the run once, then Scenario A (left) and B (right).
+    scen <- function(title, x) div(class = "summary-scen",
+      div(class = "section-hdr", title),
+      ro_field_row(
+        ro_field("Total value (NOK)", value(x)),
+        ro_field("Commercial volume (m³ u.b.)", vol(x)),
+        ro_field("NOK per m³", nok(x)),
+        ro_field("Price volume (m³)", pvol(x))))
+    tagList(
+      ro_field_row(
+        ro_field("Run time", sprintf("%.1f s", r$elapsed_seconds)),
+        ro_field("Plots", fmt_int(r$n_plots_sampled)),
+        ro_field("Trees", fmt_int(r$n_trees_total))),
+      layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
+                     scen("Scenario A", r), scen("Scenario B", result_b())))
   })
 
 

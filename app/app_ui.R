@@ -14,8 +14,8 @@
 # One scenario column: its assortment table, its scenario file, and its
 # price matrices. s = "a" or "b". The two scenarios are independent and
 # both editable; "Make A equal to B" / "Make B equal to A" copy from the
-# other column (the whole scenario, one assortment, all prices or one
-# matrix).
+# other column (the whole scenario or one assortment in Assortments, one
+# matrix in Price matrices).
 scenario_column <- function(s) {
   S <- toupper(s); O <- if (S == "A") "B" else "A"
   eq <- sprintf("Make %s equal to %s", S, O)
@@ -41,8 +41,7 @@ scenario_column <- function(s) {
     div(class = "pm-grid",
       div(class = "pm-toolbar",
         selectInput(paste0("pm_id_", s), "Matrix", choices = character(0), width = "220px"),
-        btn(paste0("pm_", s, "_copy_one"), sprintf("Make matrix equal to %s", O)),
-        btn(paste0("pm_", s, "_copy_all"), eq)),
+        btn(paste0("pm_", s, "_copy_one"), sprintf("Make matrix equal to %s", O))),
       conditionalPanel(sprintf("input.pm_id_%s != 'flat_prices'", s),
         div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark")),
       rHandsontableOutput(paste0("pm_", s)),
@@ -61,6 +60,9 @@ scenario_column <- function(s) {
 prices_page <- nav_panel(
   "Assortments and prices", value = "prices",
   div(class = "apter-page",
+    p(class = "page-intro", sprintf(paste(
+      "Define two scenarios with assortments and prices. %s finds the optimal bucking",
+      "of each stem under both and compares the results."), APP_DISPLAY_NAME)),
     layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                    scenario_column("a"), scenario_column("b"))
   )
@@ -189,5 +191,7 @@ ui <- page_navbar(
     banner_strip()
   ),
   prices_page,
-  simulator_page
+  simulator_page,
+  nav_spacer(),
+  nav_item(tags$img(src = "smartforest_logo.jpg", alt = "SmartForest", class = "navbar-logo"))
 )

@@ -35,14 +35,16 @@
 #  6.  Layout: two tabs, "Assortments and prices" first and open, then
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
 #      release footer; the stripe is shown; the window title and the
-#      navbar say "optBuck"; "NFI data"; no "2021" (as a number on its own;
+#      navbar say "optBuck"; the intro line above the scenarios and the
+#      SmartForest logo in the navbar are shown; "NFI data"; no "2021" (as a number on its own;
 #      grid headers run together) or "(wide or long)"
 #  7.  Theme: Bootstrap 5 loaded, self-hosted Inter font loaded, no Google
 #      Fonts request
 #  8.  Scenario A's compact assortment table: six base rows, columns
 #      Assortment, Species, Top Ø, Max butt Ø, Length, Volume method (no
 #      Type, Length step or Diameter rounding); no limit shown as "–" or
-#      "≥", never "Inf"/"Infinity"
+#      "≥", never "Inf"/"Infinity"; columns cannot be sorted by clicking;
+#      one copy button per price section ("Make matrix equal to B/A")
 #  9.  Independent scenarios (Phase 4d): both grids editable (no read-only
 #      cells), nothing greyed, no highlighted differences at the start, no
 #      "Same as A" dropdown and no "B equals/differs" notes
@@ -68,7 +70,8 @@
 # 16.  Automatic comparison: B's price matrix uploaded (spruce sawlog x1.2,
 #      wide CSV) -> differing cells highlighted in both grids, 351 cells
 #      differ in B's download; Run -> comparison tab shown, difference
-#      table, pattern line and stem diagram render, no error notification
+#      table, pattern line and stem diagram render, no error notification;
+#      the Summary shows the run once and Scenario A and B side by side
 # 17.  Spruce pulpwood removed from B only: the comparison run's B has no
 #      spruce pulpwood; "Make assortment equal to A" brings it back
 # 18.  Stale notice: absent right after a run; after a price edit,
@@ -90,8 +93,10 @@
 #      min top 14 cm) is highlighted on both sides; an assortment added to B
 #      only is highlighted in B and listed as "Not in A" in A; one removed
 #      from B only is listed as "Not in B"; Run -> comparison with B's
-#      products (poles); "Make A equal to B" in A's price section copies
-#      prices; "Make B equal to A" -> no highlighted differences left
+#      products (poles); both tables list the same assortments in the same
+#      order (species, sawlog, pulpwood, waste, custom), "Not in" lines
+#      included; "Make matrix equal to B" in A copies prices; "Make B equal
+#      to A" -> no highlighted differences left
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -364,7 +369,7 @@ browser_checks <- c(
   "Check 21: Uploaded tree list validates, runs and reports height sources",
   "Check 22: Screenshots saved for review",
   "Check 23: Browser runtime under 300 s",
-  "Check 24: Scenario B assortments: own rule, B-only, removed from B only, comparison, Make B equal to A")
+  "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, Make B equal to A")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -451,6 +456,10 @@ if (!browser_ok) {
     brand <- js(app, "document.querySelector('.navbar-brand').textContent.trim()")
     labels6 <- js(app, "Array.from(document.querySelectorAll('label, .control-label')).map(function(e){ return e.textContent; }).join(' | ')")
     texts6 <- paste(body0, labels6)
+    intro6 <- grepl("Define two scenarios with assortments and prices. optBuck finds the optimal bucking",
+                    body0, fixed = TRUE)
+    logo6 <- js(app, paste0("(function(){ var i = document.querySelector('.navbar img.navbar-logo');",
+                            " return i && i.complete && i.naturalWidth > 0 ? Math.round(i.getBoundingClientRect().height) : 0; })()"))
     ok6 <- identical(tabs, "Assortments and prices|Simulator") &&
       identical(active, "Assortments and prices") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
@@ -458,10 +467,11 @@ if (!browser_ok) {
       !grepl("Apter", paste(title, brand), fixed = TRUE) &&
       grepl("NFI data", texts6, fixed = TRUE) && !grepl("NFI sample", texts6, fixed = TRUE) &&
       !grepl("(^|[^0-9.])2021([^0-9]|$)", texts6) && !grepl("wide or long", texts6, fixed = TRUE) &&
-      !grepl("runs use Scenario A only|runs compare both", texts6)
+      !grepl("runs use Scenario A only|runs compare both", texts6) &&
+      intro6 && isTRUE(logo6 > 0L && logo6 <= 40L)
     rec(browser_checks[2], if (ok6) PASS else FAIL,
-        sprintf("tabs: '%s' | open: '%s' | Home/tiles/footer elements: %s | stripe: %s | title: '%s' | brand: '%s' | 'NFI data': %s | '2021': %s | 'wide or long': %s",
-                tabs, active, n_old, stripe, title, brand, grepl("NFI data", texts6, fixed = TRUE),
+        sprintf("tabs: '%s' | open: '%s' | Home/tiles/footer elements: %s | stripe: %s | title: '%s' | brand: '%s' | intro line: %s | logo height: %s px | 'NFI data': %s | '2021': %s | 'wide or long': %s",
+                tabs, active, n_old, stripe, title, brand, intro6, logo6, grepl("NFI data", texts6, fixed = TRUE),
                 grepl("(^|[^0-9.])2021([^0-9]|$)", texts6), grepl("wide or long", texts6, fixed = TRUE)))
     bs_ver <- js(app, "typeof bootstrap !== 'undefined' ? bootstrap.Tooltip.VERSION : ''")
     inter_loaded <- js(app, paste0(
@@ -481,12 +491,16 @@ if (!browser_ok) {
     hdr_ok <- all(vapply(hdr, grepl, logical(1), x = asm_txt, fixed = TRUE)) &&
       !any(vapply(gone8, grepl, logical(1), x = asm_txt, fixed = TRUE))
     n_asm0 <- n_tbl_rows(app, "tbl_asm_a")
+    sortable8 <- js(app, "document.querySelectorAll('#tbl_asm_a [aria-sort], #tbl_asm_b [aria-sort], #tbl_asm_a .rt-sort-header').length")
+    copy8 <- js(app, "['pm_a_copy_all','pm_b_copy_all'].filter(function(i){ return !!document.getElementById(i); }).length")
+    copy1 <- js(app, "[document.getElementById('pm_a_copy_one'), document.getElementById('pm_b_copy_one')].map(function(b){ return b ? b.textContent.trim() : ''; }).join('|')")
     ok8 <- hdr_ok && identical(n_asm0, 6L) && grepl("–", asm_txt, fixed = TRUE) &&
-      !grepl("Inf", asm_txt, fixed = TRUE)
+      !grepl("Inf", asm_txt, fixed = TRUE) && identical(sortable8, 0L) && identical(copy8, 0L) &&
+      identical(copy1, "Make matrix equal to B|Make matrix equal to A")
     rec(browser_checks[4], if (ok8) PASS else FAIL,
-        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s",
+        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | price copy buttons: '%s' (whole-scenario ones in prices: %s)",
                 n_asm0, hdr_ok, grepl("–", asm_txt, fixed = TRUE),
-                grepl("Inf", asm_txt, fixed = TRUE)))
+                grepl("Inf", asm_txt, fixed = TRUE), sortable8, copy1, copy8))
     shoot(app, "01_assortments_and_prices")
 
     # 09. Both scenarios editable (Handsontable marks read-only cells
@@ -666,6 +680,14 @@ if (!browser_ok) {
     cmp_tab16 <- tab_shown(app, "comparison")
     e16c <- try_drv({ app$set_inputs(result_tabs = "comparison"); app$wait_for_idle() })
     n_delta  <- n_tbl_rows(app, "tbl_cmp_delta")
+    e16d <- try_drv({ app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle() })
+    sum16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .section-hdr, #summary_cards .ro-label'))",
+                            ".map(function(e){ return e.textContent.trim(); }).join('|')"))
+    shoot(app, "04b_summary_A_and_B")
+    exp16 <- paste(c("Run time", "Plots", "Trees", "Scenario A", "Total value (NOK)", "Commercial volume (m³ u.b.)",
+                     "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
+                     "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
+    e16e <- try_drv({ app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle() })
     pat_txt  <- txt(app, "#cmp_patterns")
     stem_img <- js(app, "document.querySelectorAll('#stem_compare img').length")
     nerr16   <- n_err_notif(app)
@@ -676,10 +698,11 @@ if (!browser_ok) {
       isTRUE(n_diff16 == 351) &&
       cmp_tab16 && isTRUE(n_delta >= 1L) &&
       grepl("trees changed their cutting pattern", pat_txt, fixed = TRUE) &&
-      isTRUE(stem_img >= 1L) && identical(nerr16, 0L)
+      isTRUE(stem_img >= 1L) && identical(nerr16, 0L) && identical(sum16, exp16) &&
+      !nzchar(paste0(e16d, e16e))
     rec(browser_checks[12], if (ok16) PASS else FAIL,
-        sprintf("highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
-                n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
+        sprintf("summary: '%s' | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
+                sum16, n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
                 trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16a, e16b, e16c)))
 
     # 17. Spruce pulpwood removed from B only
@@ -856,6 +879,10 @@ if (!browser_ok) {
       app$set_inputs(asm_pick_b = "pine_pulpwood", wait_ = FALSE); app$click("asm_remove_b"); app$wait_for_idle()
       app$click("asm_rm_one"); app$wait_for_idle()
       n24$none_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-none').length")
+      rows_of <- function(id) js(app, sprintf(paste0(
+        "Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr')).map(function(r){",
+        " var c = r.querySelectorAll('.rt-td'); return c[0].textContent.trim() + ' ' + c[1].textContent.trim(); }).join('|')"), id))
+      n24$rows_a <- rows_of("tbl_asm_a"); n24$rows_b <- rows_of("tbl_asm_b")
       shoot(app, "08_scenarios_A_and_B")
       app$set_inputs(main_nav = "simulator")
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
@@ -868,7 +895,8 @@ if (!browser_ok) {
     prod24 <- txt(app, "#tbl_products")
     cmp24 <- tab_shown(app, "comparison")
     e24b <- try_drv({
-      app$set_inputs(main_nav = "prices"); app$click("pm_a_copy_all"); app$wait_for_idle()
+      app$set_inputs(main_nav = "prices")
+      app$set_inputs(pm_id_a = "spruce_sawlog", wait_ = FALSE); app$click("pm_a_copy_one"); app$wait_for_idle()
       msg24 <- txt(app, "#msg_a")
       app$click("asm_copy_all_b"); app$wait_for_idle()
       n24$end <- marks(app)
@@ -876,16 +904,18 @@ if (!browser_ok) {
     ok24 <- !nzchar(paste0(e24, e24b)) && identical(n24$start, 0L) &&
       isTRUE(n24$diff_a >= 1L) && isTRUE(n24$diff_b >= 1L) &&
       isTRUE(n24$only_b >= 1L) && isTRUE(n24$none_a >= 1L) && identical(n24$a_rows, 7L) &&
-      isTRUE(n24$none_b >= 1L) && cmp24 && grepl("Spruce poles", prod24, fixed = TRUE) &&
+      isTRUE(n24$none_b >= 1L) && cmp24 &&
+      identical(n24$rows_a, n24$rows_b) &&
+      identical(n24$rows_a, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine") && grepl("Spruce poles", prod24, fixed = TRUE) &&
       grepl("Value A", prod24, fixed = TRUE) && grepl("Prices equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make A equal to B (prices): '%s' | after Make B equal to A: %s marks%s",
-                n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
+        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make A equal to B (prices): '%s' | after Make B equal to A: %s marks%s",
+                n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
-    rec(browser_checks[18], if (length(shots) == 12L) PASS else REVIEW,
-        sprintf("%d of 12 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[18], if (length(shots) == 13L) PASS else REVIEW,
+        sprintf("%d of 13 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
     for (ck in browser_checks[c(2:18, 20)]) rec(ck, FAIL, "skipped: app did not start")

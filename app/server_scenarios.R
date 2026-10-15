@@ -72,10 +72,20 @@ scenario_server <- function(input, output, session) {
   }
   HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm")
 
+  # Fixed row order, the same in both tables so rows line up: by species
+  # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
+  # name). Uses the hidden Type, so a renamed base waste row stays a waste row.
+  asm_order <- function(d) {
+    sp <- match(d$Species, PRODUCT_SPECIES)
+    tp <- match(d$Type, c("sawlog", "pulpwood", "waste")); tp[is.na(tp)] <- 4L
+    order(sp, tp, ifelse(tp == 4L, tolower(d$Name), ""))
+  }
+
   # One scenario's table: cells that differ from the other scenario are
   # highlighted (differences in fields only in the form mark the name), rows
   # only in this scenario are highlighted, and the other scenario's
-  # assortments missing here are listed as a muted "Not in A/B" line.
+  # assortments missing here are listed as a muted "Not in A/B" line, in
+  # the same place as in the other table. Columns cannot be sorted.
   render_asm <- function(side) renderReactable({
     d <- defs(side); o <- defs(other(side))
     disp <- asm_display(d, prices(side)); disp_o <- asm_display(o, prices(other(side)))
@@ -90,17 +100,21 @@ scenario_server <- function(input, output, session) {
     }
     cls <- ifelse(rd$status == "only", "asm-only", "")
     gone <- match(rd$other_only, ko)
+    all_rows <- d
     if (length(gone)) {
       extra <- disp_o[gone, , drop = FALSE]
       extra$Pricing <- paste("Not in", side)
       disp <- rbind(disp, extra)
       cell <- rbind(cell, matrix(FALSE, length(gone), ncol(cell)))
       cls <- c(cls, rep("asm-none", length(gone)))
+      all_rows <- rbind(d, o[gone, , drop = FALSE])
     }
+    ord <- asm_order(all_rows)
+    disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
     rownames(disp) <- NULL
     cols <- setNames(lapply(names(disp), function(n) reactable::colDef(
       class = function(value, index) if (isTRUE(cell[index, n])) "asm-diff")), names(disp))
-    apter_reactable(disp, page_size = 20L, columns = cols,
+    apter_reactable(disp, page_size = 20L, columns = cols, sortable = FALSE,
                     row_class = function(index) cls[index])
   })
   output$tbl_asm_a <- render_asm("A")
@@ -496,8 +510,8 @@ scenario_server <- function(input, output, session) {
       }
     })
 
-    # Prices equal to the other scenario's: all of them, or the shown matrix
-    # (the flat table: all flat prices). Assortments priced differently in
+    # Prices of the shown matrix equal to the other scenario's (the flat
+    # table: all flat prices). Assortments priced differently in
     # the two scenarios, or missing in one, keep their prices.
     copy <- function(keys) {
       o <- other(side)
@@ -511,7 +525,6 @@ scenario_server <- function(input, output, session) {
         if (length(r$skipped)) sprintf(" Not copied (not in both scenarios or priced differently): %s.",
                                        paste(key_label(r$skipped), collapse = ", ")) else ""))
     }
-    observeEvent(input[[paste0(p, "_copy_all")]], copy(keys_of(defs(side))))
     observeEvent(input[[paste0(p, "_copy_one")]], {
       id <- input[[paste0("pm_id_", s)]]; req(id)
       copy(if (is_flat(id)) flat_keys(side) else id)

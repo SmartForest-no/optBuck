@@ -114,7 +114,7 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
 
 
 # Column widths (px) from the content: the longest value (of up to 2,000
-# rows) and the longest word of the header.
+# rows) and the header (its longest word, and at most two lines).
 .fit_columns <- function(df, columns = NULL) {
   if (is.null(columns)) columns <- list()
   rows <- utils::head(df, 2000L)
@@ -123,7 +123,8 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
     txt <- if (is.numeric(v)) format(v, big.mark = "", trim = TRUE) else as.character(v)
     w_val <- if (length(txt)) max(nchar(txt), na.rm = TRUE) else 0
     w_val <- if (is.finite(w_val)) w_val else 0
-    w_hdr <- max(nchar(strsplit(n, "[ ]")[[1L]]), 0)
+    # The header wraps to at most two lines and is never cut off.
+    w_hdr <- max(nchar(strsplit(n, "[ ]")[[1L]]), ceiling(nchar(n) / 2) + 1, 0)
     w <- max(56, ceiling(7.4 * max(w_val, w_hdr)) + 26)
     cd <- columns[[n]]
     if (is.null(cd)) cd <- reactable::colDef()

@@ -117,8 +117,10 @@ assortment's pricing (price matrix or flat price) is set per scenario, so,
 for example, spruce pulpwood can have a price matrix in A and a flat price in
 B. *Make B equal to A* (right column) and *Make A equal to B* (left column)
 copy the other scenario: the whole scenario or one assortment in the
-Assortments section, and all prices or one price matrix in the Price
-matrices section. A new assortment can be added to both scenarios or to one;
+Assortments section, and one price matrix in the Price matrices section
+(*Make matrix equal to B* or *A*). Both assortment tables list the
+assortments in the same order (by species: sawlog, pulpwood, waste, then
+added assortments), so the rows line up. A new assortment can be added to both scenarios or to one;
 *Remove* asks whether to remove it from this scenario only or from both.
 
 **Price matrices.** Under its assortments, each scenario shows its price
@@ -188,7 +190,9 @@ All results describe the selected trees only. The headline figure is
 The results have these tabs:
 
 - **Summary:** run time, plots, trees, trees with logs, logs, commercial
-  volume, total value, NOK per m³ and sale (price) volume
+  volume, total value, NOK per m³ and sale (price) volume; after a
+  comparison, total value, commercial volume, NOK per m³ and price volume
+  for Scenario A and Scenario B side by side
 - **Per m³:** NOK/m³ in total, per species and by assortment, and per-tree
   results; select a tree to see its logs (position, length, assortment, top
   diameter over and under bark, price-diameter class, volumes and value)
