@@ -21,18 +21,19 @@
 #      waste 99, also for a custom flat assortment
 #  5.  Lengths: a matrix-priced product's are its matrix columns (a column
 #      removed is a length not allowed); a flat-priced product's are min..max
-#      by step
+#      by 10 cm (Phase 4d: no step setting)
 #  6.  Rows and columns: classes added and removed at the ends with the
 #      neighbour's prices; lengths added (nearest column's prices) and
 #      removed; the last class or length cannot be removed; a length that is
 #      already there, not whole dm or not positive is refused
 #  7.  Validation: a gap in the diameter classes is an error; classes that
 #      start above the minimum top diameter give a warning
-#  8.  B states: b_differs() is FALSE for all "same" and for "own" copies of
-#      A, TRUE for "none", an "own" price change or an "own" row/column
-#      change; b_set() drops "none" products and takes A's rows for "same"
-#  9.  Assortment xlsx (assortment_table_export() -> _import()): table, A, B
-#      and states come back identical; an unknown state is refused
+#  8.  Prices of two scenarios (Phase 4d: independent scenarios replace the
+#      Phase 4c B states): scenarios_differ() is FALSE for a copy of A, TRUE
+#      for a changed price, a removed length column or a missing product
+#  9.  Scenario xlsx (Phase 4d: scenario_export() -> scenario_import(), one
+#      scenario per file): table and prices come back identical; a file
+#      without the assortments sheet is refused
 # 10.  Backend: A with the explicit table, products and price file gives
 #      results identical to the default run; a comparison where B drops
 #      31 dm from both sawlog matrices has no 31 dm logs in B and the same
@@ -101,7 +102,6 @@ pd0  <- load_products(root_dir); lc0 <- load_length_classes(root_dir)
 pm0  <- pm_minimal(load_price_matrix_long(root_dir))
 defs <- defs_from_products(pd0)
 keys <- assortment_table_keys(defs)
-st0  <- setNames(rep("same", length(keys)), keys)
 errmsg <- function(expr) tryCatch({ expr; "" }, error = function(e) conditionMessage(e))
 
 
@@ -154,9 +154,9 @@ custom <- .type_assortment_table(data.frame(
   Name = c("Poles", "Chips"), Type = c("poles", "chips"), Species = c("spruce", "pine"),
   MinTopDiameter_cm = c(12, 0), MaxTopDiameter_cm = c(30, Inf),
   MinButtDiameter_cm = 0, MaxButtDiameter_cm = Inf,
-  MinLength_cm = c(600, 200), MaxLength_cm = c(1000, 400), LengthStep_cm = c(200, 100),
+  MinLength_cm = c(600, 200), MaxLength_cm = c(1000, 400),
   DiameterTopPosition_cm = 0, VolumeDiameterCategory = "All diameters (solid volume)",
-  VolumeDiameterAdjustment = "None", PriceType = c("matrix", "flat"), stringsAsFactors = FALSE))
+  PriceType = c("matrix", "flat"), stringsAsFactors = FALSE))
 defs4 <- rbind(defs, custom)
 pm4 <- pm_minimal(rbind(pm0, pm_start_prices("spruce_poles", "matrix", 900, 12, 30, c(600, 800, 1000)),
                         pm_start_prices("pine_chips", "flat", 300)))
@@ -173,13 +173,13 @@ rec("Check 04: Priority matrix 1, flat 2, waste 99 (custom included)",
 section("05. Lengths")
 pm5 <- pm_remove_length(pm4, "spruce_poles", 80)
 l5 <- assortment_lengths(defs4, pm5)
-ok5 <- identical(l5$spruce_poles, c(600, 1000)) && identical(l5$pine_chips, c(200, 300, 400)) &&
+ok5 <- identical(l5$spruce_poles, c(600, 1000)) && identical(l5$pine_chips, seq(200, 400, by = 10)) &&
   identical(l5$spruce_sawlog, seq(310, 550, by = 30)) && identical(l5$spruce_pulpwood, seq(300, 550, by = 10))
 v5 <- check_price_set(defs4, pm5)
-rec("Check 05: Matrix lengths from the columns, flat lengths from min/max/step",
+rec("Check 05: Matrix lengths from the columns, flat lengths from min/max by 10 cm",
     ok(ok5 && isTRUE(v5$ok)),
-    sprintf("poles after removing 80 dm: %s | chips: %s | spruce sawlog: %d lengths | price set ok: %s",
-            paste(l5$spruce_poles, collapse = ","), paste(l5$pine_chips, collapse = ","),
+    sprintf("poles after removing 80 dm: %s | chips: %s-%s by 10 | spruce sawlog: %d lengths | price set ok: %s",
+            paste(l5$spruce_poles, collapse = ","), min(l5$pine_chips), max(l5$pine_chips),
             length(l5$spruce_sawlog), isTRUE(v5$ok)))
 
 
@@ -225,45 +225,35 @@ rec("Check 07: Class gap is an error; classes above the minimum top diameter war
 
 
 # ==============================================================================
-section("08. B states")
-own <- st0; own["spruce_sawlog"] <- "own"
-none <- st0; none["pine_pulpwood"] <- "none"
-pm_b_cp  <- pm_b_copy_a(pm0, pm0, "spruce_sawlog")
-pm_b_px  <- pm_b_cp; i <- which(pm_b_px$ProductKey == "spruce_sawlog")[1]
-pm_b_px$PriceNOKperM3[i] <- pm_b_px$PriceNOKperM3[i] + 1
-pm_b_ax  <- pm_remove_length(pm_b_cp, "spruce_sawlog", 31)
-d8 <- c(same = b_differs(pm0, pm0, st0), own_copy = b_differs(pm0, pm_b_cp, own),
-        none = b_differs(pm0, pm0, none), own_price = b_differs(pm0, pm_b_px, own),
-        own_axes = b_differs(pm0, pm_b_ax, own))
-bs <- b_set(defs, pm0, pm_b_ax, c(own, NULL)); bs2 <- b_set(defs, pm0, pm0, none)
-ok8 <- identical(d8, c(same = FALSE, own_copy = FALSE, none = TRUE, own_price = TRUE, own_axes = TRUE)) &&
-  !"pine_pulpwood" %in% c(assortment_table_keys(bs2$defs), bs2$pm$ProductKey) &&
-  identical(pm_minimal(bs$pm[bs$pm$ProductKey == "pine_sawlog", ]),
-            pm_minimal(pm0[pm0$ProductKey == "pine_sawlog", ])) &&
-  !31L %in% lns(bs$pm, "spruce_sawlog")
-rec("Check 08: b_differs() and b_set()",
-    ok(ok8), sprintf("%s | 'none' dropped: %s | 'same' uses A: TRUE | 'own' axes: 31 dm in B %s",
-                     paste(sprintf("%s %s", names(d8), d8), collapse = ", "),
-                     !"pine_pulpwood" %in% bs2$pm$ProductKey, 31L %in% lns(bs$pm, "spruce_sawlog")))
+section("08. Prices of two scenarios")
+pm_px <- pm0; i8 <- which(pm_px$ProductKey == "spruce_sawlog")[1]
+pm_px$PriceNOKperM3[i8] <- pm_px$PriceNOKperM3[i8] + 1
+pm_ax <- pm_remove_length(pm0, "spruce_sawlog", 31)
+defs_np <- defs[keys != "pine_pulpwood", , drop = FALSE]
+d8 <- c(copy = scenarios_differ(defs, pm0, defs, pm_minimal(pm0)),
+        price = scenarios_differ(defs, pm0, defs, pm_px),
+        axes = scenarios_differ(defs, pm0, defs, pm_ax),
+        missing = scenarios_differ(defs, pm0, defs_np, pm0[pm0$ProductKey != "pine_pulpwood", ]))
+ok8 <- identical(d8, c(copy = FALSE, price = TRUE, axes = TRUE, missing = TRUE)) &&
+  !31L %in% lns(pm_ax, "spruce_sawlog")
+rec("Check 08: scenarios_differ() on prices, columns and products",
+    ok(ok8), paste(sprintf("%s %s", names(d8), d8), collapse = ", "))
 
 
 # ==============================================================================
-section("09. Assortment xlsx round trip")
-st9 <- c(setNames(rep("same", length(keys)), keys), spruce_poles = "own", pine_chips = "none")
+section("09. Scenario xlsx round trip")
 f9 <- tempfile(fileext = ".xlsx")
-pm_b9 <- pm_b_copy_a(pm4, pm_b_px, "spruce_poles")   # B owns poles: it needs their prices
-assortment_table_export(defs4, pm4, pm_b9, st9, f9)
-im <- assortment_table_import(f9)
+scenario_export(defs4, pm4, f9)
+im <- scenario_import(f9)
 bad <- tempfile(fileext = ".xlsx")
-writexl::write_xlsx(list(assortments = defs4, prices_A = pm4, prices_B = pm4,
-                         B_states = data.frame(ProductKey = "spruce_poles", State = "maybe")), bad)
-im_bad <- assortment_table_import(bad)
-ok9 <- isTRUE(im$ok) && identical(im$defs, defs4) && identical(im$pm_a, pm4) &&
-  identical(im$pm_b, pm_b9) && identical(im$state, st9) && !isTRUE(im_bad$ok)
-rec("Check 09: Assortment xlsx export -> import",
-    ok(ok9), sprintf("ok %s | table %s | A %s | B %s | states %s | unknown state refused: %s ('%s')",
-                     isTRUE(im$ok), identical(im$defs, defs4), identical(im$pm_a, pm4),
-                     identical(im$pm_b, pm_b9), identical(im$state, st9),
+writexl::write_xlsx(list(prices = pm4), bad)
+im_bad <- scenario_import(bad)
+ok9 <- isTRUE(im$ok) && identical(im$defs, defs4) && identical(pm_minimal(im$pm), pm_minimal(pm4)) &&
+  !isTRUE(im_bad$ok)
+rec("Check 09: Scenario xlsx export -> import",
+    ok(ok9), sprintf("ok %s | table %s | prices %s | file without assortments refused: %s ('%s')",
+                     isTRUE(im$ok), identical(im$defs, defs4),
+                     identical(pm_minimal(im$pm), pm_minimal(pm4)),
                      !isTRUE(im_bad$ok), paste(im_bad$errors, collapse = "; ")))
 
 
@@ -277,9 +267,8 @@ r_def <- run_tree_list_bucking(tl, "default_2021", root_dir)
 f_a <- tempfile(fileext = ".csv"); pm_export(pm0, f_a)
 r_exp <- run_tree_list_bucking(tl, f_a, root_dir, products = p1$pd, length_classes = p1$lc)
 pm_b10 <- pm_remove_length(pm_remove_length(pm0, "spruce_sawlog", 31), "pine_sawlog", 31)
-st10 <- st0; st10[c("spruce_sawlog", "pine_sawlog")] <- "own"
-b10 <- b_set(defs, pm0, pm_b10, st10); pb10 <- products_from_defs(b10$defs, b10$pm)
-f_b <- tempfile(fileext = ".csv"); pm_export(b10$pm, f_b)
+pb10 <- products_from_defs(defs, pm_b10)
+f_b <- tempfile(fileext = ".csv"); pm_export(pm_b10, f_b)
 r_cmp <- run_tree_list_bucking(tl, f_a, root_dir, products = p1$pd, length_classes = p1$lc,
                                scenario = list(price_matrix_path = f_b, products = pb10$pd,
                                                length_classes = pb10$lc))

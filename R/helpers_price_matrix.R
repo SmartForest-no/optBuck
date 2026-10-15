@@ -252,41 +252,6 @@ pm_remove_length <- function(pm, id, dm) {
 }
 
 
-# ---- price set B (Phase 4c) ---------------------------------------------------------
-# B holds a state per product: "same" (A's prices and axes), "own" (B's own
-# matrix or flat price) or "none" (not used in B). B's own prices are kept
-# for every product, so switching back and forth keeps them.
-
-#' B states and their labels.
-B_STATES <- c(same = "Same as A", own = "Own prices", none = "Not used")
-
-#' B's price matrix in effect: A's rows for "same", B's for "own", none for
-#' "none". Products without a state are "same".
-pm_b_effective <- function(pm_a, pm_b, state) {
-  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
-  st <- state[a$ProductKey]; st[is.na(st)] <- "same"
-  keys_b <- names(state)[state == "own"]
-  pm_minimal(rbind(a[st == "same", , drop = FALSE], b[b$ProductKey %in% keys_b, , drop = FALSE]))
-}
-
-#' TRUE when B differs from A: a product not used in B, or an "own" product
-#' whose prices, classes or lengths differ from A's.
-b_differs <- function(pm_a, pm_b, state) {
-  if (any(state == "none")) return(TRUE)
-  key <- function(m) paste(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm)
-  a <- pm_minimal(pm_a); e <- pm_b_effective(pm_a, pm_b, state)
-  if (!identical(sort(key(a)), sort(key(e)))) return(TRUE)
-  any(abs(a$PriceNOKperM3 - e$PriceNOKperM3[match(key(a), key(e))]) > 1e-9, na.rm = TRUE)
-}
-
-#' Set B's own prices of products `keys` to A's (when a product switches to
-#' "own", it starts from A).
-pm_b_copy_a <- function(pm_a, pm_b, keys) {
-  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
-  pm_minimal(rbind(b[!b$ProductKey %in% keys, , drop = FALSE], a[a$ProductKey %in% keys, , drop = FALSE]))
-}
-
-
 # ---- assortment table prices (Phase 4c) ---------------------------------------------
 
 #' Starting prices of a new product: a grid of diameter classes
@@ -317,54 +282,41 @@ pm_rename_key <- function(pm, from, to) {
   pm_minimal(pm)
 }
 
-#' Write the assortment table with both price sets to one xlsx: sheets
-#' "assortments", "prices_A", "prices_B" (B's own prices, long layout) and
-#' "B_states" (ProductKey, State).
-assortment_table_export <- function(defs, pm_a, pm_b, state, path) {
-  writexl::write_xlsx(list(
-    assortments = defs[, ASSORTMENT_TABLE_COLS, drop = FALSE],
-    prices_A = pm_minimal(pm_a), prices_B = pm_minimal(pm_b),
-    B_states = data.frame(ProductKey = names(state), State = unname(state),
-                          stringsAsFactors = FALSE)), path)
+#' Write one scenario (Phase 4d) to an xlsx: sheet "assortments" (the
+#' assortment table, cm; Type is the hidden product type, keep it as it is)
+#' and its prices in the wide layout of pm_template_wide() (one sheet per
+#' matrix, "flat_prices").
+scenario_export <- function(defs, pm, path) {
+  sheets <- c(list(assortments = defs[, ASSORTMENT_TABLE_COLS, drop = FALSE]),
+              .pm_wide_sheets(pm))
+  writexl::write_xlsx(sheets, path)
   invisible(path)
 }
 
-#' Read an assortment_table_export() xlsx. Replaces all assortments and
-#' both price sets.
+#' Read a scenario_export() xlsx (assortments plus prices) and check it.
 #'
-#' @return list(ok, defs, pm_a, pm_b, state, errors, warnings).
-assortment_table_import <- function(path) {
+#' @return list(ok, defs, pm, errors, warnings).
+scenario_import <- function(path) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
   if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
-  need <- c("assortments", "prices_A", "prices_B", "B_states")
-  if (!all(need %in% sheets))
-    return(fail(paste("The xlsx needs sheets:", paste(need, collapse = ", "))))
-  rd <- function(sh) as.data.frame(readxl::read_excel(path, sheet = sh, col_types = "text"))
-  defs <- rd("assortments")
-  miss <- setdiff(ASSORTMENT_TABLE_COLS, names(defs))
+  if (!"assortments" %in% sheets)
+    return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
+  defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, "Type"), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
+  defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]
   defs <- .type_assortment_table(defs)
-  st <- rd("B_states")
-  state <- setNames(as.character(st$State), as.character(st$ProductKey))
   keys <- assortment_table_keys(defs)
-  bad <- setdiff(unique(state), names(B_STATES))
-  if (length(bad) > 0L)
-    return(fail(sprintf("B_states: State must be one of %s.", paste(names(B_STATES), collapse = ", "))))
-  state <- state[intersect(names(state), keys)]
-  state[setdiff(keys, names(state))] <- "same"
-  state <- state[keys]
-  rd_pm <- function(sh) { m <- rd(sh); m[m$ProductKey %in% keys, , drop = FALSE] }
-  raw_a <- rd_pm("prices_A"); pm_b <- pm_minimal(rd_pm("prices_B"))
-  va <- check_price_set(defs, raw_a)
-  if (!va$ok) return(fail(paste("A:", va$errors)))
-  b  <- b_set(defs, va$pm, pm_b, state)
-  vb <- check_price_set(b$defs, b$pm)
-  if (!vb$ok) return(fail(paste("B:", vb$errors)))
-  list(ok = TRUE, defs = defs, pm_a = va$pm, pm_b = pm_b, state = state, errors = character(0),
-       warnings = c(if (length(va$warnings)) paste("A:", va$warnings),
-                    if (length(vb$warnings)) paste("B:", vb$warnings)))
+  empty <- data.frame(ProductKey = character(0), LengthClass_dm = numeric(0),
+                      PriceDiameterClass_cm = numeric(0), PriceNOKperM3 = numeric(0))
+  up <- read_price_matrix_upload(path, path, empty,
+                                 matrix_keys = keys[defs$PriceType == "matrix"])
+  if (length(up$errors) > 0L) return(fail(up$errors))
+  v <- check_price_set(defs, up$long)
+  if (!v$ok) return(fail(v$errors))
+  list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings)
 }
 
 #' Check a price set: the assortment table with the price matrix it runs
@@ -382,14 +334,95 @@ check_price_set <- function(defs, pm) {
   vv
 }
 
-#' B's assortment table and price matrix in effect: products "not used" in
-#' B are dropped, "same" take A's prices and axes, "own" B's.
-b_set <- function(defs, pm_a, pm_b, state) {
-  keys <- assortment_table_keys(defs)
-  st <- state[keys]; st[is.na(st)] <- "same"
-  use <- st != "none"
-  list(defs = defs[use, , drop = FALSE],
-       pm = pm_b_effective(pm_a, pm_b, st))
+# ---- two independent scenarios (Phase 4d) -------------------------------------------
+# Scenarios A and B each hold their own assortment table and price matrix;
+# B starts as a copy of A and nothing is linked. These helpers compare the
+# two and copy an assortment or prices from one to the other.
+
+# A scenario's prices of the given keys, sorted (for comparisons).
+.scenario_rows <- function(pm, keys) {
+  m <- pm_minimal(pm)
+  m <- m[m$ProductKey %in% keys, , drop = FALSE]
+  m <- m[order(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm, na.last = TRUE), , drop = FALSE]
+  rownames(m) <- NULL
+  m
+}
+
+#' Row-by-row comparison of one scenario's assortment table (`defs`) with
+#' the other's (`other`).
+#'
+#' @return list(status = per row of `defs` "same" / "changed" / "only" (not
+#'   in the other scenario), diff = logical matrix (rows of `defs` x
+#'   ASSORTMENT_TABLE_COLS) of fields that differ, other_only = keys only in
+#'   the other scenario).
+assortment_diff <- function(defs, other) {
+  k <- assortment_table_keys(defs); ko <- assortment_table_keys(other)
+  cols <- ASSORTMENT_TABLE_COLS
+  diff <- matrix(FALSE, nrow(defs), length(cols), dimnames = list(k, cols))
+  status <- rep("only", nrow(defs))
+  for (i in seq_len(nrow(defs))) {
+    j <- match(k[i], ko)
+    if (is.na(j)) { diff[i, ] <- TRUE; next }
+    for (n in cols) {
+      x <- other[[n]][j]; y <- defs[[n]][i]
+      diff[i, n] <- !((is.na(x) && is.na(y)) || (!is.na(x) && !is.na(y) && x == y))
+    }
+    status[i] <- if (any(diff[i, ])) "changed" else "same"
+  }
+  list(status = status, diff = diff, other_only = setdiff(ko, k))
+}
+
+#' TRUE when two assortment tables hold the same rows (order ignored).
+same_assortments <- function(a, b) {
+  if (nrow(a) != nrow(b)) return(FALSE)
+  if (!setequal(assortment_table_keys(a), assortment_table_keys(b))) return(FALSE)
+  all(assortment_diff(a, b)$status == "same")
+}
+
+#' TRUE when the two scenarios' prices of `key` are identical (cells, rows
+#' and columns; flat or matrix).
+same_prices <- function(pm_a, pm_b, key)
+  isTRUE(all.equal(.scenario_rows(pm_a, key), .scenario_rows(pm_b, key), check.attributes = FALSE))
+
+#' TRUE when Scenarios A and B differ: in their assortments (membership or
+#' any field) or in the prices of their assortments. Then a run compares
+#' them.
+scenarios_differ <- function(defs_a, pm_a, defs_b, pm_b) {
+  if (!same_assortments(defs_a, defs_b)) return(TRUE)
+  keys <- assortment_table_keys(defs_a)
+  !isTRUE(all.equal(.scenario_rows(pm_a, keys), .scenario_rows(pm_b, keys), check.attributes = FALSE))
+}
+
+#' Copy assortment `key` (its definition and prices) from one scenario to
+#' the other: it replaces the target's row in place, or is added at the end.
+#'
+#' @return list(defs, pm): the target scenario after the copy.
+copy_assortment <- function(from_defs, from_pm, to_defs, to_pm, key) {
+  i <- match(key, assortment_table_keys(from_defs))
+  if (is.na(i)) stop("Assortment ", key, " is not in the scenario copied from.")
+  j <- match(key, assortment_table_keys(to_defs))
+  if (is.na(j)) to_defs <- rbind(to_defs, from_defs[i, , drop = FALSE])
+  else to_defs[j, ] <- from_defs[i, ]
+  rownames(to_defs) <- NULL
+  f <- pm_minimal(from_pm); t <- pm_minimal(to_pm)
+  list(defs = to_defs,
+       pm = pm_minimal(rbind(t[t$ProductKey != key, , drop = FALSE], f[f$ProductKey == key, , drop = FALSE])))
+}
+
+#' Copy the prices of `keys` from one scenario to the other, where the
+#' assortment is in both and priced the same way (both matrix or both flat).
+#'
+#' @return list(pm (the target's prices), copied, skipped (keys not copied:
+#'   not in both or priced differently)).
+copy_prices <- function(from_defs, from_pm, to_defs, to_pm, keys) {
+  kf <- assortment_table_keys(from_defs); kt <- assortment_table_keys(to_defs)
+  ok <- keys %in% kf & keys %in% kt
+  ok[ok] <- from_defs$PriceType[match(keys[ok], kf)] == to_defs$PriceType[match(keys[ok], kt)]
+  copied <- keys[ok]
+  f <- pm_minimal(from_pm); t <- pm_minimal(to_pm)
+  list(pm = pm_minimal(rbind(t[!t$ProductKey %in% copied, , drop = FALSE],
+                             f[f$ProductKey %in% copied, , drop = FALSE])),
+       copied = copied, skipped = keys[!ok])
 }
 
 
@@ -591,7 +624,7 @@ read_price_matrix_upload <- function(path, filename = path, default,
     sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
     if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
     longs <- list(); ids <- character(0); errs <- character(0)
-    for (sh in sheets) {
+    for (sh in setdiff(sheets, "assortments")) {   # a scenario file's table is not prices
       raw <- as.data.frame(readxl::read_excel(path, sheet = sh, col_names = FALSE,
                                               col_types = "text", .name_repair = "minimal"))
       if (identical(sh, PM_FLAT_ID)) {
@@ -681,7 +714,13 @@ pm_template_long <- function(default, path) pm_export(default, path)
 #' layout (top-left cell = ProductKey, header = lengths dm, rows = diameter
 #' classes cm) plus a flat_prices sheet; filled with the default prices.
 pm_template_wide <- function(default, path) {
-  d <- pm_minimal(default)
+  writexl::write_xlsx(.pm_wide_sheets(default), path)
+  invisible(path)
+}
+
+# The sheets of the wide layout: one per matrix, then "flat_prices".
+.pm_wide_sheets <- function(pm) {
+  d <- pm_minimal(pm)
   sheets <- lapply(setdiff(pm_matrix_ids(d), PM_FLAT_ID), function(id) {
     g <- pm_to_grid(d, id)
     out <- cbind(setNames(data.frame(as.integer(rownames(g))), id), g)
@@ -690,11 +729,11 @@ pm_template_wide <- function(default, path) {
   })
   names(sheets) <- setdiff(pm_matrix_ids(d), PM_FLAT_ID)
   f <- pm_to_grid(d, PM_FLAT_ID)
-  sheets[[PM_FLAT_ID]] <- data.frame(ProductKey = rownames(f),
-                                     PriceNOKperM3 = f$PriceNOKperM3,
-                                     stringsAsFactors = FALSE)
-  writexl::write_xlsx(sheets, path)
-  invisible(path)
+  if (nrow(f) > 0L)
+    sheets[[PM_FLAT_ID]] <- data.frame(ProductKey = rownames(f),
+                                       PriceNOKperM3 = f$PriceNOKperM3,
+                                       stringsAsFactors = FALSE)
+  sheets
 }
 
 
@@ -743,6 +782,10 @@ validate_assortment_defs <- function(defs, base_pd, base_lc) {
   bad_sp <- !defs$Species %in% c(PRODUCT_SPECIES, "both")
   if (any(bad_sp)) err <- c(err, sprintf("Species must be spruce, pine or both: %s",
                                          paste(defs$Name[bad_sp], collapse = ", ")))
+  # Custom assortments are commercial: "waste" is the base waste products' class.
+  if (any(as.character(defs$Class) %in% "waste"))
+    err <- c(err, sprintf("ProductType 'waste' is reserved for the base waste products: %s",
+                          paste(defs$Name[as.character(defs$Class) %in% "waste"], collapse = ", ")))
   bad_use <- !defs$UseIn %in% ASSORTMENT_USE_IN
   if (any(bad_use)) err <- c(err, sprintf("UseIn must be one of %s: %s",
                                           paste(ASSORTMENT_USE_IN, collapse = "/"),

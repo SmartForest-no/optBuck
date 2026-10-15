@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: custom assortments and volume methods
-  Run: 2026-10-13 18:15:11.359652
+  Run: 2026-10-15 13:11:55.359038
 ============================================================= 
 
 --- 01-03. Formula methods by hand ---
@@ -37,7 +37,7 @@
   [PASS  ] Check 10: min > max butt -> rejected | MaxButtDiameter must be >= MinButtDiameter: spruce_poles
   [PASS  ] Check 10: unknown method -> rejected | VolumeDiameterCategory must be one of: Top cylinder; Top; All diameters (solid volume); Calculated Norwegian mid: spruce_poles
   [PASS  ] Check 10: solid + rounding -> rejected | solid volume is never rounded; use VolumeDiameterAdjustment = None: spruce_poles
-  [PASS  ] Check 10: class waste -> rejected | ProductType 'waste' is reserved for the base waste products: spruce_poles
+  [PASS  ] Check 10: class waste -> rejected | ProductType 'waste' is reserved for the base waste products: Poles
   [PASS  ] Check 10: bad PriceType -> rejected | PriceType must be 'matrix' or 'flat': spruce_poles
   [PASS  ] Check 10: top position >= log -> rejected | spruce_poles: DiameterTopPosition (600 cm) must be shorter than the shortest log (600 cm)
   [PASS  ] Check 10: top position not 10 -> rejected | DiameterTopPosition must be a non-negative multiple of 10 cm: spruce_poles

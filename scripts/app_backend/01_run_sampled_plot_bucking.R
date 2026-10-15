@@ -339,7 +339,9 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
 #' Run the sampled-plot bucking pipeline.
 #'
 #' @param params Named list. Required: species_group, hogstkl, abonitet.
-#'   Optional: n_plots (default 10, max 50), seed (default 42),
+#'   Optional: all_plots (TRUE: every eligible plot, no sampling; the app,
+#'   Phase 4d), n_plots (default 10, max 50; ignored with all_plots), seed
+#'   (default 42),
 #'   fylnr (character vector or NULL), hoh_min, hoh_max (numeric or NULL),
 #'   stump_height_cm (default 10), start_pos_step_cm (default 10).
 #' @param price_matrix_path "default_2021" (default) or a path to a CSV/RDS
@@ -384,6 +386,7 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
 
   hogstkl_vec  <- as.integer(or_default(params$hogstkl, stop("params$hogstkl required.")))
   abonitet_vec <- as.integer(or_default(params$abonitet, stop("params$abonitet required.")))
+  all_plots    <- isTRUE(params$all_plots)
   n_plots_req  <- min(as.integer(or_default(params$n_plots, 10L)), 50L)
   seed_val     <- as.integer(or_default(params$seed, 42L))
 
@@ -436,10 +439,16 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
          paste(hogstkl_vec, collapse = "/"), ", abonitet=",
          paste(abonitet_vec, collapse = "/"), ".")
 
-  # ---- 4. Sample complete plots ----------------------------------------------
-  set.seed(seed_val)
-  n_plots_sampled <- min(n_plots_req, n_eligible_plots)
-  sampled_plots   <- sort(sample(eligible_plots, n_plots_sampled, replace = FALSE))
+  # ---- 4. Sample complete plots (or take them all) ---------------------------
+  if (all_plots) {
+    n_plots_req     <- n_eligible_plots
+    n_plots_sampled <- n_eligible_plots
+    sampled_plots   <- eligible_plots
+  } else {
+    set.seed(seed_val)
+    n_plots_sampled <- min(n_plots_req, n_eligible_plots)
+    sampled_plots   <- sort(sample(eligible_plots, n_plots_sampled, replace = FALSE))
+  }
   trees_sampled   <- trees_filt[
     trees_filt$plot_id_github %in% sampled_plots, , drop = FALSE]
   t_filter_sample <- .pt(t0_filter_sample)

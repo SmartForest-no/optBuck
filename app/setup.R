@@ -13,17 +13,24 @@ plots_all <- as.data.frame(arrow::read_parquet(
 
 # ---- default assortments and prices -------------------------------------------
 # The base products as the assortment table (Phase 4c; R/helpers_products.R)
-# and the 2021 prices in Apter's minimal long form. Both price sets A and B
-# start from these; "Reset to defaults" and "Reset to 2021 prices" restore them.
+# and the default prices in Apter's minimal long form. Both scenarios start
+# from these; "Reset to defaults" and "Reset to default prices" restore them.
 APP_PRODUCTS   <- load_products(ROOT)
 APP_PM_DEFAULT <- pm_minimal(load_price_matrix_long(ROOT))
 APP_DEFS       <- defs_from_products(APP_PRODUCTS)
 
-# ---- fixed sampling settings (Phase 4c) ----------------------------------------
-# NFI runs sample up to 200 plots (strata with fewer plots use all of them)
-# with seed 42. APTER_N_PLOTS overrides the number (audit 17 runs with 5).
-APP_N_PLOTS <- as.integer(or_default(suppressWarnings(as.integer(Sys.getenv("APTER_N_PLOTS"))), 200L))
+# ---- NFI plots (Phase 4d) -------------------------------------------------------
+# NFI runs use every plot of the selected stratum (no sampling). The test-only
+# APTER_N_PLOTS samples that many plots instead (seed 42; audit 17 runs with 5).
+APP_N_PLOTS <- suppressWarnings(as.integer(Sys.getenv("APTER_N_PLOTS")))   # NA = all plots
 APP_SEED    <- 42L
+
+# Trees per plot and species, for the tree count of a selection (the note
+# on large runs).
+trees_meta <- as.data.frame(arrow::read_parquet(
+  file.path(ROOT, "data_processed_github", "nfi_tree_plot_stratum_ready_github.parquet"),
+  col_select = c("plot_id_github", "species_group", "hogstkl", "abonitet", "fylnr")))
+LARGE_RUN_TREES <- 30000L
 
 # ---- HKL group mapping (user-facing -> raw hogstkl codes) -----------------
 HKL_CHOICES <- c(

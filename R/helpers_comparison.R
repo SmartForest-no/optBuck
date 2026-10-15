@@ -39,50 +39,68 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
 #'   gain_at_default, max_volume_diff_m3, pattern_differs, changed, tie_only.
 compare_cutting_patterns <- function(r1, r2, pm1, pm2,
                                      tol = if (exists("DP_TIE_TOL_NOK")) DP_TIE_TOL_NOK else 1e-6) {
+  # Vectorised (2026-10-15): every log is priced once per matrix and summed
+  # per tree with split() + sum(), the same sums in the same order as the
+  # former per-tree loop, so the results are identical.
   t1 <- r1$tree_summary; t2 <- r2$tree_summary
   keys <- intersect(.tree_key(t1), .tree_key(t2))
-  l1 <- split(r1$selected_logs_all, .tree_key(r1$selected_logs_all))
-  l2 <- split(r2$selected_logs_all, .tree_key(r2$selected_logs_all))
+  if (length(keys) == 0L) return(data.frame())
+  l1 <- r1$selected_logs_all; l2 <- r2$selected_logs_all
+  k1 <- .tree_key(l1); k2 <- .tree_key(l2)
   lk1 <- build_price_lookup(pm1); lk2 <- build_price_lookup(pm2)
-  empty <- r1$selected_logs_all[0, , drop = FALSE]
 
-  val <- function(l, lk) {               # value of a pattern at given prices
-    if (nrow(l) == 0L) return(0)
+  # Value of each tree's pattern at given prices: NA if a log is not priced
+  # there, 0 without logs.
+  val <- function(l, k, lk) {
+    out <- setNames(rep(0, length(keys)), keys)
+    if (nrow(l) == 0L) return(out)
     p <- lookup_prices(l, lk)
-    if (anyNA(p)) return(NA_real_)       # pattern not priced at these prices
-    sum(l$price_volume_m3 * p)
+    v <- vapply(split(l$price_volume_m3 * p, factor(k, levels = unique(k))), sum, numeric(1))
+    v <- v[names(v) %in% keys]
+    out[names(v)] <- v
+    out
   }
-  vol_by_type <- function(l) tapply(l$commercial_volume_m3, l$ProductType, sum)
+  v_a1 <- val(l1, k1, lk1); v_b2 <- val(l2, k2, lk2)
+  v_a2 <- val(l1, k1, lk2); v_b1 <- val(l2, k2, lk1)
+  gain2 <- ifelse(is.na(v_a2), Inf, v_b2 - v_a2)   # scenario pattern advantage at scenario prices
+  gain1 <- ifelse(is.na(v_b1), Inf, v_a1 - v_b1)   # default pattern advantage at default prices
 
-  rows <- lapply(keys, function(k) {
-    a <- or_default(l1[[k]], empty); b <- or_default(l2[[k]], empty)
-    differs <- !identical(.log_set(a), .log_set(b))
-    v_a1 <- val(a, lk1); v_b2 <- val(b, lk2)
-    v_a2 <- val(a, lk2); v_b1 <- val(b, lk1)
-    gain2 <- if (is.na(v_a2)) Inf else v_b2 - v_a2   # scenario pattern advantage at scenario prices
-    gain1 <- if (is.na(v_b1)) Inf else v_a1 - v_b1   # default pattern advantage at default prices
-    va <- vol_by_type(a); vb <- vol_by_type(b)
-    types <- union(names(va), names(vb))
-    dvol  <- 0
-    if (length(types) > 0L) {
-      va2 <- setNames(rep(0, length(types)), types); va2[names(va)] <- va
-      vb2 <- setNames(rep(0, length(types)), types); vb2[names(vb)] <- vb
-      dvol <- max(abs(va2 - vb2))
-    }
-    matters <- gain2 > tol || gain1 > tol || dvol > 1e-9
-    tr <- t1[.tree_key(t1) == k, ][1L, ]
-    data.frame(plot_id_github = tr$plot_id_github, treid = tr$treid,
-               species_group = tr$species_group,
-               n_logs_default = nrow(a), n_logs_scenario = nrow(b),
-               value_default = v_a1, value_scenario = v_b2,
-               gain_at_scenario = gain2, gain_at_default = gain1,
-               max_volume_diff_m3 = dvol, pattern_differs = differs,
-               changed = differs && matters, tie_only = differs && !matters,
-               stringsAsFactors = FALSE)
-  })
-  out <- do.call(rbind, rows)
-  if (is.null(out)) return(data.frame())
-  out
+  # Log sets and log counts per tree.
+  set_of <- function(l, k) {
+    s <- vapply(split(paste(l$StartPos, l$StopPos, l$ProductKey), factor(k, levels = unique(k))),
+                function(x) paste(sort(x), collapse = ""), character(1))
+    out <- setNames(rep("", length(keys)), keys); s <- s[names(s) %in% keys]; out[names(s)] <- s
+    out
+  }
+  n_of <- function(k) { n <- table(factor(k, levels = keys)); setNames(as.integer(n), keys) }
+  differs <- set_of(l1, k1) != set_of(l2, k2)
+
+  # Largest difference in commercial volume by assortment class per tree.
+  vol <- function(l, k) {
+    if (nrow(l) == 0L) return(numeric(0))
+    g <- paste(k, l$ProductType, sep = "")
+    vapply(split(l$commercial_volume_m3, factor(g, levels = unique(g))), sum, numeric(1))
+  }
+  va <- vol(l1, k1); vb <- vol(l2, k2)
+  g <- union(names(va), names(vb))
+  d <- abs(ifelse(is.na(va[g]), 0, va[g]) - ifelse(is.na(vb[g]), 0, vb[g]))
+  dk <- sub("[^]*$", "", g)
+  dvol <- setNames(rep(0, length(keys)), keys)
+  if (length(g)) {
+    m <- vapply(split(d, factor(dk, levels = unique(dk))), max, numeric(1))
+    m <- m[names(m) %in% keys]; dvol[names(m)] <- m
+  }
+
+  matters <- gain2 > tol | gain1 > tol | dvol > 1e-9
+  tr <- t1[match(keys, .tree_key(t1)), , drop = FALSE]
+  data.frame(plot_id_github = tr$plot_id_github, treid = tr$treid,
+             species_group = tr$species_group,
+             n_logs_default = n_of(k1), n_logs_scenario = n_of(k2),
+             value_default = unname(v_a1), value_scenario = unname(v_b2),
+             gain_at_scenario = unname(gain2), gain_at_default = unname(gain1),
+             max_volume_diff_m3 = unname(dvol), pattern_differs = unname(differs),
+             changed = unname(differs & matters), tie_only = unname(differs & !matters),
+             stringsAsFactors = FALSE, row.names = NULL)
 }
 
 #' NOK/m3 per scope and assortment under both price matrices.

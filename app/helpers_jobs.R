@@ -112,7 +112,7 @@ run_job_async <- function(spec, progress = function(done, total, what) NULL) {
                               params = spec$list_params, scenario = spec$scenario,
                               profiles = .combine_taper(parts)))
   } else {
-    progress(0L, NA_integer_, "Sampling plots and loading taper profiles")
+    progress(0L, NA_integer_, "Loading NFI data and taper profiles")
     .backend_promise("prepare_sampled_job",
                      list(spec$params, spec$path, ROOT, spec$pd, spec$lc, spec$scenario))
   }

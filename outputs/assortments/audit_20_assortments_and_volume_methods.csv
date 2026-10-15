@@ -20,7 +20,7 @@ Check 10: min > max top -> rejected,PASS,MaxTopDiameter must be >= MinTopDiamete
 Check 10: min > max butt -> rejected,PASS,MaxButtDiameter must be >= MinButtDiameter: spruce_poles
 Check 10: unknown method -> rejected,PASS,VolumeDiameterCategory must be one of: Top cylinder; Top; All diameters (solid volume); Calculated Norwegian mid: spruce_poles
 Check 10: solid + rounding -> rejected,PASS,solid volume is never rounded; use VolumeDiameterAdjustment = None: spruce_poles
-Check 10: class waste -> rejected,PASS,ProductType 'waste' is reserved for the base waste products: spruce_poles
+Check 10: class waste -> rejected,PASS,ProductType 'waste' is reserved for the base waste products: Poles
 Check 10: bad PriceType -> rejected,PASS,PriceType must be 'matrix' or 'flat': spruce_poles
 Check 10: top position >= log -> rejected,PASS,spruce_poles: DiameterTopPosition (600 cm) must be shorter than the shortest log (600 cm)
 Check 10: top position not 10 -> rejected,PASS,DiameterTopPosition must be a non-negative multiple of 10 cm: spruce_poles

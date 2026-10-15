@@ -22,8 +22,9 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Tie-breaking and price scenarios | Audit 19 PASS (26/26): synthetic ties, order independence, matrix helpers, long and wide uploads (class gaps rejected), pattern comparison |
 | Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline (with the pre-Phase-4c limits), validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
 | Tree lists and height imputation (Phase 5) | Audit 21 PASS (28/28): FinnHoyde curves and calibration by hand, fieldPlot wrapper (single species, time limit), validation of broken files, NFI trees as a tree list give identical results, end-to-end runs |
-| Shiny app (Phase 4c layout) | Audit 17 PASS (28/28), headless shinytest2 smoke test with screenshots: two tabs, A editable, B states, rows and columns, automatic comparison when B differs, no "default"/"scenario" text, a custom assortment through the form, an uploaded tree list, Run disabled with progress while a run task runs |
+| Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, Make B equal to A), Run disabled with progress while a run task runs |
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
+| Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -40,19 +41,23 @@ app/                        Shiny app, files sourced explicitly by app.R
                             and the files below, calls shinyApp(ui, server)
   helpers_root.R            Project root resolution (APTER_ROOT / parent of app/)
   setup.R                   Data, default assortments and prices (APP_DEFS, APP_PM_DEFAULT),
-                            HKL/bonitet/county choices, fixed plots/seed, APP_VERSION
+                            HKL/bonitet/county choices, all plots (APTER_N_PLOTS for tests),
+                            tree counts for the large-run note, APP_VERSION
   theme.R                   Design tokens, chart colours, bslib (Bootstrap 5) theme
-  helpers_ui.R              Stripe, cards, read-only fields, reactable tables,
-                            base-R plot styling, grid renderers
-  helpers_validation.R      Inputs -> backend params; stratum plot counts
-  helpers_upload.R          Price files for the runs; uploads merged into price set A or B
+  helpers_ui.R              Stripe, cards, read-only fields, reactable tables (columns sized
+                            to content), server-side paged tables, base-R plots (A/B bars),
+                            grid renderers; APP_DISPLAY_NAME ("optBuck")
+  helpers_validation.R      Inputs -> backend params; stratum plot and tree counts; run-time estimate
+  helpers_upload.R          Price files for the runs; a price upload merged into one scenario
   helpers_jobs.R            Runs as background jobs: promise chain over the workers
                             (shiny::ExtendedTask), progress per chunk
   app_ui.R                  `ui`: page_navbar with Assortments and prices, Simulator
                             (not ui.R: Shiny treats ui.R + app.R as two app formats)
-  app_server.R              `server`
+  server_scenarios.R        scenario_server(): the Assortments and prices tab (Scenarios A and B)
+  app_server.R              `server`: Simulator (tree sources, runs, results)
   www/
     apter.css               Component styles (ForestSens / Redwood look)
+    apter.js                Shows the progress bar as soon as Run is clicked
     apter-icon.svg          App icon and favicon (original artwork)
     fonts/                  Inter and Source Serif 4 (.woff2, SIL OFL 1.1; licences alongside)
 
@@ -72,8 +77,9 @@ R/                          Core engine helpers
   helpers_bark.R            Swappable bark model (default taperNOR::barkNOR, B >= 0 floor)
   helpers_commercial_volume.R  NOK/m3 denominator and per-m3 summaries
   helpers_price_matrix.R    Price matrices: grids, diff, rows/columns, upload (long/wide), export;
-                            price set B (states, b_set(), b_differs()), check_price_set(),
-                            assortment xlsx I/O; Phase 4b definition format (performance cases)
+                            two scenarios (assortment_diff(), scenarios_differ(),
+                            copy_assortment(), copy_prices()), check_price_set(), scenario xlsx I/O
+                            (scenario_export()/_import()); Phase 4b definition format (performance cases)
   helpers_comparison.R      A vs. B: pattern changes, NOK/m3 comparison
   helpers_heights.R         Height imputation for tree lists (fieldPlot wrapper, FinnHoyde curves)
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
@@ -89,6 +95,7 @@ audits/
   audit_21_tree_lists_and_heights.R          Tree lists, height imputation, tree-list runs
   audit_22_performance_equivalence.R         Workers, chunking, comparisons, main baseline, app jobs
   audit_23_assortment_table_and_price_sets.R Assortment table, default limits, rows/columns, price set B
+  audit_24_scenarios.R                       Scenarios A and B with their own assortments; demo files
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -104,10 +111,12 @@ scripts/
   performance_profile.R                   Per-tree stage profile (step 1 of the phase)
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
+  make_demo_files.R                       Writes demo/ (scenario and price files, example tree list)
   app_backend/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
     01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer): NFI
-                                              sample runs and tree-list runs (run_tree_list_bucking())
+                                              runs (all plots, or a sample) and tree-list runs
+                                              (run_tree_list_bucking())
     02_benchmark_dp_optimizer_alternatives.R  DP optimizer benchmark (v3 adopted)
   prototype_reference/      Frozen prototype scripts 00–15
 
@@ -134,6 +143,8 @@ outputs/
   performance/              Audit 22 results, main baseline, profile, benchmarks, Phase 4c limits report
   app_cache/                Taper profile cache (local, regenerated by app_backend/00)
   stratum_availability/     Species/hogstkl/abonitet/fylnr combinations with enough plots
+
+demo/                       Demo files for the app (scripts/make_demo_files.R; audit 24)
 
 VERSION                     Release number (internal since Phase 4c; bump by hand)
 
@@ -235,6 +246,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 21 — tree lists and heights | `Rscript audits/audit_21_tree_lists_and_heights.R` | fieldPlot, nlme, taperNOR, readxl; taper profile cache (check 6) |
 | 22 — performance equivalence | `Rscript audits/audit_22_performance_equivalence.R` | future, promises, later, taperNOR; taper profile cache; `outputs/performance/baseline_main_3fa0a9d.rds`; uses up to 15 workers |
 | 23 — assortment table and price sets | `Rscript audits/audit_23_assortment_table_and_price_sets.R` | readxl, writexl, taperNOR |
+| 24 — scenarios | `Rscript audits/audit_24_scenarios.R` | readxl, writexl, taperNOR, fieldPlot; `demo/` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -378,12 +390,13 @@ These keep the old name on purpose:
   definition format (`custom_assortment_rows()`, `products_for_run()`, `UseIn`,
   explicit Priority) stays for `scripts/performance_cases.R` and audit 20, whose
   baselines depend on it.
-- **A and B.** B holds its own prices for every product and a state per product
-  (`same`, `own`, `none`). A run compares A and B when `b_differs()`. With the
+- **A and B.** B held its own prices for every product and a state per product
+  (`same`, `own`, `none`; replaced in Phase 4d by two independent scenarios and
+  `scenarios_differ()`). With the
   default table and 2021 prices, A runs through the default price file and
   products, as before; audit 23 check 10 shows the explicit path gives the same.
-- **Fixed sampling.** NFI runs use 200 plots and seed 42 (`app/setup.R`);
-  `APTER_N_PLOTS` overrides the number (audit 17 uses 5).
+- **Fixed sampling.** NFI runs used 200 plots and seed 42 (`app/setup.R`);
+  replaced in Phase 4d by all plots (below).
 - **Default diameter limits** (optBuck's example.hpr, under bark): spruce sawlog
   max top 60 / butt 65 cm, pine sawlog 50 / 60, pulpwood 70 / 70. The baselines
   predate them, so audits 20 (check 8), 22 (check 5) and
@@ -397,3 +410,43 @@ These keep the old name on purpose:
   (no PriceType column; read only by frozen prototype script 03) and was not
   updated.
 
+## Phase 4d: scenarios and polish
+
+- **Scenarios.** `app/server_scenarios.R` (`scenario_server()`) holds two
+  independent scenarios, `sc$A` and `sc$B` (assortment table and prices
+  each). An earlier draft linked B to A per assortment; it was replaced
+  before merging. Now B starts as a copy, and "Make A equal to B" / "Make B
+  equal to A" copy from the other side (`copy_assortment()`,
+  `copy_prices()`). The helpers are in `R/helpers_price_matrix.R`, and audit
+  24 tests them without Shiny. The backend needed no change: `.prepare_runs()`
+  already gives a key defined differently in A and B (other rules or price
+  type) its own candidate pass.
+- **Hidden type.** `Type` stays in `ASSORTMENT_TABLE_COLS` and in the scenario
+  xlsx, but it is never shown. Edits keep a row's type. New rows get
+  `custom_type()`. `validate_products()` no longer reserves "waste" for the
+  base keys, so a renamed base waste row is valid. The Phase 4b format keeps
+  that rule in `validate_assortment_defs()` (audit 20 check 10).
+- **All plots.** `build_run_params()` sends `all_plots = TRUE` (when
+  `APTER_N_PLOTS` is unset), and `prepare_sampled_job()` then takes every
+  eligible plot without RNG. The old path (`n_plots`, default 10, capped at 50,
+  seed 42) is unchanged, so the baselines and audits 16, 20 and 22 are
+  unaffected. The app used to ask for 200 plots, but the cap meant it got 50.
+  A typical stratum (spruce, HKL 4, bonitet 11/14/17, all counties) has about
+  800 plots and 12,500 trees.
+- **Large tables.** reactable 0.4.5 sends every row to the browser and runs R
+  `details` functions for every row when it renders. The old Trees table did
+  that for every tree, which made the Per m³ tab slow with many trees.
+  `paged_table_server()` now sends one page at a time and sorts on the server.
+  A tree's logs render only when the tree is selected. With all plots of the
+  typical stratum (26,857 logs, comparison) every results tab renders in about
+  1 s.
+- **Run time.** NFI runs never call taperNOR: all 93,607 bucked trees of
+  HKL 3–5 have a cached profile, and a missing one stops the run. Default-
+  stratum comparison (12,427 trees, 15 workers): loading 5.8 s, bucking
+  26.9 s, result tables 1.3 s, and a 2.5 s worker start once per app
+  process. The app's earlier ~2 min was mostly `compare_cutting_patterns()`
+  (61.7 s: a per-tree loop with a quadratic lookup). It is vectorised now
+  (0.8 s, identical output on all 12,427 trees).
+- **Progress.** `www/apter.js` draws an indeterminate bar on click. The server
+  then reports stages: loading NFI data and taper profiles (indeterminate),
+  taperNOR chunks (tree lists, 0–40 %), bucking, and summarising.
