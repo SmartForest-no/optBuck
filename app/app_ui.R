@@ -12,9 +12,13 @@
 # ---- Assortments and prices --------------------------------------------------------
 
 # One scenario column: its assortment table, its scenario file, and its
-# price matrices. s = "a" or "b".
+# price matrices. s = "a" or "b". The two scenarios are independent and
+# both editable; "Make A equal to B" / "Make B equal to A" copy from the
+# other column (the whole scenario, one assortment, all prices or one
+# matrix).
 scenario_column <- function(s) {
-  S <- toupper(s)
+  S <- toupper(s); O <- if (S == "A") "B" else "A"
+  eq <- sprintf("Make %s equal to %s", S, O)
   btn <- function(id, label, cls = "btn-secondary btn-sm") actionButton(id, label, class = cls)
   apter_card(paste("Scenario", S),
     div(class = "section-hdr", "Assortments"),
@@ -23,8 +27,9 @@ scenario_column <- function(s) {
       btn(paste0("asm_add_", s), "Add", "btn-primary btn-sm"),
       btn(paste0("asm_edit_", s), "Edit"),
       btn(paste0("asm_remove_", s), "Remove"),
-      if (s == "a") btn("asm_reset", "Reset to defaults")
-      else tagList(btn("asm_same_b", "Make equal to A"), btn("asm_all_same", "Make B equal to A"))
+      btn(paste0("asm_copy_one_", s), sprintf("Make assortment equal to %s", O)),
+      btn(paste0("asm_copy_all_", s), eq),
+      btn(paste0("asm_reset_", s), "Reset to defaults")
     ),
     reactableOutput(paste0("tbl_asm_", s)),
     div(class = "scen-file",
@@ -36,12 +41,11 @@ scenario_column <- function(s) {
     div(class = "pm-grid",
       div(class = "pm-toolbar",
         selectInput(paste0("pm_id_", s), "Matrix", choices = character(0), width = "220px"),
-        if (s == "b") uiOutput("pm_b_state_ui")),
+        btn(paste0("pm_", s, "_copy_one"), sprintf("Make matrix equal to %s", O)),
+        btn(paste0("pm_", s, "_copy_all"), eq)),
       conditionalPanel(sprintf("input.pm_id_%s != 'flat_prices'", s),
         div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark")),
-      if (s == "b") uiOutput("pm_b_note"),
-      if (s == "b") conditionalPanel("output.pm_b_shown", rHandsontableOutput("pm_b"))
-      else rHandsontableOutput("pm_a"),
+      rHandsontableOutput(paste0("pm_", s)),
       uiOutput(paste0("pm_", s, "_axes")),
       div(class = "pm-actions",
         btn(paste0("pm_", s, "_reset"), "Reset prices"),
@@ -57,7 +61,6 @@ scenario_column <- function(s) {
 prices_page <- nav_panel(
   "Assortments and prices", value = "prices",
   div(class = "apter-page",
-    uiOutput("pm_status"),
     layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                    scenario_column("a"), scenario_column("b"))
   )

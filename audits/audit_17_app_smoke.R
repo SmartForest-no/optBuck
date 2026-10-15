@@ -43,10 +43,13 @@
 #      Assortment, Species, Top Ø, Max butt Ø, Length, Volume method (no
 #      Type, Length step or Diameter rounding); no limit shown as "–" or
 #      "≥", never "Inf"/"Infinity"
-#  9.  A is editable (no read-only cells); B "Same as A" is greyed and
-#      read-only
-# 10.  B states: "Own prices" makes B editable and B differs from A; "Not
-#      used" shows no B grid; back to "Same as A" B equals A again
+#  9.  Independent scenarios (Phase 4d): both grids editable (no read-only
+#      cells), nothing greyed, no highlighted differences at the start, no
+#      "Same as A" dropdown and no "B equals/differs" notes
+# 10.  Matrix selectors are independent (choosing in B does not change A);
+#      spruce pulpwood edited to a price matrix in B only: B lists its
+#      matrix, A does not, and the Pricing cell is highlighted on both
+#      sides; "Make assortment equal to A" in B restores it (no highlights)
 # 11.  Rows and columns of A (spruce sawlog, from the downloaded A): a
 #      larger and a smaller class added and removed at the ends, a length
 #      (58 dm) added and removed; the download matches each step
@@ -62,12 +65,12 @@
 # 15.  Per m3 tab: tables render, the collapsed Trees card expands to tree
 #      rows, selecting a tree shows its logs below; no "per ha" /
 #      "ha-expanded" text
-# 16.  Automatic comparison: B uploaded (spruce sawlog x1.2, wide CSV)
-#      -> spruce sawlog "Own prices", 351 B cells highlighted, status
-#      "Scenario B differs"; Run -> comparison tab shown, difference table, pattern line
-#      and stem diagram render, no error notification
-# 17.  B "Not used" (spruce pulpwood): the comparison run's B has no spruce
-#      pulpwood in its per-m3 table
+# 16.  Automatic comparison: B's price matrix uploaded (spruce sawlog x1.2,
+#      wide CSV) -> differing cells highlighted in both grids, 351 cells
+#      differ in B's download; Run -> comparison tab shown, difference
+#      table, pattern line and stem diagram render, no error notification
+# 17.  Spruce pulpwood removed from B only: the comparison run's B has no
+#      spruce pulpwood; "Make assortment equal to A" brings it back
 # 18.  Stale notice: absent right after a run; after a price edit,
 #      "Assortments or prices changed since this run" shows
 # 19.  No "default" or "price set" (as words) anywhere in the page text
@@ -84,12 +87,11 @@
 #      outputs/app_smoke/screenshots/ (for review)
 # 23.  Total browser runtime under 300 s (REVIEW if above)
 # 24.  Scenario B's assortments (Phase 4d): a B rule change (spruce sawlog
-#      min top 14 cm) is highlighted in B's table and alone makes B differ;
-#      a B-only assortment is added (highlighted, not in A); an assortment
-#      removed from B only shows as "Not used" in B and stays in A; Run ->
-#      comparison with B's products (poles in B's products table, both
-#      charts labelled Scenario A / Scenario B); "Make B equal to A" -> B
-#      equals A
+#      min top 14 cm) is highlighted on both sides; an assortment added to B
+#      only is highlighted in B and listed as "Not in A" in A; one removed
+#      from B only is listed as "Not in B"; Run -> comparison with B's
+#      products (poles); "Make A equal to B" in A's price section copies
+#      prices; "Make B equal to A" -> no highlighted differences left
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -277,20 +279,17 @@ if (!is.na(saved_np)) Sys.setenv(APTER_N_PLOTS = saved_np)
 if (!nzchar(helpers_err)) {
   # a. price file round trip into A and into B
   defs0 <- H$APP_DEFS; pm0 <- H$APP_PM_DEFAULT
-  st0 <- setNames(rep("same", nrow(defs0)), assortment_table_keys(defs0))
   pm_x <- pm0; pm_x$PriceNOKperM3 <- round(pm_x$PriceNOKperM3 * 1.2, 2)
   f_a  <- H$write_price_file(pm_x)
-  up_a <- H$upload_price_set(f_a, f_a, "A", defs0, pm0, pm0, st0)
-  up_b <- H$upload_price_set(f_a, f_a, "B", defs0, pm0, pm0, st0)
+  up_a <- H$upload_price_set(f_a, f_a, defs0, pm0)
   file.remove(f_a)
   ok_a <- isTRUE(up_a$ok) && identical(up_a$pm, pm_minimal(pm_x)) &&
-    isTRUE(up_b$ok) && all(up_b$state == "own") && b_differs(pm0, up_b$pm, up_b$state)
-  rec("Check 04a: write_price_file() + upload_price_set() round trip into A and B",
+    isTRUE(scenarios_differ(defs0, pm0, defs0, up_a$pm))
+  rec("Check 04a: write_price_file() + upload_price_set() round trip; the scenarios then differ",
       if (ok_a) PASS else FAIL,
-      sprintf("A: ok %s, identical %s | B: ok %s, states %s, B differs %s",
-              isTRUE(up_a$ok), identical(up_a$pm, pm_minimal(pm_x)), isTRUE(up_b$ok),
-              paste(unique(up_b$state), collapse = "/"),
-              isTRUE(up_b$ok) && b_differs(pm0, up_b$pm, up_b$state)))
+      sprintf("ok %s, identical %s, differs from the defaults %s",
+              isTRUE(up_a$ok), identical(up_a$pm, pm_minimal(pm_x)),
+              isTRUE(up_a$ok) && scenarios_differ(defs0, pm0, defs0, up_a$pm)))
 
   # b. build_run_params
   p_all <- H$build_run_params(list(species_group = "spruce", hkl_group = "4",
@@ -350,15 +349,15 @@ browser_checks <- c(
   "Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, optBuck, texts",
   "Check 07: Bootstrap 5 and self-hosted Inter font loaded",
   "Check 08: Compact assortment table: base rows, columns, '–' for no limit",
-  "Check 09: A editable; B 'Same as A' greyed and read-only",
-  "Check 10: B states Own prices / Not used / Same as A",
+  "Check 09: Both scenarios editable, nothing greyed, no differences at the start",
+  "Check 10: Independent matrix selectors; price type per scenario; Make assortment equal to A",
   "Check 11: Diameter classes and lengths added and removed",
   "Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",
   "Check 13: Summary shows the nine fields; no Diagnostics tab",
   "Check 14: Selected logs paged on the server, readable headers",
   "Check 15: Per m3 tab renders; Trees card expands, a selected tree shows its logs; no per-ha text",
   "Check 16: Comparison runs automatically when B differs",
-  "Check 17: B 'Not used' drops the product from B's run",
+  "Check 17: Assortment removed from B only drops it from B's run",
   "Check 18: Stale notice after a price edit",
   "Check 19: No 'default'/'price set' in the page text",
   "Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed",
@@ -458,7 +457,8 @@ if (!browser_ok) {
       isTRUE(stripe >= 1L) && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
       !grepl("Apter", paste(title, brand), fixed = TRUE) &&
       grepl("NFI data", texts6, fixed = TRUE) && !grepl("NFI sample", texts6, fixed = TRUE) &&
-      !grepl("(^|[^0-9.])2021([^0-9]|$)", texts6) && !grepl("wide or long", texts6, fixed = TRUE)
+      !grepl("(^|[^0-9.])2021([^0-9]|$)", texts6) && !grepl("wide or long", texts6, fixed = TRUE) &&
+      !grepl("runs use Scenario A only|runs compare both", texts6)
     rec(browser_checks[2], if (ok6) PASS else FAIL,
         sprintf("tabs: '%s' | open: '%s' | Home/tiles/footer elements: %s | stripe: %s | title: '%s' | brand: '%s' | 'NFI data': %s | '2021': %s | 'wide or long': %s",
                 tabs, active, n_old, stripe, title, brand, grepl("NFI data", texts6, fixed = TRUE),
@@ -489,37 +489,50 @@ if (!browser_ok) {
                 grepl("Inf", asm_txt, fixed = TRUE)))
     shoot(app, "01_assortments_and_prices")
 
-    # 09. A editable, B "Same as A" read-only and greyed (Handsontable marks
-    # read-only cells htDimmed)
+    # 09. Both scenarios editable (Handsontable marks read-only cells
+    # htDimmed), nothing greyed or highlighted at the start.
+    marks <- function(app) js(app, paste0("document.querySelectorAll('.pm-diff, .asm-diff, .asm-only, ",
+                                          ".asm-none, .pm-same').length"))
     a_cells <- n_cells(app, "pm_a", ""); a_dim <- n_cells(app, "pm_a", ".htDimmed")
     b_cells <- n_cells(app, "pm_b", ""); b_dim <- n_cells(app, "pm_b", ".htDimmed")
-    b_same  <- n_cells(app, "pm_b", ".pm-same")
+    marks9 <- marks(app)
+    dropdown9 <- js(app, "document.querySelectorAll('#pm_b_state, #pm_status').length")
     ok9 <- isTRUE(a_cells > 0L) && identical(a_dim, 0L) && isTRUE(b_cells > 0L) &&
-      identical(b_dim, b_cells) && identical(b_same, b_cells)
+      identical(b_dim, 0L) && identical(marks9, 0L) && identical(dropdown9, 0L)
     rec(browser_checks[5], if (ok9) PASS else FAIL,
-        sprintf("A cells %s (read-only %s) | B cells %s (read-only %s, greyed %s)",
-                a_cells, a_dim, b_cells, b_dim, b_same))
+        sprintf("A cells %s (read-only %s) | B cells %s (read-only %s) | highlighted or greyed: %s | B dropdown / status note: %s",
+                a_cells, a_dim, b_cells, b_dim, marks9, dropdown9))
 
-    # 10. B states
+    # 10. Independent selectors; price type per scenario
+    opts <- function(app, id) js(app, sprintf(paste0(
+      "(function(){ var s = document.getElementById('%s');",
+      " return s && s.selectize ? Object.keys(s.selectize.options).join(',')",
+      " : Array.from(s.options).map(function(o){ return o.value; }).join(','); })()"), id))
     e10 <- try_drv({
-      app$set_inputs(pm_b_state = "own"); app$wait_for_idle()
+      app$set_inputs(pm_id_b = "flat_prices", wait_ = FALSE); app$wait_for_idle()
     })
-    own_dim <- n_cells(app, "pm_b", ".htDimmed"); own_cells <- n_cells(app, "pm_b", "")
-    st_own  <- txt(app, "#pm_status")
-    e10b <- try_drv({ app$set_inputs(pm_b_state = "none"); app$wait_for_idle() })
-    none_cells <- js(app, "document.querySelector('#pm_b').offsetParent === null ? 0 : document.querySelectorAll('#pm_b .ht_master td').length")
-    none_note <- txt(app, "#pm_b_note")
-    st_none <- txt(app, "#pm_status")
-    e10c <- try_drv({ app$set_inputs(pm_b_state = "same"); app$wait_for_idle() })
-    st_same <- txt(app, "#pm_status")
-    ok10 <- !nzchar(paste0(e10, e10b, e10c)) && isTRUE(own_cells > 0L) && identical(own_dim, 0L) &&
-      grepl("B equals A", st_own, fixed = TRUE) &&           # own starts as a copy of A
-      identical(none_cells, 0L) && grepl("Not used in Scenario B", none_note, fixed = TRUE) &&
-      grepl("B differs", st_none, fixed = TRUE) && grepl("B equals A", st_same, fixed = TRUE)
+    sel_a10 <- app$get_value(input = "pm_id_a")
+    e10b <- try_drv({
+      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_edit_b"); app$wait_for_idle()
+      app$set_inputs(asm_price_type = "matrix", asm_price = 300, asm_max_class = 30, wait_ = FALSE)
+      app$click("asm_save"); app$wait_for_idle()
+    })
+    ids_a10 <- opts(app, "pm_id_a"); ids_b10 <- opts(app, "pm_id_b")
+    diff_a10 <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-diff').length")
+    diff_b10 <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-diff').length")
+    shoot(app, "01b_price_type_in_B")
+    e10c <- try_drv({
+      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_copy_one_b"); app$wait_for_idle()
+    })
+    marks10 <- marks(app); msg10 <- txt(app, "#msg_b")
+    ok10 <- !nzchar(paste0(e10, e10b, e10c)) && identical(sel_a10, "spruce_sawlog") &&
+      grepl("spruce_pulpwood", ids_b10, fixed = TRUE) && !grepl("spruce_pulpwood", ids_a10, fixed = TRUE) &&
+      isTRUE(diff_a10 >= 1L) && isTRUE(diff_b10 >= 1L) && identical(marks10, 0L) &&
+      grepl("equal to Scenario A", msg10, fixed = TRUE)
     rec(browser_checks[6], if (ok10) PASS else FAIL,
-        sprintf("own: %s cells, read-only %s, status '%s' | none: %s cells, note '%s', status '%s' | same: '%s'%s",
-                own_cells, own_dim, trimws(st_own), none_cells, trimws(none_note),
-                trimws(st_none), trimws(st_same), err_txt(e10, e10b, e10c)))
+        sprintf("A's selector after choosing flat prices in B: '%s' | matrices A: %s | B: %s | highlighted cells A %s, B %s | after Make assortment equal to A: %s marks, '%s'%s",
+                sel_a10, ids_a10, ids_b10, diff_a10, diff_b10, marks10, trimws(msg10),
+                err_txt(e10, e10b, e10c)))
 
     # 11. rows and columns of A (spruce sawlog)
     ax0 <- axes_of(dl_pm(app, "dl_a_long"), "spruce_sawlog")
@@ -642,10 +655,10 @@ if (!browser_ok) {
       app$upload_file(pm_b_upload = wide_csv)
       app$wait_for_idle()
     })
-    st16  <- txt(app, "#pm_status")
     msg16 <- txt(app, "#msg_b")
-    sel16 <- js(app, "(function(){ var s = document.getElementById('pm_b_state'); return s ? s.value : ''; })()")
+    e16a <- try_drv({ app$set_inputs(pm_id_b = "spruce_sawlog", wait_ = FALSE); app$wait_for_idle() })
     n_hl  <- n_cells(app, "pm_b", ".pm-diff")
+    n_hl_a <- n_cells(app, "pm_a", ".pm-diff")
     b16   <- dl_pm(app, "dl_b_long")
     n_diff16 <- if (is.null(b16)) NA else pm_n_diff(H$APP_PM_DEFAULT, b16)
     shoot(app, "04_prices_B_own")
@@ -659,32 +672,24 @@ if (!browser_ok) {
     shoot(app, "05_price_matrix_comparison")
     # Handsontable renders the visible rows only: the DOM shows some
     # highlighted cells; B's download has all 351 cells changed.
-    ok16 <- !nzchar(paste0(e16, e16b, e16c)) && grepl("B differs", st16, fixed = TRUE) &&
-      identical(sel16, "own") && isTRUE(n_hl > 0L) && isTRUE(n_diff16 == 351) &&
+    ok16 <- !nzchar(paste0(e16, e16a, e16b, e16c)) && isTRUE(n_hl > 0L) && isTRUE(n_hl_a > 0L) &&
+      isTRUE(n_diff16 == 351) &&
       cmp_tab16 && isTRUE(n_delta >= 1L) &&
       grepl("trees changed their cutting pattern", pat_txt, fixed = TRUE) &&
       isTRUE(stem_img >= 1L) && identical(nerr16, 0L)
     rec(browser_checks[12], if (ok16) PASS else FAIL,
-        sprintf("status: '%s' | B state: '%s' | highlighted B cells: %s, cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
-                trimws(st16), sel16, n_hl, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
-                trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16b, e16c)))
+        sprintf("highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
+                n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
+                trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16a, e16b, e16c)))
 
-    # 17. B "Not used" for spruce pulpwood (flat table, state column)
+    # 17. Spruce pulpwood removed from B only
     flat17 <- ""; st17 <- ""
     e17 <- try_drv({
       app$set_inputs(main_nav = "prices")
-      app$set_inputs(pm_id_b = "flat_prices"); app$wait_for_idle()
-      app$wait_for_js(paste0("(function(){ var w = HTMLWidgets.find('#pm_b');",
-                             " return !!(w && w.hot && w.hot.getRowHeader().indexOf('Spruce pulpwood') >= 0); })()"),
-                      timeout = 30 * 1000)
-      # Set the state cell through Handsontable, as a user edit would.
-      app$run_js(paste0(
-        "var hot = HTMLWidgets.find('#pm_b').hot;",
-        "var r = hot.getRowHeader().indexOf('Spruce pulpwood');",
-        "hot.setDataAtCell(r, 0, 'Not used');"))
-      app$wait_for_idle()
-      flat17 <<- js(app, "JSON.stringify(HTMLWidgets.find('#pm_b').hot.getData())")
-      st17 <<- paste(txt(app, "#pm_status"), "B products:", paste(unique(dl_pm(app, "dl_b_long")$ProductKey), collapse = ","))
+      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_remove_b"); app$wait_for_idle()
+      app$click("asm_rm_one"); app$wait_for_idle()
+      flat17 <- txt(app, "#msg_b")
+      st17 <- paste("B products:", paste(unique(dl_pm(app, "dl_b_long")$ProductKey), collapse = ","))
       app$set_inputs(main_nav = "simulator"); run(app)
       app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
     })
@@ -695,10 +700,16 @@ if (!browser_ok) {
     # Columns: Assortment; Value A (NOK); Value B (NOK); ...
     b_val <- if (length(pulp)) suppressWarnings(as.numeric(strsplit(pulp[1], ";")[[1]][3])) else NA
     a_val <- if (length(pulp)) suppressWarnings(as.numeric(strsplit(pulp[1], ";")[[1]][2])) else NA
-    ok17 <- !nzchar(e17) && isTRUE(a_val > 0) && isTRUE(b_val == 0) && identical(n_err_notif(app), 0L)
+    e17b <- try_drv({
+      app$set_inputs(main_nav = "prices")
+      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_copy_one_b"); app$wait_for_idle()
+    })
+    back17 <- "spruce_pulpwood" %in% dl_pm(app, "dl_b_long")$ProductKey
+    ok17 <- !nzchar(paste0(e17, e17b)) && isTRUE(a_val > 0) && isTRUE(b_val == 0) && back17 &&
+      !grepl("spruce_pulpwood", st17, fixed = TRUE) && identical(n_err_notif(app), 0L)
     rec(browser_checks[13], if (ok17) PASS else FAIL,
-        sprintf("B flat table after the edit: %s (%s) | spruce pulpwood value A %s, B %s | error notifications: %s%s", flat17, trimws(st17),
-                a_val, b_val, n_err_notif(app), err_txt(e17)))
+        sprintf("'%s' (%s) | spruce pulpwood value A %s, B %s | back in B after Make assortment equal to A: %s | error notifications: %s%s",
+                trimws(flat17), trimws(st17), a_val, b_val, back17, n_err_notif(app), err_txt(e17, e17b)))
 
     # 18. stale notice after a price edit (reset A)
     e18 <- try_drv({
@@ -767,7 +778,7 @@ if (!browser_ok) {
     prod20 <- txt(app, "#tbl_products")
     e20d <- try_drv({
       app$set_inputs(main_nav = "prices")
-      app$click("asm_reset"); app$wait_for_idle()
+      app$click("asm_reset_a"); app$wait_for_idle()
     })
     n_asm_reset <- n_tbl_rows(app, "tbl_asm_a")
     a_reset <- dl_pm(app, "dl_a_long")
@@ -822,31 +833,29 @@ if (!browser_ok) {
                 substr(trimws(tl_panel), 1, 160), substr(trimws(banner21), 1, 120),
                 grepl("Height source", trees21, fixed = TRUE), nerr21, err_txt(e21, e21b)))
 
-    # 24. Scenario B's own assortments (Phase 4d)
-    st24 <- list(); n24 <- list()
+    # 24. Scenario B's own assortments (Phase 4d, independent scenarios)
+    n24 <- list(); msg24 <- ""
     e24 <- try_drv({
-      app$set_inputs(main_nav = "prices"); app$click("asm_all_same"); app$wait_for_idle()
-      app$click("pm_b_reset"); app$wait_for_idle()
-      st24$start <- txt(app, "#pm_status")
+      app$set_inputs(main_nav = "prices"); app$click("asm_copy_all_b"); app$wait_for_idle()
+      n24$start <- marks(app)
       # a rule of B only: spruce sawlog min top 14 cm
       app$set_inputs(asm_pick_b = "spruce_sawlog", wait_ = FALSE); app$click("asm_edit_b"); app$wait_for_idle()
       app$set_inputs(asm_min_top = 14, wait_ = FALSE); app$click("asm_save"); app$wait_for_idle()
-      st24$rule <- txt(app, "#pm_status")
-      n24$diff <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-diff').length")
-      n24$same <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-same').length")
-      # a B-only assortment
+      n24$diff_a <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-diff').length")
+      n24$diff_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-diff').length")
+      # an assortment added to B only
       app$click("asm_add_b"); app$wait_for_idle()
       app$set_inputs(asm_name = "Poles", asm_species = "spruce", asm_price_type = "flat",
                      asm_min_top = 15, asm_min_len = 800, asm_max_len = 1200, asm_price = 900,
-                     wait_ = FALSE)
+                     asm_both = FALSE, wait_ = FALSE)
       app$click("asm_save"); app$wait_for_idle()
-      n24$bonly <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-bonly').length")
+      n24$only_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-only').length")
+      n24$none_a <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-none').length")
       n24$a_rows <- n_tbl_rows(app, "tbl_asm_a")
       # pine pulpwood removed from B only
       app$set_inputs(asm_pick_b = "pine_pulpwood", wait_ = FALSE); app$click("asm_remove_b"); app$wait_for_idle()
       app$click("asm_rm_one"); app$wait_for_idle()
-      n24$none <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-none').length")
-      n24$a_rows2 <- n_tbl_rows(app, "tbl_asm_a")
+      n24$none_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-none').length")
       shoot(app, "08_scenarios_A_and_B")
       app$set_inputs(main_nav = "simulator")
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
@@ -859,24 +868,24 @@ if (!browser_ok) {
     prod24 <- txt(app, "#tbl_products")
     cmp24 <- tab_shown(app, "comparison")
     e24b <- try_drv({
-      app$set_inputs(main_nav = "prices"); app$click("asm_all_same"); app$wait_for_idle()
-      st24$end <- txt(app, "#pm_status")
+      app$set_inputs(main_nav = "prices"); app$click("pm_a_copy_all"); app$wait_for_idle()
+      msg24 <- txt(app, "#msg_a")
+      app$click("asm_copy_all_b"); app$wait_for_idle()
+      n24$end <- marks(app)
     })
-    ok24 <- !nzchar(paste0(e24, e24b)) && grepl("B equals A", st24$start, fixed = TRUE) &&
-      grepl("B differs", st24$rule, fixed = TRUE) && isTRUE(n24$diff >= 1L) && isTRUE(n24$same >= 4L) &&
-      isTRUE(n24$bonly >= 1L) && identical(n24$a_rows, 6L) && isTRUE(n24$none >= 1L) &&
-      identical(n24$a_rows2, 6L) && cmp24 && grepl("Spruce poles", prod24, fixed = TRUE) &&
-      grepl("Value A", prod24, fixed = TRUE) && grepl("B equals A", st24$end, fixed = TRUE) &&
-      identical(n_err_notif(app), 0L)
+    ok24 <- !nzchar(paste0(e24, e24b)) && identical(n24$start, 0L) &&
+      isTRUE(n24$diff_a >= 1L) && isTRUE(n24$diff_b >= 1L) &&
+      isTRUE(n24$only_b >= 1L) && isTRUE(n24$none_a >= 1L) && identical(n24$a_rows, 7L) &&
+      isTRUE(n24$none_b >= 1L) && cmp24 && grepl("Spruce poles", prod24, fixed = TRUE) &&
+      grepl("Value A", prod24, fixed = TRUE) && grepl("Prices equal to Scenario B", msg24, fixed = TRUE) &&
+      identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("start: '%s' | B rule: '%s', highlighted cells %s, greyed cells %s | B-only rows %s (A rows %s) | removed from B: 'Not used' rows %s (A rows %s) | comparison tab %s, poles in products %s | Make B equal to A: '%s'%s",
-                trimws(or_default(st24$start, "")), trimws(or_default(st24$rule, "")), n24$diff, n24$same,
-                n24$bonly, n24$a_rows, n24$none, n24$a_rows2, cmp24,
-                grepl("Spruce poles", prod24, fixed = TRUE), trimws(or_default(st24$end, "")),
-                err_txt(e24, e24b)))
-
-    rec(browser_checks[18], if (length(shots) == 11L) PASS else REVIEW,
-        sprintf("%d of 11 screenshots in %s", length(shots), shot_dir))
+        sprintf("start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make A equal to B (prices): '%s' | after Make B equal to A: %s marks%s",
+                n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
+                cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
+                n24$end, err_txt(e24, e24b)))
+    rec(browser_checks[18], if (length(shots) == 12L) PASS else REVIEW,
+        sprintf("%d of 12 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
     for (ck in browser_checks[c(2:18, 20)]) rec(ck, FAIL, "skipped: app did not start")

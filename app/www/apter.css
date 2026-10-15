@@ -225,10 +225,9 @@ details.apter-card { margin-bottom: 16px; }
 #tl_validation .pm-msg-warn, #tl_validation .pm-msg-error { white-space: pre-wrap; font-size: 0.88rem; }
 
 /* ---- Phase 4d: scenarios, paged tables, progress ---------------------------------- */
-/* Assortment tables of Scenario B: equal to A greyed, differences highlighted. */
-.reactable .asm-same { color: var(--apter-muted); }
-.reactable .asm-bonly { background: #FBF3E6; }
-.reactable .asm-changed { }
+/* Assortment tables: rows only in this scenario and cells that differ from
+   the other scenario are highlighted; nothing is greyed. */
+.reactable .asm-only { background: #FBF3E6; }
 .reactable .asm-none { color: var(--apter-muted); font-style: italic; text-decoration: line-through; }
 .reactable .asm-diff { background: #FCE7C8; font-weight: 600; color: var(--apter-ink); }
 .scen-file { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 8px 0 4px; }

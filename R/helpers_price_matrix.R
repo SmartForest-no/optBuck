@@ -252,43 +252,6 @@ pm_remove_length <- function(pm, id, dm) {
 }
 
 
-# ---- price set B (Phase 4c) ---------------------------------------------------------
-# B holds a state per product: "same" (A's prices and axes), "own" (B's own
-# matrix or flat price) or "none" (not used in B). B's own prices are kept
-# for every product, so switching back and forth keeps them.
-
-#' B states and their labels.
-B_STATES <- c(same = "Same as A", own = "Own prices", none = "Not used")
-
-#' B's price matrix in effect: A's rows for "same", B's for "own", none for
-#' "none". Products without a state are "same".
-pm_b_effective <- function(pm_a, pm_b, state) {
-  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
-  st <- state[a$ProductKey]; st[is.na(st)] <- "same"
-  keys_b <- names(state)[state == "own"]
-  pm_minimal(rbind(a[st == "same", , drop = FALSE], b[b$ProductKey %in% keys_b, , drop = FALSE]))
-}
-
-#' TRUE when B differs from A: a product not used in B, an "own" product
-#' whose prices, classes or lengths differ from A's, or (Phase 4d, when the
-#' tables are given) B's assortment table in effect differing from A's.
-b_differs <- function(pm_a, pm_b, state, defs_a = NULL, defs_b = NULL) {
-  if (any(state == "none")) return(TRUE)
-  if (!is.null(defs_a) && !is.null(defs_b) && !same_assortments(defs_a, defs_b)) return(TRUE)
-  key <- function(m) paste(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm)
-  a <- pm_minimal(pm_a); e <- pm_b_effective(pm_a, pm_b, state)
-  if (!identical(sort(key(a)), sort(key(e)))) return(TRUE)
-  any(abs(a$PriceNOKperM3 - e$PriceNOKperM3[match(key(a), key(e))]) > 1e-9, na.rm = TRUE)
-}
-
-#' Set B's own prices of products `keys` to A's (when a product switches to
-#' "own", it starts from A).
-pm_b_copy_a <- function(pm_a, pm_b, keys) {
-  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
-  pm_minimal(rbind(b[!b$ProductKey %in% keys, , drop = FALSE], a[a$ProductKey %in% keys, , drop = FALSE]))
-}
-
-
 # ---- assortment table prices (Phase 4c) ---------------------------------------------
 
 #' Starting prices of a new product: a grid of diameter classes
@@ -371,102 +334,95 @@ check_price_set <- function(defs, pm) {
   vv
 }
 
-#' B's assortment table and price matrix in effect: products "not used" in
-#' B are dropped, "same" take A's prices and axes, "own" B's. With
-#' `defs_b_own` and `b_asm` (Phase 4d) B's definitions come from b_defs().
-b_set <- function(defs, pm_a, pm_b, state, defs_b_own = NULL, b_asm = NULL) {
-  if (!is.null(b_asm)) {
-    db <- b_defs(defs, defs_b_own, b_asm); kb <- assortment_table_keys(db)
-    st <- state[kb]; st[is.na(st)] <- "same"; names(st) <- kb
-    pm <- pm_b_effective(pm_a, pm_b, st)
-    return(list(defs = db, pm = pm[pm$ProductKey %in% kb, , drop = FALSE]))
-  }
-  keys <- assortment_table_keys(defs)
-  st <- state[keys]; st[is.na(st)] <- "same"
-  use <- st != "none"
-  list(defs = defs[use, , drop = FALSE],
-       pm = pm_b_effective(pm_a, pm_b, st))
+# ---- two independent scenarios (Phase 4d) -------------------------------------------
+# Scenarios A and B each hold their own assortment table and price matrix;
+# B starts as a copy of A and nothing is linked. These helpers compare the
+# two and copy an assortment or prices from one to the other.
+
+# A scenario's prices of the given keys, sorted (for comparisons).
+.scenario_rows <- function(pm, keys) {
+  m <- pm_minimal(pm)
+  m <- m[m$ProductKey %in% keys, , drop = FALSE]
+  m <- m[order(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm, na.last = TRUE), , drop = FALSE]
+  rownames(m) <- NULL
+  m
 }
 
-
-# ---- scenario B's assortments (Phase 4d) ---------------------------------------------
-# B's assortment table is linked to A per assortment: b_asm[key] is "same"
-# (follows A's row), "own" (B's own row, in defs_b_own) or "none" (not in B).
-# Keys only in B are "own". The price state (B_STATES) of a key not in B is
-# "none"; a key only in B always has "own" prices.
-
-#' B's assortment table in effect: A's rows in A's order (A's definition for
-#' "same", B's own for "own", dropped for "none"), then B-only rows.
-b_defs <- function(defs_a, defs_b_own, b_asm) {
-  ka <- assortment_table_keys(defs_a)
-  st <- b_asm[ka]; st[is.na(st)] <- "same"
-  out <- defs_a
-  extra <- defs_a[0, , drop = FALSE]
-  if (!is.null(defs_b_own) && nrow(defs_b_own) > 0L) {
-    kb <- assortment_table_keys(defs_b_own)
-    own <- which(st == "own" & ka %in% kb)
-    if (length(own)) out[own, ] <- defs_b_own[match(ka[own], kb), names(out), drop = FALSE]
-    extra <- defs_b_own[!kb %in% ka & kb %in% names(b_asm)[b_asm == "own"], names(out), drop = FALSE]
+#' Row-by-row comparison of one scenario's assortment table (`defs`) with
+#' the other's (`other`).
+#'
+#' @return list(status = per row of `defs` "same" / "changed" / "only" (not
+#'   in the other scenario), diff = logical matrix (rows of `defs` x
+#'   ASSORTMENT_TABLE_COLS) of fields that differ, other_only = keys only in
+#'   the other scenario).
+assortment_diff <- function(defs, other) {
+  k <- assortment_table_keys(defs); ko <- assortment_table_keys(other)
+  cols <- ASSORTMENT_TABLE_COLS
+  diff <- matrix(FALSE, nrow(defs), length(cols), dimnames = list(k, cols))
+  status <- rep("only", nrow(defs))
+  for (i in seq_len(nrow(defs))) {
+    j <- match(k[i], ko)
+    if (is.na(j)) { diff[i, ] <- TRUE; next }
+    for (n in cols) {
+      x <- other[[n]][j]; y <- defs[[n]][i]
+      diff[i, n] <- !((is.na(x) && is.na(y)) || (!is.na(x) && !is.na(y) && x == y))
+    }
+    status[i] <- if (any(diff[i, ])) "changed" else "same"
   }
-  out <- rbind(out[st != "none", , drop = FALSE], extra)
-  rownames(out) <- NULL
-  out
+  list(status = status, diff = diff, other_only = setdiff(ko, k))
 }
 
 #' TRUE when two assortment tables hold the same rows (order ignored).
 same_assortments <- function(a, b) {
   if (nrow(a) != nrow(b)) return(FALSE)
   if (!setequal(assortment_table_keys(a), assortment_table_keys(b))) return(FALSE)
-  all(b_row_diff(a, b)$status == "same")
+  all(assortment_diff(a, b)$status == "same")
 }
 
-#' Row-by-row comparison of B's table with A's, for the B column.
-#'
-#' @return list(status = per B row "same" / "changed" / "b_only",
-#'   diff = logical matrix (B rows x ASSORTMENT_TABLE_COLS) of fields that
-#'   differ from A, a_only = keys of A not in B).
-b_row_diff <- function(defs_a, defs_b) {
-  ka <- assortment_table_keys(defs_a); kb <- assortment_table_keys(defs_b)
-  cols <- ASSORTMENT_TABLE_COLS
-  diff <- matrix(FALSE, nrow(defs_b), length(cols), dimnames = list(kb, cols))
-  status <- rep("b_only", nrow(defs_b))
-  for (i in seq_len(nrow(defs_b))) {
-    j <- match(kb[i], ka)
-    if (is.na(j)) { diff[i, ] <- TRUE; next }
-    for (n in cols) {
-      x <- defs_a[[n]][j]; y <- defs_b[[n]][i]
-      diff[i, n] <- !((is.na(x) && is.na(y)) || (!is.na(x) && !is.na(y) && x == y))
-    }
-    status[i] <- if (any(diff[i, ])) "changed" else "same"
-  }
-  list(status = status, diff = diff, a_only = setdiff(ka, kb))
+#' TRUE when the two scenarios' prices of `key` are identical (cells, rows
+#' and columns; flat or matrix).
+same_prices <- function(pm_a, pm_b, key)
+  isTRUE(all.equal(.scenario_rows(pm_a, key), .scenario_rows(pm_b, key), check.attributes = FALSE))
+
+#' TRUE when Scenarios A and B differ: in their assortments (membership or
+#' any field) or in the prices of their assortments. Then a run compares
+#' them.
+scenarios_differ <- function(defs_a, pm_a, defs_b, pm_b) {
+  if (!same_assortments(defs_a, defs_b)) return(TRUE)
+  keys <- assortment_table_keys(defs_a)
+  !isTRUE(all.equal(.scenario_rows(pm_a, keys), .scenario_rows(pm_b, keys), check.attributes = FALSE))
 }
 
-#' B's states (definitions and prices) from two full scenarios, e.g. after
-#' a scenario upload to B: a row equal to A's is "same", otherwise "own";
-#' A keys missing from B are "none"; prices are "same" when B's rows of the
-#' key equal A's.
+#' Copy assortment `key` (its definition and prices) from one scenario to
+#' the other: it replaces the target's row in place, or is added at the end.
 #'
-#' @return list(b_asm, state, defs_b_own, pm_b).
-b_states_from <- function(defs_a, pm_a, defs_b, pm_b) {
-  ka <- assortment_table_keys(defs_a); kb <- assortment_table_keys(defs_b)
-  d <- b_row_diff(defs_a, defs_b)
-  b_asm <- setNames(ifelse(d$status == "same", "same", "own"), kb)
-  b_asm[d$a_only] <- "none"
-  a <- pm_minimal(pm_a); b <- pm_minimal(pm_b)
-  rows <- function(m, k) {
-    r <- m[m$ProductKey == k, , drop = FALSE]
-    r <- r[order(r$LengthClass_dm, r$PriceDiameterClass_cm), , drop = FALSE]
-    rownames(r) <- NULL
-    r
-  }
-  state <- setNames(vapply(kb, function(k) {
-    if (!k %in% ka) return("own")
-    if (isTRUE(all.equal(rows(a, k), rows(b, k), check.attributes = FALSE))) "same" else "own"
-  }, character(1)), kb)
-  state[d$a_only] <- "none"
-  list(b_asm = b_asm, state = state,
-       defs_b_own = defs_b[b_asm[kb] == "own", , drop = FALSE], pm_b = b)
+#' @return list(defs, pm): the target scenario after the copy.
+copy_assortment <- function(from_defs, from_pm, to_defs, to_pm, key) {
+  i <- match(key, assortment_table_keys(from_defs))
+  if (is.na(i)) stop("Assortment ", key, " is not in the scenario copied from.")
+  j <- match(key, assortment_table_keys(to_defs))
+  if (is.na(j)) to_defs <- rbind(to_defs, from_defs[i, , drop = FALSE])
+  else to_defs[j, ] <- from_defs[i, ]
+  rownames(to_defs) <- NULL
+  f <- pm_minimal(from_pm); t <- pm_minimal(to_pm)
+  list(defs = to_defs,
+       pm = pm_minimal(rbind(t[t$ProductKey != key, , drop = FALSE], f[f$ProductKey == key, , drop = FALSE])))
+}
+
+#' Copy the prices of `keys` from one scenario to the other, where the
+#' assortment is in both and priced the same way (both matrix or both flat).
+#'
+#' @return list(pm (the target's prices), copied, skipped (keys not copied:
+#'   not in both or priced differently)).
+copy_prices <- function(from_defs, from_pm, to_defs, to_pm, keys) {
+  kf <- assortment_table_keys(from_defs); kt <- assortment_table_keys(to_defs)
+  ok <- keys %in% kf & keys %in% kt
+  ok[ok] <- from_defs$PriceType[match(keys[ok], kf)] == to_defs$PriceType[match(keys[ok], kt)]
+  copied <- keys[ok]
+  f <- pm_minimal(from_pm); t <- pm_minimal(to_pm)
+  list(pm = pm_minimal(rbind(t[!t$ProductKey %in% copied, , drop = FALSE],
+                             f[f$ProductKey %in% copied, , drop = FALSE])),
+       copied = copied, skipped = keys[!ok])
 }
 
 

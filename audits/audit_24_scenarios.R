@@ -2,38 +2,47 @@
 # audits/audit_24_scenarios.R
 #
 # Purpose : Phase 4d (2026-10-15): Scenarios A and B each have their own
-#           assortments and prices. B is linked to A per assortment
-#           (b_asm: same / own / none; R/helpers_price_matrix.R). Checks the
-#           scenario helpers, the derived assortment fields (type, length
-#           step, diameter rounding), runs with B's own rules, and the demo
+#           assortments and prices. The scenarios are independent: B starts
+#           as a copy of A, nothing is linked, and "Make A equal to B" /
+#           "Make B equal to A" copy a whole scenario, one assortment or
+#           prices (R/helpers_price_matrix.R). Checks the scenario helpers,
+#           the derived assortment fields (type, length step, diameter
+#           rounding), runs with B's own rules and price types, and the demo
 #           files in demo/.
 #
 # Checks  :
 #  1.  Derived fields: rounding fixed per volume method (Top cylinder, Top,
 #      Norwegian mid down to cm; solid volume none); flat lengths every
 #      10 cm; the hidden type of a user-added assortment is never "waste"
-#  2.  B-only assortment: in B's table (after A's rows), not in A's; B differs
-#  3.  Changed rules in B with the same prices: B differs (a comparison runs
-#      on an assortment change alone); b_row_diff() marks only the changed
-#      field
-#  4.  Assortment removed from B only: gone from B's table and prices, still
-#      in A; B differs
-#  5.  "Make equal to A" (all "same"): B's table and prices equal A's; B does
-#      not differ
+#  2.  Assortment only in B: assortment_diff() marks it "only" in B and as
+#      missing in A; the scenarios differ
+#  3.  Changed rule in B with the same prices: the scenarios differ (a
+#      comparison runs on an assortment change alone); only that field is
+#      marked, on both sides
+#  4.  Assortment removed from B only: gone from B's table, still in A; the
+#      scenarios differ
+#  5.  Make equal: copy_assortment() brings B's changed row back to A's (in
+#      place) and re-adds the removed one; with B's own assortment removed,
+#      the scenarios are equal again; B = A copied whole does not differ
 #  6.  Backend comparison (100-tree list): B with spruce sawlog min top 14 cm,
-#      a B-only flat-priced assortment (spruce poles) and pine pulpwood not in
-#      B. A equals the single run; B has no spruce sawlog under 14 cm top
-#      (under bark), has poles and no pine pulpwood
+#      a flat-priced spruce poles only in B, no pine pulpwood, and spruce
+#      pulpwood matrix-priced in B (flat in A). A equals the single run; B has
+#      no spruce sawlog under 14 cm top (under bark), has poles and no pine
+#      pulpwood, and prices spruce pulpwood from its matrix
 #  7.  Renaming the base Waste assortments (type stays waste) leaves every
 #      tree's value, volumes and NOK/m3 unchanged
-#  8.  b_states_from() (scenario upload to B): the demo B gives spruce sawlog
-#      "own" (rules and prices), the rest "same"; b_set() gives back B's file
+#  8.  Scenario file uploaded to B: scenario_import() gives exactly the
+#      file's assortments and prices; it differs from A
 #  9.  Demo scenario and price files: both scenario files import, both price
-#      files upload into their scenario (upload_price_set()), B differs
+#      files upload into their scenario (upload_price_set()); B differs
 # 10.  Demo tree list: reads and prepares without errors (2 plots, spruce and
 #      pine, heights imputed with fieldPlot for spruce and the ratio method,
 #      "FinnHoyde (calibrated)", for pine), and a comparison with the demo
 #      scenarios runs and gives different values
+# 11.  Price type per assortment and scenario: spruce pulpwood matrix-priced
+#      and pine pulpwood flat within one scenario is valid; copy_prices()
+#      copies only assortments priced the same way in both scenarios and
+#      reports the others; copying the assortment copies its price type
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -99,9 +108,8 @@ pd0  <- load_products(root_dir)
 pm0  <- pm_minimal(load_price_matrix_long(root_dir))
 defs <- defs_from_products(pd0)
 keys <- assortment_table_keys(defs)
-same <- setNames(rep("same", length(keys)), keys)
-no_own <- defs[0, , drop = FALSE]
-kb <- function(b) assortment_table_keys(b$defs)
+kb <- function(d) assortment_table_keys(d)
+pm_a0 <- pm0
 
 # A user-added B-only assortment (flat price), as the app's form makes it.
 poles <- .type_assortment_table(data.frame(
@@ -131,56 +139,67 @@ rec("Check 01: Rounding per volume method, flat lengths every 10 cm, user types 
 
 
 # ==============================================================================
-section("02. B-only assortment")
-asm2 <- c(same, spruce_poles = "own"); st2 <- asm2
-b2 <- b_set(defs, pm0, rbind(pm0, pm_poles), st2, poles, asm2)
-d2 <- b_differs(pm0, rbind(pm0, pm_poles), st2, defs, b2$defs)
-ok2 <- identical(kb(b2), c(keys, "spruce_poles")) && "spruce_poles" %in% b2$pm$ProductKey &&
-  !"spruce_poles" %in% keys && isTRUE(d2) && isTRUE(check_price_set(b2$defs, b2$pm)$ok) &&
-  identical(b_row_diff(defs, b2$defs)$status, c(rep("same", length(keys)), "b_only"))
-rec("Check 02: B-only assortment in B's table and prices, not in A; B differs",
-    ok(ok2), sprintf("B keys: %s | B differs: %s", paste(kb(b2), collapse = ", "), d2))
+section("02. Assortment only in B")
+defs2 <- rbind(defs, poles); pm2 <- rbind(pm0, pm_poles)
+d2 <- scenarios_differ(defs, pm0, defs2, pm2)
+rb <- assortment_diff(defs2, defs); ra <- assortment_diff(defs, defs2)
+ok2 <- isTRUE(d2) && identical(rb$status, c(rep("same", length(keys)), "only")) &&
+  identical(ra$other_only, "spruce_poles") && all(ra$status == "same") &&
+  isTRUE(check_price_set(defs2, pm2)$ok)
+rec("Check 02: Assortment only in B marked on both sides; the scenarios differ",
+    ok(ok2), sprintf("B statuses: %s | missing in A: %s | differ: %s",
+                     paste(rb$status, collapse = ","), paste(ra$other_only, collapse = ","), d2))
 
 
 # ==============================================================================
-section("03. Changed rules in B, same prices")
-asm3 <- same; asm3["spruce_sawlog"] <- "own"
-b3 <- b_set(defs, pm0, pm0, same, saw14, asm3)
-d3 <- b_differs(pm0, pm0, same, defs, b3$defs)
-rd3 <- b_row_diff(defs, b3$defs)
-diff_cols <- colnames(rd3$diff)[rd3$diff[match("spruce_sawlog", kb(b3)), ]]
-ok3 <- isTRUE(d3) && identical(diff_cols, "MinTopDiameter_cm") &&
-  identical(pm_minimal(b3$pm), pm0) && !isTRUE(b_differs(pm0, pm0, same))
-rec("Check 03: A rule change alone makes B differ (comparison); only that field marked",
-    ok(ok3), sprintf("B differs: %s (prices alone: %s) | changed fields: %s | prices equal A: %s",
-                     d3, b_differs(pm0, pm0, same), paste(diff_cols, collapse = ", "),
-                     identical(pm_minimal(b3$pm), pm0)))
+section("03. Changed rule in B, same prices")
+defs3 <- defs; defs3[keys == "spruce_sawlog", ] <- saw14
+d3 <- scenarios_differ(defs, pm0, defs3, pm0)
+r3b <- assortment_diff(defs3, defs); r3a <- assortment_diff(defs, defs3)
+cols_b <- colnames(r3b$diff)[r3b$diff[match("spruce_sawlog", keys), ]]
+cols_a <- colnames(r3a$diff)[r3a$diff[match("spruce_sawlog", keys), ]]
+ok3 <- isTRUE(d3) && identical(cols_b, "MinTopDiameter_cm") && identical(cols_a, "MinTopDiameter_cm") &&
+  !isTRUE(scenarios_differ(defs, pm0, defs, pm0)) && same_prices(pm0, pm0, "spruce_sawlog")
+rec("Check 03: A rule change alone makes the scenarios differ; only that field marked on both sides",
+    ok(ok3), sprintf("differ: %s (identical scenarios: %s) | changed fields B: %s, A: %s",
+                     d3, scenarios_differ(defs, pm0, defs, pm0),
+                     paste(cols_b, collapse = ","), paste(cols_a, collapse = ",")))
 
 
 # ==============================================================================
 section("04. Removed from B only")
-asm4 <- same; asm4["pine_pulpwood"] <- "none"; st4 <- asm4
-b4 <- b_set(defs, pm0, pm0, st4, no_own, asm4)
-d4 <- b_differs(pm0, pm0, st4, defs, b4$defs)
-ok4 <- !"pine_pulpwood" %in% c(kb(b4), b4$pm$ProductKey) && "pine_pulpwood" %in% keys &&
-  isTRUE(d4) && identical(b_row_diff(defs, b4$defs)$a_only, "pine_pulpwood")
-rec("Check 04: Assortment removed from B only: not in B, still in A; B differs",
-    ok(ok4), sprintf("B keys: %s | A only: %s | B differs: %s", paste(kb(b4), collapse = ", "),
-                     paste(b_row_diff(defs, b4$defs)$a_only, collapse = ", "), d4))
+defs4 <- defs[keys != "pine_pulpwood", , drop = FALSE]; rownames(defs4) <- NULL
+pm4 <- pm0[pm0$ProductKey != "pine_pulpwood", , drop = FALSE]
+d4 <- scenarios_differ(defs, pm0, defs4, pm4)
+ok4 <- !"pine_pulpwood" %in% kb(defs4) && "pine_pulpwood" %in% keys && isTRUE(d4) &&
+  identical(assortment_diff(defs4, defs)$other_only, "pine_pulpwood") &&
+  isTRUE(check_price_set(defs4, pm4)$ok)
+rec("Check 04: Assortment removed from B only: not in B, still in A; the scenarios differ",
+    ok(ok4), sprintf("B keys: %s | missing in B: %s | differ: %s", paste(kb(defs4), collapse = ", "),
+                     paste(assortment_diff(defs4, defs)$other_only, collapse = ", "), d4))
 
 
 # ==============================================================================
-section("05. Make equal to A")
-b5 <- b_set(defs, pm0, rbind(pm0, pm_poles), same, rbind(saw14, poles), same)
-d5 <- b_differs(pm0, rbind(pm0, pm_poles), same, defs, b5$defs)
-ok5 <- identical(b5$defs, defs) && identical(pm_minimal(b5$pm), pm0) && !isTRUE(d5)
-rec("Check 05: With every assortment 'same', B equals A (own rows and prices ignored)",
-    ok(ok5), sprintf("table equal: %s | prices equal: %s | B differs: %s",
-                     identical(b5$defs, defs), identical(pm_minimal(b5$pm), pm0), d5))
+section("05. Make equal")
+# B: changed sawlog rule, pine pulpwood removed, poles added.
+db <- rbind(defs3[kb(defs3) != "pine_pulpwood", , drop = FALSE], poles); rownames(db) <- NULL
+pb <- rbind(pm4, pm_poles)
+c1 <- copy_assortment(defs, pm0, db, pb, "spruce_sawlog")
+c2 <- copy_assortment(defs, pm0, c1$defs, c1$pm, "pine_pulpwood")
+eq_pos <- identical(match("spruce_sawlog", kb(c1$defs)), match("spruce_sawlog", kb(db)))
+d5a <- scenarios_differ(defs, pm0, c2$defs, c2$pm)                   # poles still only in B
+back <- c2$defs[kb(c2$defs) != "spruce_poles", , drop = FALSE]
+d5b <- scenarios_differ(defs, pm0, back, c2$pm[c2$pm$ProductKey != "spruce_poles", ])
+d5c <- scenarios_differ(defs, pm0, defs, pm0)                        # B = A copied whole
+ok5 <- eq_pos && isTRUE(d5a) && !isTRUE(d5b) && !isTRUE(d5c) &&
+  assortment_diff(c2$defs, defs)$status[match("spruce_sawlog", kb(c2$defs))] == "same"
+rec("Check 05: Make equal: one assortment copied in place, a removed one re-added, whole scenario",
+    ok(ok5), sprintf("copied in place: %s | differ with poles only in B: %s | without poles: %s | B = A: %s",
+                     eq_pos, d5a, d5b, d5c))
 
 
 # ==============================================================================
-section("06. Backend comparison with B's own assortments")
+section("06. Backend comparison with B's own assortments and price types")
 tl <- perf_tree_list(100L)
 TABLES <- c("selected_logs_all", "tree_summary", "per_m3_summary", "per_m3_by_assortment",
             "product_summary")
@@ -188,25 +207,30 @@ same_tables <- function(x, y) all(vapply(TABLES, function(k) identical(x[[k]], y
 pa <- products_from_defs(defs, pm0)
 f_a <- tempfile(fileext = ".csv"); pm_export(pm0, f_a)
 r_single <- run_tree_list_bucking(tl, f_a, root_dir, products = pa$pd, length_classes = pa$lc)
-asm6 <- c(same, spruce_poles = "own"); asm6["spruce_sawlog"] <- "own"; asm6["pine_pulpwood"] <- "none"
-st6 <- asm6; st6["spruce_sawlog"] <- "same"
-b6 <- b_set(defs, pm0, rbind(pm0, pm_poles), st6, rbind(saw14, poles), asm6)
-pb <- products_from_defs(b6$defs, b6$pm)
-f_b <- tempfile(fileext = ".csv"); pm_export(b6$pm, f_b)
+# B: sawlog min top 14, poles only in B, no pine pulpwood, spruce pulpwood by a matrix.
+pulp_m <- pm_start_prices("spruce_pulpwood", "matrix", 300, 5, 70, seq(300, 540, by = 30))
+db6 <- db; db6$PriceType[kb(db6) == "spruce_pulpwood"] <- "matrix"
+pb6 <- pm_minimal(rbind(pb[pb$ProductKey != "spruce_pulpwood", ], pulp_m))
+v6 <- check_price_set(db6, pb6)
+pbp <- products_from_defs(db6, pb6)
+f_b <- tempfile(fileext = ".csv"); pm_export(pb6, f_b)
 r6 <- run_tree_list_bucking(tl, f_a, root_dir, products = pa$pd, length_classes = pa$lc,
-                            scenario = list(price_matrix_path = f_b, products = pb$pd,
-                                            length_classes = pb$lc))
+                            scenario = list(price_matrix_path = f_b, products = pbp$pd,
+                                            length_classes = pbp$lc))
 unlink(c(f_a, f_b))
 lb <- r6$scenario$selected_logs_all; la <- r6$selected_logs_all
 small_saw <- function(l) sum(l$ProductKey == "spruce_sawlog" & l$TopDiameter_ub < 140)
-ok6 <- same_tables(r_single, r6) && small_saw(lb) == 0L && small_saw(la) > 0L &&
+pulp_b <- lb[lb$ProductKey == "spruce_pulpwood", ]
+ok6 <- isTRUE(v6$ok) && same_tables(r_single, r6) && small_saw(lb) == 0L && small_saw(la) > 0L &&
   sum(lb$ProductKey == "spruce_poles") > 0L && sum(lb$ProductKey == "pine_pulpwood") == 0L &&
-  sum(la$ProductKey == "pine_pulpwood") > 0L
-rec("Check 06: Comparison runs B's own rules: min top 14 cm, B-only poles, no pine pulpwood",
-    ok(ok6), sprintf("A = single run: %s | spruce sawlogs < 14 cm top u.b.: A %d, B %d | poles in B: %d | pine pulpwood: A %d, B %d",
-                     same_tables(r_single, r6), small_saw(la), small_saw(lb),
+  sum(la$ProductKey == "pine_pulpwood") > 0L && nrow(pulp_b) > 0L &&
+  all(pulp_b$PriceNOKperM3 == 300) && all(pulp_b$LogLength %in% seq(300, 540, by = 30))
+rec("Check 06: Comparison runs B's own rules and price types (pulpwood by a matrix in B)",
+    ok(ok6), sprintf("B valid: %s | A = single run: %s | spruce sawlogs < 14 cm top u.b.: A %d, B %d | poles in B: %d | pine pulpwood: A %d, B %d | B spruce pulpwood logs %d, matrix prices %s, matrix lengths %s",
+                     isTRUE(v6$ok), same_tables(r_single, r6), small_saw(la), small_saw(lb),
                      sum(lb$ProductKey == "spruce_poles"), sum(la$ProductKey == "pine_pulpwood"),
-                     sum(lb$ProductKey == "pine_pulpwood")))
+                     sum(lb$ProductKey == "pine_pulpwood"), nrow(pulp_b),
+                     all(pulp_b$PriceNOKperM3 == 300), all(pulp_b$LogLength %in% seq(300, 540, by = 30))))
 
 
 # ==============================================================================
@@ -236,27 +260,26 @@ rec("Check 07: Waste renamed 'Residue' (type stays waste): per-tree results unch
 
 
 # ==============================================================================
-section("08. Scenario upload to B (b_states_from)")
+section("08. Scenario file uploaded to B")
 demo <- file.path(root_dir, "demo")
 sa <- scenario_import(file.path(demo, "scenario_A.xlsx"))
 sb <- scenario_import(file.path(demo, "scenario_B.xlsx"))
-s8 <- b_states_from(sa$defs, sa$pm, sb$defs, sb$pm)
-b8 <- b_set(sa$defs, sa$pm, s8$pm_b, s8$state, s8$defs_b_own, s8$b_asm)
-exp_asm <- same; exp_asm["spruce_sawlog"] <- "own"
-ok8 <- identical(s8$b_asm, exp_asm) && identical(s8$state, exp_asm) &&
-  identical(b8$defs, sb$defs) && identical(pm_minimal(b8$pm), pm_minimal(sb$pm))
-rec("Check 08: Demo B uploaded to B: spruce sawlog own (rules and prices), rest same",
-    ok(ok8), sprintf("assortments: %s | prices: %s | B in effect equals the file: %s",
-                     paste(sprintf("%s %s", names(s8$b_asm), s8$b_asm), collapse = ", "),
-                     paste(sprintf("%s %s", names(s8$state), s8$state), collapse = ", "),
-                     identical(b8$defs, sb$defs) && identical(pm_minimal(b8$pm), pm_minimal(sb$pm))))
+f8 <- tempfile(fileext = ".xlsx"); scenario_export(sb$defs, sb$pm, f8)
+s8 <- scenario_import(f8); unlink(f8)
+exp_saw <- sb$defs$MinTopDiameter_cm[kb(sb$defs) == "spruce_sawlog"]
+ok8 <- isTRUE(sb$ok) && identical(s8$defs, sb$defs) && identical(pm_minimal(s8$pm), pm_minimal(sb$pm)) &&
+  identical(exp_saw, 14) && isTRUE(scenarios_differ(sa$defs, sa$pm, sb$defs, sb$pm))
+rec("Check 08: A scenario file loads into B exactly (round trip); demo B differs from demo A",
+    ok(ok8), sprintf("ok %s | round trip table %s, prices %s | spruce sawlog min top %s | differs from A %s",
+                     isTRUE(sb$ok), identical(s8$defs, sb$defs), identical(pm_minimal(s8$pm), pm_minimal(sb$pm)),
+                     exp_saw, scenarios_differ(sa$defs, sa$pm, sb$defs, sb$pm)))
 
 
 # ==============================================================================
 section("09. Demo scenario and price files")
-ua <- upload_price_set(file.path(demo, "prices_A.xlsx"), "prices_A.xlsx", "A", sa$defs, sa$pm, sa$pm, same)
-ub <- upload_price_set(file.path(demo, "prices_B.xlsx"), "prices_B.xlsx", "B", sa$defs, sa$pm, sa$pm, same)
-d9 <- isTRUE(ub$ok) && b_differs(sa$pm, ub$pm, ub$state, sa$defs, sa$defs)
+ua <- upload_price_set(file.path(demo, "prices_A.xlsx"), "prices_A.xlsx", sa$defs, sa$pm)
+ub <- upload_price_set(file.path(demo, "prices_B.xlsx"), "prices_B.xlsx", sa$defs, sa$pm)
+d9 <- isTRUE(ub$ok) && scenarios_differ(sa$defs, sa$pm, sa$defs, ub$pm)
 ok9 <- isTRUE(sa$ok) && isTRUE(sb$ok) && isTRUE(ua$ok) && isTRUE(ub$ok) &&
   identical(pm_minimal(ua$pm), pm0) && d9 && identical(sa$defs, defs)
 rec("Check 09: Demo scenario files import; demo price files upload; B differs",
@@ -290,6 +313,25 @@ rec("Check 10: Demo tree list prepares (2 plots, spruce and pine, heights impute
                       isTRUE(pt$ok), if (!is.null(pt$trees)) nrow(pt$trees) else NA,
                       paste(sprintf("%s %s", names(hm), hm), collapse = ", "), ran, va, vb,
                       if (!ran) paste(" | error:", r10) else ""))
+
+
+# ==============================================================================
+section("11. Price type per assortment and scenario")
+v11 <- check_price_set(db6, pb6)                     # spruce pulpwood matrix, others flat
+kinds <- setNames(db6$PriceType, kb(db6))
+cp <- copy_prices(defs, pm0, db6, pb6, kb(db6))      # B's prices from A where priced alike
+c11 <- copy_assortment(db6, pb6, defs, pm0, "spruce_pulpwood")   # A takes B's matrix pulpwood
+ok11 <- isTRUE(v11$ok) && identical(unname(kinds[c("spruce_pulpwood", "spruce_waste")]), c("matrix", "flat")) &&
+  "spruce_pulpwood" %in% cp$skipped && "spruce_poles" %in% cp$skipped &&
+  "spruce_sawlog" %in% cp$copied && "spruce_waste" %in% cp$copied &&
+  same_prices(cp$pm, pm0, "spruce_sawlog") && same_prices(cp$pm, pb6, "spruce_pulpwood") &&
+  identical(c11$defs$PriceType[kb(c11$defs) == "spruce_pulpwood"], "matrix") &&
+  isTRUE(check_price_set(c11$defs, c11$pm)$ok)
+rec("Check 11: Price type per assortment and scenario; copy_prices() copies only alike-priced ones",
+    ok(ok11), sprintf("matrix and flat in one scenario valid: %s | copied: %s | skipped: %s | A after copying B's pulpwood: %s, valid %s",
+                      isTRUE(v11$ok), paste(cp$copied, collapse = ","), paste(cp$skipped, collapse = ","),
+                      c11$defs$PriceType[kb(c11$defs) == "spruce_pulpwood"],
+                      isTRUE(check_price_set(c11$defs, c11$pm)$ok)))
 
 
 # ==============================================================================

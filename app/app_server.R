@@ -100,7 +100,7 @@ server <- function(input, output, session) {
     n <- count_stratum_trees(trees_meta, input$species_group, hkl_raw, abon,
                              selected_fylnr(input$fylnr_sel))
     if (n <= LARGE_RUN_TREES) return(NULL)
-    secs <- estimate_run_seconds(n, APP_WORKERS, compare = sc$b_differ())
+    secs <- estimate_run_seconds(n, APP_WORKERS, compare = sc$differ())
     div(class = "note-warn", sprintf("%s trees: about %s.", format(n, big.mark = ","),
         if (secs < 90) sprintf("%.0f s", secs) else sprintf("%.0f min", secs / 60)))
   })
@@ -155,9 +155,9 @@ server <- function(input, output, session) {
     d <- sc$defs_a(); a <- pm_minimal(sc$pm_a())
     va <- check_price_set(d, a)
     if (!va$ok) return(reject(paste(c("Scenario A cannot be used:", va$errors), collapse = "\n")))
-    compare <- sc$b_differ(); b <- NULL
+    compare <- sc$differ(); b <- NULL
     if (compare) {
-      b <- sc$b_now()
+      b <- list(defs = sc$defs_b(), pm = pm_minimal(sc$pm_b()))
       vb <- check_price_set(b$defs, b$pm)
       if (!vb$ok) return(reject(paste(c("Scenario B cannot be used:", vb$errors), collapse = "\n")))
     }

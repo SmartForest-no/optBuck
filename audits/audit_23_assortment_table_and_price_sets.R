@@ -28,9 +28,9 @@
 #      already there, not whole dm or not positive is refused
 #  7.  Validation: a gap in the diameter classes is an error; classes that
 #      start above the minimum top diameter give a warning
-#  8.  B states: b_differs() is FALSE for all "same" and for "own" copies of
-#      A, TRUE for "none", an "own" price change or an "own" row/column
-#      change; b_set() drops "none" products and takes A's rows for "same"
+#  8.  Prices of two scenarios (Phase 4d: independent scenarios replace the
+#      Phase 4c B states): scenarios_differ() is FALSE for a copy of A, TRUE
+#      for a changed price, a removed length column or a missing product
 #  9.  Scenario xlsx (Phase 4d: scenario_export() -> scenario_import(), one
 #      scenario per file): table and prices come back identical; a file
 #      without the assortments sheet is refused
@@ -102,7 +102,6 @@ pd0  <- load_products(root_dir); lc0 <- load_length_classes(root_dir)
 pm0  <- pm_minimal(load_price_matrix_long(root_dir))
 defs <- defs_from_products(pd0)
 keys <- assortment_table_keys(defs)
-st0  <- setNames(rep("same", length(keys)), keys)
 errmsg <- function(expr) tryCatch({ expr; "" }, error = function(e) conditionMessage(e))
 
 
@@ -226,26 +225,19 @@ rec("Check 07: Class gap is an error; classes above the minimum top diameter war
 
 
 # ==============================================================================
-section("08. B states")
-own <- st0; own["spruce_sawlog"] <- "own"
-none <- st0; none["pine_pulpwood"] <- "none"
-pm_b_cp  <- pm_b_copy_a(pm0, pm0, "spruce_sawlog")
-pm_b_px  <- pm_b_cp; i <- which(pm_b_px$ProductKey == "spruce_sawlog")[1]
-pm_b_px$PriceNOKperM3[i] <- pm_b_px$PriceNOKperM3[i] + 1
-pm_b_ax  <- pm_remove_length(pm_b_cp, "spruce_sawlog", 31)
-d8 <- c(same = b_differs(pm0, pm0, st0), own_copy = b_differs(pm0, pm_b_cp, own),
-        none = b_differs(pm0, pm0, none), own_price = b_differs(pm0, pm_b_px, own),
-        own_axes = b_differs(pm0, pm_b_ax, own))
-bs <- b_set(defs, pm0, pm_b_ax, c(own, NULL)); bs2 <- b_set(defs, pm0, pm0, none)
-ok8 <- identical(d8, c(same = FALSE, own_copy = FALSE, none = TRUE, own_price = TRUE, own_axes = TRUE)) &&
-  !"pine_pulpwood" %in% c(assortment_table_keys(bs2$defs), bs2$pm$ProductKey) &&
-  identical(pm_minimal(bs$pm[bs$pm$ProductKey == "pine_sawlog", ]),
-            pm_minimal(pm0[pm0$ProductKey == "pine_sawlog", ])) &&
-  !31L %in% lns(bs$pm, "spruce_sawlog")
-rec("Check 08: b_differs() and b_set()",
-    ok(ok8), sprintf("%s | 'none' dropped: %s | 'same' uses A: TRUE | 'own' axes: 31 dm in B %s",
-                     paste(sprintf("%s %s", names(d8), d8), collapse = ", "),
-                     !"pine_pulpwood" %in% bs2$pm$ProductKey, 31L %in% lns(bs$pm, "spruce_sawlog")))
+section("08. Prices of two scenarios")
+pm_px <- pm0; i8 <- which(pm_px$ProductKey == "spruce_sawlog")[1]
+pm_px$PriceNOKperM3[i8] <- pm_px$PriceNOKperM3[i8] + 1
+pm_ax <- pm_remove_length(pm0, "spruce_sawlog", 31)
+defs_np <- defs[keys != "pine_pulpwood", , drop = FALSE]
+d8 <- c(copy = scenarios_differ(defs, pm0, defs, pm_minimal(pm0)),
+        price = scenarios_differ(defs, pm0, defs, pm_px),
+        axes = scenarios_differ(defs, pm0, defs, pm_ax),
+        missing = scenarios_differ(defs, pm0, defs_np, pm0[pm0$ProductKey != "pine_pulpwood", ]))
+ok8 <- identical(d8, c(copy = FALSE, price = TRUE, axes = TRUE, missing = TRUE)) &&
+  !31L %in% lns(pm_ax, "spruce_sawlog")
+rec("Check 08: scenarios_differ() on prices, columns and products",
+    ok(ok8), paste(sprintf("%s %s", names(d8), d8), collapse = ", "))
 
 
 # ==============================================================================
@@ -275,9 +267,8 @@ r_def <- run_tree_list_bucking(tl, "default_2021", root_dir)
 f_a <- tempfile(fileext = ".csv"); pm_export(pm0, f_a)
 r_exp <- run_tree_list_bucking(tl, f_a, root_dir, products = p1$pd, length_classes = p1$lc)
 pm_b10 <- pm_remove_length(pm_remove_length(pm0, "spruce_sawlog", 31), "pine_sawlog", 31)
-st10 <- st0; st10[c("spruce_sawlog", "pine_sawlog")] <- "own"
-b10 <- b_set(defs, pm0, pm_b10, st10); pb10 <- products_from_defs(b10$defs, b10$pm)
-f_b <- tempfile(fileext = ".csv"); pm_export(b10$pm, f_b)
+pb10 <- products_from_defs(defs, pm_b10)
+f_b <- tempfile(fileext = ".csv"); pm_export(pm_b10, f_b)
 r_cmp <- run_tree_list_bucking(tl, f_a, root_dir, products = p1$pd, length_classes = p1$lc,
                                scenario = list(price_matrix_path = f_b, products = pb10$pd,
                                                length_classes = pb10$lc))

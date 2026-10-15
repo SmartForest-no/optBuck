@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: assortment table and price sets A and B
-  Run: 2026-10-15 10:30:25.036189
+  Run: 2026-10-15 11:31:14.53736
 ============================================================= 
 
 --- 01. Round trip of the base products ---
@@ -24,8 +24,8 @@
 --- 07. Validation of classes ---
   [PASS  ] Check 07: Class gap is an error; classes above the minimum top diameter warn | gap: ok FALSE, 'Diameter classes must be consecutive whole cm (no gaps): spruce_sawlog' | smallest class 13: ok TRUE, 'spruce_sawlog: the smallest diameter class is 13 cm but the minimum top diameter is 12 cm; logs below 13 cm are unpriced.'
 
---- 08. B states ---
-  [PASS  ] Check 08: b_differs() and b_set() | same FALSE, own_copy FALSE, none TRUE, own_price TRUE, own_axes TRUE | 'none' dropped: TRUE | 'same' uses A: TRUE | 'own' axes: 31 dm in B FALSE
+--- 08. Prices of two scenarios ---
+  [PASS  ] Check 08: scenarios_differ() on prices, columns and products | copy FALSE, price TRUE, axes TRUE, missing TRUE
 
 --- 09. Scenario xlsx round trip ---
   [PASS  ] Check 09: Scenario xlsx export -> import | ok TRUE | table TRUE | prices TRUE | file without assortments refused: TRUE ('The xlsx needs a sheet 'assortments' and the price sheets.')

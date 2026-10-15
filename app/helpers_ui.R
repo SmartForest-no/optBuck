@@ -326,23 +326,9 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
                   col = ch$muted, cex = 0.7)
 }
 
-#' rhandsontable renderer: plain numbers (Scenario A).
-PM_PLAIN_RENDERER <- "
-function(instance, td, row, col, prop, value, cellProperties) {
-  Handsontable.renderers.NumericRenderer.apply(this, arguments);
-  return td;
-}"
-
-#' rhandsontable renderer: B "Same as A", greyed (class "pm-same").
-PM_SAME_RENDERER <- "
-function(instance, td, row, col, prop, value, cellProperties) {
-  Handsontable.renderers.NumericRenderer.apply(this, arguments);
-  td.classList.add('pm-same');
-  return td;
-}"
-
-#' rhandsontable renderer: highlight B cells that differ from A's grid
-#' passed as params$def (row-major), class "pm-diff".
+#' rhandsontable renderer: highlight cells that differ from the other
+#' scenario's grid passed as params$def (row-major; NA where the other
+#' scenario has no such cell), class "pm-diff".
 PM_DIFF_RENDERER <- "
 function(instance, td, row, col, prop, value, cellProperties) {
   Handsontable.renderers.NumericRenderer.apply(this, arguments);
