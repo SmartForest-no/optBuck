@@ -370,10 +370,13 @@ server <- function(input, output, session) {
                   fmt = function(v) sprintf("%.1f %%", v))
   })
 
-  # Trees: a server-side paged table (all plots of a stratum can be tens of
-  # thousands of trees); the selected tree's logs are shown below it.
-  trees_df <- reactive({
-    req(has_result()); ts <- result()$tree_summary
+  # Trees, as Selected logs: a preview of Scenario A's first trees (select
+  # one to see its logs below) and a CSV of all trees, with both scenarios
+  # and a Scenario column after a comparison. No Status column: a tree
+  # without logs shows Logs = 0.
+  TREE_PREVIEW_N <- 20L
+  readable_trees <- function(r) {
+    ts <- r$tree_summary
     data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
                Species = tools::toTitleCase(ts$species_group), `DBH (cm)` = ts$dbh_cm,
                `Height (m)` = round(ts$height_m, 1), `Height source` = ts$height_source,
@@ -381,15 +384,32 @@ server <- function(input, output, session) {
                `Value (NOK)` = round(ts$total_value_nok, 2),
                `Commercial volume u.b. (m³)` = round(ts$commercial_volume_m3, 4),
                `NOK per m³` = round(ts$nok_per_m3, 1),
-               Status = ts$optimizer_status,
                check.names = FALSE, stringsAsFactors = FALSE)
+  }
+  trees_preview <- reactive({
+    req(has_result()); utils::head(readable_trees(result()), TREE_PREVIEW_N)
   })
-  tree_sel <- paged_table_server(input, output, session, "tbl_trees", trees_df, page_size = 15L,
-                                 selection = TRUE, filename = "optBuck_trees.csv")
+  output$trees_preview_note <- renderUI({
+    req(has_result()); n <- nrow(result()$tree_summary)
+    div(class = "note-muted", sprintf("Scenario A: the first %d of %s trees. Download all trees for the full table%s.",
+                                      min(TREE_PREVIEW_N, n), fmt_int(n),
+                                      if (compared()) " (both scenarios)" else ""))
+  })
+  output$tbl_trees <- renderReactable(
+    apter_reactable(trees_preview(), sortable = FALSE, pagination = FALSE, selection = "single"))
+  output$dl_trees <- downloadHandler(
+    filename = function() "optBuck_trees.csv",
+    content  = function(file) {
+      t <- cbind(Scenario = "A", readable_trees(result()), stringsAsFactors = FALSE)
+      if (compared())
+        t <- rbind(t, cbind(Scenario = "B", readable_trees(result_b()), stringsAsFactors = FALSE))
+      utils::write.csv(t, file, row.names = FALSE, fileEncoding = "UTF-8")
+    })
   output$tree_logs <- renderUI({
-    i <- tree_sel()
-    if (is.null(i)) return(div(class = "note-muted", "Select a tree to see its logs."))
-    tr <- trees_df()[i, ]
+    i <- reactable::getReactableState("tbl_trees", "selected")
+    if (is.null(i) || length(i) == 0L || i[1L] > nrow(trees_preview()))
+      return(div(class = "note-muted", "Select a tree to see its logs."))
+    tr <- trees_preview()[i[1L], ]
     sl <- result()$selected_logs_all
     logs <- sl[sl$plot_id_github %in% tr$Plot & sl$treid == tr$Tree, , drop = FALSE]   # plot may be NA
     tagList(div(class = "section-hdr", sprintf("Logs of tree %s%s", tr$Tree,

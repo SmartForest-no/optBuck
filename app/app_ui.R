@@ -129,7 +129,9 @@ simulator_page <- nav_panel(
           plotOutput("bar_volume_share",        height = "260px")
         ),
         apter_card("Trees", collapsible = TRUE, open = FALSE,
-          paged_table_ui("tbl_trees"),
+          uiOutput("trees_preview_note"),
+          reactableOutput("tbl_trees"),
+          downloadButton("dl_trees", "Download all trees (CSV)", class = "btn-secondary btn-sm"),
           uiOutput("tree_logs")
         )
       ),

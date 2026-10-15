@@ -141,7 +141,9 @@ still out of bounds.
   trees once, then Scenario A and B side by side, each as a 2 × 2 grid
   (value, commercial volume / NOK per m³, price volume). Selected logs is a
   preview (Scenario A's first 20 logs) plus `dl_logs`, a CSV of all logs
-  with a Scenario column (both scenarios after a comparison). The Summary's run time is
+  with a Scenario column (both scenarios after a comparison). The Trees
+  card (Per m³) works the same way: a preview of Scenario A's first 20 trees
+  (select one to see its logs), `dl_trees` for all trees, no Status column. The Summary's run time is
   the full time from clicking Run to the results (`elapsed_total_seconds`;
   the backend's `elapsed_seconds` counts only its own work). The SmartForest
   logo (`app/www/smartforest_logo.jpg`, `navbar_logo()`) sits at the right of

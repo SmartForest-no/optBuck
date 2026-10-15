@@ -195,8 +195,10 @@ The results have these tabs:
   volume, NOK per m³ and price volume for Scenario A and Scenario B side by
   side
 - **Per m³:** NOK/m³ in total, per species and by assortment, and per-tree
-  results; select a tree to see its logs (position, length, assortment, top
-  diameter over and under bark, price-diameter class, volumes and value)
+  results: a preview of the first 20 trees of Scenario A (select a tree to
+  see its logs: position, length, assortment, top diameter over and under
+  bark, price-diameter class, volumes and value) and a CSV download of all
+  trees (after a comparison, both scenarios, with a Scenario column)
 - **Products:** value and sale volume by assortment; after a comparison,
   for Scenario A and Scenario B side by side
 - **Selected logs:** a preview of the first 20 logs of Scenario A, and a

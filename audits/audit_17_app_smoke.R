@@ -71,8 +71,11 @@
 #      headers (Plot, StartPos, StopPos; no ProductType, plot_id_github or
 #      underscores); "Download all logs (CSV)" holds every log with a
 #      Scenario column (A)
-# 15.  Per m3 tab: tables render, the collapsed Trees card expands to tree
-#      rows, selecting a tree shows its logs below; no "per ha" /
+# 15.  Per m3 tab: tables render; the collapsed Trees card expands to a
+#      preview of Scenario A's first 20 trees (one-line label naming
+#      Scenario A, no sorting or paging controls, no Status column);
+#      selecting a tree shows its logs below; "Download all trees (CSV)"
+#      holds every tree with a Scenario column (A); no "per ha" /
 #      "ha-expanded" text
 # 16.  Automatic comparison: B's price matrix uploaded (spruce sawlog x1.2,
 #      wide CSV) -> differing cells highlighted in both grids, 351 cells
@@ -80,8 +83,8 @@
 #      table, pattern line and stem diagram render, no error notification;
 #      the Summary shows the run once and Scenario A and B side by side,
 #      each as a 2 x 2 grid (value, commercial volume / NOK per m3, price
-#      volume); the logs CSV holds both scenarios (Scenario A and B, as
-#      many rows as each run's logs)
+#      volume); the logs and trees CSVs hold both scenarios (Scenario A and
+#      B; the trees CSV has every tree once per scenario)
 # 17.  Spruce pulpwood removed from B only: the comparison run's B has no
 #      spruce pulpwood; "Make assortment equal to A" brings it back
 # 18.  Stale notice: absent right after a run; after a price edit,
@@ -370,7 +373,7 @@ browser_checks <- c(
   "Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",
   "Check 13: Summary shows the nine fields; no Diagnostics tab",
   "Check 14: Selected logs preview (Scenario A, first 20), readable headers, CSV of all logs",
-  "Check 15: Per m3 tab renders; Trees card expands, a selected tree shows its logs; no per-ha text",
+  "Check 15: Per m3 tab renders; Trees preview (Scenario A, first 20), selected tree's logs, CSV; no per-ha text",
   "Check 16: Comparison runs automatically when B differs",
   "Check 17: Assortment removed from B only drops it from B's run",
   "Check 18: Stale notice after a price edit",
@@ -701,18 +704,37 @@ if (!browser_ok) {
     }
     open_trees(app)
     n_trees_rows <- n_tbl_rows(app, "tbl_trees")
-    app$run_js("var r = document.querySelector('#tbl_trees .rt-tbody .rt-tr'); if (r) r.click();")
+    note15 <- txt(app, "#trees_preview_note")
+    hdr15 <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')")
+    ctrl15 <- js(app, paste0("document.querySelectorAll('#tbl_trees .rt-pagination, #tbl_trees [aria-sort], ",
+                             "#tbl_trees_sort, #tbl_trees_next').length"))
+    n_trees_run <- suppressWarnings(as.integer(gsub("[^0-9]", "", js(app, paste0(
+      "(function(){ var f = Array.from(document.querySelectorAll('#summary_cards .ro-field'))",
+      ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Trees'; });",
+      " return f ? f.querySelector('.ro-value').textContent : ''; })()")))))
+    read_trees_csv <- function(app) {
+      f <- tryCatch(app$get_download("dl_trees"), error = function(e) NULL)
+      if (is.null(f)) return(NULL)
+      utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+    }
+    csv15 <- read_trees_csv(app)
+    app$run_js("var r = document.querySelector('#tbl_trees .rt-tbody .rt-tr .rt-td:nth-child(3)'); if (r) r.click();")
     app$wait_for_idle()
-    n_detail <- js(app, "document.querySelectorAll('#tree_logs .reactable, #tree_logs .note-muted').length")
+    n_detail <- js(app, "document.querySelectorAll('#tree_logs .section-hdr').length")
     page_text <- js(app, "document.body.textContent")
     per_ha_hits <- regmatches(page_text, gregexpr("(?i)per ha\\b|ha-expanded", page_text, perl = TRUE))[[1]]
     shoot(app, "03_per_m3")
     ok15 <- !nzchar(e15) && isTRUE(n_pm3 >= 2L) && isTRUE(n_asort >= 1L) && trees_closed &&
-      isTRUE(n_trees_rows >= 1L) && isTRUE(n_detail >= 1L) && length(per_ha_hits) == 0L
+      identical(n_trees_rows, min(20L, n_trees_run)) && grepl("Scenario A", note15, fixed = TRUE) &&
+      identical(ctrl15, 0L) && !grepl("Status", hdr15, fixed = TRUE) && grepl("Logs", hdr15, fixed = TRUE) &&
+      !is.null(csv15) && identical(nrow(csv15), n_trees_run) && identical(unique(csv15$Scenario), "A") &&
+      !"Status" %in% names(csv15) && isTRUE(n_detail >= 1L) && length(per_ha_hits) == 0L
     rec(browser_checks[11], if (ok15) PASS else FAIL,
-        sprintf("per-m3 rows: %s | assortment rows: %s | Trees card starts closed: %s | tree rows: %s | log detail shown: %s | per-ha text hits: %d%s",
-                n_pm3, n_asort, trees_closed, n_trees_rows, isTRUE(n_detail >= 1L),
-                length(per_ha_hits), err_txt(e15)))
+        sprintf("per-m3 rows: %s | assortment rows: %s | Trees card starts closed: %s | label: '%s' | preview rows: %s of %s | controls: %s | headers: %s | CSV rows %s, scenarios %s | log detail shown: %s | per-ha text hits: %d%s",
+                n_pm3, n_asort, trees_closed, trimws(note15), n_trees_rows, n_trees_run, ctrl15, hdr15,
+                if (is.null(csv15)) NA else nrow(csv15),
+                if (is.null(csv15)) "" else paste(unique(csv15$Scenario), collapse = "/"),
+                isTRUE(n_detail >= 1L), length(per_ha_hits), err_txt(e15)))
     stale_before <- txt(app, "#stale_notice")
 
     # 16. upload B (spruce sawlog x1.2), automatic comparison
@@ -742,6 +764,7 @@ if (!browser_ok) {
     grid16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .summary-scen .ro-row'))",
                              ".map(function(r){ return getComputedStyle(r).gridTemplateColumns.split(' ').length; }).join(',')"))
     csv16 <- read_logs_csv(app)
+    tcsv16 <- read_trees_csv(app)
     exp16 <- paste(c("Run time", "Plots", "Trees", "Scenario A", "Total value (NOK)", "Commercial volume (m³ u.b.)",
                      "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
@@ -759,11 +782,14 @@ if (!browser_ok) {
       isTRUE(stem_img >= 1L) && identical(nerr16, 0L) && identical(sum16, exp16) &&
       !nzchar(paste0(e16d, e16e)) && identical(grid16, "2,2") &&
       !is.null(csv16) && identical(sort(unique(csv16$Scenario)), c("A", "B")) &&
-      all(table(csv16$Scenario) > 0)
+      all(table(csv16$Scenario) > 0) &&
+      !is.null(tcsv16) && identical(sort(unique(tcsv16$Scenario)), c("A", "B")) &&
+      identical(sum(tcsv16$Scenario == "A"), sum(tcsv16$Scenario == "B"))
     rec(browser_checks[12], if (ok16) PASS else FAIL,
-        sprintf("summary: '%s' | grid columns per scenario: %s | logs CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
+        sprintf("summary: '%s' | grid columns per scenario: %s | logs CSV: %s | trees CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
                 sum16, grid16,
                 if (is.null(csv16)) "none" else paste(sprintf("%s %d", names(table(csv16$Scenario)), table(csv16$Scenario)), collapse = ", "),
+                if (is.null(tcsv16)) "none" else paste(sprintf("%s %d", names(table(tcsv16$Scenario)), table(tcsv16$Scenario)), collapse = ", "),
                 n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
                 trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16a, e16b, e16c)))
 
