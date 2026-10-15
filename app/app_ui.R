@@ -13,12 +13,11 @@
 
 # One scenario column: its assortment table, its scenario file, and its
 # price matrices. s = "a" or "b". The two scenarios are independent and
-# both editable; "Make A equal to B" / "Make B equal to A" copy from the
-# other column (the whole scenario or one assortment in Assortments, one
-# matrix in Price matrices).
+# both editable; one copy button per section copies from the other column
+# ("Make assortment equal to B/A", "Make matrix equal to B/A"). A whole
+# scenario is copied by downloading one side and uploading it to the other.
 scenario_column <- function(s) {
   S <- toupper(s); O <- if (S == "A") "B" else "A"
-  eq <- sprintf("Make %s equal to %s", S, O)
   btn <- function(id, label, cls = "btn-secondary btn-sm") actionButton(id, label, class = cls)
   apter_card(paste("Scenario", S),
     div(class = "section-hdr", "Assortments"),
@@ -28,7 +27,6 @@ scenario_column <- function(s) {
       btn(paste0("asm_edit_", s), "Edit"),
       btn(paste0("asm_remove_", s), "Remove"),
       btn(paste0("asm_copy_one_", s), sprintf("Make assortment equal to %s", O)),
-      btn(paste0("asm_copy_all_", s), eq),
       btn(paste0("asm_reset_", s), "Reset to defaults")
     ),
     reactableOutput(paste0("tbl_asm_", s)),

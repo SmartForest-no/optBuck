@@ -3,9 +3,10 @@
 #
 # Purpose : Phase 4d (2026-10-15): Scenarios A and B each have their own
 #           assortments and prices. The scenarios are independent: B starts
-#           as a copy of A, nothing is linked, and "Make A equal to B" /
-#           "Make B equal to A" copy a whole scenario, one assortment or
-#           prices (R/helpers_price_matrix.R). Checks the scenario helpers,
+#           as a copy of A, nothing is linked, "Make assortment equal to
+#           A/B" and "Make matrix equal to A/B" copy one assortment or one
+#           matrix (R/helpers_price_matrix.R), and a whole scenario is copied
+#           by downloading one side and uploading it to the other. Checks the scenario helpers,
 #           the derived assortment fields (type, length step, diameter
 #           rounding), runs with B's own rules and price types, and the demo
 #           files in demo/.
@@ -23,7 +24,8 @@
 #      scenarios differ
 #  5.  Make equal: copy_assortment() brings B's changed row back to A's (in
 #      place) and re-adds the removed one; with B's own assortment removed,
-#      the scenarios are equal again; B = A copied whole does not differ
+#      the scenarios are equal again; Scenario A written to a scenario
+#      file and read back as B (download, upload) does not differ
 #  6.  Backend comparison (100-tree list): B with spruce sawlog min top 14 cm,
 #      a flat-priced spruce poles only in B, no pine pulpwood, and spruce
 #      pulpwood matrix-priced in B (flat in A). A equals the single run; B has
@@ -190,11 +192,13 @@ eq_pos <- identical(match("spruce_sawlog", kb(c1$defs)), match("spruce_sawlog", 
 d5a <- scenarios_differ(defs, pm0, c2$defs, c2$pm)                   # poles still only in B
 back <- c2$defs[kb(c2$defs) != "spruce_poles", , drop = FALSE]
 d5b <- scenarios_differ(defs, pm0, back, c2$pm[c2$pm$ProductKey != "spruce_poles", ])
-d5c <- scenarios_differ(defs, pm0, defs, pm0)                        # B = A copied whole
+f5 <- tempfile(fileext = ".xlsx"); scenario_export(defs, pm0, f5)    # A downloaded ...
+s5 <- scenario_import(f5); unlink(f5)                                  # ... uploaded to B
+d5c <- !isTRUE(s5$ok) || scenarios_differ(defs, pm0, s5$defs, s5$pm)
 ok5 <- eq_pos && isTRUE(d5a) && !isTRUE(d5b) && !isTRUE(d5c) &&
   assortment_diff(c2$defs, defs)$status[match("spruce_sawlog", kb(c2$defs))] == "same"
 rec("Check 05: Make equal: one assortment copied in place, a removed one re-added, whole scenario",
-    ok(ok5), sprintf("copied in place: %s | differ with poles only in B: %s | without poles: %s | B = A: %s",
+    ok(ok5), sprintf("copied in place: %s | differ with poles only in B: %s | without poles: %s | A downloaded and uploaded to B differs: %s",
                      eq_pos, d5a, d5b, d5c))
 
 

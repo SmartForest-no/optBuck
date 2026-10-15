@@ -9,9 +9,10 @@
 #           assortment table, pm = its prices). B starts as an exact copy of
 #           A; nothing is linked. Both sides are always editable; cells and
 #           rows that differ from the other scenario are highlighted on both
-#           sides. "Make A equal to B" / "Make B equal to A" copy a whole
-#           scenario, one assortment or prices (R/helpers_price_matrix.R:
-#           copy_assortment(), copy_prices()). A run compares A and B when
+#           sides. "Make assortment equal to A/B" and "Make matrix equal to
+#           A/B" copy one assortment or one matrix from the other scenario
+#           (R/helpers_price_matrix.R: copy_assortment(), copy_prices()); a
+#           whole scenario is copied by download and upload. A run compares A and B when
 #           scenarios_differ().
 #           Internal names: "default" and "scenario" in the backend mean A and B.
 
@@ -304,12 +305,6 @@ scenario_server <- function(input, output, session) {
           if (in_other) actionButton("asm_rm_both", "From both", class = "btn-primary"))))
     })
 
-    # The whole scenario equal to the other one (assortments and prices).
-    observeEvent(input[[paste0("asm_copy_all_", s)]], {
-      o <- other(side)
-      sc[[side]]$defs(defs(o)); sc[[side]]$pm(prices(o)); redraw()
-      say(side, "ok", sprintf("Scenario %s is equal to Scenario %s.", side, o))
-    })
     # One assortment (definition and prices) equal to the other scenario's.
     observeEvent(input[[paste0("asm_copy_one_", s)]], {
       o <- other(side); k <- input[[paste0("asm_pick_", s)]]

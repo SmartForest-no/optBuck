@@ -48,7 +48,8 @@
 #      Assortment, Species, Top Ø, Max butt Ø, Length, Volume method (no
 #      Type, Length step or Diameter rounding); no limit shown as "–" or
 #      "≥", never "Inf"/"Infinity"; columns cannot be sorted by clicking;
-#      one copy button per price section ("Make matrix equal to B/A")
+#      one copy button per section ("Make assortment equal to B/A",
+#      "Make matrix equal to B/A"); no whole-scenario buttons
 #  9.  Independent scenarios (Phase 4d): both grids editable (no read-only
 #      cells), nothing greyed, no highlighted differences at the start, no
 #      "Same as A" dropdown and no "B equals/differs" notes
@@ -99,8 +100,8 @@
 #      from B only is listed as "Not in B"; Run -> comparison with B's
 #      products (poles); both tables list the same assortments in the same
 #      order (species, sawlog, pulpwood, waste, custom), "Not in" lines
-#      included; "Make matrix equal to B" in A copies prices; "Make B equal
-#      to A" -> no highlighted differences left
+#      included; "Make matrix equal to B" in A copies prices; Scenario A
+#      downloaded and uploaded to B -> no highlighted differences left
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -373,7 +374,7 @@ browser_checks <- c(
   "Check 21: Uploaded tree list validates, runs and reports height sources",
   "Check 22: Screenshots saved for review",
   "Check 23: Browser runtime under 300 s",
-  "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, Make B equal to A")
+  "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B")
 
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -528,15 +529,18 @@ if (!browser_ok) {
       !any(vapply(gone8, grepl, logical(1), x = asm_txt, fixed = TRUE))
     n_asm0 <- n_tbl_rows(app, "tbl_asm_a")
     sortable8 <- js(app, "document.querySelectorAll('#tbl_asm_a [aria-sort], #tbl_asm_b [aria-sort], #tbl_asm_a .rt-sort-header').length")
-    copy8 <- js(app, "['pm_a_copy_all','pm_b_copy_all'].filter(function(i){ return !!document.getElementById(i); }).length")
-    copy1 <- js(app, "[document.getElementById('pm_a_copy_one'), document.getElementById('pm_b_copy_one')].map(function(b){ return b ? b.textContent.trim() : ''; }).join('|')")
+    copy8 <- js(app, "['pm_a_copy_all','pm_b_copy_all','asm_copy_all_a','asm_copy_all_b'].filter(function(i){ return !!document.getElementById(i); }).length")
+    copy1 <- js(app, paste0("['pm_a_copy_one','pm_b_copy_one','asm_copy_one_a','asm_copy_one_b'].map(function(i){",
+                            " var b = document.getElementById(i); return b ? b.textContent.trim() : ''; }).join('|')"))
+    n_eq8 <- js(app, "Array.from(document.querySelectorAll('button')).filter(function(b){ return /^Make [AB] equal to [AB]$/.test(b.textContent.trim()); }).length")
     ok8 <- hdr_ok && identical(n_asm0, 6L) && grepl("–", asm_txt, fixed = TRUE) &&
       !grepl("Inf", asm_txt, fixed = TRUE) && identical(sortable8, 0L) && identical(copy8, 0L) &&
-      identical(copy1, "Make matrix equal to B|Make matrix equal to A")
+      identical(copy1, "Make matrix equal to B|Make matrix equal to A|Make assortment equal to B|Make assortment equal to A") &&
+      identical(n_eq8, 0L)
     rec(browser_checks[4], if (ok8) PASS else FAIL,
-        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | price copy buttons: '%s' (whole-scenario ones in prices: %s)",
+        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | copy buttons: '%s' (whole-scenario buttons: %s, 'Make A/B equal to' buttons: %s)",
                 n_asm0, hdr_ok, grepl("–", asm_txt, fixed = TRUE),
-                grepl("Inf", asm_txt, fixed = TRUE), sortable8, copy1, copy8))
+                grepl("Inf", asm_txt, fixed = TRUE), sortable8, copy1, copy8, n_eq8))
     shoot(app, "01_assortments_and_prices")
 
     # 09. Both scenarios editable (Handsontable marks read-only cells
@@ -893,9 +897,14 @@ if (!browser_ok) {
                 grepl("Height source", trees21, fixed = TRUE), nerr21, err_txt(e21, e21b)))
 
     # 24. Scenario B's own assortments (Phase 4d, independent scenarios)
+    # B made equal to A as a user does it: download Scenario A, upload to B.
+    a_to_b <- function(app) {
+      f <- app$get_download("dl_scen_a")
+      app$upload_file(scen_b_upload = f); app$wait_for_idle()
+    }
     n24 <- list(); msg24 <- ""
     e24 <- try_drv({
-      app$set_inputs(main_nav = "prices"); app$click("asm_copy_all_b"); app$wait_for_idle()
+      app$set_inputs(main_nav = "prices"); a_to_b(app)
       n24$start <- marks(app)
       # a rule of B only: spruce sawlog min top 14 cm
       app$set_inputs(asm_pick_b = "spruce_sawlog", wait_ = FALSE); app$click("asm_edit_b"); app$wait_for_idle()
@@ -934,7 +943,7 @@ if (!browser_ok) {
       app$set_inputs(main_nav = "prices")
       app$set_inputs(pm_id_a = "spruce_sawlog", wait_ = FALSE); app$click("pm_a_copy_one"); app$wait_for_idle()
       msg24 <- txt(app, "#msg_a")
-      app$click("asm_copy_all_b"); app$wait_for_idle()
+      a_to_b(app)
       n24$end <- marks(app)
     })
     ok24 <- !nzchar(paste0(e24, e24b)) && identical(n24$start, 0L) &&
@@ -946,7 +955,7 @@ if (!browser_ok) {
       grepl("Value A", prod24, fixed = TRUE) && grepl("Prices equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make A equal to B (prices): '%s' | after Make B equal to A: %s marks%s",
+        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make matrix equal to B: '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
                 n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))

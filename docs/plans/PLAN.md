@@ -32,7 +32,7 @@ Built on branch `scenarios-and-polish` after Phase 4c was merged. Results are id
 
 1. **Scenarios A and B** cover assortments as well as prices. The Assortments and prices tab has two columns, Scenario A on the left and Scenario B on the right, which stack on narrow screens. Each column has a compact assortment table (Assortment, Species, Top Ø, Max butt Ø, Length, Volume method) with Add/Edit/Remove, and that scenario's price matrices below it.
    - The scenarios are independent (revised before merging): B starts as an exact copy of A, both sides are always editable, and nothing is greyed or linked. Differences are highlighted on both sides.
-   - "Make B equal to A" (right column) and "Make A equal to B" (left column) work for the whole scenario and per assortment (Assortments section), and for all prices and per matrix (Price matrices section).
+   - One copy button per section and side: "Make assortment equal to B/A" (Assortments) and "Make matrix equal to B/A" (Price matrices). A whole scenario is copied by downloading one side and uploading it to the other.
    - An assortment can be added to both scenarios or one, and removed from one scenario or both. Its price type (matrix or flat) is set per scenario. The matrix selectors are independent.
    - No status notes. A comparison runs when A and B differ in assortments or prices. NOK/m³ per scenario uses that scenario's own commercial volume.
    - Each scenario has an xlsx upload and download (assortments plus price sheets), and price matrices load separately as before.

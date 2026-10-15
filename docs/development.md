@@ -22,7 +22,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Tie-breaking and price scenarios | Audit 19 PASS (26/26): synthetic ties, order independence, matrix helpers, long and wide uploads (class gaps rejected), pattern comparison |
 | Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline (with the pre-Phase-4c limits), validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
 | Tree lists and height imputation (Phase 5) | Audit 21 PASS (28/28): FinnHoyde curves and calibration by hand, fieldPlot wrapper (single species, time limit), validation of broken files, NFI trees as a tree list give identical results, end-to-end runs |
-| Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, Make B equal to A), Run disabled with progress while a run task runs |
+| Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, A downloaded and uploaded to B), Run disabled with progress while a run task runs |
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
@@ -415,8 +415,9 @@ These keep the old name on purpose:
 - **Scenarios.** `app/server_scenarios.R` (`scenario_server()`) holds two
   independent scenarios, `sc$A` and `sc$B` (assortment table and prices
   each). An earlier draft linked B to A per assortment; it was replaced
-  before merging. Now B starts as a copy, and "Make A equal to B" / "Make B
-  equal to A" copy from the other side (`copy_assortment()`,
+  before merging. Now B starts as a copy, and "Make assortment/matrix equal to
+  A/B" copy one item from the other side (a whole scenario: download and
+  upload) (`copy_assortment()`,
   `copy_prices()`). The helpers are in `R/helpers_price_matrix.R`, and audit
   24 tests them without Shiny. The backend needed no change: `.prepare_runs()`
   already gives a key defined differently in A and B (other rules or price

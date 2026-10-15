@@ -3,7 +3,7 @@ check,result,detail
 Check 02: Assortment only in B marked on both sides; the scenarios differ,PASS,"B statuses: same,same,same,same,same,same,only | missing in A: spruce_poles | differ: TRUE"
 Check 03: A rule change alone makes the scenarios differ; only that field marked on both sides,PASS,"differ: TRUE (identical scenarios: FALSE) | changed fields B: MinTopDiameter_cm, A: MinTopDiameter_cm"
 "Check 04: Assortment removed from B only: not in B, still in A; the scenarios differ",PASS,"B keys: spruce_sawlog, spruce_pulpwood, pine_sawlog, spruce_waste, pine_waste | missing in B: pine_pulpwood | differ: TRUE"
-"Check 05: Make equal: one assortment copied in place, a removed one re-added, whole scenario",PASS,copied in place: TRUE | differ with poles only in B: TRUE | without poles: FALSE | B = A: FALSE
+"Check 05: Make equal: one assortment copied in place, a removed one re-added, whole scenario",PASS,copied in place: TRUE | differ with poles only in B: TRUE | without poles: FALSE | A downloaded and uploaded to B differs: FALSE
 Check 06: Comparison runs B's own rules and price types (pulpwood by a matrix in B),PASS,"B valid: TRUE | A = single run: TRUE | spruce sawlogs < 14 cm top u.b.: A 22, B 0 | poles in B: 30 | pine pulpwood: A 52, B 0 | B spruce pulpwood logs 115, matrix prices TRUE, matrix lengths TRUE"
 Check 07: Waste renamed 'Residue' (type stays waste): per-tree results unchanged,PASS,trees identical: TRUE | per-m3 summary identical: TRUE | price volume equal: TRUE | residue priority 99: TRUE
 Check 08: A scenario file loads into B exactly (round trip); demo B differs from demo A,PASS,"ok TRUE | round trip table TRUE, prices TRUE | spruce sawlog min top 14 | differs from A TRUE"

@@ -115,10 +115,10 @@ other scenario are highlighted on both sides, and an assortment that is
 missing on one side is listed there as *Not in A* or *Not in B*. Each
 assortment's pricing (price matrix or flat price) is set per scenario, so,
 for example, spruce pulpwood can have a price matrix in A and a flat price in
-B. *Make B equal to A* (right column) and *Make A equal to B* (left column)
-copy the other scenario: the whole scenario or one assortment in the
-Assortments section, and one price matrix in the Price matrices section
-(*Make matrix equal to B* or *A*). Both assortment tables list the
+B. *Make assortment equal to B* (left column) and *Make assortment equal to
+A* (right column) copy one assortment from the other scenario, and *Make
+matrix equal to B* or *A* copies one price matrix. To copy a whole
+scenario, download it and upload the file to the other side. Both assortment tables list the
 assortments in the same order (by species: sawlog, pulpwood, waste, then
 added assortments), so the rows line up. A new assortment can be added to both scenarios or to one;
 *Remove* asks whether to remove it from this scenario only or from both.
