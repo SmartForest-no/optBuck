@@ -155,7 +155,6 @@ details.apter-card { margin-bottom: 16px; }
 .selectize-dropdown { border: 1px solid var(--apter-rule); border-radius: 5px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08); }
 .selectize-dropdown .active { background: var(--apter-panel); color: var(--apter-ink); }
 .selectize-dropdown .selected { background: var(--apter-diff); color: var(--apter-ink); }
-.form-check-input { background-color: #FFFFFF; border: 1px solid #C9CECB; }   /* visible on white */
 .form-check-input:checked { background-color: var(--apter-primary); border-color: var(--apter-primary); }
 .form-check-input:focus { box-shadow: 0 0 0 2px rgba(63, 110, 88, 0.18); border-color: var(--apter-primary); }
 /* file input on the input background */

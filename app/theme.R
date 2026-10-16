@@ -89,6 +89,9 @@ apter_theme <- function() {
     "card-cap-bg"        = "#FFFFFF",
     "input-border-color" = t$field,
     "input-bg"           = t$field,
+    # Check boxes and radios: white with a grey border, visible on white.
+    "form-check-input-bg"     = "#FFFFFF",
+    "form-check-input-border" = "1px solid #A9B0AC",
     "link-color"         = t$accent
   )
 }
