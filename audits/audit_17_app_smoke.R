@@ -34,7 +34,11 @@
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
 #  6.  Layout: two tabs, "Assortments and prices" first and open, then
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
-#      release footer; the stripe is shown; the window title and the
+#      release footer; no striped bar (removed in the restyle, option 3
+#      "Combination"); the look's main colours, read from the browser: white
+#      page and navbar with a #E6E6E6 rule, grey tabs with a black active
+#      tab, borderless shadowless cards with a #E6E6E6 border, green primary
+#      and grey secondary buttons, uppercase grey section labels; the window title and the
 #      navbar say "optBuck"; the intro line above the scenarios and the
 #      SmartForest logo in the navbar are shown; the logo, measured in
 #      headless Chrome, is as tall as the optBuck icon (26 px), not taller
@@ -364,7 +368,7 @@ if (!nzchar(helpers_err)) {
 # ==============================================================================
 browser_checks <- c(
   "Check 05: AppDriver starts the app",
-  "Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, optBuck, texts",
+  "Check 06: Two tabs (Assortments and prices first), no Home or footer, no stripe, colours, optBuck, texts",
   "Check 07: Bootstrap 5 and self-hosted Inter font loaded",
   "Check 08: Compact assortment table: base rows, columns, '–' for no limit",
   "Check 09: Both scenarios editable, nothing greyed, no differences at the start",
@@ -465,6 +469,30 @@ if (!browser_ok) {
     body0 <- js(app, "document.body.textContent")
     n_old <- js(app, "document.querySelectorAll('.status-tile, .apter-footer, .apter-hero').length")
     stripe <- js(app, "document.querySelectorAll('.banner-strip').length")
+    # The look (option 3 "Combination"), as computed by the browser.
+    css <- function(sel, prop) js(app, sprintf(
+      "(function(){ var e = document.querySelector(%s); return e ? getComputedStyle(e).%s : 'missing'; })()",
+      jsonlite::toJSON(sel, auto_unbox = TRUE), prop))
+    look <- c(
+      page        = css("body", "backgroundColor"),
+      navbar      = css(".navbar", "backgroundColor"),
+      navbar_rule = css(".navbar", "borderBottomColor"),
+      tab         = css("#main_nav .nav-link:not(.active)", "color"),
+      tab_active  = css("#main_nav .nav-link.active", "color"),
+      tab_line    = css("#main_nav .nav-link.active", "borderBottomColor"),
+      card_border = css(".bslib-card", "borderTopColor"),
+      card_shadow = css(".bslib-card", "boxShadow"),
+      primary     = css(".btn.btn-primary", "backgroundColor"),
+      secondary   = css(".btn.btn-secondary", "backgroundColor"),
+      label       = css(".section-hdr", "textTransform"),
+      label_col   = css(".section-hdr", "color"))
+    look_exp <- c(page = "rgb(255, 255, 255)", navbar = "rgb(255, 255, 255)",
+                  navbar_rule = "rgb(230, 230, 230)", tab = "rgb(107, 107, 107)",
+                  tab_active = "rgb(17, 17, 17)", tab_line = "rgb(17, 17, 17)",
+                  card_border = "rgb(230, 230, 230)", card_shadow = "none",
+                  primary = "rgb(63, 110, 88)", secondary = "rgb(238, 240, 239)",
+                  label = "uppercase", label_col = "rgb(138, 138, 138)")
+    look_ok <- identical(unname(unlist(look)), unname(look_exp))
     title <- js(app, "document.title")
     brand <- js(app, "document.querySelector('.navbar-brand').textContent.trim()")
     labels6 <- js(app, "Array.from(document.querySelectorAll('label, .control-label')).map(function(e){ return e.textContent; }).join(' | ')")
@@ -504,7 +532,7 @@ if (!browser_ok) {
     ok6 <- identical(tabs, "Assortments and prices|Simulator") &&
       identical(active, "Assortments and prices") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
-      isTRUE(stripe >= 1L) && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
+      identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
       !grepl("Apter", paste(title, brand), fixed = TRUE) &&
       grepl("NFI data", texts6, fixed = TRUE) && !grepl("NFI sample", texts6, fixed = TRUE) &&
       !grepl("(^|[^0-9.])2021([^0-9]|$)", texts6) && !grepl("wide or long", texts6, fixed = TRUE) &&
@@ -512,8 +540,10 @@ if (!browser_ok) {
       intro6 && logo_ok && narrow_ok && !nzchar(paste0(e6, e6b, e6c)) &&
       grepl("Data source", texts6, fixed = TRUE) && !grepl("Tree source", texts6, fixed = TRUE)
     rec(browser_checks[2], if (ok6) PASS else FAIL,
-        sprintf("tabs: '%s' | open: '%s' | Home/tiles/footer elements: %s | stripe: %s | title: '%s' | brand: '%s' | intro line: %s | logo height: %s px | 'NFI data': %s | '2021': %s | 'wide or long': %s",
-                tabs, active, n_old, stripe, title, brand, intro6,
+        sprintf("tabs: '%s' | open: '%s' | Home/tiles/footer elements: %s | stripe: %s | look: %s | title: '%s' | brand: '%s' | intro line: %s | logo height: %s px | 'NFI data': %s | '2021': %s | 'wide or long': %s",
+                tabs, active, n_old, stripe,
+                if (look_ok) "as option 3" else paste(sprintf("%s %s (expected %s)", names(look), unlist(look), look_exp)[unlist(look) != look_exp], collapse = "; "),
+                title, brand, intro6,
                 sprintf("%s (1920 px: loaded,logo,icon,navbar,centre offset,height attr,width = %s; 700 px: %s)",
                         logo6, paste(g1920, collapse = ","), paste(g700, collapse = ",")),
                 grepl("NFI data", texts6, fixed = TRUE),

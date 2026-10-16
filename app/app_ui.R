@@ -189,8 +189,7 @@ ui <- page_navbar(
       tags$link(rel = "stylesheet", href = asset_url("apter.css")),
       tags$link(rel = "icon", type = "image/svg+xml", href = "apter-icon.svg"),
       tags$script(src = asset_url("apter.js"))
-    ),
-    banner_strip()
+    )
   ),
   prices_page,
   simulator_page,
