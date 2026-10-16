@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-15 14:24:03.50024
+  Run: 2026-10-16 09:17:43.1979
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpoD1bjX/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/Rtmpmcev02/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -22,7 +22,7 @@
 
 --- 05-23. Browser checks ---
   [PASS  ] Check 05: AppDriver starts the app | app started
-  [PASS  ] Check 06: Two tabs (Assortments and prices first), no Home or footer, stripe, optBuck, texts | tabs: 'Assortments and prices|Simulator' | open: 'Assortments and prices' | Home/tiles/footer elements: 0 | stripe: 1 | title: 'optBuck — Bucking simulator' | brand: 'optBuck' | intro line: TRUE | logo height: 26 (1920 px: loaded,logo,icon,navbar,centre offset,height attr,width = 1,26,26,56,1,26,112; 700 px: 1,0,26,56,29,26,0) px | 'NFI data': TRUE | '2021': FALSE | 'wide or long': FALSE
+  [PASS  ] Check 06: Two tabs (Assortments and prices first), no Home or footer, no stripe, colours, optBuck, texts | tabs: 'Assortments and prices|Simulator' | open: 'Assortments and prices' | Home/tiles/footer elements: 0 | stripe: 0 | look: as option 3 | title: 'optBuck — Bucking simulator' | brand: 'optBuck' | intro line: TRUE | logo height: 26 (1920 px: loaded,logo,icon,navbar,centre offset,height attr,width = 1,26,26,56,1,26,112; 700 px: 1,0,26,56,28,26,0) px | 'NFI data': TRUE | '2021': FALSE | 'wide or long': FALSE
   [PASS  ] Check 07: Bootstrap 5 and self-hosted Inter font loaded | Bootstrap 5.3.1 | Inter loaded: TRUE | Google Fonts links: 0
   [PASS  ] Check 08: Compact assortment table: base rows, columns, '–' for no limit | rows 6 | all visible columns: TRUE | '–' shown: TRUE | 'Inf' shown: FALSE | sortable headers: 0 | copy buttons: 'Make matrix equal to B|Make matrix equal to A|Make assortment equal to B|Make assortment equal to A' (whole-scenario buttons: 0, 'Make A/B equal to' buttons: 0)
   [PASS  ] Check 09: Both scenarios editable, nothing greyed, no differences at the start | A cells 234 (read-only 0) | B cells 234 (read-only 0) | highlighted or greyed: 0 | B dropdown / status note: 0
@@ -32,17 +32,17 @@
   [PASS  ] Check 13: Summary shows the nine fields; no Diagnostics tab | labels: 'Run time|Plots|Trees|Trees with logs|Logs|Commercial volume (m³ u.b.)|Total value (NOK)|NOK per m³|Price volume (m³)' | plots: '5' | Diagnostics tabs: 0
   [PASS  ] Check 14: Selected logs preview (Scenario A, first 20), readable headers, CSV of all logs | label: 'Scenario A: the first 20 of 334 logs. Download all logs for the full table.' | preview rows: 20 | sorting/paging controls: 0 | logs in run: 334 | CSV rows 334, scenarios A | headers: Plot|Tree|Species|Assortment|StartPos|StopPos|Length (cm)|Length class (dm)|Top Ø over bark (mm)|Top Ø under bark (mm)|Diameter class (cm)|Price class used (cm)|Price (NOK/m³)|Price volume (m³)|Commercial volume u.b. (m³)|Value (NOK)
   [PASS  ] Check 15: Per m3 tab renders; Trees preview (Scenario A, first 20), selected tree's logs, CSV; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | label: 'Scenario A: the first 20 of 113 trees. Download all trees for the full table.' | preview rows: 20 of 113 | controls: 0 | headers: |Plot|Tree|Species|DBH (cm)|Height (m)|Height source|Logs|Value (NOK)|Commercial volume u.b. (m³)|NOK per m³ | CSV rows 113, scenarios A | log detail shown: TRUE | per-ha text hits: 0
-  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | grid columns per scenario: 2,2 | logs CSV: A 334, B 335 | trees CSV: A 113, B 113 | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded file5d1036cd734f.csv: Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
+  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | grid columns per scenario: 2,2 | logs CSV: A 334, B 335 | trees CSV: A 113, B 113 | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded fileb97035717ec1.csv: Spruce sawlog.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
   [PASS  ] Check 17: Assortment removed from B only drops it from B's run | 'Removed Spruce pulpwood from Scenario B.' (B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | spruce pulpwood value A 1292, B 0 | back in B after Make assortment equal to A: TRUE | error notifications: 0
   [PASS  ] Check 18: Stale notice after a price edit | after runs: '' / '' | after resetting B: 'Assortments or prices changed since this run.'
   [PASS  ] Check 19: No 'default'/'price set' in the page text | none found
   [PASS  ] Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed | form: removed fields present 0, backdrop filter 'none' | add: 'Added Spruce poles to both scenarios.', rows 7, matrix choices spruce_sawlog,pine_sawlog,spruce_poles,flat_prices | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove from both: rows A 6, B 6
-  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'file5d106ee43a0.csv: 12 trees, 12 within taperNOR's range.
+  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'fileb97035c6892.csv: 12 trees, 12 within taperNOR's range.
 Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). Thes' | banner: 'Heights: 
   Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height source column: TRUE | error notifications: 0
   [PASS  ] Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B | rows A: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | rows B: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | start marks 0 | B rule highlighted: A 1, B 1 | only in B: 1 (A shows 'Not in A': 1, A rows 7) | removed from B: 'Not in B' 1 | comparison tab TRUE, poles in products TRUE | Make matrix equal to B: 'Prices equal to Scenario B: Spruce sawlog.' | after Scenario A downloaded and uploaded to B: 0 marks
   [PASS  ] Check 22: Screenshots saved for review | 15 of 15 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
-  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 217.9 s (threshold: 300 s)
+  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 209.6 s (threshold: 300 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

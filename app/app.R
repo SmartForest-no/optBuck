@@ -15,7 +15,7 @@
 # Files   : helpers_root.R        project root resolution
 #           setup.R               data, default assortments and prices, choices
 #           theme.R               design tokens, bslib (Bootstrap 5) theme
-#           helpers_ui.R          cards, read-only fields, stripe,
+#           helpers_ui.R          cards, read-only fields,
 #                                 reactable and plot styling
 #           www/                  apter.css, icon, self-hosted fonts (OFL)
 #           helpers_validation.R  inputs -> backend params, stratum counts

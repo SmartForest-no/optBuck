@@ -44,7 +44,7 @@ app/                        Shiny app, files sourced explicitly by app.R
                             HKL/bonitet/county choices, all plots (APTER_N_PLOTS for tests),
                             tree counts for the large-run note, APP_VERSION
   theme.R                   Design tokens, chart colours, bslib (Bootstrap 5) theme
-  helpers_ui.R              Stripe, cards, read-only fields, reactable tables (columns sized
+  helpers_ui.R              Cards, summary boxes, reactable tables (columns sized
                             to content), server-side paged tables, base-R plots (A/B bars),
                             grid renderers; APP_DISPLAY_NAME ("optBuck")
   helpers_validation.R      Inputs -> backend params; stratum plot and tree counts; run-time estimate
@@ -56,7 +56,7 @@ app/                        Shiny app, files sourced explicitly by app.R
   server_scenarios.R        scenario_server(): the Assortments and prices tab (Scenarios A and B)
   app_server.R              `server`: Simulator (tree sources, runs, results)
   www/
-    apter.css               Component styles (ForestSens / Redwood look)
+    apter.css               Component styles (option 3 "Combination" look)
     apter.js                Shows the progress bar as soon as Run is clicked
     apter-icon.svg          App icon and favicon (original artwork)
     fonts/                  Inter and Source Serif 4 (.woff2, SIL OFL 1.1; licences alongside)
@@ -190,10 +190,17 @@ read (removed in the 2026-10 rename).
 
 ## App appearance
 
-The look follows NIBIO's ForestSens (Oracle APEX Redwood style; reference
-screenshots in `docs/design_reference/`) with the "Forest & sand" palette of
-Phase 4c: forest green `#3F6E58` is the only strong colour (logo, primary
-buttons, active tab, status icons), secondary buttons are sand `#EAE5DC`.
+The look is option 3 "Combination" of
+`docs/design_reference/optbuck_design_directions.html` (restyle,
+2026-10-16; it replaced the ForestSens-like "Forest & sand" look and its
+stripe). The page and navbar are white with hairline `#E6E6E6` rules, the
+navbar tabs are grey with a black active tab, and cards have a 1 px border
+and no shadow. Section labels are small uppercase grey, and forest green
+`#3F6E58` is the only strong colour (primary buttons, focus, progress, the
+result tabs' underline). Secondary buttons are `#EEF0EF`, inputs `#F3F4F3`.
+Table headers are grey-green (`#6A726E` on `#F7F8F7`), A/B differences
+pale green `#EAF3EE`, and the summary boxes `#F7F8F7` without a border.
+Audit 17 check 6 reads these colours back from the browser.
 Everything is our own: colours
 are the tokens in `app/theme.R` (`APTER_TOKENS`, `APTER_CHART`), component
 styles are in `app/www/apter.css`, and building blocks are in
@@ -205,12 +212,14 @@ Oracle or ForestSens assets.
   since the Home page went). Both are SIL OFL 1.1; keep the licence files
   next to the font files.
 - Chart colours were checked with the dataviz palette validator (headless
-  Chrome, all pairs, white surface; 2026-10-13). Sawlog green `#3F6E58`,
-  pulpwood sand `#B38A52`, waste grey `#C4BFB8`, custom assortments charcoal
-  `#3A3836`: worst CVD dE 13.3, worst normal-vision dE 16.6. The proposed
-  `#C9A97A` / `#A39E98` failed (normal-vision dE 8.0 between them). A is
-  green, B sand; the delta chart uses a neutral grey because the sign is
-  shown by bar direction.
+  Chrome, all pairs, white surface; 2026-10-16). The requested pulpwood
+  `#C9A97A` and waste `#B9BFBC` failed (normal-vision dE 8.7, floor 15), so
+  they were shifted slightly. The result is sawlog green `#3F6E58`, pulpwood
+  sand `#C09A66`, waste grey `#CBD0CD` and custom assortments charcoal
+  `#3A3836`: worst CVD dE 15.5, worst normal-vision dE 16.5. Scenario A is
+  green and B sand `#C09A66` (CVD dE 17.9). The delta chart uses a neutral
+  grey because the sign is shown by bar direction. Log labels are dark on
+  sand and grey.
 - Audit 17 saves screenshots of both tabs, the results and the comparison
   to `outputs/app_smoke/screenshots/` for review.
 

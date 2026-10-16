@@ -8,9 +8,6 @@
 
 # ---- page chrome ---------------------------------------------------------------
 
-#' Decorative stripe under the top bar (own CSS pattern).
-banner_strip <- function() div(class = "banner-strip", `aria-hidden` = "true")
-
 #' Navbar brand: small icon and the name shown in the app ("optBuck";
 #' the code and repository keep the name Apter).
 APP_DISPLAY_NAME <- "optBuck"
@@ -112,13 +109,13 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
     theme = reactable::reactableTheme(
       color            = t$ink,
       backgroundColor  = "#FFFFFF",
-      borderColor      = t$border,
-      highlightColor   = "#F6F5F3",
+      borderColor      = t$table_row,
+      highlightColor   = t$panel,
       cellPadding      = "9px 10px",
       style            = list(fontFamily = "Inter, system-ui, sans-serif"),
-      headerStyle      = list(fontWeight = 500, color = t$ink_muted,
+      headerStyle      = list(fontWeight = 500, color = t$ink_muted, background = t$panel,
                               fontSize = "0.8rem", whiteSpace = "normal",
-                              borderBottom = paste("1px solid", t$border)),
+                              borderBottom = paste("1px solid", t$table_head)),
       paginationStyle  = list(color = t$ink_muted)
     ),
     language = reactable::reactableLang(
@@ -320,7 +317,7 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   graphics::axis(2, at = c(2, 1), labels = c("Scenario A", "Scenario B"),
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {
-    graphics::rect(0, y - 0.32, height_m, y + 0.32, col = "#F1EFED", border = NA)
+    graphics::rect(0, y - 0.32, height_m, y + 0.32, col = APTER_TOKENS$panel, border = NA)
     if (nrow(l) == 0L) return(invisible())
     type <- as.character(l$ProductType)
     is_custom <- !type %in% names(ch$assortment)
