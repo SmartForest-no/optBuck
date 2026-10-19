@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: sampled-plot backend smoke
-  Run: 2026-10-16 09:21:27.283239
+  Run: 2026-10-19 14:04:33.042055
 ============================================================= 
 
 --- 01. Backend script exists ---
@@ -43,7 +43,7 @@
   [PASS  ] Check 13: Runtime under 120 s for n_plots=5 | runtime: 4.3 s (threshold: 120 s)
 
 --- 14-15. Fast vs reference optimizer ---
-  [PASS  ] Check 14: .optimize_dp_fast() and the backend match the reference: value and n_selected | 788 trees compared over 3 runs (85.3 s); 0 mismatch(es); max |value diff| fast 0.00e+00, backend 0.00e+00
+  [PASS  ] Check 14: .optimize_dp_fast() and the backend match the reference: value and n_selected | 788 trees compared over 3 runs (81.1 s); 0 mismatch(es); max |value diff| fast 0.00e+00, backend 0.00e+00
   [PASS  ] Check 15: .optimize_dp_fast() and the backend match the reference: cutting pattern | 0 of 788 trees differ in cutting pattern (fast or backend vs reference; 0 of them at equal value)
 ============================================================= 
   AUDIT FINAL SUMMARY

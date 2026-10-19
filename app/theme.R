@@ -10,7 +10,8 @@
 
 #' Design tokens shared by the theme, the CSS and the base-R plots.
 APTER_TOKENS <- list(
-  page_bg     = "#FFFFFF",   # page and navbar
+  page_bg     = "#F3F4F3",   # page background behind the cards (2026-10-19)
+  surface     = "#FFFFFF",   # cards, sidebar, navbar, dialogs
   border      = "#E6E6E6",   # navbar rule, card borders
   ink         = "#111111",   # primary text, active navbar tab
   ink_soft    = "#1D2321",   # secondary-button text, active result tab
@@ -68,12 +69,56 @@ APTER_CHART <- list(
 )
 
 
+#' Species colours in the tree figures (layout-and-figures, 2026-10-19):
+#' spruce #3F6E58, pine #C9A97A as requested. Validator (as above, white
+#' surface): CVD dE 22.2 (protan), normal dE 27.1, both pass; pine is 2.2:1
+#' on white and both fall below the chroma floor (muted by design), so the
+#' curves have an outline and a legend names each colour.
+APTER_SPECIES <- c(Spruce = "#3F6E58", Pine = "#C9A97A")
+
+#' Font of the ggplot2 figures: the app's Inter, from the TTFs next to the
+#' web fonts (www/fonts, SIL OFL), registered with systemfonts; Shiny draws
+#' plots with ragg, which uses it. "sans" if the files or packages are missing.
+APTER_PLOT_FONT <- local({
+  f <- file.path(ROOT, "app", "www", "fonts",c("inter-latin-400-normal.ttf", "inter-latin-600-normal.ttf"))
+  ok <- all(file.exists(f)) && requireNamespace("systemfonts", quietly = TRUE) &&
+        requireNamespace("ragg", quietly = TRUE)
+  if (ok) ok <- !inherits(try(systemfonts::register_font("Inter", plain = f[1], bold = f[2]),
+                              silent = TRUE), "try-error")
+  if (ok) "Inter" else "sans"
+})
+
+#' ggplot2 theme of the figures: Inter, white background, light grid, muted
+#' axes, legend on top, bold left-aligned facet labels.
+theme_apter <- function(base_size = 11) {
+  ch <- APTER_CHART
+  ggplot2::theme_minimal(base_size = base_size, base_family = APTER_PLOT_FONT) +
+    ggplot2::theme(
+      plot.background  = ggplot2::element_rect(fill = ch$surface, colour = NA),
+      panel.background = ggplot2::element_rect(fill = ch$surface, colour = NA),
+      panel.grid.major = ggplot2::element_line(colour = ch$grid, linewidth = 0.4),
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_blank(),
+      axis.line.x      = ggplot2::element_line(colour = ch$baseline, linewidth = 0.4),
+      axis.text        = ggplot2::element_text(colour = ch$muted, size = ggplot2::rel(0.85)),
+      axis.title       = ggplot2::element_text(colour = ch$ink2, size = ggplot2::rel(0.9)),
+      plot.title       = ggplot2::element_text(colour = ch$ink, face = "bold", size = ggplot2::rel(1)),
+      plot.title.position = "plot",
+      legend.position  = "top", legend.justification = "left",
+      legend.title     = ggplot2::element_blank(),
+      legend.text      = ggplot2::element_text(colour = ch$ink, size = ggplot2::rel(0.85)),
+      legend.key.size  = ggplot2::unit(10, "pt"),
+      strip.text       = ggplot2::element_text(colour = ch$ink, face = "bold", hjust = 0),
+      panel.spacing    = ggplot2::unit(16, "pt"))
+}
+
+
 #' The app's Bootstrap 5 theme.
 apter_theme <- function() {
   t <- APTER_TOKENS
   bslib::bs_theme(
     version   = 5,
-    bg        = t$page_bg,
+    bg        = t$surface,   # Bootstrap body-bg = card background; the page grey is set in apter.css
     fg        = t$ink,
     primary   = t$primary,
     secondary = t$secondary,
@@ -84,7 +129,7 @@ apter_theme <- function() {
     font_scale   = 0.95,
     "border-radius"      = "6px",
     "border-color"       = t$border,
-    "navbar-bg"          = t$page_bg,
+    "navbar-bg"          = t$surface,
     "card-border-color"  = t$border,
     "card-cap-bg"        = "#FFFFFF",
     "input-border-color" = t$field,

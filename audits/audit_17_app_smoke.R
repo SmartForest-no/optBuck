@@ -29,14 +29,16 @@
 #        b. build_run_params(): HKL "4" -> c(41L, 42L), "__all__" -> NULL,
 #           all plots (APTER_N_PLOTS instead samples that many, seed 42)
 #        c. count_eligible_plots() matches a direct filter of plots_prod
-#        d. the default assortment table gives the base ProductData; matrix
-#           choices are spruce sawlog, pine sawlog and the flat table
+#        d. the default assortment table gives the base ProductData
+#        e. live tree counts (layout-and-figures): select_nfi_trees() gives
+#           exactly the trees and plots prepare_sampled_job() bucks (all
+#           plots and a 5-plot sample, both species); tree_counts() text
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
 #  6.  Layout: two tabs, "Assortments and prices" first and open, then
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
 #      release footer; no striped bar (removed in the restyle, option 3
-#      "Combination"); the look's main colours, read from the browser: white
-#      page and navbar with a #E6E6E6 rule, grey tabs with a black active
+#      "Combination"); the look's main colours, read from the browser: light grey
+#      page (#F3F4F3) behind white cards and sidebar, white navbar with a #E6E6E6 rule, grey tabs with a black active
 #      tab, borderless shadowless cards with a #E6E6E6 border, green primary
 #      and grey secondary buttons, uppercase grey section labels; the window title and the
 #      navbar say "optBuck"; the intro line above the scenarios and the
@@ -52,15 +54,16 @@
 #      Assortment, Species, Top Ø, Max butt Ø, Length, Volume method (no
 #      Type, Length step or Diameter rounding); no limit shown as "–" or
 #      "≥", never "Inf"/"Infinity"; columns cannot be sorted by clicking;
-#      one copy button per section ("Make assortment equal to B/A",
-#      "Make matrix equal to B/A"); no whole-scenario buttons
+#      one copy button per side ("Make assortment equal to B/A"); no
+#      "Make matrix equal" or whole-scenario buttons, no assortment or
+#      matrix dropdowns
 #  9.  Independent scenarios (Phase 4d): both grids editable (no read-only
 #      cells), nothing greyed, no highlighted differences at the start, no
 #      "Same as A" dropdown and no "B equals/differs" notes
-# 10.  Matrix selectors are independent (choosing in B does not change A);
-#      spruce pulpwood edited to a price matrix in B only: B lists its
-#      matrix, A does not, and the Pricing cell is highlighted on both
-#      sides; "Make assortment equal to A" in B restores it (no highlights)
+# 10.  Spruce pulpwood (selected by a row click) edited to a price matrix
+#      in B only: B's detail panel shows a matrix grid, A's the flat price
+#      field, and the Pricing cell is highlighted on both sides; "Make
+#      assortment equal to A" in B restores it (no highlights)
 # 11.  Rows and columns of A (spruce sawlog, from the downloaded A): a
 #      larger and a smaller class added and removed at the ends, a length
 #      (58 dm) added and removed; the download matches each step
@@ -90,15 +93,16 @@
 #      volume); the logs and trees CSVs hold both scenarios (Scenario A and
 #      B; the trees CSV has every tree once per scenario)
 # 17.  Spruce pulpwood removed from B only: the comparison run's B has no
-#      spruce pulpwood; "Make assortment equal to A" brings it back
+#      spruce pulpwood; B's panel says "Not in this scenario" and "Add from
+#      A" brings it back
 # 18.  Stale notice: absent right after a run; after a price edit,
 #      "Assortments or prices changed since this run" shows
 # 19.  No "default" or "price set" (as words) anywhere in the page text
 #      (Phase 4d: "Scenario A/B" is the user-facing term)
 # 20.  Custom assortment through the form in A (spruce poles, price matrix,
 #      12-30 cm, 600-1000 cm, 2000 NOK/m3): the form has no Type, Length step
-#      or Diameter rounding and no blurred backdrop; listed, in the matrix
-#      choices, edit keeps its prices; a run selects it; Reset to defaults
+#      or Diameter rounding and no blurred backdrop; listed and selected
+#      (its matrix grid shown), edit keeps its prices; a run selects it; Reset to defaults
 #      keeps it and restores the base rows; Remove (from both) drops it
 # 21.  Tree list (Phase 5): upload the template -> validation panel lists 12
 #      trees and the height methods; Run -> the FinnHoyde height banner shows
@@ -112,8 +116,23 @@
 #      from B only is listed as "Not in B"; Run -> comparison with B's
 #      products (poles); both tables list the same assortments in the same
 #      order (species, sawlog, pulpwood, waste, custom), "Not in" lines
-#      included; "Make matrix equal to B" in A copies prices; Scenario A
-#      downloaded and uploaded to B -> no highlighted differences left
+#      included; "Make assortment equal to B" in A copies spruce sawlog;
+#      Scenario A downloaded and uploaded to B -> no highlighted
+#      differences left
+# 25.  Selection and detail panel (layout-and-figures): the first row
+#      (spruce sawlog) starts selected and highlighted on both sides;
+#      clicking spruce pulpwood in A selects it in A and B (one highlighted
+#      row each), both panels show its rules and the flat price field, no
+#      grid; a flat price edited in B (333) is highlighted on both sides
+#      and stored in B only; clicking spruce sawlog in B shows the grids
+#      again; per-assortment price download holds that assortment only
+# 26.  Live tree counts: the sidebar box names the plots and trees per
+#      species and a run time; it changes with the species group and
+#      matches the run's Plots and Trees; after a tree-list upload it
+#      counts the 12 trees
+# 27.  Figures: DBH and height densities (Trees card) and log length /
+#      top-diameter bars (Selected logs) render as images for a single run
+#      and after a comparison
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -131,9 +150,7 @@
 #
 # Usage   : Rscript audits/audit_17_app_smoke.R   (from the project root)
 # ==============================================================================
-
 suppressPackageStartupMessages(library(readr))
-
 root_dir <- local({
   # APTER_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
@@ -152,49 +169,38 @@ root_dir <- local({
   }
   d
 })
-
 source(file.path(root_dir, "R", "helpers_paths.R"))
 source(file.path(root_dir, "R", "helpers_audit.R"))
-
 app_dir <- file.path(root_dir, "app")
 out_dir <- path_output("app_smoke", root_dir = root_dir)
 ensure_dir(out_dir)
-
 audit_txt <- file.path(out_dir, "audit_17_app_smoke.txt")
 audit_csv <- file.path(out_dir, "audit_17_app_smoke.csv")
 init_audit_log(audit_txt)
-
 E <- new.env(parent = emptyenv())
 rec <- function(check, result, detail = "")
   record_check(E, check, result, detail, log_path = audit_txt)
-
 PASS   <- "PASS"
 REVIEW <- "REVIEW"
 FAIL   <- "FAIL"
-
 section <- function(title) {
   cat(sprintf("\n--- %s ---\n", title), file = audit_txt, append = TRUE)
   cat(sprintf("\n--- %s ---\n", title))
 }
-
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 cat("  Audit: Shiny app headless smoke\n",        file = audit_txt, append = TRUE)
 cat(sprintf("  Run: %s\n", Sys.time()),           file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
-
-
 # ==============================================================================
 # Check 01: browser-test dependencies
 # ==============================================================================
 section("01. shinytest2 / chromote / Chrome")
-
 has_st2      <- requireNamespace("shinytest2", quietly = TRUE)
 has_chromote <- requireNamespace("chromote",   quietly = TRUE)
 chrome_path  <- if (has_chromote)
   tryCatch(chromote::find_chrome(), error = function(e) NULL) else NULL
 has_chrome   <- !is.null(chrome_path) && nzchar(chrome_path)
 browser_ok   <- has_st2 && has_chromote && has_chrome
-
 rec("Check 01: shinytest2 + chromote installed and Chrome found",
     if (browser_ok) PASS else FAIL,
     if (browser_ok) sprintf("Chrome: %s", chrome_path)
@@ -203,46 +209,37 @@ rec("Check 01: shinytest2 + chromote installed and Chrome found",
       " chrome=", has_chrome,
       " -- install.packages(c(\"shinytest2\", \"chromote\")); install Chrome ",
       "or set CHROMOTE_CHROME to the browser path"))
-
-
 # ==============================================================================
 # Check 02: split app files exist
 # ==============================================================================
 section("02. Split app files exist")
-
 app_files <- c("app.R", "app_ui.R", "app_server.R", "server_scenarios.R", "setup.R",
                "theme.R", "helpers_root.R", "helpers_ui.R", "helpers_validation.R",
                "helpers_upload.R", "www/apter.css", "www/apter.js", "www/apter-icon.svg")
 missing_app  <- app_files[!file.exists(file.path(app_dir, app_files))]
 conflicting  <- c("ui.R", "server.R", "global.R")
 conflicting  <- conflicting[file.exists(file.path(app_dir, conflicting))]
-
 rec("Check 02: Split app files exist",
     if (length(missing_app) == 0L && length(conflicting) == 0L) PASS else FAIL,
     if (length(missing_app) == 0L && length(conflicting) == 0L)
       sprintf("all %d present in app/; no ui.R/server.R/global.R", length(app_files))
     else paste0("missing: ", paste(missing_app, collapse = ", "),
                 " | conflicting: ", paste(conflicting, collapse = ", ")))
-
-
 # ==============================================================================
 # Check 03: root resolution (no browser)
 # ==============================================================================
 section("03. Root resolution")
-
 root_env <- new.env()
 root_src_ok <- tryCatch({
   source(file.path(app_dir, "helpers_root.R"), local = root_env)
   TRUE
 }, error = function(e) FALSE)
-
 if (root_src_ok) {
   saved_root  <- Sys.getenv("APTER_ROOT", unset = NA)
   restore_env <- function() {
     if (is.na(saved_root)) Sys.unsetenv("APTER_ROOT")
     else Sys.setenv(APTER_ROOT = saved_root)
   }
-
   # a. unset -> parent of app/
   Sys.unsetenv("APTER_ROOT")
   r_a <- tryCatch(root_env$resolve_app_root(app_dir),
@@ -250,7 +247,6 @@ if (root_src_ok) {
   rec("Check 03a: Env unset -> resolves to project root",
       if (identical(r_a, root_dir)) PASS else FAIL,
       sprintf("resolved '%s' (expected '%s')", r_a, root_dir))
-
   # b. APTER_ROOT = empty temp dir -> clear error
   bad_dir <- file.path(tempdir(), "audit17_not_a_root")
   dir.create(bad_dir, showWarnings = FALSE)
@@ -262,7 +258,6 @@ if (root_src_ok) {
                                  fixed = TRUE)) PASS else FAIL,
       if (is.null(r_b)) "resolved without error (expected stop())"
       else sprintf("error: %s", r_b))
-
   # c. APTER_ROOT = real root -> resolves
   Sys.setenv(APTER_ROOT = root_dir)
   r_c <- tryCatch(root_env$resolve_app_root(app_dir),
@@ -270,18 +265,14 @@ if (root_src_ok) {
   rec("Check 03c: APTER_ROOT = project root -> resolves",
       if (identical(r_c, root_dir)) PASS else FAIL,
       sprintf("resolved '%s'", r_c))
-
   restore_env()
 } else {
   rec("Check 03: Root resolution", FAIL, "app/helpers_root.R failed to source")
 }
-
-
 # ==============================================================================
 # Check 04: pure helpers (no browser)
 # ==============================================================================
 section("04. Pure app helpers")
-
 # Same load order as app.R: backend (global), then app files into one env.
 H <- new.env()
 H$ROOT <- root_dir
@@ -297,7 +288,6 @@ helpers_err <- tryCatch({
   ""
 }, error = function(e) conditionMessage(e))
 if (!is.na(saved_np)) Sys.setenv(APTER_N_PLOTS = saved_np)
-
 if (!nzchar(helpers_err)) {
   # a. price file round trip into A and into B
   defs0 <- H$APP_DEFS; pm0 <- H$APP_PM_DEFAULT
@@ -312,7 +302,6 @@ if (!nzchar(helpers_err)) {
       sprintf("ok %s, identical %s, differs from the defaults %s",
               isTRUE(up_a$ok), identical(up_a$pm, pm_minimal(pm_x)),
               isTRUE(up_a$ok) && scenarios_differ(defs0, pm0, defs0, up_a$pm)))
-
   # b. build_run_params
   p_all <- H$build_run_params(list(species_group = "spruce", hkl_group = "4",
                                    abonitet = c("14", "17"), fylnr_sel = "__all__"))
@@ -333,7 +322,6 @@ if (!nzchar(helpers_err)) {
               if (is.null(p_all$fylnr)) "NULL" else p_all$fylnr, isTRUE(p_all$all_plots), p_all$seed,
               paste(p_fyl$hogstkl, collapse = ","), some_fyl,
               if (is.null(p_fyl$fylnr)) "NULL" else p_fyl$fylnr))
-
   # c. count_eligible_plots vs direct filter
   pp <- H$plots_prod
   n_helper_all <- H$count_eligible_plots(pp, c(41L, 42L), 17L, NULL)
@@ -346,23 +334,37 @@ if (!nzchar(helpers_err)) {
           n_direct_all > 0L) PASS else FAIL,
       sprintf("HKL4/ab17/all: %d vs %d; HKL4/ab14,17/fylnr %s: %d vs %d",
               n_helper_all, n_direct_all, some_fyl, n_helper_fyl, n_direct_fyl))
-
   # d. default assortment table
   p_d  <- products_from_defs(defs0, pm0)
-  keys <- assortment_table_keys(defs0)
-  ids  <- c(keys[defs0$PriceType == "matrix"], PM_FLAT_ID)
-  ok_d <- identical(p_d$pd, H$APP_PRODUCTS) &&
-    identical(ids, c("spruce_sawlog", "pine_sawlog", "flat_prices"))
-  rec("Check 04d: Default assortment table gives the base products; matrix choices",
+  ok_d <- identical(p_d$pd, H$APP_PRODUCTS)
+  rec("Check 04d: Default assortment table gives the base products",
       if (ok_d) PASS else FAIL,
-      sprintf("ProductData identical: %s | matrices: %s",
-              identical(p_d$pd, H$APP_PRODUCTS), paste(ids, collapse = ", ")))
+      sprintf("ProductData identical: %s", identical(p_d$pd, H$APP_PRODUCTS)))
+  # e. live tree counts = the trees the run bucks (same selection code)
+  cases_e <- list(
+    H$build_run_params(list(species_group = "both", hkl_group = "4",
+                            abonitet = c("11", "14", "17"), fylnr_sel = "__all__")),
+    H$build_run_params(list(species_group = "both", hkl_group = c("3", "5"),
+                            abonitet = c("8", "11"), fylnr_sel = some_fyl), n_plots = 5L))
+  det_e <- character(0); ok_e <- TRUE
+  for (pe in cases_e) {
+    sel <- select_nfi_trees(H$trees_meta, pe)
+    job <- tryCatch(prepare_sampled_job(pe, root = root_dir), error = function(e) conditionMessage(e))
+    same <- is.list(job) &&
+      identical(sort(as.character(sel$trees$treid)), sort(as.character(job$tree_data$treid))) &&
+      identical(length(sel$plots), as.integer(job$meta$n_plots_sampled))
+    tc <- H$tree_counts(sel$trees$species_group, length(sel$plots))
+    ok_e <- ok_e && same && identical(tc$n_trees, nrow(sel$trees))
+    det_e <- c(det_e, sprintf("%s: '%s' (run: %s trees, %s plots) %s", if (isTRUE(pe$all_plots)) "all plots" else "5 plots",
+                              tc$text, if (is.list(job)) nrow(job$tree_data) else job,
+                              if (is.list(job)) job$meta$n_plots_sampled else NA, if (same) "same" else "DIFFERENT"))
+  }
+  rec("Check 04e: Live tree counts select exactly the trees and plots the run bucks",
+      if (ok_e) PASS else FAIL, paste(det_e, collapse = " | "))
 } else {
   rec("Check 04: Pure app helpers", FAIL,
       paste("sourcing backend/app files failed:", helpers_err))
 }
-
-
 # ==============================================================================
 # Checks 05-23: drive the app with shinytest2
 # ==============================================================================
@@ -372,7 +374,7 @@ browser_checks <- c(
   "Check 07: Bootstrap 5 and self-hosted Inter font loaded",
   "Check 08: Compact assortment table: base rows, columns, '–' for no limit",
   "Check 09: Both scenarios editable, nothing greyed, no differences at the start",
-  "Check 10: Independent matrix selectors; price type per scenario; Make assortment equal to A",
+  "Check 10: Price type per scenario (matrix in B, flat in A); Make assortment equal to A",
   "Check 11: Diameter classes and lengths added and removed",
   "Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",
   "Check 13: Summary shows the nine fields; no Diagnostics tab",
@@ -386,14 +388,15 @@ browser_checks <- c(
   "Check 21: Uploaded tree list validates, runs and reports height sources",
   "Check 22: Screenshots saved for review",
   "Check 23: Browser runtime under 300 s",
-  "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B")
-
+  "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B",
+  "Check 25: Row selection, detail panel, selection synced between A and B, flat price field",
+  "Check 26: Live tree counts in the sidebar match the run",
+  "Check 27: Tree and log figures render (single run and comparison)")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
 } else {
   section("05-23. Browser checks")
-
   txt <- function(app, sel)
     tryCatch(paste(app$get_text(sel), collapse = " "), error = function(e) "")
   js <- function(app, code) tryCatch(app$get_js(code), error = function(e) NA)
@@ -423,11 +426,26 @@ if (!browser_ok) {
     if (is.null(f)) return(NULL)
     pm_minimal(as.data.frame(readr::read_csv(f, show_col_types = FALSE)))
   }
+  # Select an assortment as a user does: click its row in A's or B's table
+  # (the key is the row's hidden .key column).
+  pick <- function(app, side, key) {
+    app$run_js(sprintf(paste0(
+      "(function(){ var id = 'tbl_asm_%s', rows = Reactable.getInstance(id).rows;",
+      " var i = rows.findIndex(function(r){ return r.original['.key'] === '%s'; });",
+      " var g = document.querySelectorAll('#' + id + ' .rt-tbody .rt-tr-group')[i];",
+      " if (g) g.querySelector('.rt-td').click(); })()"), side, key))
+    app$wait_for_idle()
+  }
+  # A scenario as downloaded (assortments and all prices).
+  scen_of <- function(app, side) {
+    f <- tryCatch(app$get_download(paste0("dl_scen_", side)), error = function(e) NULL)
+    if (is.null(f)) return(NULL)
+    scenario_import(f)
+  }
   axes_of <- function(pm, id) {
     s <- pm[pm$ProductKey == id & !is.na(pm$LengthClass_dm), , drop = FALSE]
     list(cls = sort(unique(s$PriceDiameterClass_cm)), len = sort(unique(s$LengthClass_dm)))
   }
-
   # AppDriver$new() skips (as "On CRAN") outside interactive sessions unless set.
   Sys.setenv(NOT_CRAN = "true")
   # NFI runs sample 5 plots instead of all (setup.R), to keep the audit short.
@@ -445,7 +463,6 @@ if (!browser_ok) {
   app_ok <- inherits(app, "AppDriver")
   rec(browser_checks[1], if (app_ok) PASS else FAIL,
       if (app_ok) "app started" else paste("start error:", app))
-
   if (app_ok) {
     # Runs are background tasks (ExtendedTask): after the click, wait until
     # no task is running and Run is enabled again.
@@ -460,7 +477,6 @@ if (!browser_ok) {
     tab_shown <- function(app, value) isTRUE(js(app, sprintf(paste0(
       "(function(){ var a = document.querySelector('#result_tabs a[data-value=\"%s\"]');",
       " return !!a && a.offsetParent !== null; })()"), value)))
-
     # 06-07. layout and theme
     app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
     tabs <- js(app, paste0("Array.from(document.querySelectorAll('#main_nav .nav-link'))",
@@ -482,14 +498,17 @@ if (!browser_ok) {
       tab_line    = css("#main_nav .nav-link.active", "borderBottomColor"),
       card_border = css(".bslib-card", "borderTopColor"),
       card_shadow = css(".bslib-card", "boxShadow"),
+      card_bg     = css(".bslib-card", "backgroundColor"),
+      sidebar_bg  = css(".bslib-sidebar-layout > .sidebar", "backgroundColor"),
       primary     = css(".btn.btn-primary", "backgroundColor"),
       secondary   = css(".btn.btn-secondary", "backgroundColor"),
       label       = css(".section-hdr", "textTransform"),
       label_col   = css(".section-hdr", "color"))
-    look_exp <- c(page = "rgb(255, 255, 255)", navbar = "rgb(255, 255, 255)",
+    look_exp <- c(page = "rgb(243, 244, 243)", navbar = "rgb(255, 255, 255)",
                   navbar_rule = "rgb(230, 230, 230)", tab = "rgb(107, 107, 107)",
                   tab_active = "rgb(17, 17, 17)", tab_line = "rgb(17, 17, 17)",
                   card_border = "rgb(230, 230, 230)", card_shadow = "none",
+                  card_bg = "rgb(255, 255, 255)", sidebar_bg = "rgb(255, 255, 255)",
                   primary = "rgb(63, 110, 88)", secondary = "rgb(238, 240, 239)",
                   label = "uppercase", label_col = "rgb(138, 138, 138)")
     look_ok <- identical(unname(unlist(look)), unname(look_exp))
@@ -557,7 +576,6 @@ if (!browser_ok) {
     rec(browser_checks[3], if (ok7) PASS else FAIL,
         sprintf("Bootstrap %s | Inter loaded: %s | Google Fonts links: %s",
                 bs_ver, isTRUE(inter_loaded), n_gfonts))
-
     # 08. assortment table
     asm_txt <- txt(app, "#tbl_asm_a")
     hdr <- c("Assortment", "Species", "Top Ø (cm)", "Max butt Ø (cm)", "Length (cm)",
@@ -567,24 +585,28 @@ if (!browser_ok) {
       !any(vapply(gone8, grepl, logical(1), x = asm_txt, fixed = TRUE))
     n_asm0 <- n_tbl_rows(app, "tbl_asm_a")
     sortable8 <- js(app, "document.querySelectorAll('#tbl_asm_a [aria-sort], #tbl_asm_b [aria-sort], #tbl_asm_a .rt-sort-header').length")
-    copy8 <- js(app, "['pm_a_copy_all','pm_b_copy_all','asm_copy_all_a','asm_copy_all_b'].filter(function(i){ return !!document.getElementById(i); }).length")
-    copy1 <- js(app, paste0("['pm_a_copy_one','pm_b_copy_one','asm_copy_one_a','asm_copy_one_b'].map(function(i){",
+    # Gone: whole-scenario and matrix copy buttons, the assortment and
+    # matrix dropdowns, the flat-price table selector.
+    copy8 <- js(app, paste0("['pm_a_copy_all','pm_b_copy_all','asm_copy_all_a','asm_copy_all_b',",
+                            "'pm_a_copy_one','pm_b_copy_one','asm_pick_a','asm_pick_b','pm_id_a','pm_id_b']",
+                            ".filter(function(i){ return !!document.getElementById(i); }).length"))
+    copy1 <- js(app, paste0("['asm_copy_one_a','asm_copy_one_b'].map(function(i){",
                             " var b = document.getElementById(i); return b ? b.textContent.trim() : ''; }).join('|')"))
-    n_eq8 <- js(app, "Array.from(document.querySelectorAll('button')).filter(function(b){ return /^Make [AB] equal to [AB]$/.test(b.textContent.trim()); }).length")
+    n_eq8 <- js(app, "Array.from(document.querySelectorAll('button')).filter(function(b){ return /^Make [AB] equal to [AB]$|^Make matrix equal/.test(b.textContent.trim()); }).length")
     ok8 <- hdr_ok && identical(n_asm0, 6L) && grepl("–", asm_txt, fixed = TRUE) &&
       !grepl("Inf", asm_txt, fixed = TRUE) && identical(sortable8, 0L) && identical(copy8, 0L) &&
-      identical(copy1, "Make matrix equal to B|Make matrix equal to A|Make assortment equal to B|Make assortment equal to A") &&
+      identical(copy1, "Make assortment equal to B|Make assortment equal to A") &&
       identical(n_eq8, 0L)
     rec(browser_checks[4], if (ok8) PASS else FAIL,
-        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | copy buttons: '%s' (whole-scenario buttons: %s, 'Make A/B equal to' buttons: %s)",
+        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | copy buttons: '%s' (removed controls present: %s, 'Make A/B equal to' / 'Make matrix equal' buttons: %s)",
                 n_asm0, hdr_ok, grepl("–", asm_txt, fixed = TRUE),
                 grepl("Inf", asm_txt, fixed = TRUE), sortable8, copy1, copy8, n_eq8))
     shoot(app, "01_assortments_and_prices")
-
     # 09. Both scenarios editable (Handsontable marks read-only cells
     # htDimmed), nothing greyed or highlighted at the start.
-    marks <- function(app) js(app, paste0("document.querySelectorAll('.pm-diff, .asm-diff, .asm-only, ",
-                                          ".asm-none, .pm-same').length"))
+    # Visible highlights only (a hidden grid of another assortment does not count).
+    marks <- function(app) js(app, paste0("Array.from(document.querySelectorAll('.pm-diff, .asm-diff, .asm-only, ",
+                                          ".asm-none, .pm-same')).filter(function(e){ return e.offsetParent !== null; }).length"))
     a_cells <- n_cells(app, "pm_a", ""); a_dim <- n_cells(app, "pm_a", ".htDimmed")
     b_cells <- n_cells(app, "pm_b", ""); b_dim <- n_cells(app, "pm_b", ".htDimmed")
     marks9 <- marks(app)
@@ -594,39 +616,73 @@ if (!browser_ok) {
     rec(browser_checks[5], if (ok9) PASS else FAIL,
         sprintf("A cells %s (read-only %s) | B cells %s (read-only %s) | highlighted or greyed: %s | B dropdown / status note: %s",
                 a_cells, a_dim, b_cells, b_dim, marks9, dropdown9))
-
-    # 10. Independent selectors; price type per scenario
-    opts <- function(app, id) js(app, sprintf(paste0(
-      "(function(){ var s = document.getElementById('%s');",
-      " return s && s.selectize ? Object.keys(s.selectize.options).join(',')",
-      " : Array.from(s.options).map(function(o){ return o.value; }).join(','); })()"), id))
-    e10 <- try_drv({
-      app$set_inputs(pm_id_b = "flat_prices", wait_ = FALSE); app$wait_for_idle()
+    # 25. Row selection, detail panel, selection synced between A and B
+    head_of <- function(app, s) js(app, sprintf(
+      "(function(){ var t = document.querySelector('#asm_head_%s .asm-detail-title'); return t ? t.textContent.trim() : ''; })()", s))
+    shown <- function(app, sel) isTRUE(js(app, sprintf(
+      "(function(){ var e = document.querySelector('%s'); return !!e && e.offsetParent !== null; })()", sel)))
+    sel_rows <- function(app) js(app, paste0(
+      "['a','b'].map(function(s){ return Array.from(document.querySelectorAll('#tbl_asm_' + s + ' .asm-selected'))",
+      ".map(function(r){ return r.querySelector('.rt-td').textContent.trim() + ' ' + r.querySelectorAll('.rt-td')[1].textContent.trim(); }).join(','); }).join('|')"))
+    flat_of <- function(sc, key) { if (is.null(sc)) return(NA); p <- sc$pm
+      p$PriceNOKperM3[p$ProductKey == key & is.na(p$LengthClass_dm)][1] }
+    c25 <- list()
+    c25$start_rows <- sel_rows(app); c25$start_head <- paste(head_of(app, "a"), head_of(app, "b"), sep = "|")
+    c25$start_grid <- shown(app, "#pm_a") && shown(app, "#pm_b")
+    e25 <- try_drv({
+      pick(app, "a", "spruce_pulpwood")
+      c25$rows <- sel_rows(app); c25$head <- paste(head_of(app, "a"), head_of(app, "b"), sep = "|")
+      c25$flat <- shown(app, "#flat_wrap_a input") && shown(app, "#flat_wrap_b input")
+      c25$grid <- shown(app, "#pm_a") || shown(app, "#pm_b")
+      c25$rules <- txt(app, "#asm_head_a .asm-rules")
+      app$run_js("var i = document.querySelector('#flat_b input'); i.value = '333'; $(i).trigger('change');")
+      app$wait_for_idle()
+      c25$diff <- js(app, "['flat_wrap_a','flat_wrap_b'].map(function(i){ return document.getElementById(i).classList.contains('is-diff') ? 1 : 0; }).join(',')")
+      c25$b <- flat_of(scen_of(app, "b"), "spruce_pulpwood"); c25$a <- flat_of(scen_of(app, "a"), "spruce_pulpwood")
+      c25$dl_keys <- paste(unique(dl_pm(app, "dl_b_long")$ProductKey), collapse = ",")
+      shoot(app, "01a_detail_flat_synced")
+      app$click("asm_copy_one_b"); app$wait_for_idle()
+      c25$marks <- marks(app)
+      pick(app, "b", "spruce_sawlog")
+      c25$back <- paste(head_of(app, "a"), head_of(app, "b"), sep = "|")
+      c25$back_grid <- shown(app, "#pm_a") && shown(app, "#pm_b")
     })
-    sel_a10 <- app$get_value(input = "pm_id_a")
+    a_flat0 <- flat_of(list(pm = H$APP_PM_DEFAULT), "spruce_pulpwood")
+    ok25 <- !nzchar(e25) && identical(c25$start_rows, "Sawlog Spruce|Sawlog Spruce") &&
+      identical(c25$start_head, "Spruce sawlog|Spruce sawlog") && isTRUE(c25$start_grid) &&
+      identical(c25$rows, "Pulpwood Spruce|Pulpwood Spruce") &&
+      identical(c25$head, "Spruce pulpwood|Spruce pulpwood") && isTRUE(c25$flat) && identical(c25$grid, FALSE) &&
+      grepl("Solid volume", c25$rules, fixed = TRUE) && identical(c25$diff, "1,1") &&
+      isTRUE(c25$b == 333) && isTRUE(c25$a == a_flat0) && identical(c25$dl_keys, "spruce_pulpwood") &&
+      identical(c25$marks, 0L) && identical(c25$back, "Spruce sawlog|Spruce sawlog") && isTRUE(c25$back_grid)
+    rec(browser_checks[21], if (ok25) PASS else FAIL,
+        sprintf("start: selected rows '%s', panels '%s', grids %s | click spruce pulpwood in A: rows '%s', panels '%s', flat fields %s, grids %s, rules '%s' | B flat 333: highlighted A,B %s, stored B %s, A %s (default %s) | B's price download: %s | Make assortment equal to A: %s marks | click spruce sawlog in B: '%s', grids %s%s",
+                c25$start_rows, c25$start_head, c25$start_grid, c25$rows, c25$head, c25$flat, c25$grid,
+                trimws(c25$rules), c25$diff, c25$b, c25$a, a_flat0, c25$dl_keys, c25$marks, c25$back,
+                c25$back_grid, err_txt(e25)))
+    # 10. Price type per scenario: spruce pulpwood a price matrix in B only
     e10b <- try_drv({
-      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_edit_b"); app$wait_for_idle()
+      pick(app, "b", "spruce_pulpwood"); app$click("asm_edit_b"); app$wait_for_idle()
       app$set_inputs(asm_price_type = "matrix", asm_price = 300, asm_max_class = 30, wait_ = FALSE)
       app$click("asm_save"); app$wait_for_idle()
     })
-    ids_a10 <- opts(app, "pm_id_a"); ids_b10 <- opts(app, "pm_id_b")
+    grid_b10 <- shown(app, "#pm_b"); flat_a10 <- shown(app, "#flat_wrap_a input")
+    head10 <- paste(head_of(app, "a"), head_of(app, "b"), sep = "|")
     diff_a10 <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-diff').length")
     diff_b10 <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-diff').length")
     shoot(app, "01b_price_type_in_B")
-    e10c <- try_drv({
-      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_copy_one_b"); app$wait_for_idle()
-    })
+    e10c <- try_drv({ app$click("asm_copy_one_b"); app$wait_for_idle() })
     marks10 <- marks(app); msg10 <- txt(app, "#msg_b")
-    ok10 <- !nzchar(paste0(e10, e10b, e10c)) && identical(sel_a10, "spruce_sawlog") &&
-      grepl("spruce_pulpwood", ids_b10, fixed = TRUE) && !grepl("spruce_pulpwood", ids_a10, fixed = TRUE) &&
+    ok10 <- !nzchar(paste0(e10b, e10c)) && grid_b10 && flat_a10 &&
+      identical(head10, "Spruce pulpwood|Spruce pulpwood") &&
       isTRUE(diff_a10 >= 1L) && isTRUE(diff_b10 >= 1L) && identical(marks10, 0L) &&
       grepl("equal to Scenario A", msg10, fixed = TRUE)
     rec(browser_checks[6], if (ok10) PASS else FAIL,
-        sprintf("A's selector after choosing flat prices in B: '%s' | matrices A: %s | B: %s | highlighted cells A %s, B %s | after Make assortment equal to A: %s marks, '%s'%s",
-                sel_a10, ids_a10, ids_b10, diff_a10, diff_b10, marks10, trimws(msg10),
-                err_txt(e10, e10b, e10c)))
-
+        sprintf("panels '%s': B shows a matrix grid %s, A the flat price field %s | highlighted cells A %s, B %s | after Make assortment equal to A: %s marks, '%s'%s",
+                head10, grid_b10, flat_a10, diff_a10, diff_b10, marks10, trimws(msg10),
+                err_txt(e10b, e10c)))
     # 11. rows and columns of A (spruce sawlog)
+    pick(app, "a", "spruce_sawlog")
     ax0 <- axes_of(dl_pm(app, "dl_a_long"), "spruce_sawlog")
     step <- function(btn, set = NULL) {
       e <- try_drv({
@@ -650,12 +706,28 @@ if (!browser_ok) {
                 lo0, hi0, min(s1$ax$cls), max(s1$ax$cls), min(s2$ax$cls), max(s2$ax$cls),
                 min(s6$ax$cls), max(s6$ax$cls), length(ax0$len), length(s3$ax$len),
                 length(s4$ax$len), err_txt(s1$e, s2$e, s3$e, s4$e, s5$e, s6$e)))
-
+    # 26 (first part). Live tree counts before the run; they follow the
+    # species group without a run.
+    c26 <- list()
+    e26 <- try_drv({
+      app$set_inputs(main_nav = "simulator")
+      # The box re-renders after the input; wait until its text changes.
+      counts_after <- function(...) {
+        prev <- txt(app, "#tree_counts")
+        app$set_inputs(...)
+        try(app$wait_for_js(sprintf("document.querySelector('#tree_counts').innerText.trim() !== %s",
+                                    jsonlite::toJSON(trimws(prev), auto_unbox = TRUE)), timeout = 10 * 1000), silent = TRUE)
+        app$wait_for_idle(); txt(app, "#tree_counts")
+      }
+      c26$spruce <- counts_after(abonitet = "17")
+      c26$both <- counts_after(species_group = "both")
+      c26$back <- counts_after(species_group = "spruce")
+    })
+    num_of <- function(x, pat) suppressWarnings(as.integer(gsub(",", "", sub(pat, "\\1", regmatches(x, regexpr(pat, x, perl = TRUE))))))
     # 12. run with B = A (default selection: spruce, HKL 4; bonitet 17)
     busy_disabled <- NA; busy_status <- ""
     e12 <- try_drv({
-      app$set_inputs(main_nav = "simulator")
-      app$set_inputs(abonitet = "17")
+      # already on the Simulator with bonitet 17 (check 26 above): no set_inputs
       app$click("run_btn")
       app$wait_for_idle(timeout = 120 * 1000)
       busy_disabled <- isTRUE(js(app, "document.getElementById('run_btn').disabled"))
@@ -674,7 +746,6 @@ if (!browser_ok) {
                 grepl("Trees with logs", cards, fixed = TRUE), cmp_tab12, nerr12,
                 isTRUE(busy_disabled), trimws(busy_status), after_enabled, err_txt(e12)))
     shoot(app, "02_simulator_summary")
-
     # 13. summary fields
     fields <- c("Run time", "Plots", "Trees", "Trees with logs", "Logs",
                 "Commercial volume (m³ u.b.)", "Total value (NOK)", "NOK per m³",
@@ -693,7 +764,6 @@ if (!browser_ok) {
       "(function(){ var f = Array.from(document.querySelectorAll('#summary_cards .ro-field'))",
       ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Logs'; });",
       " return f ? f.querySelector('.ro-value').textContent : ''; })()")))))
-
     # 14. selected logs: preview of the first 20 and a CSV of all
     read_logs_csv <- function(app) {
       f <- tryCatch(app$get_download("dl_logs"), error = function(e) NULL)
@@ -705,6 +775,14 @@ if (!browser_ok) {
     hdr14 <- js(app, "Array.from(document.querySelectorAll('#tbl_selected_logs .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')")
     h14 <- strsplit(as.character(hdr14), "|", fixed = TRUE)[[1]]
     n_rows14 <- n_tbl_rows(app, "tbl_selected_logs")
+    # Figures as images: "id:width" for each plot that rendered.
+    figs <- function(app, ids) js(app, sprintf(paste0(
+      "[%s].map(function(i){ var m = document.querySelector('#' + i + ' img');",
+      " return i + ':' + (m && m.complete ? m.naturalWidth : 0); }).join(',')"),
+      paste0("'", ids, "'", collapse = ",")))
+    fig_ok <- function(f) length(f) == 1L && !is.na(f) && !grepl(":0(,|$)", f)
+    c27 <- list(logs1 = figs(app, c("fig_log_lengths", "fig_log_volume")))
+    shoot(app, "02b_selected_logs_figures")
     ctrl14 <- js(app, paste0("document.querySelectorAll('#tbl_selected_logs .rt-pagination, ",
                              "#tbl_selected_logs [aria-sort], #tbl_selected_logs_sort, #tbl_selected_logs_next').length"))
     csv14 <- read_logs_csv(app)
@@ -718,7 +796,6 @@ if (!browser_ok) {
         sprintf("label: '%s' | preview rows: %s | sorting/paging controls: %s | logs in run: %s | CSV rows %s, scenarios %s | headers: %s%s",
                 trimws(note14), n_rows14, ctrl14, n_logs, if (is.null(csv14)) NA else nrow(csv14),
                 if (is.null(csv14)) "" else paste(unique(csv14$Scenario), collapse = "/"), hdr14, err_txt(e14)))
-
     # 15. Per m3 tab and tree detail on demand
     e15 <- try_drv({ app$set_inputs(result_tabs = "per_m3"); app$wait_for_idle() })
     n_pm3   <- n_tbl_rows(app, "tbl_per_m3")
@@ -733,6 +810,7 @@ if (!browser_ok) {
       app$wait_for_idle()
     }
     open_trees(app)
+    c27$trees1 <- figs(app, c("fig_dbh", "fig_height"))
     n_trees_rows <- n_tbl_rows(app, "tbl_trees")
     note15 <- txt(app, "#trees_preview_note")
     hdr15 <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')")
@@ -766,18 +844,18 @@ if (!browser_ok) {
                 if (is.null(csv15)) "" else paste(unique(csv15$Scenario), collapse = "/"),
                 isTRUE(n_detail >= 1L), length(per_ha_hits), err_txt(e15)))
     stale_before <- txt(app, "#stale_notice")
-
     # 16. upload B (spruce sawlog x1.2), automatic comparison
     wide_csv <- tempfile(fileext = ".csv")
     g16 <- pm_to_grid(H$APP_PM_DEFAULT, "spruce_sawlog") * 1.2
     utils::write.csv(cbind(spruce_sawlog = rownames(g16), g16), wide_csv, row.names = FALSE)
     e16 <- try_drv({
       app$set_inputs(main_nav = "prices")
+      pick(app, "b", "spruce_sawlog")             # the upload is for the selected assortment
       app$upload_file(pm_b_upload = wide_csv)
       app$wait_for_idle()
     })
     msg16 <- txt(app, "#msg_b")
-    e16a <- try_drv({ app$set_inputs(pm_id_b = "spruce_sawlog", wait_ = FALSE); app$wait_for_idle() })
+    e16a <- ""
     n_hl  <- n_cells(app, "pm_b", ".pm-diff")
     n_hl_a <- n_cells(app, "pm_a", ".pm-diff")
     b16   <- dl_pm(app, "dl_b_long")
@@ -798,6 +876,13 @@ if (!browser_ok) {
     exp16 <- paste(c("Run time", "Plots", "Trees", "Scenario A", "Total value (NOK)", "Commercial volume (m³ u.b.)",
                      "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
+    e27 <- try_drv({
+      app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
+      c27$logs2 <- figs(app, c("fig_log_lengths", "fig_log_volume"))
+      shoot(app, "05a_selected_logs_figures_A_and_B")
+      app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
+      c27$trees2 <- figs(app, c("fig_dbh", "fig_height"))
+    })
     e16e <- try_drv({ app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle() })
     pat_txt  <- txt(app, "#cmp_patterns")
     stem_img <- js(app, "document.querySelectorAll('#stem_compare img').length")
@@ -822,15 +907,15 @@ if (!browser_ok) {
                 if (is.null(tcsv16)) "none" else paste(sprintf("%s %d", names(table(tcsv16$Scenario)), table(tcsv16$Scenario)), collapse = ", "),
                 n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
                 trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16a, e16b, e16c)))
-
     # 17. Spruce pulpwood removed from B only
     flat17 <- ""; st17 <- ""
     e17 <- try_drv({
       app$set_inputs(main_nav = "prices")
-      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_remove_b"); app$wait_for_idle()
+      pick(app, "b", "spruce_pulpwood"); app$click("asm_remove_b"); app$wait_for_idle()
       app$click("asm_rm_one"); app$wait_for_idle()
       flat17 <- txt(app, "#msg_b")
-      st17 <- paste("B products:", paste(unique(dl_pm(app, "dl_b_long")$ProductKey), collapse = ","))
+      missing17 <- txt(app, "#asm_detail_b .asm-missing")
+      st17 <- paste("B products:", paste(unique(scen_of(app, "b")$pm$ProductKey), collapse = ","))
       app$set_inputs(main_nav = "simulator"); run(app)
       app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
     })
@@ -843,22 +928,24 @@ if (!browser_ok) {
     a_val <- if (length(pulp)) suppressWarnings(as.numeric(strsplit(pulp[1], ";")[[1]][2])) else NA
     e17b <- try_drv({
       app$set_inputs(main_nav = "prices")
-      app$set_inputs(asm_pick_b = "spruce_pulpwood", wait_ = FALSE); app$click("asm_copy_one_b"); app$wait_for_idle()
+      pick(app, "a", "spruce_pulpwood"); app$click("asm_add_from_b"); app$wait_for_idle()
     })
-    back17 <- "spruce_pulpwood" %in% dl_pm(app, "dl_b_long")$ProductKey
+    sc17 <- scen_of(app, "b")
+    back17 <- "spruce_pulpwood" %in% sc17$pm$ProductKey && "spruce_pulpwood" %in% assortment_table_keys(sc17$defs)
     ok17 <- !nzchar(paste0(e17, e17b)) && isTRUE(a_val > 0) && isTRUE(b_val == 0) && back17 &&
+      grepl("Not in this scenario", missing17, fixed = TRUE) && grepl("Add from A", missing17, fixed = TRUE) &&
       !grepl("spruce_pulpwood", st17, fixed = TRUE) && identical(n_err_notif(app), 0L)
     rec(browser_checks[13], if (ok17) PASS else FAIL,
-        sprintf("'%s' (%s) | spruce pulpwood value A %s, B %s | back in B after Make assortment equal to A: %s | error notifications: %s%s",
-                trimws(flat17), trimws(st17), a_val, b_val, back17, n_err_notif(app), err_txt(e17, e17b)))
-
+        sprintf("'%s' (%s) | B's panel: '%s' | spruce pulpwood value A %s, B %s | back in B after Add from A: %s | error notifications: %s%s",
+                trimws(flat17), trimws(st17), trimws(missing17), a_val, b_val, back17, n_err_notif(app), err_txt(e17, e17b)))
     # 18. stale notice after a price edit (reset A)
     e18 <- try_drv({
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
     })
     stale_after_run <- txt(app, "#stale_notice")
     e18b <- try_drv({
-      app$set_inputs(main_nav = "prices"); app$click("pm_b_reset"); app$wait_for_idle()
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle(); pick(app, "b", "spruce_sawlog")
+      app$click("pm_b_reset"); app$wait_for_idle()
       app$set_inputs(main_nav = "simulator"); app$wait_for_idle()
     })
     stale_after_edit <- txt(app, "#stale_notice")
@@ -868,7 +955,6 @@ if (!browser_ok) {
     rec(browser_checks[14], if (ok18) PASS else FAIL,
         sprintf("after runs: '%s' / '%s' | after resetting B: '%s'%s", trimws(stale_before),
                 trimws(stale_after_run), trimws(stale_after_edit), err_txt(e18, e18b)))
-
     # 19. no "default"/"scenario" words in the page text (both tabs are in
     # the DOM; hidden tabs count too)
     page19 <- js(app, "document.body.textContent")
@@ -876,7 +962,6 @@ if (!browser_ok) {
     rec(browser_checks[15], if (length(hits19) == 0L) PASS else FAIL,
         if (length(hits19) == 0L) "none found"
         else sprintf("found: %s", paste(hits19, collapse = ", ")))
-
     # 20. custom assortment through the form
     form20 <- NA; blur20 <- NA
     e20 <- try_drv({
@@ -896,13 +981,11 @@ if (!browser_ok) {
     })
     msg20a <- txt(app, "#msg_a")
     n_asm1 <- n_tbl_rows(app, "tbl_asm_a")
-    pm_opts <- js(app, paste0(
-      "(function(){ var s = document.getElementById('pm_id_a');",
-      " return s && s.selectize ? Object.keys(s.selectize.options).join(',')",
-      " : Array.from(s.options).map(function(o){ return o.value; }).join(','); })()"))
+    # The new assortment is selected, its matrix grid shown.
+    pm_opts <- paste(head_of(app, "a"), if (shown(app, "#pm_a")) "grid" else "no grid")
     a_before <- dl_pm(app, "dl_a_long")
     e20b <- try_drv({
-      app$set_inputs(asm_pick_a = "spruce_poles", wait_ = FALSE)
+      pick(app, "a", "spruce_poles")
       app$click("asm_edit_a"); app$wait_for_idle()
       app$set_inputs(asm_max_top = 28, wait_ = FALSE)
       app$click("asm_save"); app$wait_for_idle()
@@ -922,29 +1005,28 @@ if (!browser_ok) {
       app$click("asm_reset_a"); app$wait_for_idle()
     })
     n_asm_reset <- n_tbl_rows(app, "tbl_asm_a")
-    a_reset <- dl_pm(app, "dl_a_long")
+    a_reset <- scen_of(app, "a")$pm
     base_back <- !is.null(a_reset) && identical(
       pm_minimal(a_reset[a_reset$ProductKey != "spruce_poles", ]), pm_minimal(H$APP_PM_DEFAULT))
     e20e <- try_drv({
-      app$set_inputs(asm_pick_a = "spruce_poles", wait_ = FALSE); app$click("asm_remove_a"); app$wait_for_idle()
+      pick(app, "a", "spruce_poles"); app$click("asm_remove_a"); app$wait_for_idle()
       app$click("asm_rm_both"); app$wait_for_idle()
     })
     n_asm_rm <- n_tbl_rows(app, "tbl_asm_a")
     n_asm_rm_b <- n_tbl_rows(app, "tbl_asm_b")
     ok20 <- !nzchar(paste0(e20, e20b, e20c, e20d, e20e)) &&
       grepl("Added Spruce poles", msg20a, fixed = TRUE) && identical(n_asm1, 7L) &&
-      grepl("spruce_poles", pm_opts, fixed = TRUE) &&
+      identical(pm_opts, "Spruce poles grid") &&
       grepl("Saved Spruce poles", msg20b, fixed = TRUE) && kept &&
       grepl("Spruce poles", prod20, fixed = TRUE) &&
       identical(n_asm_reset, 7L) && base_back && identical(n_asm_rm, 6L) &&
       identical(n_asm_rm_b, 6L) && identical(form20, 0L) && identical(blur20, "none") &&
       identical(n_err_notif(app), 0L)
     rec(browser_checks[16], if (ok20) PASS else FAIL,
-        sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', rows %s, matrix choices %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s%s",
+        sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', rows %s, selected: %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s%s",
                 form20, blur20, trimws(msg20a), n_asm1, pm_opts, trimws(msg20b), kept,
                 grepl("Spruce poles", prod20, fixed = TRUE), n_asm_reset, base_back, n_asm_rm, n_asm_rm_b,
                 err_txt(e20, e20b, e20c, e20d, e20e)))
-
     # 21. uploaded tree list (template)
     tl_csv <- tempfile(fileext = ".csv")
     tree_list_template(tl_csv)
@@ -955,6 +1037,7 @@ if (!browser_ok) {
       app$wait_for_idle()
     })
     tl_panel <- txt(app, "#tl_validation")
+    c26$tl <- txt(app, "#tree_counts")
     e21b <- try_drv({
       run(app)
       app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
@@ -973,7 +1056,19 @@ if (!browser_ok) {
         sprintf("panel: '%s' | banner: '%s' | Height source column: %s | error notifications: %s%s",
                 substr(trimws(tl_panel), 1, 160), substr(trimws(banner21), 1, 120),
                 grepl("Height source", trees21, fixed = TRUE), nerr21, err_txt(e21, e21b)))
-
+    # 26. live tree counts: NFI box before the first run vs that run's
+    # Plots and Trees (spruce, HKL 4, bonitet 17, 5 sampled plots); the
+    # species group changes it; the tree list counts its 12 trees.
+    sp26 <- num_of(c26$spruce, "([0-9,]+) spruce tree")
+    pl26 <- num_of(c26$spruce, "([0-9,]+) plots?")
+    tl26 <- sum(num_of(c26$tl, "([0-9,]+) spruce"), num_of(c26$tl, "([0-9,]+) pine"))
+    ok26 <- !nzchar(e26) && identical(sp26, n_trees_run) && identical(as.character(pl26), plots_val) &&
+      grepl("pine", c26$both, fixed = TRUE) && identical(c26$back, c26$spruce) &&
+      grepl("Estimated run time", c26$spruce, fixed = TRUE) && identical(tl26, 12L)
+    rec(browser_checks[22], if (ok26) PASS else FAIL,
+        sprintf("box: '%s' (run: %s plots, %s trees) | both species: '%s' | back to spruce: same %s | tree list: '%s'%s",
+                gsub("\\s+", " ", trimws(c26$spruce)), plots_val, n_trees_run, gsub("\\s+", " ", trimws(c26$both)),
+                identical(c26$back, c26$spruce), gsub("\\s+", " ", trimws(c26$tl)), err_txt(e26)))
     # 24. Scenario B's own assortments (Phase 4d, independent scenarios)
     # B made equal to A as a user does it: download Scenario A, upload to B.
     a_to_b <- function(app) {
@@ -985,7 +1080,7 @@ if (!browser_ok) {
       app$set_inputs(main_nav = "prices"); a_to_b(app)
       n24$start <- marks(app)
       # a rule of B only: spruce sawlog min top 14 cm
-      app$set_inputs(asm_pick_b = "spruce_sawlog", wait_ = FALSE); app$click("asm_edit_b"); app$wait_for_idle()
+      pick(app, "b", "spruce_sawlog"); app$click("asm_edit_b"); app$wait_for_idle()
       app$set_inputs(asm_min_top = 14, wait_ = FALSE); app$click("asm_save"); app$wait_for_idle()
       n24$diff_a <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-diff').length")
       n24$diff_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-diff').length")
@@ -999,7 +1094,7 @@ if (!browser_ok) {
       n24$none_a <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-none').length")
       n24$a_rows <- n_tbl_rows(app, "tbl_asm_a")
       # pine pulpwood removed from B only
-      app$set_inputs(asm_pick_b = "pine_pulpwood", wait_ = FALSE); app$click("asm_remove_b"); app$wait_for_idle()
+      pick(app, "b", "pine_pulpwood"); app$click("asm_remove_b"); app$wait_for_idle()
       app$click("asm_rm_one"); app$wait_for_idle()
       n24$none_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-none').length")
       rows_of <- function(id) js(app, sprintf(paste0(
@@ -1019,8 +1114,9 @@ if (!browser_ok) {
     cmp24 <- tab_shown(app, "comparison")
     e24b <- try_drv({
       app$set_inputs(main_nav = "prices")
-      app$set_inputs(pm_id_a = "spruce_sawlog", wait_ = FALSE); app$click("pm_a_copy_one"); app$wait_for_idle()
+      pick(app, "a", "spruce_sawlog"); app$click("asm_copy_one_a"); app$wait_for_idle()
       msg24 <- txt(app, "#msg_a")
+      n24$sawlog_eq <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-diff').length")
       a_to_b(app)
       n24$end <- marks(app)
     })
@@ -1030,27 +1126,30 @@ if (!browser_ok) {
       isTRUE(n24$none_b >= 1L) && cmp24 &&
       identical(n24$rows_a, n24$rows_b) &&
       identical(n24$rows_a, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine") && grepl("Spruce poles", prod24, fixed = TRUE) &&
-      grepl("Value A", prod24, fixed = TRUE) && grepl("Prices equal to Scenario B", msg24, fixed = TRUE) &&
+      grepl("Value A", prod24, fixed = TRUE) && grepl("Spruce sawlog is equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make matrix equal to B: '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
+        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
                 n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
-    rec(browser_checks[18], if (length(shots) == 15L) PASS else REVIEW,
-        sprintf("%d of 15 screenshots in %s", length(shots), shot_dir))
+    # 27. figures (images with a width) for the single run and the comparison
+    ok27 <- !nzchar(e27) && all(vapply(c27[c("logs1", "trees1", "logs2", "trees2")],
+                                       function(f) isTRUE(fig_ok(f)), logical(1)))
+    rec(browser_checks[23], if (ok27) PASS else FAIL,
+        sprintf("single run: logs %s, trees %s | comparison: logs %s, trees %s (id:image width px)%s",
+                c27$logs1, c27$trees1, c27$logs2, c27$trees2, err_txt(e27)))
+    rec(browser_checks[18], if (length(shots) == 18L) PASS else REVIEW,
+        sprintf("%d of 18 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:18, 20)]) rec(ck, FAIL, "skipped: app did not start")
+    for (ck in browser_checks[c(2:18, 20:23)]) rec(ck, FAIL, "skipped: app did not start")
   }
-
   # 23. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
   rec(browser_checks[19], if (t_el < 300) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 300 s)", t_el))
 }
-
-
 # ==============================================================================
 # Verdict and output
 # ==============================================================================
