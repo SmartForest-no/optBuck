@@ -196,7 +196,11 @@ read (removed in the 2026-10 rename).
 The look is option 3 "Combination" of
 `docs/design_reference/optbuck_design_directions.html` (restyle,
 2026-10-16; it replaced the ForestSens-like "Forest & sand" look and its
-stripe). The page and navbar are white with hairline `#E6E6E6` rules, the
+stripe). Since 2026-10-19 the page is light grey `#F3F4F3` (`--apter-page`)
+behind white cards: Scenario A and B, the Simulator sidebar (a card of its
+own) and the results card (`--apter-surface`; bs_theme `bg` stays white,
+because Bootstrap's cards take their background from it). The navbar is
+white with a hairline `#E6E6E6` rule, the
 navbar tabs are grey with a black active tab, and cards have a 1 px border
 and no shadow. Section labels are small uppercase grey, and forest green
 `#3F6E58` is the only strong colour (primary buttons, focus, progress, the
@@ -226,6 +230,11 @@ Oracle or ForestSens assets.
   green and B sand `#C09A66` (CVD dE 17.9). The delta chart uses a neutral
   grey because the sign is shown by bar direction. Log labels are dark on
   sand and grey.
+- Figures (2026-10-19): ggplot2 with `theme_apter()` (Inter, white
+  background, light grid). DBH and height densities per species in the
+  Trees card (spruce `#3F6E58`, pine `#C9A97A`: CVD dE 22.2, normal dE
+  27.1); logs per length class and commercial volume per top-diameter class
+  by assortment in Selected logs, Scenario A | B facets after a comparison.
 - Audit 17 saves screenshots of both tabs, the results and the comparison
   to `outputs/app_smoke/screenshots/` for review.
 
@@ -376,6 +385,41 @@ Oracle (SKOG.NORGE_TRE_2024_V, SKOG.NORGE_FLA_2024_V)
   deliberately, and re-run the audits afterwards.
 - Data-privacy rules, including the one authorised coordinate-export
   exception, are in [CLAUDE.md](../CLAUDE.md#data-privacy--read-before-touching-plotcoordinate-data).
+
+### Which NFI trees a run bucks
+
+One function decides it, `select_nfi_trees()` in
+`R/helpers_tree_selection.R`. `prepare_sampled_job()` calls it, and so do
+the app's live tree counts, so the sidebar box always counts exactly the
+trees the run will buck (audit 17 check 4e). Don't reimplement it.
+
+- **Only spruce and pine exist in the data.** Data preparation
+  (`scripts/prototype_reference/00_prepare_nfi_2024_data.R`) maps `treslag`
+  to `species_group` and keeps only spruce and pine; broadleaves and other
+  species are dropped before sanitization. They are never counted or bucked.
+- **Plots are selected by tree species, not by dominant species.** The
+  stratum filter (maturity class, site class, county) is applied to the
+  trees of the chosen species group; a plot is eligible if it has at least
+  one such tree. There is no dominant-species rule.
+- **Only trees of the chosen species are bucked.** With "Spruce", the pine
+  on the same plots is left out; "Spruce and pine" bucks both.
+- **Trees need DBH ≥ 5 cm and height ≥ 4.5 m** (`NFI_MIN_DBH_CM`,
+  `NFI_MIN_HEIGHT_M`; height = `beregnet_hoyde` / 10), the taperNOR
+  validity filter. It is applied after plot selection, so a plot stays
+  counted even if all its trees fail it.
+- The app uses all eligible plots (`all_plots = TRUE`); scripts and audits
+  can sample `n_plots` complete plots instead (seed 42).
+
+Default stratum (HKL 4, bonitet 11/14/17, all counties):
+
+| Species group | Plots | Trees before the DBH/height filter | Trees bucked |
+|---|---|---|---|
+| Spruce | 655 | 12,508 | 12,427 |
+| Pine | 477 | 4,197 | 4,166 |
+| Spruce and pine | 801 | 16,705 | 16,593 (12,427 spruce, 4,166 pine) |
+
+655 plots have spruce, 477 have pine and 331 have both, so "Spruce and
+pine" adds 146 pine-only plots to the spruce plots.
 
 ---
 

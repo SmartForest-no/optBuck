@@ -31,7 +31,7 @@ the simulator appears as **optBuck**.
 
 | Source | Status |
 |--------|--------|
-| **NFI data.** Spruce and pine from the Norwegian National Forest Inventory: all trees on all plots of the selected species, maturity class, site class and county. Results describe the selected trees only. | Available |
+| **NFI data.** Spruce and pine from the Norwegian National Forest Inventory. The app takes every plot of the selected maturity class, site class and county that has trees of the selected species, and bucks the trees of that species (spruce, pine or both) with a diameter at breast height of at least 5 cm and a height of at least 4.5 m. Other tree species are not included. Results describe the selected trees only. | Available |
 | **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
 
@@ -80,8 +80,11 @@ d < 10: 1.3 + 0.65456·d (Eid & Fitje 1993); 10 ≤ d < 35: 0.39 + 0.852·d −
 
 ## Assortments and prices
 
-The app opens on *Assortments and prices*, with **Scenario A** on the left and
-**Scenario B** on the right (one above the other on narrow screens). Each
+The app opens on *Assortments and prices*, with **Scenario A** and
+**Scenario B** as two white cards side by side on a light grey page (one
+above the other on narrow screens). Each card runs from top to bottom: the
+assortment table, the selected assortment with its prices, and the
+scenario's own buttons (add, reset, download, upload). Each
 scenario has its own assortments and its own price matrices. Apter ships
 with this base set and the 2021 price matrices for spruce and pine
 (diameters under bark); both scenarios start from it:
@@ -175,7 +178,8 @@ Prices are never converted between units.
 
 ## Results
 
-In the *Simulator*, choose the trees and click *Run optimizer*. NFI runs use
+In the *Simulator*, choose the trees in the sidebar card and click *Run
+optimizer*; the results appear in the card beside it. NFI runs use
 all plots of the selected stratum. Under the selection, the app shows the
 number of plots and trees per species that will be bucked and an estimated
 run time, updated as the selection changes (for a tree list, after the
