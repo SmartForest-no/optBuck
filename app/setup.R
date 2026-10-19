@@ -25,12 +25,12 @@ APP_DEFS       <- defs_from_products(APP_PRODUCTS)
 APP_N_PLOTS <- suppressWarnings(as.integer(Sys.getenv("APTER_N_PLOTS")))   # NA = all plots
 APP_SEED    <- 42L
 
-# Trees per plot and species, for the tree count of a selection (the note
-# on large runs).
+# The NFI trees with the columns select_nfi_trees() (R/helpers_tree_selection.R)
+# needs: the sidebar's live tree counts use the run's own selection code.
 trees_meta <- as.data.frame(arrow::read_parquet(
   file.path(ROOT, "data_processed_github", "nfi_tree_plot_stratum_ready_github.parquet"),
-  col_select = c("plot_id_github", "species_group", "hogstkl", "abonitet", "fylnr")))
-LARGE_RUN_TREES <- 30000L
+  col_select = c("plot_id_github", "treid", "species_group", "dbh_cm", "trehoyde",
+                 "beregnet_hoyde", "hogstkl", "abonitet", "fylnr", "hoh")))
 
 # ---- HKL group mapping (user-facing -> raw hogstkl codes) -----------------
 HKL_CHOICES <- c(

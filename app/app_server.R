@@ -92,17 +92,28 @@ server <- function(input, output, session) {
     content  = function(file) tree_list_template(file))
 
 
-  # Selections above LARGE_RUN_TREES trees: tree count and a rough run time.
-  output$large_run_note <- renderUI({
-    req(identical(input$tree_source, "nfi"))
-    hkl_raw <- unlist(HKL_MAP[input$hkl_group]); abon <- as.integer(input$abonitet)
-    req(length(hkl_raw) > 0L, length(abon) > 0L)
-    n <- count_stratum_trees(trees_meta, input$species_group, hkl_raw, abon,
-                             selected_fylnr(input$fylnr_sel))
-    if (n <= LARGE_RUN_TREES) return(NULL)
-    secs <- estimate_run_seconds(n, APP_WORKERS, compare = sc$differ())
-    div(class = "note-warn", sprintf("%s trees: about %s.", format(n, big.mark = ","),
-        if (secs < 90) sprintf("%.0f s", secs) else sprintf("%.0f min", secs / 60)))
+  # Live tree counts: the trees the run will buck, from the cached data and
+  # the run's own selection code (select_nfi_trees() with build_run_params(),
+  # as Run uses them; for tree lists the rows in taperNOR's range), plus a
+  # rough run time. No bucking.
+  sel_counts <- reactive({
+    if (identical(input$tree_source, "list")) {
+      p <- tl_prepared(); req(p, isTRUE(p$ok))
+      tr <- p$trees[p$trees$in_range, , drop = FALSE]
+      pl <- unique(tr$plot_id[!is.na(tr$plot_id)])
+      return(tree_counts(tr$species_group, if (length(pl)) length(pl) else NA_integer_))
+    }
+    req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
+    sel <- select_nfi_trees(trees_meta, build_run_params(input))
+    tree_counts(sel$trees$species_group, length(sel$plots))
+  })
+  output$tree_counts <- renderUI({
+    n <- sel_counts()
+    secs <- estimate_run_seconds(n$n_trees, APP_WORKERS, compare = sc$differ())
+    div(class = "tree-counts",
+      div(class = "tree-counts-n", n$text),
+      if (n$n_trees > 0L) div(class = "tree-counts-time", sprintf("Estimated run time: about %s",
+        if (secs < 90) sprintf("%.0f s", secs) else sprintf("%.0f min", secs / 60))))
   })
 
 
@@ -418,6 +429,17 @@ server <- function(input, output, session) {
             else apter_reactable(readable_logs(logs)[, -(1:3)], page_size = 20L))
   })
 
+  # DBH and height of the bucked trees per species (the same trees in A and
+  # B, so shown once).
+  output$fig_dbh <- renderPlot(res = 96, {
+    req(has_result()); ts <- result()$tree_summary
+    apter_density_species(ts$dbh_cm, ts$species_group, "DBH (cm)", "DBH distribution")
+  })
+  output$fig_height <- renderPlot(res = 96, {
+    req(has_result()); ts <- result()$tree_summary
+    apter_density_species(ts$height_m, ts$species_group, "Tree height (m)", "Height distribution")
+  })
+
 
   # ---- Products -----------------------------------------------------------------
   products_ab <- reactive({
@@ -498,6 +520,42 @@ server <- function(input, output, session) {
                             stringsAsFactors = FALSE))
       utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
     })
+
+  # Figures of all selected logs (not the preview): bars by assortment over
+  # a class, summed per scenario (facets Scenario A | B after a comparison)
+  # and species (facet rows when both).
+  log_fig_data <- function(class_of, value_of, drop_waste = FALSE) {
+    one <- function(r, nm) {
+      sl <- r$selected_logs_all
+      if (drop_waste) sl <- sl[sl$ProductType != "waste", , drop = FALSE]
+      if (nrow(sl) == 0L) return(NULL)
+      data.frame(Scenario = nm, Species = tools::toTitleCase(sl$species_group),
+                 class = class_of(sl), Assortment = type_label(sub("^[^_]+_", "", sl$ProductKey)),
+                 Type = sl$ProductType, value = value_of(sl), stringsAsFactors = FALSE)
+    }
+    d <- rbind(one(result(), "Scenario A"), if (compared()) one(result_b(), "Scenario B"))
+    if (is.null(d)) return(NULL)
+    stats::aggregate(value ~ Scenario + Species + class + Assortment + Type, data = d, FUN = sum)
+  }
+  # Height grows with the facet rows (both species).
+  log_fig_height <- function() {
+    if (!has_result()) return(300)
+    if (length(unique(result()$selected_logs_all$species_group)) > 1L) 520 else 300
+  }
+  output$fig_log_lengths <- renderPlot(res = 96, height = log_fig_height, {
+    req(has_result())
+    apter_bars_by_assortment(
+      log_fig_data(function(sl) sl$LengthClass_dm, function(sl) rep(1, nrow(sl))),
+      "Length class (dm)", "Logs", "Number of logs per length class")
+  })
+  output$fig_log_volume <- renderPlot(res = 96, height = log_fig_height, {
+    req(has_result())
+    apter_bars_by_assortment(
+      log_fig_data(function(sl) floor(sl$TopDiameter_ub / 10), function(sl) sl$commercial_volume_m3,
+                   drop_waste = TRUE),
+      "Top diameter under bark (cm)", "Commercial volume (m³)",
+      "Commercial volume per top-diameter class")
+  })
 
 
   # ---- Scenario comparison (A vs B) ------------------------------------------

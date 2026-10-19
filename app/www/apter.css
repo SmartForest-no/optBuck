@@ -18,7 +18,8 @@
   src: url("fonts/source-serif-4-latin-400-normal.woff2") format("woff2"); }
 
 :root {
-  --apter-page: #FFFFFF;          /* page and navbar */
+  --apter-page: #F3F4F3;          /* page background behind the cards (2026-10-19) */
+  --apter-surface: #FFFFFF;       /* cards, sidebar, navbar */
   --apter-rule: #E6E6E6;          /* navbar rule, card borders */
   --apter-ink: #111111;           /* primary text, active tab */
   --apter-ink-soft: #1D2321;      /* secondary-button text, active result tab */
@@ -135,7 +136,11 @@ details.apter-card { margin-bottom: 16px; }
 .height-notice div { margin-top: 2px; }
 
 /* ---- sidebar ---------------------------------------------------------------- */
-.bslib-sidebar-layout > .sidebar { background: #FFFFFF; border-right: 1px solid var(--apter-rule); }
+/* The sidebar is a white card on the grey page, beside the results card. */
+.bslib-sidebar-layout { border: none !important; background: transparent !important; }
+.bslib-sidebar-layout > .main { background: transparent !important; }
+.bslib-sidebar-layout > .sidebar { background: var(--apter-surface) !important;
+  border: 1px solid var(--apter-rule) !important; border-radius: 6px; }
 .sidebar-heading {
   font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--apter-label); margin: 6px 0 8px;
@@ -230,8 +235,37 @@ details.apter-card { margin-bottom: 16px; }
 .pm-msg-error { color: var(--apter-danger); white-space: pre-wrap; }
 .pm-msg-ok { color: var(--apter-success); }
 .pm-msg-warn { color: var(--apter-warning); }
-.scen-file { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 8px 0 4px; }
-.scen-file .shiny-input-container { flex: 1 1 260px; margin-bottom: 0; }
+/* Assortment tables: rows are clickable; the selected one (shared by A and
+   B) has a green bar on the left and a bold name. */
+[id^="tbl_asm_"] .rt-tr-group { cursor: pointer; }
+/* As tall as their rows: the card body is a bslib fill container, and a
+   shorter column (e.g. "Not in this scenario") stretched the table. */
+[id^="tbl_asm_"].html-fill-item { flex: none !important; }
+.reactable .asm-selected { box-shadow: inset 3px 0 0 var(--apter-primary); }
+.reactable .asm-selected .rt-td:nth-child(1) { font-weight: 600; }
+/* Detail panel of the selected assortment. */
+.asm-detail { border: 1px solid var(--apter-rule); border-radius: 6px; padding: 12px 14px;
+  margin: 12px 0 8px; background: var(--apter-surface); }
+.asm-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.asm-detail-title { font-weight: 600; font-size: 1.02rem; }
+.asm-rules { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 6px 0 10px;
+  font-size: 0.86rem; color: var(--apter-muted); }
+.asm-rule { padding: 1px 6px; border-radius: 4px; background: var(--apter-panel); }
+.asm-rule.asm-diff { background: var(--apter-diff); color: var(--apter-ink); font-weight: 600; }
+.asm-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  color: var(--apter-muted); font-style: italic; margin: 8px 0 4px; }
+.asm-flat { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 4px;
+  padding: 6px 8px; border-radius: 6px; }
+.asm-flat.is-diff { background: var(--apter-diff); }
+.asm-flat .shiny-input-container { margin-bottom: 0; }
+.asm-flat-other { font-size: 0.84rem; color: var(--apter-muted); display: inline-block; padding: 1px 6px; border-radius: 4px; }
+.asm-flat-other.asm-diff { color: var(--apter-ink); font-weight: 600; }
+
+/* ---- live tree counts (sidebar, above Run) ----------------------------------- */
+.tree-counts { background: var(--apter-panel); border: 1px solid var(--apter-rule); border-radius: 6px;
+  padding: 8px 10px; margin: 4px 0 12px; font-size: 0.86rem; }
+.tree-counts-n { font-weight: 600; color: var(--apter-ink); font-variant-numeric: tabular-nums; }
+.tree-counts-time { color: var(--apter-muted); margin-top: 2px; }
 
 /* ---- tree lists (sidebar validation panel) --------------------------------- */
 .tl-excluded { font-size: 0.88rem; margin: 4px 0; }

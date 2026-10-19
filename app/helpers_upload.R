@@ -50,3 +50,35 @@ upload_price_set <- function(path, filename, defs, pm) {
   out$errors <- v$errors; out$warnings <- v$warnings
   out
 }
+
+
+#' Upload prices for one assortment (the detail panel's upload): the
+#' file's rows for `key` replace that assortment's prices; rows for other
+#' assortments are ignored and listed in `ignored`.
+#'
+#' @return list(ok, pm, ignored, errors, warnings).
+upload_assortment_prices <- function(path, filename, defs, pm, key) {
+  keys <- assortment_table_keys(defs)
+  cur  <- pm_minimal(pm)
+  up <- read_price_matrix_upload(path, filename, cur,
+                                 matrix_keys = keys[defs$PriceType == "matrix"])
+  out <- list(ok = FALSE, pm = NULL, ignored = character(0),
+              errors = up$errors, warnings = character(0))
+  if (length(up$errors) > 0L) return(out)
+  long <- up$long
+  if (!all(PM_REQUIRED_COLS %in% names(long))) {
+    out$errors <- sprintf("Long price files need the columns %s.", paste(PM_REQUIRED_COLS, collapse = ", "))
+    return(out)
+  }
+  long <- long[, PM_REQUIRED_COLS, drop = FALSE]
+  out$ignored <- setdiff(unique(as.character(long$ProductKey)), key)
+  mine <- long[long$ProductKey %in% key, , drop = FALSE]
+  if (nrow(mine) == 0L) {
+    out$errors <- sprintf("The file has no prices for %s.", key)
+    return(out)
+  }
+  v <- check_price_set(defs, rbind(cur[cur$ProductKey != key, , drop = FALSE], mine))
+  out$ok <- isTRUE(v$ok); out$pm <- v$pm
+  out$errors <- v$errors; out$warnings <- v$warnings
+  out
+}

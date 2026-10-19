@@ -76,7 +76,7 @@ for (.h in c("helpers_utils", "helpers_paths", "helpers_volume_methods", "helper
              "helpers_candidate_generation", "helpers_dp_optimizer", "helpers_bucking_core",
              "helpers_parallel",
              "helpers_price_matrix", "helpers_comparison", "helpers_heights",
-             "helpers_tree_list")) {
+             "helpers_tree_list", "helpers_tree_selection")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -84,8 +84,8 @@ for (.h in c("helpers_utils", "helpers_paths", "helpers_volume_methods", "helper
 rm(.h, src)
 
 # ---- constants ---------------------------------------------------------------
-BACKEND_MIN_DBH_CM               <- 5.0
-BACKEND_MIN_HEIGHT_M             <- 4.5
+BACKEND_MIN_DBH_CM               <- NFI_MIN_DBH_CM     # R/helpers_tree_selection.R
+BACKEND_MIN_HEIGHT_M             <- NFI_MIN_HEIGHT_M
 BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap per product (Phase 4b)
 
 # ---- internal utilities ------------------------------------------------------
@@ -409,28 +409,10 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
     file.path(gh_dir, "nfi_plots_github.parquet"))
   t_load_data <- .pt(t0_load_data)
 
-  # ---- 3. Filter to requested stratum ----------------------------------------
-  t0_filter_sample <- proc.time()
-  sg_filter <- if (sg == "both") c("spruce", "pine") else sg
-
-  trees_filt <- trees_all[
-    trees_all$species_group %in% sg_filter &
-    trees_all$hogstkl       %in% hogstkl_vec &
-    trees_all$abonitet      %in% abonitet_vec, , drop = FALSE]
-
-  if (!is.null(fylnr_vec) && length(fylnr_vec) > 0L)
-    trees_filt <- trees_filt[
-      trees_filt$fylnr %in% as.character(fylnr_vec), , drop = FALSE]
-
-  if (!is.null(hoh_min_val))
-    trees_filt <- trees_filt[
-      !is.na(trees_filt$hoh) & trees_filt$hoh >= hoh_min_val, , drop = FALSE]
-
-  if (!is.null(hoh_max_val))
-    trees_filt <- trees_filt[
-      !is.na(trees_filt$hoh) & trees_filt$hoh <= hoh_max_val, , drop = FALSE]
-
-  eligible_plots  <- sort(unique(trees_filt$plot_id_github))
+  # ---- 3-5. Stratum, plots, dbh/height filter (R/helpers_tree_selection.R) ---
+  # The same function gives the app's live tree counts.
+  sel <- select_nfi_trees(trees_all, params)
+  eligible_plots   <- sel$eligible_plots
   n_eligible_plots <- length(eligible_plots)
 
   if (n_eligible_plots == 0L)
@@ -439,46 +421,19 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
          paste(hogstkl_vec, collapse = "/"), ", abonitet=",
          paste(abonitet_vec, collapse = "/"), ".")
 
-  # ---- 4. Sample complete plots (or take them all) ---------------------------
-  if (all_plots) {
-    n_plots_req     <- n_eligible_plots
-    n_plots_sampled <- n_eligible_plots
-    sampled_plots   <- eligible_plots
-  } else {
-    set.seed(seed_val)
-    n_plots_sampled <- min(n_plots_req, n_eligible_plots)
-    sampled_plots   <- sort(sample(eligible_plots, n_plots_sampled, replace = FALSE))
-  }
-  trees_sampled   <- trees_filt[
-    trees_filt$plot_id_github %in% sampled_plots, , drop = FALSE]
-  t_filter_sample <- .pt(t0_filter_sample)
-
-  # ---- 5. Compute height_m and apply taperNOR validity filter ----------------
-  t0_tree_filter <- proc.time()
-  # Use beregnet_hoyde (dm) / 10 -- identical to script 11 convention.
-  # No tilstand filter -- matches script 11 exactly.
-  if ("beregnet_hoyde" %in% names(trees_sampled)) {
-    trees_sampled$height_m <- as.numeric(trees_sampled$beregnet_hoyde) / 10
-  } else if ("trehoyde" %in% names(trees_sampled)) {
-    trees_sampled$height_m <- as.numeric(trees_sampled$trehoyde) / 10
-  } else {
-    stop("No height column found (expected beregnet_hoyde or trehoyde).")
-  }
-
-  n_trees_before_filter <- nrow(trees_sampled)
-
-  trees_valid <- trees_sampled[
-    !is.na(trees_sampled$dbh_cm)   & trees_sampled$dbh_cm   >= BACKEND_MIN_DBH_CM &
-    !is.na(trees_sampled$height_m) & trees_sampled$height_m >= BACKEND_MIN_HEIGHT_M,
-    , drop = FALSE]
-
-  n_trees_after_filter <- nrow(trees_valid)
-  n_trees_dropped      <- n_trees_before_filter - n_trees_after_filter
+  n_plots_req           <- sel$n_plots_req
+  sampled_plots         <- sel$plots
+  n_plots_sampled       <- length(sampled_plots)
+  trees_valid           <- sel$trees
+  n_trees_before_filter <- sel$n_trees_before_filter
+  n_trees_after_filter  <- nrow(trees_valid)
+  n_trees_dropped       <- n_trees_before_filter - n_trees_after_filter
+  t_filter_sample       <- sel$t_filter_sample
+  t_tree_filter         <- sel$t_tree_filter
 
   if (n_trees_after_filter == 0L)
     stop("All trees were filtered out (DBH < ", BACKEND_MIN_DBH_CM, " cm or ",
          "height < ", BACKEND_MIN_HEIGHT_M, " m). Check your stratum selection.")
-  t_tree_filter <- .pt(t0_tree_filter)
 
   # ---- 6. Load products and price matrix -------------------------------------
   pps <- .load_runs(price_matrix_path, root, products, length_classes, scenario)

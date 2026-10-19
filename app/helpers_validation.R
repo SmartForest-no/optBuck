@@ -36,14 +36,22 @@ build_run_params <- function(input_list, hkl_map = HKL_MAP,
 }
 
 
-#' Number of NFI trees in a selection (species group, raw hogstkl codes,
-#' abonitet, counties or NULL), before the backend's dbh/height checks.
-count_stratum_trees <- function(trees_meta, species_group, hkl_raw, abon, fyl) {
-  sg <- if (identical(species_group, "both")) c("spruce", "pine") else species_group
-  keep <- trees_meta$species_group %in% sg & trees_meta$hogstkl %in% hkl_raw &
-          trees_meta$abonitet %in% abon
-  if (!is.null(fyl)) keep <- keep & as.character(trees_meta$fylnr) %in% as.character(fyl)
-  sum(keep)
+#' The trees a run will buck, counted for the sidebar: "655 plots · 11,890
+#' spruce · 537 pine trees". For NFI data `trees` is select_nfi_trees()$trees
+#' (the backend's own selection) and `n_plots` its plots; for a tree list the
+#' rows prepare_tree_list_job() bucks (in_range) and their distinct plot_id.
+#'
+#' @return list(n_plots, n_trees, by_species (named counts), text).
+tree_counts <- function(species, n_plots = NA_integer_) {
+  by <- vapply(c("spruce", "pine"), function(s) sum(species == s), integer(1))
+  by <- by[by > 0L]
+  fmt <- function(n) format(n, big.mark = ",")
+  parts <- c(if (!is.na(n_plots)) sprintf("%s plot%s", fmt(n_plots), if (n_plots == 1L) "" else "s"),
+             sprintf("%s %s", fmt(by), names(by)))
+  if (length(by)) parts[length(parts)] <- paste(parts[length(parts)],
+                                                 if (sum(by) == 1L) "tree" else "trees")
+  list(n_plots = n_plots, n_trees = sum(by), by_species = by,
+       text = if (sum(by) == 0L) "No trees" else paste(parts, collapse = " · "))
 }
 
 

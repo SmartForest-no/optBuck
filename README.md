@@ -99,7 +99,9 @@ assortments you added stay.
 
 **Assortments.** Each scenario lists its assortments in a compact table
 (assortment, species, top diameter, maximum butt diameter, lengths and
-volume method), with *Add*, *Edit* and *Remove*. The form also holds the
+volume method). Click a row to select an assortment: the panel below the
+table shows its rules with *Edit*, its prices directly underneath, and
+*Remove*. *Add assortment* is at the bottom of the scenario. The form also holds the
 minimum butt diameter, where the top diameter is read (cm below the cut)
 and the pricing: a price matrix, or one flat price over a range of lengths
 (every 10 cm). A matrix-priced assortment's lengths are its matrix columns.
@@ -115,20 +117,23 @@ other scenario are highlighted on both sides, and an assortment that is
 missing on one side is listed there as *Not in A* or *Not in B*. Each
 assortment's pricing (price matrix or flat price) is set per scenario, so,
 for example, spruce pulpwood can have a price matrix in A and a flat price in
-B. *Make assortment equal to B* (left column) and *Make assortment equal to
-A* (right column) copy one assortment from the other scenario, and *Make
-matrix equal to B* or *A* copies one price matrix. To copy a whole
+B. Selecting an assortment in one scenario selects it in the other too; if
+it is missing there, that side says *Not in this scenario* and offers *Add
+from A* or *Add from B*. *Make assortment equal to B* (left column) and
+*Make assortment equal to A* (right column) copy the selected assortment,
+rules and prices, from the other scenario. To copy a whole
 scenario, download it and upload the file to the other side. Both assortment tables list the
 assortments in the same order (by species: sawlog, pulpwood, waste, then
 added assortments), so the rows line up. A new assortment can be added to both scenarios or to one;
 *Remove* asks whether to remove it from this scenario only or from both.
 
-**Price matrices.** Under its assortments, each scenario shows its price
-matrices in the layout of the source price lists: top-diameter classes (cm)
-as rows and length classes (dm) as columns, in NOK/m³ under bark. The two
-scenarios each have their own matrix selector. Cells that differ from the
-other scenario are highlighted. Both scenarios can be edited, reset,
-uploaded and downloaded.
+**Prices.** The selected assortment's prices are shown under its rules. A
+matrix-priced assortment shows its price matrix in the layout of the source
+price lists: top-diameter classes (cm) as rows and length classes (dm) as
+columns, in NOK/m³ under bark. A flat-priced assortment shows one price
+field. Cells or prices that differ from the other scenario are
+highlighted. Each assortment's prices can be edited, reset (base
+assortments), uploaded and downloaded on their own.
 
 **Scenario files.** Each scenario can be downloaded and uploaded as one xlsx
 file with its assortments (sheet `assortments`) and its prices (one sheet
@@ -142,13 +147,15 @@ largest end, so there are no gaps. A log with a top diameter above the
 largest class is priced at that class (50 cm in the 2021 matrices); its
 physical diameter is not changed.
 
-**Uploading prices.** Price matrices can also be loaded on their own: drop a
-file on a scenario's price-matrix upload box, wide (as in the
-editor; xlsx with one sheet per price matrix plus `flat_prices`, or a CSV
-holding one matrix) or long (CSV or RDS, one row per price). The layout is
-detected automatically. A wide file replaces only the matrices it contains;
-in B, uploaded assortments get their own prices. A downloaded price matrix
-file is a ready-made template. The long layout has these columns:
+**Uploading prices.** Prices can also be loaded on their own. A full price
+file dropped on a scenario's *Upload scenario* box sets the prices of all
+assortments it contains; a file dropped on the selected assortment's price
+upload box sets that assortment's prices only (other assortments in the file
+are ignored and listed). Files can be wide (as in the editor; xlsx with one
+sheet per price matrix plus `flat_prices`, or a CSV holding one matrix) or
+long (CSV, one row per price). The layout is detected automatically. A wide
+file replaces only the matrices it contains. A downloaded price file is a
+ready-made template. The long layout has these columns:
 
 | Column | Content |
 |--------|---------|
@@ -169,8 +176,10 @@ Prices are never converted between units.
 ## Results
 
 In the *Simulator*, choose the trees and click *Run optimizer*. NFI runs use
-all plots of the selected stratum; for selections above 30,000 trees the
-app shows the number of trees and an estimated run time. A progress bar
+all plots of the selected stratum. Under the selection, the app shows the
+number of plots and trees per species that will be bucked and an estimated
+run time, updated as the selection changes (for a tree list, after the
+upload). A progress bar
 follows the run from loading the data to the summary. When Scenario B
 differs from A, in assortments or prices, the same trees are bucked under
 both scenarios. Each scenario's NOK/m³ uses its own commercial volume.
@@ -195,13 +204,16 @@ The results have these tabs:
   volume, NOK per m³ and price volume for Scenario A and Scenario B side by
   side
 - **Per m³:** NOK/m³ in total, per species and by assortment, and per-tree
-  results: a preview of the first 20 trees of Scenario A (select a tree to
+  results: the DBH and height distributions per species, a preview of the
+  first 20 trees of Scenario A (select a tree to
   see its logs: position, length, assortment, top diameter over and under
   bark, price-diameter class, volumes and value) and a CSV download of all
   trees (after a comparison, both scenarios, with a Scenario column)
 - **Products:** value and sale volume by assortment; after a comparison,
   for Scenario A and Scenario B side by side
-- **Selected logs:** a preview of the first 20 logs of Scenario A, and a
+- **Selected logs:** the number of logs per length class and the commercial
+  volume per top-diameter class, by assortment (Scenario A and B side by side
+  after a comparison), a preview of the first 20 logs of Scenario A, and a
   CSV download of every log cut (after a comparison, both scenarios, with a
   Scenario column)
 - **Scenario comparison** (when B differs from A): NOK/m³, value and

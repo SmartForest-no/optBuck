@@ -59,7 +59,8 @@ app/                        Shiny app, files sourced explicitly by app.R
     apter.css               Component styles (option 3 "Combination" look)
     apter.js                Shows the progress bar as soon as Run is clicked
     apter-icon.svg          App icon and favicon (original artwork)
-    fonts/                  Inter and Source Serif 4 (.woff2, SIL OFL 1.1; licences alongside)
+    fonts/                  Inter and Source Serif 4 (.woff2, SIL OFL 1.1; licences alongside);
+                            Inter .ttf (400/600) for the ggplot2 figures (registered with systemfonts)
 
 R/                          Core engine helpers
   helpers_paths.R           Project root and path utilities (get_root_dir())
@@ -83,6 +84,8 @@ R/                          Core engine helpers
   helpers_comparison.R      A vs. B: pattern changes, NOK/m3 comparison
   helpers_heights.R         Height imputation for tree lists (fieldPlot wrapper, FinnHoyde curves)
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
+  helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
+                            used by the backend and the app's live tree counts
 
 audits/
   audit_14_validate_first_helpers.R          Products, valuation, price-matrix validation
@@ -210,7 +213,10 @@ Oracle or ForestSens assets.
 - Fonts are self-hosted from `app/www/fonts/` (no Google Fonts request at
   runtime): Inter for the UI (Source Serif 4 is still in `fonts/` but unused
   since the Home page went). Both are SIL OFL 1.1; keep the licence files
-  next to the font files.
+  next to the font files. The ggplot2 figures use Inter's .ttf files
+  (fontsource latin subset, 400 and 600), registered with
+  `systemfonts::register_font()` in `app/theme.R`; Shiny draws plots with
+  ragg, which picks them up (falls back to sans without them).
 - Chart colours were checked with the dataviz palette validator (headless
   Chrome, all pairs, white surface; 2026-10-16). The requested pulpwood
   `#C9A97A` and waste `#B9BFBC` failed (normal-vision dE 8.7, floor 15), so

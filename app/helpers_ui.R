@@ -73,13 +73,16 @@ ro_field_row <- function(...) div(class = "ro-row", ...)
 #' @param row_class Optional function(index) -> CSS class of the row.
 #' @param selection "single" for row selection (getReactableState()).
 #' @param sortable FALSE for page slices of a server-side pager.
+#' @param on_click Optional reactable::JS() row-click handler (overrides the
+#'   "select" click of `selection`).
 #'
 #' Columns are sized to their content (Phase 4d): the width fits the longest
 #' value and the longest word of the header, headers wrap, and the table is
 #' only as wide as its columns.
 apter_reactable <- function(df, digits = NULL, page_size = 10L,
                             details = NULL, columns = NULL, row_class = NULL,
-                            selection = NULL, sortable = TRUE, pagination = TRUE) {
+                            selection = NULL, sortable = TRUE, pagination = TRUE,
+                            on_click = NULL) {
   df <- as.data.frame(df, stringsAsFactors = FALSE)
   if (!is.null(digits)) {
     num <- vapply(df, function(x) is.double(x), logical(1))
@@ -94,7 +97,7 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
     columns         = columns,
     rowClass        = row_class,
     selection       = selection,
-    onClick         = if (!is.null(selection)) "select",
+    onClick         = if (!is.null(on_click)) on_click else if (!is.null(selection)) "select",
     fullWidth       = FALSE,
     sortable        = sortable,
     pagination      = pagination,
@@ -358,3 +361,61 @@ function(instance, td, row, col, prop, value, cellProperties) {
   }
   return td;
 }"
+
+
+# ---- ggplot2 figures (layout-and-figures) -------------------------------------------
+# Styled by theme_apter() (theme.R): Inter, white background, light grid.
+
+#' Overlapping density curves per species (alpha 0.45, thin outline in the
+#' species colour, legend when both species are present).
+#'
+#' @param x Numeric values (e.g. dbh in cm); species: "spruce"/"pine" per value.
+apter_density_species <- function(x, species, xlab, title) {
+  d <- data.frame(x = x, Species = factor(tools::toTitleCase(species), levels = names(APTER_SPECIES)))
+  d <- d[is.finite(d$x) & !is.na(d$Species), , drop = FALSE]
+  keep <- names(which(table(d$Species) >= 2L))         # a density needs two values
+  d <- d[d$Species %in% keep, , drop = FALSE]
+  if (nrow(d) == 0L) return(NULL)
+  ggplot2::ggplot(d, ggplot2::aes(x = x, fill = Species, colour = Species)) +
+    ggplot2::geom_density(alpha = 0.45, linewidth = 0.5) +
+    ggplot2::scale_fill_manual(values = APTER_SPECIES, drop = TRUE) +
+    ggplot2::scale_colour_manual(values = APTER_SPECIES, drop = TRUE) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.05))) +
+    ggplot2::guides(fill = if (length(keep) > 1L) "legend" else "none", colour = "none") +
+    ggplot2::labs(x = xlab, y = "Density", title = title) +
+    theme_apter()
+}
+
+#' Stacked bars by assortment over a discrete class (length class, top
+#' diameter class); Scenario A | Scenario B side by side as facets after a
+#' comparison, species as facet rows when both are present.
+#'
+#' @param d data.frame with Scenario ("Scenario A"/"Scenario B"), Species,
+#'   class (numeric), Assortment (name), Type (sawlog/pulpwood/waste/other),
+#'   value.
+apter_bars_by_assortment <- function(d, xlab, ylab, title) {
+  if (is.null(d) || nrow(d) == 0L) return(NULL)
+  ch <- APTER_CHART
+  # Fill per assortment name, coloured by its class (custom ones fold into
+  # the charcoal "other"); fixed order sawlog, pulpwood, waste, custom.
+  ty <- unique(d[, c("Assortment", "Type")])
+  ty$rank <- match(ty$Type, c("sawlog", "pulpwood", "waste")); ty$rank[is.na(ty$rank)] <- 4L
+  ty <- ty[order(ty$rank, ty$Assortment), , drop = FALSE]
+  ty <- ty[!duplicated(ty$Assortment), , drop = FALSE]
+  cols <- setNames(ifelse(ty$Type %in% names(ch$assortment), ch$assortment[ty$Type], ch$other),
+                   ty$Assortment)
+  d$Assortment <- factor(d$Assortment, levels = ty$Assortment)
+  d$Species <- factor(d$Species, levels = names(APTER_SPECIES))
+  rows <- length(unique(d$Species)) > 1L; cols_f <- length(unique(d$Scenario)) > 1L
+  facet <- if (rows || cols_f)
+    ggplot2::facet_grid(rows = if (rows) ggplot2::vars(Species),
+                        cols = if (cols_f) ggplot2::vars(Scenario))
+  ggplot2::ggplot(d, ggplot2::aes(x = class, y = value, fill = Assortment)) +
+    ggplot2::geom_col(width = 0.85, colour = ch$surface, linewidth = 0.25) +
+    ggplot2::scale_fill_manual(values = cols, drop = TRUE) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.06)),
+                                labels = function(v) format(v, big.mark = ",", scientific = FALSE, trim = TRUE)) +
+    facet +
+    ggplot2::labs(x = xlab, y = ylab, title = title) +
+    theme_apter()
+}

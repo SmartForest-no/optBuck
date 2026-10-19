@@ -11,47 +11,55 @@
 
 # ---- Assortments and prices --------------------------------------------------------
 
-# One scenario column: its assortment table, its scenario file, and its
-# price matrices. s = "a" or "b". The two scenarios are independent and
-# both editable; one copy button per section copies from the other column
-# ("Make assortment equal to B/A", "Make matrix equal to B/A"). A whole
-# scenario is copied by downloading one side and uploading it to the other.
+# One scenario column, one connected flow (layout-and-figures): the
+# assortment table (click a row to select it; the selection is shared by A
+# and B), a detail panel for the selected assortment (its rules, its prices
+# and its actions), then the scenario actions. s = "a" or "b". The panel's
+# parts show by output.asm_state_<s>: "matrix", "flat" or "none" (not in
+# this scenario).
 scenario_column <- function(s) {
   S <- toupper(s); O <- if (S == "A") "B" else "A"
   btn <- function(id, label, cls = "btn-secondary btn-sm") actionButton(id, label, class = cls)
+  state <- function(cond) sprintf("output.asm_state_%s %s", s, cond)
   apter_card(paste("Scenario", S),
     div(class = "section-hdr", "Assortments"),
-    div(class = "pm-toolbar",
-      selectInput(paste0("asm_pick_", s), NULL, choices = character(0), width = "220px"),
-      btn(paste0("asm_add_", s), "Add", "btn-primary btn-sm"),
-      btn(paste0("asm_edit_", s), "Edit"),
-      btn(paste0("asm_remove_", s), "Remove"),
-      btn(paste0("asm_copy_one_", s), sprintf("Make assortment equal to %s", O)),
-      btn(paste0("asm_reset_", s), "Reset to defaults")
-    ),
     reactableOutput(paste0("tbl_asm_", s)),
-    div(class = "scen-file",
-      fileInput(paste0("scen_", s, "_upload"), "Upload scenario (assortments and prices, xlsx)",
-                accept = ".xlsx", width = "100%"),
-      downloadButton(paste0("dl_scen_", s), "Download scenario (xlsx)", class = "btn-secondary btn-sm")),
 
-    div(class = "section-hdr", "Price matrices"),
-    div(class = "pm-grid",
-      div(class = "pm-toolbar",
-        selectInput(paste0("pm_id_", s), "Matrix", choices = character(0), width = "220px"),
-        btn(paste0("pm_", s, "_copy_one"), sprintf("Make matrix equal to %s", O))),
-      conditionalPanel(sprintf("input.pm_id_%s != 'flat_prices'", s),
-        div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark")),
-      rHandsontableOutput(paste0("pm_", s)),
-      uiOutput(paste0("pm_", s, "_axes")),
-      div(class = "pm-actions",
-        btn(paste0("pm_", s, "_reset"), "Reset prices"),
-        downloadButton(paste0("dl_", s, "_wide"), "Download (xlsx)", class = "btn-secondary btn-sm"),
-        downloadButton(paste0("dl_", s, "_long"), "Download (CSV)", class = "btn-secondary btn-sm")),
-      fileInput(paste0("pm_", s, "_upload"), "Upload price matrix (xlsx or CSV)",
-                accept = c(".csv", ".xlsx", ".rds"), width = "100%")
+    div(class = "asm-detail", id = paste0("asm_detail_", s),
+      uiOutput(paste0("asm_head_", s)),
+      conditionalPanel(state("== 'none'"),
+        div(class = "asm-missing",
+          span("Not in this scenario."),
+          btn(paste0("asm_add_from_", s), sprintf("Add from %s", O), "btn-primary btn-sm"))),
+      conditionalPanel(state("== 'matrix'"),
+        div(class = "pm-grid",
+          div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark"),
+          rHandsontableOutput(paste0("pm_", s)),
+          uiOutput(paste0("pm_", s, "_axes")))),
+      conditionalPanel(state("== 'flat'"),
+        div(class = "asm-flat", id = paste0("flat_wrap_", s),
+          uiOutput(paste0("flat_", s)),
+          uiOutput(paste0("flat_other_", s)))),
+      conditionalPanel(state("!= 'none'"),
+        div(class = "pm-actions",
+          btn(paste0("asm_remove_", s), "Remove"),
+          btn(paste0("asm_copy_one_", s), sprintf("Make assortment equal to %s", O)),
+          btn(paste0("pm_", s, "_reset"), "Reset prices"),
+          downloadButton(paste0("dl_", s, "_wide"), "Prices (xlsx)", class = "btn-secondary btn-sm"),
+          downloadButton(paste0("dl_", s, "_long"), "Prices (CSV)", class = "btn-secondary btn-sm")),
+        fileInput(paste0("pm_", s, "_upload"), "Upload prices for this assortment (xlsx or CSV)",
+                  accept = c(".csv", ".xlsx"), width = "100%"))
     ),
-    uiOutput(paste0("msg_", s))
+    uiOutput(paste0("msg_", s)),
+
+    div(class = "section-hdr", "Scenario"),
+    div(class = "pm-actions",
+      btn(paste0("asm_add_", s), "Add assortment", "btn-primary btn-sm"),
+      btn(paste0("asm_reset_", s), "Reset to defaults"),
+      downloadButton(paste0("dl_scen_", s), "Download scenario (xlsx)", class = "btn-secondary btn-sm")),
+    fileInput(paste0("scen_", s, "_upload"),
+              "Upload scenario (xlsx), or a price file for all assortments (xlsx or CSV)",
+              accept = c(".xlsx", ".csv"), width = "100%")
   )
 }
 
@@ -97,10 +105,10 @@ simulator_sidebar <- sidebar(
         downloadLink("dl_tree_template", "Download template (CSV)")),
     uiOutput("tl_validation")
   ),
+  uiOutput("tree_counts"),
 
   actionButton("run_btn", "Run optimizer",
-               class = "btn-primary", width = "100%"),
-  uiOutput("large_run_note")
+               class = "btn-primary", width = "100%")
 )
 
 simulator_page <- nav_panel(
@@ -129,6 +137,10 @@ simulator_page <- nav_panel(
           plotOutput("bar_volume_share",        height = "260px")
         ),
         apter_card("Trees", collapsible = TRUE, open = FALSE,
+          layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
+            plotOutput("fig_dbh",    height = "260px"),
+            plotOutput("fig_height", height = "260px")
+          ),
           uiOutput("trees_preview_note"),
           reactableOutput("tbl_trees"),
           downloadButton("dl_trees", "Download all trees (CSV)", class = "btn-secondary btn-sm"),
@@ -145,6 +157,8 @@ simulator_page <- nav_panel(
       ),
 
       nav_panel("Selected logs", value = "logs",
+        plotOutput("fig_log_lengths", height = "auto"),
+        plotOutput("fig_log_volume",  height = "auto"),
         uiOutput("logs_preview_note"),
         reactableOutput("tbl_selected_logs"),
         downloadButton("dl_logs", "Download all logs (CSV)", class = "btn-secondary btn-sm")
