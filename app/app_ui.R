@@ -95,6 +95,14 @@ simulator_sidebar <- sidebar(
     selectInput("fylnr_sel", "County",
                 choices  = FYLNR_CHOICES,
                 selected = "__all__"),
+    # The one slider in the app (intended exception): altitude range, 50 m step.
+    # force_edges keeps the value labels inside the slider, so "1,100 m" ends
+    # at the right edge of the other inputs (ion.rangeSlider reads data-*).
+    htmltools::tagQuery(
+      sliderInput("hoh_range", "Altitude (m a.s.l.)",
+                  min = HOH_RANGE[1L], max = HOH_RANGE[2L], value = HOH_RANGE,
+                  step = HOH_STEP_M, post = " m", ticks = FALSE, width = "100%")
+    )$find("input")$addAttrs(`data-force-edges` = "true")$allTags(),
     uiOutput("stratum_error")
   ),
   conditionalPanel("input.tree_source == 'list'",

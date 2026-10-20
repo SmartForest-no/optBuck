@@ -12,6 +12,17 @@ selected_fylnr <- function(fylnr_sel) {
 }
 
 
+#' Altitude slider -> c(min, max) in m, or NULL for no filter. The full
+#' range (HOH_RANGE, setup.R) or a missing input means no filter, so plots
+#' with missing altitude stay in; a narrowed range excludes them
+#' (select_nfi_trees()).
+selected_hoh <- function(hoh_range, full = HOH_RANGE) {
+  if (is.null(hoh_range) || length(hoh_range) != 2L) return(NULL)
+  r <- sort(as.numeric(hoh_range))
+  if (r[1L] <= full[1L] && r[2L] >= full[2L]) NULL else r
+}
+
+
 #' Map sidebar inputs to the params list for run_sampled_plot_bucking().
 #'
 #' NFI runs use all plots of the stratum (Phase 4d): APP_N_PLOTS is NA,
@@ -19,12 +30,14 @@ selected_fylnr <- function(fylnr_sel) {
 #' APP_SEED (42); setup.R.
 #'
 #' @param input_list Shiny `input` (or a plain list) with species_group,
-#'   hkl_group, abonitet, fylnr_sel.
+#'   hkl_group, abonitet, fylnr_sel; optional hoh_range (altitude slider).
 #' @param hkl_map    User-facing HKL group -> raw hogstkl codes.
-#' @return Named list of backend params.
+#' @return Named list of backend params. hoh_min/hoh_max are added only for
+#'   a narrowed altitude range, so the full range gives the same params as
+#'   before the altitude filter.
 build_run_params <- function(input_list, hkl_map = HKL_MAP,
                              n_plots = APP_N_PLOTS, seed = APP_SEED) {
-  list(
+  p <- list(
     species_group = input_list$species_group,
     hogstkl       = unlist(hkl_map[input_list$hkl_group]),
     abonitet      = as.integer(input_list$abonitet),
@@ -33,6 +46,12 @@ build_run_params <- function(input_list, hkl_map = HKL_MAP,
     n_plots       = if (!is.na(n_plots)) as.integer(n_plots),
     seed          = as.integer(seed)
   )
+  hoh <- selected_hoh(input_list$hoh_range)
+  if (!is.null(hoh)) {
+    p$hoh_min <- hoh[1L]
+    p$hoh_max <- hoh[2L]
+  }
+  p
 }
 
 
@@ -69,15 +88,20 @@ estimate_run_seconds <- function(n, workers, compare = FALSE) {
 #' @param hkl_raw    Raw hogstkl codes.
 #' @param abon       Integer abonitet values, or NULL for no filter.
 #' @param fyl        fylnr codes, or NULL for all counties.
-filter_stratum_plots <- function(plots_prod, hkl_raw, abon = NULL, fyl = NULL) {
+#' @param hoh        c(min, max) altitude in m (selected_hoh()), or NULL for
+#'   no filter; plots with missing altitude are excluded when set.
+filter_stratum_plots <- function(plots_prod, hkl_raw, abon = NULL, fyl = NULL,
+                                 hoh = NULL) {
   keep <- plots_prod$hogstkl %in% hkl_raw
   if (!is.null(abon)) keep <- keep & plots_prod$abonitet %in% abon
   if (!is.null(fyl))  keep <- keep & plots_prod$fylnr %in% fyl
+  if (!is.null(hoh))  keep <- keep & !is.na(plots_prod$hoh) &
+                        plots_prod$hoh >= hoh[1L] & plots_prod$hoh <= hoh[2L]
   plots_prod[keep, , drop = FALSE]
 }
 
 
 #' Number of eligible plots in the selected stratum.
-count_eligible_plots <- function(plots_prod, hkl_raw, abon, fyl) {
-  nrow(filter_stratum_plots(plots_prod, hkl_raw, abon, fyl))
+count_eligible_plots <- function(plots_prod, hkl_raw, abon, fyl, hoh = NULL) {
+  nrow(filter_stratum_plots(plots_prod, hkl_raw, abon, fyl, hoh))
 }

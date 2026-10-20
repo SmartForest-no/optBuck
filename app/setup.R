@@ -44,6 +44,13 @@ BONITET_LABELS <- c("6"="6 (very low)","8"="8","11"="11","14"="14",
 # Productive-forest plots only (raw HKL 3-5, codes 31-52)
 plots_prod <- plots_all[plots_all$hogstkl %in% unlist(HKL_MAP), , drop = FALSE]
 
+# ---- altitude slider (hoh, m a.s.l.) ------------------------------------------
+# Fixed range over all HKL 3-5 plots, rounded out to the 50 m step (0-1100 m);
+# the full range means no altitude filter (selected_hoh(), helpers_validation.R).
+HOH_STEP_M <- 50
+HOH_RANGE  <- c(floor(min(plots_prod$hoh, na.rm = TRUE) / HOH_STEP_M),
+                ceiling(max(plots_prod$hoh, na.rm = TRUE) / HOH_STEP_M)) * HOH_STEP_M
+
 # ---- County label mapping (current 2024 codes + historical fallback) --------
 .FYLNR_NAMES <- c(
   "03"="Oslo", "11"="Rogaland", "15"="M\u00f8re og Romsdal",

@@ -31,7 +31,7 @@ the simulator appears as **optBuck**.
 
 | Source | Status |
 |--------|--------|
-| **NFI data.** Spruce and pine from the Norwegian National Forest Inventory. The app takes every plot of the selected maturity class, site class and county that has trees of the selected species, and bucks the trees of that species (spruce, pine or both) with a diameter at breast height of at least 5 cm and a height of at least 4.5 m. Other tree species are not included. Results describe the selected trees only. | Available |
+| **NFI data.** Spruce and pine from the Norwegian National Forest Inventory. The app takes every plot of the selected maturity class, site class, county and altitude range (metres above sea level, in 50 m steps) that has trees of the selected species, and bucks the trees of that species (spruce, pine or both) with a diameter at breast height of at least 5 cm and a height of at least 4.5 m. Other tree species are not included. Results describe the selected trees only. | Available |
 | **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
 
