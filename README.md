@@ -116,19 +116,19 @@ restrictions are applied. Added assortments always count as saleable
 volume.
 
 **Two scenarios.** B starts as an exact copy of A; after that the two are
-independent and both can be edited. Values and rows that differ from the
-other scenario are highlighted on both sides, and an assortment that is
-missing on one side is listed there as *Not in A* or *Not in B*. Each
+independent and both can be edited. Each scenario lists only its own
+assortments. Values that differ from the same assortment in the other
+scenario are highlighted on both sides, and so are assortments that the
+other scenario does not have. Each
 assortment's pricing (price matrix or flat price) is set per scenario, so,
 for example, spruce pulpwood can have a price matrix in A and a flat price in
 B. Selecting an assortment in one scenario selects it in the other too; if
-it is missing there, that side says *Not in this scenario* and offers *Add
-from A* or *Add from B*. *Make assortment equal to B* (left column) and
+it is missing there, that side shows no details for it. *Make assortment equal to B* (left column) and
 *Make assortment equal to A* (right column) copy the selected assortment,
 rules and prices, from the other scenario. To copy a whole
 scenario, download it and upload the file to the other side. Both assortment tables list the
 assortments in the same order (by species: sawlog, pulpwood, waste, then
-added assortments), so the rows line up. A new assortment can be added to both scenarios or to one;
+added assortments). A new assortment can be added to both scenarios or to one;
 *Remove* asks whether to remove it from this scenario only or from both.
 
 **Prices.** The selected assortment's prices are shown under its rules. A
@@ -147,8 +147,11 @@ replaces that scenario's assortments and prices.
 **Importing from a harvester file (.hpr).** *Import from .hpr* (each
 scenario's buttons) reads the products and price matrices of a StanForD 2010
 harvester production file and replaces that scenario's assortments and
-prices; the other scenario is not changed. Before anything is replaced, a
-dialog shows what the file contains and what will be imported:
+prices; the other scenario is not changed. The file can be an .hpr, or an
+.hpr compressed as .zip or .gz, up to 200 MB. Only the definitions at the
+start of the file are read, so even large files load in a few seconds.
+Before anything is replaced, a dialog shows what the file contains and what
+will be imported:
 
 - **Species groups.** Each of the file's species groups is set to Spruce, Pine
   or Not used. The app suggests a choice from the group's name and ID (for
@@ -157,7 +160,8 @@ dialog shows what the file contains and what will be imported:
 - **Products.** Every product is listed with its diameter and length classes.
   Products that do not allow the best quality grade of their species group
   (for example an energy-wood product for rotten wood only) start unticked,
-  since the simulated stems have no defects. Any product can be ticked or
+  marked *Only for lower quality grades*, since the simulated stems have no
+  defects. Any product can be ticked or
   unticked.
 
 Each imported product becomes a matrix-priced assortment, and a Waste
@@ -179,10 +183,15 @@ assortment at 0 NOK/m³ is added for each species:
   or solid volume). For products priced on the length class, the price
   volume uses the class's lower limit (365 cm), not the cut length.
 
-What the file says that has no counterpart is listed as a warning in the
-dialog and after the import: for example rounded lengths, forbidden cells,
-diameter classes that do not start at a whole centimetre, or a volume
-method the app does not have (solid volume is used instead). The file's
+After the import, one line says how many assortments were imported. A
+warning follows only when something is lost or replaced: a product that
+could not be imported (for example one without priced cells), a length
+class left out, or a volume method the app does not have (solid volume is
+used instead). The conversions described above (rounded lengths, whole-cm
+diameter rows, empty forbidden cells, the top diameter rounded down to cm
+for top and Norwegian-mid volumes) always apply and are not reported, nor
+is a duplicate product name, which gets the species group's name added
+(e.g. *Massevirke (FURU)*). The file's
 bark functions, quality grades, length margins and distribution settings
 are not used, and prices are read as NOK/m³ under bark. Only the products,
 prices and species groups are read; stems, coordinates, dates and names in

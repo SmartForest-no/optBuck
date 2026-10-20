@@ -79,6 +79,16 @@ FYLNR_CHOICES <- c(
   setNames(.DATA_FYLNR, vapply(.DATA_FYLNR, .fylnr_lbl, character(1)))
 )
 
+# ---- upload limit (Import from .hpr) -------------------------------------------
+# Harvester files are large (real .hpr files: 3-151 MB). Shiny has one upload
+# limit for all inputs; the other uploads are small. Default 200 MB; set the
+# option apter.hpr_max_mb or the environment variable APTER_HPR_MAX_MB.
+HPR_MAX_UPLOAD_MB <- local({
+  env <- suppressWarnings(as.numeric(Sys.getenv("APTER_HPR_MAX_MB", "")))
+  as.numeric(getOption("apter.hpr_max_mb", if (is.na(env)) 200 else env))
+})
+options(shiny.maxRequestSize = HPR_MAX_UPLOAD_MB * 1024^2)
+
 # ---- release version (repo-root VERSION file; internal, not shown) ------------
 APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))
 

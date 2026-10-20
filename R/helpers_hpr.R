@@ -89,18 +89,129 @@ guess_hpr_species <- function(name, user_id = NA) {
 
 # ---- reading -------------------------------------------------------------------------
 
-#' Read a StanForD 2010 .hpr file: species groups, products with their price
-#' matrices and permitted grades, and an index of the stems.
+#' Bytes read per step when looking for the first stem.
+HPR_CHUNK_BYTES <- 4L * 1024L * 1024L
+
+#' A stem record: <Stem> directly followed by its StemKey. ("<Stem>" alone
+#' also occurs inside species groups' biomass functions, and StemTypeDefinition
+#' and StemCode start with "<Stem".)
+HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
+
+#' Byte position of the first stem record in `buf` (NA if none): the first
+#' "<StemKey>" (a fast fixed search), then its "<Stem" opening tag, checked
+#' with HPR_STEM_START on that short stretch only.
+.hpr_stem_pos <- function(buf) {
+  for (k in grepRaw("<StemKey>", buf, fixed = TRUE, all = TRUE)) {
+    if (k <= 1L) next
+    from <- max(1L, k - 400L)
+    win <- buf[from:(k - 1L)]                       # up to the "<StemKey>"
+    s <- grepRaw("<Stem", win, fixed = TRUE, all = TRUE)
+    if (!length(s)) next
+    p <- s[length(s)]                               # the last "<Stem" before it
+    if (grepl("^<Stem[^>]*>[[:space:]]*$", rawToChar(win[p:length(win)]), useBytes = TRUE))
+      return(from + p - 1L)
+  }
+  NA_integer_
+}
+
+#' The bytes of an .hpr (or .gz) file before its first stem record:
+#' list(bytes (raw), found (a stem was found), total (bytes read)). Only that
+#' part is read; a file without stems is read whole.
+.hpr_prefix <- function(path, entry = NULL) {
+  # gzfile() also reads uncompressed files; unz() streams one zip entry.
+  con <- if (is.null(entry)) gzfile(path, "rb") else unz(path, entry, open = "rb")
+  on.exit(close(con))
+  done <- list(); tail <- raw(0); total <- 0
+  repeat {
+    b <- readBin(con, "raw", HPR_CHUNK_BYTES)
+    if (length(b) == 0L)
+      return(list(bytes = c(unlist(done, use.names = FALSE), tail), found = FALSE, total = total))
+    total <- total + length(b)
+    buf <- c(tail, b)
+    m <- .hpr_stem_pos(buf)
+    if (!is.na(m)) {
+      return(list(bytes = c(unlist(done, use.names = FALSE), buf[seq_len(m - 1L)]),
+                  found = TRUE, total = total))
+    }
+    keep <- max(0L, length(buf) - 512L)   # a match may straddle two chunks
+    done[[length(done) + 1L]] <- buf[seq_len(keep)]
+    tail <- buf[-seq_len(keep)]
+  }
+}
+
+#' Close the elements still open at the end of a truncated XML text (the part
+#' before the first stem), so it parses as a whole document.
+.hpr_close_tags <- function(bytes) {
+  txt <- rawToChar(bytes)
+  tags <- regmatches(txt, gregexpr("<(/?)([A-Za-z_][A-Za-z0-9_.:-]*)[^<>]*?(/?)>", txt, perl = TRUE,
+                                   useBytes = TRUE))[[1L]]
+  tags <- tags[!grepl("^<[?!]", tags, useBytes = TRUE) & !grepl("/>$", tags, useBytes = TRUE)]
+  name <- sub("^</?([A-Za-z_][A-Za-z0-9_.:-]*).*$", "\\1", tags, perl = TRUE, useBytes = TRUE)
+  closing <- startsWith(tags, "</")
+  stack <- character(0)
+  for (i in seq_along(tags)) {
+    if (!closing[i]) stack <- c(stack, name[i])
+    else if (length(stack) && stack[length(stack)] == name[i]) stack <- stack[-length(stack)]
+  }
+  c(bytes, charToRaw(paste0(sprintf("</%s>", rev(stack)), collapse = "")))
+}
+
+#' The .hpr file to read: the file itself, or for a .zip the first .hpr
+#' inside it (`entry`: streamed with unz(), extracted only when the whole
+#' file must be parsed). list(path, entry, errors, warnings).
+.hpr_source <- function(path, filename) {
+  if (!grepl("\\.zip$", filename, ignore.case = TRUE))
+    return(list(path = path, entry = NULL, errors = character(0), warnings = character(0)))
+  ls <- tryCatch(utils::unzip(path, list = TRUE), error = function(e) NULL)
+  if (is.null(ls)) return(list(errors = sprintf("%s is not a readable zip file.", filename)))
+  hp <- ls$Name[grepl("\\.hpr$", ls$Name, ignore.case = TRUE)]
+  if (length(hp) == 0L) return(list(errors = sprintf("%s contains no .hpr file.", filename)))
+  list(path = path, entry = hp[1L], errors = character(0),
+       warnings = if (length(hp) > 1L) sprintf("%s holds %d .hpr files; %s was read.", filename, length(hp), hp[1L])
+                  else character(0))
+}
+
+#' Read the definitions of a StanForD 2010 .hpr file (also .hpr.gz, or an
+#' .hpr inside a .zip): species groups, products with their price matrices
+#' and permitted grades. Only the part before the first stem is parsed
+#' (definitions precede the stems in StanForD 2010 files); if no definitions
+#' are found there, the whole file is parsed.
 #'
 #' @param path     File path.
-#' @param filename Name shown in messages.
-#' @return list(ok, errors, warnings, header, species (data.frame: key,
-#'   name, user_id, best_grade, start_grade, n_products, n_stems), products
-#'   (list, one per classified product), stems (data.frame: key,
-#'   species_key, has_profile, diameter_category)).
+#' @param filename Name shown in messages (its extension decides .zip).
+#' @return list(ok, errors, warnings, header (file, version, read: "prefix"
+#'   or "whole", mb_read, mb_file), species (data.frame: key, name, user_id,
+#'   best_grade, start_grade, n_products), products (list, one per
+#'   classified product)). Stems are not read (hpr Phase B).
 read_hpr <- function(path, filename = basename(path)) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
-  x <- tryCatch(xml2::read_xml(path), error = function(e) NULL)
+  src <- .hpr_source(path, filename)
+  if (length(src$errors)) return(fail(src$errors))
+  path <- src$path
+  pre <- tryCatch(.hpr_prefix(path, src$entry), error = function(e) NULL)
+  if (is.null(pre)) return(fail(sprintf("%s cannot be read.", filename)))
+  parse <- function(x) tryCatch(xml2::read_xml(x, options = c("NOBLANKS", "HUGE")),
+                                error = function(e) NULL)
+  x <- parse(if (pre$found) .hpr_close_tags(pre$bytes) else pre$bytes)
+  how <- if (pre$found) "prefix" else "whole"
+  # Both kinds of definitions must be in the part read; otherwise (e.g. a
+  # stem before the products) the whole file is parsed.
+  has_defs <- function(x) !is.null(x) && {
+    xml2::xml_ns_strip(x)
+    length(xml2::xml_find_all(x, "/*/Machine/SpeciesGroupDefinition")) > 0L &&
+      length(xml2::xml_find_all(x, "/*/Machine/ProductDefinition")) > 0L
+  }
+  if (pre$found && !has_defs(x)) {                 # definitions after a stem: read all
+    whole <- path
+    if (!is.null(src$entry)) {                       # a zip: extract that entry first
+      dir <- tempfile("hpr_zip_")
+      whole <- tryCatch(utils::unzip(path, files = src$entry, exdir = dir, junkpaths = TRUE)[1L],
+                        error = function(e) NA_character_)
+    }
+    x <- if (is.na(whole)) NULL else parse(whole)
+    how <- "whole"
+    if (!is.null(src$entry)) unlink(dirname(whole), recursive = TRUE)
+  }
   if (is.null(x)) return(fail(sprintf("%s is not a readable XML file.", filename)))
   xml2::xml_ns_strip(x)
   if (xml2::xml_name(x) != "HarvestedProduction")
@@ -110,7 +221,7 @@ read_hpr <- function(path, filename = basename(path)) {
   mt <- att["messageType"]
   if (!is.na(mt) && mt != "hpr")
     return(fail(sprintf("%s is a StanForD '%s' message, not hpr.", filename, mt)))
-  errors <- character(0); warnings <- character(0)
+  errors <- character(0); warnings <- src$warnings
   du <- unname(att["diameterUnit"]); lu <- unname(att["lengthUnit"])
   if (!is.na(du) && du != "mm") errors <- c(errors, sprintf("Diameter unit is '%s'; Apter reads mm only (no conversion).", du))
   if (!is.na(lu) && lu != "cm") errors <- c(errors, sprintf("Length unit is '%s'; Apter reads cm only (no conversion).", lu))
@@ -167,8 +278,9 @@ read_hpr <- function(path, filename = basename(path)) {
       cells = data.frame(
         d_mm  = suppressWarnings(as.numeric(xml2::xml_attr(items, "diameterClassLowerLimit"))),
         l_cm  = suppressWarnings(as.numeric(xml2::xml_attr(items, "lengthClassLowerLimit"))),
-        price = suppressWarnings(as.numeric(vapply(items, .hx1, "", "./Price"))),
-        criteria = vapply(items, .hx1, "", "./BuckingCriteria"),
+        # One XPath call per column over all items (not one per item).
+        price = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Price")))),
+        criteria = trimws(xml2::xml_text(xml2::xml_find_first(items, "./BuckingCriteria"))),
         stringsAsFactors = FALSE))
   })
   pkeys <- vapply(products, `[[`, "", "key")
@@ -178,21 +290,9 @@ read_hpr <- function(path, filename = basename(path)) {
                                 paste(unique(pkeys[duplicated(pkeys)]), collapse = ", ")))
   names(products) <- pkeys
 
-  # Stem index only (Phase B bucks the stems): no coordinates, dates or logs.
-  stems <- xml2::xml_find_all(machine, "./Stem")
-  sd <- xml2::xml_find_first(stems, "./SingleTreeProcessedStem/StemDiameters")
-  stems_df <- data.frame(
-    key = trimws(xml2::xml_text(xml2::xml_find_first(stems, "./StemKey"))),
-    species_key = trimws(xml2::xml_text(xml2::xml_find_first(stems, "./SpeciesGroupKey"))),
-    has_profile = !is.na(xml2::xml_name(sd)),
-    diameter_category = xml2::xml_attr(sd, "diameterCategory"),
-    stringsAsFactors = FALSE)
-
-  if (nrow(species) > 0L) {
+  if (nrow(species) > 0L)
     species$n_products <- vapply(species$key, function(k)
       sum(vapply(products, function(p) k %in% p$species_keys, logical(1))), integer(1))
-    species$n_stems <- vapply(species$key, function(k) sum(stems_df$species_key == k), integer(1))
-  }
   unknown <- unlist(lapply(products, function(p)
     if (length(p$species_keys) == 0L || !all(p$species_keys %in% species$key)) p$name))
   if (length(unknown) > 0L)
@@ -201,8 +301,9 @@ read_hpr <- function(path, filename = basename(path)) {
 
   list(ok = length(errors) == 0L, errors = errors, warnings = warnings,
        header = list(file = filename, version = unname(att["version"]),
-                     n_stems = nrow(stems_df)),
-       species = species, products = products, stems = stems_df)
+                     read = how, mb_read = if (how == "prefix") round(length(pre$bytes) / 1048576, 2) else NA,
+                    mb_file = round(file.size(path) / 1048576, 2)),
+       species = species, products = products)
 }
 
 
@@ -242,7 +343,7 @@ hpr_product_table <- function(hpr, species_map) {
     priced <- sum(!is.na(p$cells$price) & p$cells$criteria != HPR_FORBIDDEN)
     reason <- if (length(sp) == 0L) "Species group not used"
               else if (priced == 0L) "No priced cells"
-              else if (isFALSE(grade)) "Does not allow the best grade"
+              else if (isFALSE(grade)) "Only for lower quality grades"
               else ""
     data.frame(key = p$key, name = p$name,
                group = paste(hpr$species$name[match(p$species_keys, hpr$species$key)], collapse = ", "),
@@ -262,14 +363,15 @@ hpr_product_table <- function(hpr, species_map) {
 
 # The price grid of one product in Apter's layout: whole-cm diameter rows x
 # whole-dm length columns. Returns list(pm (long), limits (kept class lower
-# limits, cm), lengths (cm), errors, warnings).
+# limits, cm), lengths (cm), errors, warnings (something lost), info (not
+# shown: what follows the documented rules, e.g. rounding)).
 .hpr_grid <- function(p, key) {
-  w <- character(0)
+  w <- character(0); info <- character(0)
   cells <- p$cells[!is.na(p$cells$d_mm) & !is.na(p$cells$l_cm), , drop = FALSE]
   forbidden <- cells$criteria %in% HPR_FORBIDDEN
   n_forb <- sum(forbidden)
   ok_cells <- cells[!is.na(cells$price) & !forbidden, , drop = FALSE]
-  if (n_forb > 0L) w <- c(w, sprintf("%d forbidden cell(s) left empty (never chosen).", n_forb))
+  if (n_forb > 0L) info <- c(info, sprintf("%d forbidden cell(s) left empty (never chosen).", n_forb))
   if (nrow(ok_cells) == 0L) return(list(errors = "no priced cells"))
 
   # Lengths: each class lower limit rounds up to whole dm. The cut must stay
@@ -284,7 +386,7 @@ hpr_product_table <- function(hpr, species_map) {
     w <- c(w, sprintf("Length class(es) %s cm dropped: no whole-dm length inside the class.",
                       paste(L[!keep_l], collapse = ", ")))
   if (any(keep_l & L %% 10 != 0))
-    w <- c(w, sprintf("Length classes rounded up to whole dm: %s.",
+    info <- c(info, sprintf("Length classes rounded up to whole dm: %s.",
                       paste(sprintf("%g→%g", L[keep_l & L %% 10 != 0], cut[keep_l & L %% 10 != 0]),
                             collapse = ", ")))
   L <- L[keep_l]; cut <- cut[keep_l]
@@ -298,7 +400,7 @@ hpr_product_table <- function(hpr, species_map) {
   # the top-diameter limits instead (the run caps above the last row).
   D <- sort(unique(ok_cells$d_mm)); D_all <- sort(unique(cells$d_mm))
   if (any(D_all %% 10 != 0))
-    w <- c(w, sprintf("Diameter class limits not in whole cm (%s mm): prices change at whole cm.",
+    info <- c(info, sprintf("Diameter class limits not in whole cm (%s mm): prices change at whole cm.",
                       paste(D_all[D_all %% 10 != 0], collapse = ", ")))
   rows_cm <- seq(floor(min(D) / 10), floor(max(D) / 10))
   cls <- vapply(rows_cm, function(cc) { u <- D_all[D_all <= cc * 10 & D_all >= min(D)]
@@ -307,7 +409,7 @@ hpr_product_table <- function(hpr, species_map) {
   max_top_mm <- if (length(above)) min(above) - 1 else NA_real_
   min_top_mm <- if (any(D_all < min(D))) min(D) else NA_real_
   if (length(above))
-    w <- c(w, sprintf("Diameter class(es) from %g mm fully forbidden: max top diameter set to %g mm.",
+    info <- c(info, sprintf("Diameter class(es) from %g mm fully forbidden: max top diameter set to %g mm.",
                       min(above), max_top_mm))
   g <- expand.grid(i = seq_along(rows_cm), j = seq_along(L), KEEP.OUT.ATTRS = FALSE)
   price <- ok_cells$price[match(paste(cls[g$i], L[g$j]), paste(ok_cells$d_mm, ok_cells$l_cm))]
@@ -321,11 +423,11 @@ hpr_product_table <- function(hpr, species_map) {
   long <- pm_drop_empty_cells(long[long$LengthClass_dm %in% priced_cols, , drop = FALSE])
   empty <- setdiff(rows_cm, unique(long$PriceDiameterClass_cm[!is.na(long$PriceNOKperM3)]))
   if (length(empty) > 0L)
-    w <- c(w, sprintf("Diameter class(es) %s cm fully forbidden: empty rows (never chosen).",
+    info <- c(info, sprintf("Diameter class(es) %s cm fully forbidden: empty rows (never chosen).",
                       paste(empty, collapse = ", ")))
   kept <- (cut / 10) %in% priced_cols             # columns with a priced cell
   list(pm = long, limits = L[kept], lengths = cut[kept], min_top_mm = min_top_mm,
-       max_top_mm = max_top_mm, warnings = w, errors = character(0))
+       max_top_mm = max_top_mm, warnings = w, info = info, errors = character(0))
 }
 
 #' Turn a read_hpr() result into a scenario: the assortment table and prices
@@ -339,7 +441,9 @@ hpr_product_table <- function(hpr, species_map) {
 #'   hpr_product_table() imports by default).
 #' @param base_defs    The base assortment table (its Waste rows are
 #'   added); default from load_products().
-#' @return list(ok, defs, pm, errors, warnings, notes).
+#' @return list(ok, defs, pm, errors, warnings (shown: something lost or
+#'   replaced, e.g. a product skipped or a volume method replaced), info (not
+#'   shown: what follows the documented rules, e.g. rounding, forbidden cells)).
 hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
   fail <- function(msg, w = character(0)) list(ok = FALSE, errors = msg, warnings = w)
   if (!isTRUE(hpr$ok)) return(fail(hpr$errors))
@@ -347,13 +451,13 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
   if (is.null(keep)) keep <- tab$key[tab$default]
   if (!any(species_map %in% PRODUCT_SPECIES))
     return(fail("Map at least one species group to Spruce or Pine."))
-  w <- character(0)
+  w <- character(0); info <- character(0)
 
   # Several groups as one species: their products all go to that species.
   for (sp in PRODUCT_SPECIES) {
     g <- names(species_map)[species_map == sp]
     if (length(g) > 1L)
-      w <- c(w, sprintf("Species groups %s are all %s: a %s stem can be bucked into any of their products.",
+      info <- c(info, sprintf("Species groups %s are all %s: a %s stem can be bucked into any of their products.",
                         paste(hpr$species$name[match(g, hpr$species$key)], collapse = " and "), sp, sp))
   }
   base <- if (is.null(base_defs)) defs_from_products(load_products()) else base_defs   # Waste rows
@@ -369,13 +473,13 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
         grp <- hpr$species$name[match(p$species_keys[species_map[p$species_keys] == sp][1L], hpr$species$key)]
         name <- sprintf("%s (%s)", name, grp); ak <- paste0(sp, "_", assortment_slug(name))
         if (ak %in% used_keys) { name <- sprintf("%s %s", name, p$key); ak <- paste0(sp, "_", assortment_slug(name)) }
-        w <- c(w, sprintf("Renamed a second '%s' for %s to '%s'.", trimws(p$name), sp, name))
+        info <- c(info, sprintf("Renamed a second '%s' for %s to '%s'.", trimws(p$name), sp, name))
       }
       grid <- .hpr_grid(p, ak)
       if (length(grid$errors) > 0L) {
         w <- c(w, sprintf("%s not imported: %s.", p$name, grid$errors)); next
       }
-      pw <- grid$warnings
+      pw <- grid$warnings; pinfo <- grid$info
       method <- p$volume_method
       if (is.na(method) || !method %in% HPR_VOLUME_METHODS) {
         pw <- c(pw, sprintf("Volume method '%s' is not available; solid volume used.", method))
@@ -383,7 +487,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
       }
       if (method != "All diameters (solid volume)" &&
           !identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM))
-        pw <- c(pw, sprintf("Volume diameter '%s': Apter rounds the top diameter down to whole cm for this method.",
+        pinfo <- c(pinfo, sprintf("Volume diameter '%s': Apter rounds the top diameter down to whole cm for this method.",
                             p$volume_adjustment))
       len_rule <- or_default(p$volume_length, "Physical length cm")
       class_len <- identical(len_rule, "Length as defined in LengthClasses") &&
@@ -401,6 +505,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
       if (any(p$len_margins > 0, na.rm = TRUE))
         pw <- c(pw, "Length class margins ignored (logs are cut at the class length).")
       if (length(pw)) w <- c(w, paste0(name, ": ", pw))
+      if (length(pinfo)) info <- c(info, paste0(name, ": ", pinfo))
 
       min_top <- if (!is.na(p$min_top)) p$min_top else if (length(p$dia_classes)) min(p$dia_classes) else 0
       min_top <- max(min_top, grid$min_top_mm, na.rm = TRUE)
@@ -436,11 +541,5 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
   v <- check_price_set(defs, pm)
   if (!v$ok) return(fail(v$errors, w))
   list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0),
-       warnings = c(w, v$warnings), notes = HPR_NOTE)
+       warnings = w, info = c(info, v$warnings))   # validation notes: info
 }
-
-#' What an .hpr import does not take over (one line in the dialog).
-HPR_NOTE <- paste(
-  "Not taken over: the file's bark functions (Apter uses barkNOR), grades (stems are",
-  "defect-free; only the best-grade filter applies), length margins, distribution and",
-  "limitation settings, and log colour marks. Prices are read as NOK/m³ under bark.")

@@ -223,10 +223,9 @@ details.apter-card { margin-bottom: 16px; }
 }
 .reactable .rt-th { display: flex; align-items: flex-end; }
 /* Assortment tables: rows only in this scenario and cells that differ from
-   the other scenario in pale green; missing assortments struck through. */
+   the same assortment in the other scenario in pale green. */
 .reactable .asm-only { background: var(--apter-diff); }
 .reactable .asm-diff { background: var(--apter-diff); font-weight: 600; color: var(--apter-ink); }
-.reactable .asm-none { color: var(--apter-muted); font-style: italic; text-decoration: line-through; }
 
 /* ---- notifications ---------------------------------------------------------- */
 .shiny-notification {
@@ -261,7 +260,7 @@ details.apter-card { margin-bottom: 16px; }
    B) has a green bar on the left and a bold name. */
 [id^="tbl_asm_"] .rt-tr-group { cursor: pointer; }
 /* As tall as their rows: the card body is a bslib fill container, and a
-   shorter column (e.g. "Not in this scenario") stretched the table. */
+   shorter column stretched the table. */
 [id^="tbl_asm_"].html-fill-item { flex: none !important; }
 .reactable .asm-selected { box-shadow: inset 3px 0 0 var(--apter-primary); }
 .reactable .asm-selected .rt-td:nth-child(1) { font-weight: 600; }
@@ -274,8 +273,6 @@ details.apter-card { margin-bottom: 16px; }
   font-size: 0.86rem; color: var(--apter-muted); }
 .asm-rule { padding: 1px 6px; border-radius: 4px; background: var(--apter-panel); }
 .asm-rule.asm-diff { background: var(--apter-diff); color: var(--apter-ink); font-weight: 600; }
-.asm-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-  color: var(--apter-muted); font-style: italic; margin: 8px 0 4px; }
 .asm-flat { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 4px;
   padding: 6px 8px; border-radius: 6px; }
 .asm-flat.is-diff { background: var(--apter-diff); }

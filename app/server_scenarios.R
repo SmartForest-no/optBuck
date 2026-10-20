@@ -57,8 +57,8 @@ scenario_server <- function(input, output, session) {
 
   # ---- the selected assortment (shared by A and B) ---------------------------
   # A row click in either table selects that assortment on both sides; a side
-  # without it shows "Not in this scenario" and "Add from A/B". If the key
-  # leaves both scenarios, the first row of A (or B) is selected.
+  # without it shows no detail panel. If the key leaves both scenarios, the
+  # first row of A (or B) is selected.
   first_key <- function() {
     d <- isolate(defs("A")); if (nrow(d) == 0L) d <- isolate(defs("B"))
     keys_of(d)[asm_order(d)][1L]
@@ -106,11 +106,10 @@ scenario_server <- function(input, output, session) {
     order(sp, tp, ifelse(tp == 4L, tolower(d$Name), ""))
   }
 
-  # One scenario's table: cells that differ from the other scenario are
-  # highlighted (differences in fields only in the form mark the name), rows
-  # only in this scenario are highlighted, and the other scenario's
-  # assortments missing here are listed as a muted "Not in A/B" line, in
-  # the same place as in the other table. Columns cannot be sorted.
+  # One scenario's table: its own assortments only. Cells that differ from
+  # the same assortment in the other scenario are highlighted (differences in
+  # fields only in the form mark the name), and rows not in the other
+  # scenario are highlighted as a whole. Columns cannot be sorted.
   render_asm <- function(side) renderReactable({
     d <- defs(side); o <- defs(other(side))
     disp <- asm_display(d, prices(side)); disp_o <- asm_display(o, prices(other(side)))
@@ -124,16 +123,7 @@ scenario_server <- function(input, output, session) {
       if (any(rd$diff[i, HIDDEN_ASM_COLS])) cell[i, "Assortment"] <- TRUE
     }
     cls <- ifelse(rd$status == "only", "asm-only", "")
-    gone <- match(rd$other_only, ko)
     all_rows <- d
-    if (length(gone)) {
-      extra <- disp_o[gone, , drop = FALSE]
-      extra$Pricing <- paste("Not in", side)
-      disp <- rbind(disp, extra)
-      cell <- rbind(cell, matrix(FALSE, length(gone), ncol(cell)))
-      cls <- c(cls, rep("asm-none", length(gone)))
-      all_rows <- rbind(d, o[gone, , drop = FALSE])
-    }
     ord <- asm_order(all_rows)
     disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
     rownames(disp) <- NULL
@@ -356,20 +346,15 @@ scenario_server <- function(input, output, session) {
     })
 
     # One assortment (definition and prices) equal to the other scenario's.
-    # "Add from A/B" (the assortment is not here) does the same copy.
-    copy_one <- function(added) {
+    observeEvent(input[[paste0("asm_copy_one_", s)]], {
       o <- other(side); k <- selected()
       if (!isTRUE(k %in% keys_of(defs(o))))
         return(say(side, "error", sprintf("%s is not in Scenario %s.", key_label(k), o)))
       r <- copy_assortment(defs(o), prices(o), defs(side), prices(side), k)
       if (commit(side, r$defs, r$pm)) {
-        redraw()
-        say(side, "ok", sprintf(if (added) "Added %s from Scenario %s." else "%s is equal to Scenario %s.",
-                                key_label(k), o))
+        redraw(); say(side, "ok", sprintf("%s is equal to Scenario %s.", key_label(k), o))
       }
-    }
-    observeEvent(input[[paste0("asm_copy_one_", s)]], copy_one(FALSE))
-    observeEvent(input[[paste0("asm_add_from_", s)]], copy_one(TRUE))
+    })
 
     # Base assortments back to their defaults (definitions and prices);
     # custom ones stay.
@@ -445,7 +430,9 @@ scenario_server <- function(input, output, session) {
     p(class = "note-muted", sprintf(paste(
       "The products and price matrices of a StanForD 2010 .hpr file replace Scenario %s's",
       "assortments and prices. Scenario %s is not changed."), side, other(side))),
-    fileInput("hpr_file", "Harvester production file (.hpr)", accept = ".hpr", width = "100%"),
+    fileInput("hpr_file", sprintf("Harvester production file (.hpr, or .hpr in .zip / .gz; up to %d MB)",
+                                  HPR_MAX_UPLOAD_MB),
+              accept = c(".hpr", ".zip", ".gz"), width = "100%"),
     uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
     uiOutput("hpr_msg"),
     footer = tagList(modalButton("Cancel"),
@@ -458,9 +445,20 @@ scenario_server <- function(input, output, session) {
       hpr(list(side = side)); hpr_err(NULL); showModal(hpr_modal(side))
     })
   })
+  # The uploaded file is kept for the session (hpr Phase B bucks its stems
+  # later) in a folder of its own, removed when the session ends.
+  hpr_dir  <- file.path(tempdir(), paste0("apter_hpr_", session$token))
+  hpr_kept <- reactiveVal(NULL)   # list(name, path, mb)
+  session$onSessionEnded(function() unlink(hpr_dir, recursive = TRUE))
   observeEvent(input$hpr_file, {
     f <- input$hpr_file; req(f, hpr())
-    hpr(utils::modifyList(hpr(), list(data = read_hpr(f$datapath, f$name), file = f$name)))
+    dir.create(hpr_dir, showWarnings = FALSE, recursive = TRUE)
+    kept <- file.path(hpr_dir, basename(f$name))
+    if (!isTRUE(file.copy(f$datapath, kept, overwrite = TRUE))) kept <- f$datapath
+    hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
+    data <- withProgress(message = sprintf("Reading %s...", f$name), value = 0.5,
+                         read_hpr(kept, f$name))
+    hpr(utils::modifyList(hpr(), list(data = data, file = f$name)))
     hpr_err(NULL)
   })
   hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
@@ -517,8 +515,7 @@ scenario_server <- function(input, output, session) {
           tags$td(tab$name[i]), tags$td(tab$group[i]),
           tags$td(if (tab$species[i] == "none") "Not used" else tools::toTitleCase(tab$species[i])),
           tags$td(class = "hpr-nowrap", tab$diameters[i]), tags$td(class = "hpr-nowrap", tab$lengths[i]),
-          tags$td(tab$forbidden[i]), tags$td(class = "note-muted", tab$reason[i]))))),
-      div(class = "note-muted", HPR_NOTE))
+          tags$td(tab$forbidden[i]), tags$td(class = "note-muted", tab$reason[i]))))))
   })
   output$hpr_msg <- renderUI({
     e <- hpr_err(); if (!is.null(e)) div(class = "pm-msg-error", paste(e, collapse = "\n"))
@@ -536,8 +533,9 @@ scenario_server <- function(input, output, session) {
     if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
     selected(keys_of(res$defs)[asm_order(res$defs)][1L])
     redraw(); removeModal()
-    say(side, "ok", sprintf("Imported %d assortment(s) from %s into Scenario %s (replaced).",
-                            sum(res$defs$Type != "waste"), h$file, side), res$warnings)
+    n <- sum(res$defs$Type != "waste")
+    say(side, "ok", sprintf("Imported %d assortment%s from %s into Scenario %s.",
+                            n, if (n == 1L) "" else "s", h$file, side), res$warnings)
   })
 
   msg_ui <- function(m) {
@@ -734,5 +732,6 @@ scenario_server <- function(input, output, session) {
   })
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
-       differ = differ, pm_state = pm_state, key_label = key_label)
+       differ = differ, pm_state = pm_state, key_label = key_label,
+       hpr_file = hpr_kept)   # the session's uploaded .hpr (hpr Phase B)
 }

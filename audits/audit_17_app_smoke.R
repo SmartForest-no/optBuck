@@ -98,8 +98,8 @@
 #      volume); the logs and trees CSVs hold both scenarios (Scenario A and
 #      B; the trees CSV has every tree once per scenario)
 # 17.  Spruce pulpwood removed from B only: the comparison run's B has no
-#      spruce pulpwood; B's panel says "Not in this scenario" and "Add from
-#      A" brings it back
+#      spruce pulpwood; B's table has no row for it and, with it selected
+#      in A, B shows no detail panel; no struck-through rows anywhere
 # 18.  Stale notice: absent right after a run; after a price edit,
 #      "Assortments or prices changed since this run" shows
 # 19.  No "default" or "price set" (as words) anywhere in the page text
@@ -117,11 +117,10 @@
 # 23.  Total browser runtime under 300 s (REVIEW if above)
 # 24.  Scenario B's assortments (Phase 4d): a B rule change (spruce sawlog
 #      min top 14 cm) is highlighted on both sides; an assortment added to B
-#      only is highlighted in B and listed as "Not in A" in A; one removed
-#      from B only is listed as "Not in B"; Run -> comparison with B's
-#      products (poles); both tables list the same assortments in the same
-#      order (species, sawlog, pulpwood, waste, custom), "Not in" lines
-#      included; "Make assortment equal to B" in A copies spruce sawlog;
+#      only is highlighted in B and not listed in A; one removed from B only
+#      is not listed in B; Run -> comparison with B's products (poles); each
+#      table lists its own assortments in the fixed order (species, sawlog,
+#      pulpwood, waste, custom), no struck-through rows; "Make assortment equal to B" in A copies spruce sawlog;
 #      Scenario A downloaded and uploaded to B -> no highlighted
 #      differences left
 # 25.  Selection and detail panel (layout-and-figures): the first row
@@ -986,7 +985,12 @@ if (!browser_ok) {
       pick(app, "b", "spruce_pulpwood"); app$click("asm_remove_b"); app$wait_for_idle()
       app$click("asm_rm_one"); app$wait_for_idle()
       flat17 <- txt(app, "#msg_b")
-      missing17 <- txt(app, "#asm_detail_b .asm-missing")
+      # Each table lists its own assortments only; with spruce pulpwood
+      # selected (in A), B shows no detail panel and no row for it.
+      pick(app, "a", "spruce_pulpwood")
+      missing17 <- list(panel_b = isTRUE(js(app, "document.getElementById('asm_detail_b').offsetParent === null")),
+                        row_b = grepl("Pulpwood\\s+Spruce", txt(app, "#tbl_asm_b")),
+                        struck = js(app, "document.querySelectorAll('.asm-none').length"))
       st17 <- paste("B products:", paste(unique(scen_of(app, "b")$pm$ProductKey), collapse = ","))
       app$set_inputs(main_nav = "simulator"); run(app)
       app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
@@ -998,18 +1002,13 @@ if (!browser_ok) {
     # Columns: Assortment; Value A (NOK); Value B (NOK); ...
     b_val <- if (length(pulp)) suppressWarnings(as.numeric(strsplit(pulp[1], ";")[[1]][3])) else NA
     a_val <- if (length(pulp)) suppressWarnings(as.numeric(strsplit(pulp[1], ";")[[1]][2])) else NA
-    e17b <- try_drv({
-      app$set_inputs(main_nav = "prices")
-      pick(app, "a", "spruce_pulpwood"); app$click("asm_add_from_b"); app$wait_for_idle()
-    })
-    sc17 <- scen_of(app, "b")
-    back17 <- "spruce_pulpwood" %in% sc17$pm$ProductKey && "spruce_pulpwood" %in% assortment_table_keys(sc17$defs)
-    ok17 <- !nzchar(paste0(e17, e17b)) && isTRUE(a_val > 0) && isTRUE(b_val == 0) && back17 &&
-      grepl("Not in this scenario", missing17, fixed = TRUE) && grepl("Add from A", missing17, fixed = TRUE) &&
+    ok17 <- !nzchar(e17) && isTRUE(a_val > 0) && isTRUE(b_val == 0) &&
+      isTRUE(missing17$panel_b) && !isTRUE(missing17$row_b) && identical(missing17$struck, 0L) &&
       !grepl("spruce_pulpwood", st17, fixed = TRUE) && identical(n_err_notif(app), 0L)
     rec(browser_checks[13], if (ok17) PASS else FAIL,
-        sprintf("'%s' (%s) | B's panel: '%s' | spruce pulpwood value A %s, B %s | back in B after Add from A: %s | error notifications: %s%s",
-                trimws(flat17), trimws(st17), trimws(missing17), a_val, b_val, back17, n_err_notif(app), err_txt(e17, e17b)))
+        sprintf("'%s' (%s) | selected in A: B panel hidden %s, row in B %s, struck rows %s | spruce pulpwood value A %s, B %s | error notifications: %s%s",
+                trimws(flat17), trimws(st17), missing17$panel_b, missing17$row_b, missing17$struck,
+                a_val, b_val, n_err_notif(app), err_txt(e17)))
     # 18. stale notice after a price edit (reset A)
     e18 <- try_drv({
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
@@ -1036,6 +1035,7 @@ if (!browser_ok) {
         else sprintf("found: %s", paste(hits19, collapse = ", ")))
     # 20. custom assortment through the form
     form20 <- NA; blur20 <- NA
+    n_b0 <- n_tbl_rows(app, "tbl_asm_b")   # B's own rows before (no spruce pulpwood since check 17)
     e20 <- try_drv({
       app$set_inputs(main_nav = "prices")
       app$click("asm_add_a"); app$wait_for_idle()
@@ -1092,12 +1092,12 @@ if (!browser_ok) {
       grepl("Saved Spruce poles", msg20b, fixed = TRUE) && kept &&
       grepl("Spruce poles", prod20, fixed = TRUE) &&
       identical(n_asm_reset, 7L) && base_back && identical(n_asm_rm, 6L) &&
-      identical(n_asm_rm_b, 6L) && identical(form20, 0L) && identical(blur20, "none") &&
+      identical(n_asm_rm_b, n_b0) && identical(form20, 0L) && identical(blur20, "none") &&
       identical(n_err_notif(app), 0L)
     rec(browser_checks[16], if (ok20) PASS else FAIL,
-        sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', rows %s, selected: %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s%s",
+        sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', rows %s, selected: %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s (before: %s)%s",
                 form20, blur20, trimws(msg20a), n_asm1, pm_opts, trimws(msg20b), kept,
-                grepl("Spruce poles", prod20, fixed = TRUE), n_asm_reset, base_back, n_asm_rm, n_asm_rm_b,
+                grepl("Spruce poles", prod20, fixed = TRUE), n_asm_reset, base_back, n_asm_rm, n_asm_rm_b, n_b0,
                 err_txt(e20, e20b, e20c, e20d, e20e)))
     # 21. uploaded tree list (template)
     tl_csv <- tempfile(fileext = ".csv")
@@ -1178,12 +1178,11 @@ if (!browser_ok) {
                      asm_both = FALSE, wait_ = FALSE)
       app$click("asm_save"); app$wait_for_idle()
       n24$only_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-only').length")
-      n24$none_a <- js(app, "document.querySelectorAll('#tbl_asm_a .asm-none').length")
       n24$a_rows <- n_tbl_rows(app, "tbl_asm_a")
       # pine pulpwood removed from B only
       pick(app, "b", "pine_pulpwood"); app$click("asm_remove_b"); app$wait_for_idle()
       app$click("asm_rm_one"); app$wait_for_idle()
-      n24$none_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-none').length")
+      n24$struck <- js(app, "document.querySelectorAll('.asm-none').length")
       rows_of <- function(id) js(app, sprintf(paste0(
         "Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr')).map(function(r){",
         " var c = r.querySelectorAll('.rt-td'); return c[0].textContent.trim() + ' ' + c[1].textContent.trim(); }).join('|')"), id))
@@ -1209,15 +1208,15 @@ if (!browser_ok) {
     })
     ok24 <- !nzchar(paste0(e24, e24b)) && identical(n24$start, 0L) &&
       isTRUE(n24$diff_a >= 1L) && isTRUE(n24$diff_b >= 1L) &&
-      isTRUE(n24$only_b >= 1L) && isTRUE(n24$none_a >= 1L) && identical(n24$a_rows, 7L) &&
-      isTRUE(n24$none_b >= 1L) && cmp24 &&
-      identical(n24$rows_a, n24$rows_b) &&
-      identical(n24$rows_a, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine") && grepl("Spruce poles", prod24, fixed = TRUE) &&
+      isTRUE(n24$only_b >= 1L) && identical(n24$a_rows, 6L) && identical(n24$struck, 0L) && cmp24 &&
+      identical(n24$rows_a, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine") &&
+      identical(n24$rows_b, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Waste Pine") &&
+      grepl("Spruce poles", prod24, fixed = TRUE) &&
       grepl("Value A", prod24, fixed = TRUE) && grepl("Spruce sawlog is equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B: %s (A shows 'Not in A': %s, A rows %s) | removed from B: 'Not in B' %s | comparison tab %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
-                n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$none_a, n24$a_rows, n24$none_b,
+        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B highlighted: %s (A rows %s) | struck rows %s | comparison tab %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
+                n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$a_rows, n24$struck,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
     # 27. figures (images with a width) for the single run and the comparison
@@ -1258,6 +1257,7 @@ if (!browser_ok) {
       c29$ticked <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_products input[type=checkbox]'))",
                                    ".map(function(c){ return c.checked ? 1 : 0; }).join('')"))
       c29$ok_enabled <- !isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
+      c29$dialog <- txt(app, ".modal-content")
       shoot(app, "11_hpr_import_dialog")
       app$click("hpr_apply"); app$wait_for_idle()
       c29$open <- js(app, "document.querySelectorAll('.modal.show').length")
@@ -1270,7 +1270,9 @@ if (!browser_ok) {
       grepl("not a readable XML", c29$err, fixed = TRUE) && c29$bad_disabled &&
       grepl("Scenario B", c29$title_b, fixed = TRUE) && identical(c29$species, "pine,spruce,none,none") &&
       identical(c29$ticked, "111011") && c29$ok_enabled && identical(c29$open, 0L) &&
-      grepl("Imported 5 assortment(s)", c29$msg, fixed = TRUE) &&
+      grepl("Imported 5 assortments from hpr_example_synthetic.hpr into Scenario B.", c29$msg, fixed = TRUE) &&
+      !grepl("Warning", c29$msg, fixed = TRUE) && !grepl("Not taken over", c29$dialog, fixed = TRUE) &&
+      grepl("Only for lower quality grades", c29$dialog, fixed = TRUE) &&
       grepl("REDACTED23", c29$b_rows, fixed = TRUE) && !grepl("Sawlog Spruce", c29$b_rows, fixed = TRUE) &&
       identical(c29$a_after, c29$a_before) && isTRUE(c29$marks > 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[25], if (ok29) PASS else FAIL,

@@ -16,7 +16,7 @@
 # and B), a detail panel for the selected assortment (its rules, its prices
 # and its actions), then the scenario actions. s = "a" or "b". The panel's
 # parts show by output.asm_state_<s>: "matrix", "flat" or "none" (not in
-# this scenario).
+# this scenario: no panel; each table lists its own assortments only).
 scenario_column <- function(s) {
   S <- toupper(s); O <- if (S == "A") "B" else "A"
   btn <- function(id, label, cls = "btn-secondary btn-sm") actionButton(id, label, class = cls)
@@ -25,12 +25,9 @@ scenario_column <- function(s) {
     div(class = "section-hdr", "Assortments"),
     reactableOutput(paste0("tbl_asm_", s)),
 
-    div(class = "asm-detail", id = paste0("asm_detail_", s),
+    # Shown only when the selected assortment is in this scenario.
+    conditionalPanel(state("!= 'none'"), div(class = "asm-detail", id = paste0("asm_detail_", s),
       uiOutput(paste0("asm_head_", s)),
-      conditionalPanel(state("== 'none'"),
-        div(class = "asm-missing",
-          span("Not in this scenario."),
-          btn(paste0("asm_add_from_", s), sprintf("Add from %s", O), "btn-primary btn-sm"))),
       conditionalPanel(state("== 'matrix'"),
         div(class = "pm-grid",
           div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark"),
@@ -49,7 +46,7 @@ scenario_column <- function(s) {
           downloadButton(paste0("dl_", s, "_long"), "Prices (CSV)", class = "btn-secondary btn-sm")),
         fileInput(paste0("pm_", s, "_upload"), "Upload prices for this assortment (xlsx or CSV)",
                   accept = c(".csv", ".xlsx"), width = "100%"))
-    ),
+    )),
     uiOutput(paste0("msg_", s)),
 
     div(class = "section-hdr", "Scenario"),

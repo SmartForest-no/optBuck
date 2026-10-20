@@ -25,7 +25,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, A downloaded and uploaded to B), Run disabled with progress while a run task runs |
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
-| Import from .hpr (hpr Phase A) | Audit 25 PASS (13/13): reading the synthetic fixture, product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
+| Import from .hpr (hpr Phase A) | Audit 25 PASS (15/15): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -277,7 +277,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 22 — performance equivalence | `Rscript audits/audit_22_performance_equivalence.R` | future, promises, later, taperNOR; taper profile cache; `outputs/performance/baseline_main_3fa0a9d.rds`; uses up to 15 workers |
 | 23 — assortment table and price sets | `Rscript audits/audit_23_assortment_table_and_price_sets.R` | readxl, writexl, taperNOR |
 | 24 — scenarios | `Rscript audits/audit_24_scenarios.R` | readxl, writexl, taperNOR, fieldPlot; `demo/` |
-| 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -542,10 +542,13 @@ These keep the old name on purpose:
 ## Import from .hpr (hpr Phase A, 2026-10-20)
 
 - **Parser.** `R/helpers_hpr.R`, on xml2, ported from optBuck's getters
-  (read, not vendored). `read_hpr()` reads the species groups, classified
+  (read, not vendored). `read_hpr()` reads the species groups and classified
   products (limits, classes, volume rules, permitted grades, price cells
-  with their BuckingCriteria) and an index of the stems (key, species,
-  profile flag, diameter category; Phase B bucks the stems). It never reads
+  with their BuckingCriteria) from the part of the file before the first
+  stem record (`.hpr_prefix()`, 4 MB chunks, fast fixed search for
+  `<StemKey>`; `.hpr_close_tags()` closes the open elements), or from the
+  whole file when that part lacks species groups or products. .gz via
+  gzfile(), .zip streamed with unz(). Stems are not read (Phase B). It never reads
   coordinates, dates, operators, object names or contacts.
 - **Mapping.** `hpr_to_scenario()` builds an assortment table and prices
   (one matrix-priced row per product and species, plus the base Waste row

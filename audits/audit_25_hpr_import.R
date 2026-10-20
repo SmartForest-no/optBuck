@@ -11,8 +11,8 @@
 #
 # Checks  :
 #  1.  Reading: 4 species groups (445 FURU, 446 GRAN, 447 LAUV, 448
-#      BIOVIRKE; best grade 1), 8 classified products (999999 skipped), the
-#      stem index has only key, species, profile flag and diameter category
+#      BIOVIRKE; best grade 1), 8 classified products (999999 skipped), read
+#      from the part before the first stem; stems are not read
 #  2.  Product definitions as in the file (limits, classes, volume method,
 #      grades, cells, forbidden cells) for all 8 products
 #  3.  Species guess: FURU pine, GRAN spruce, LAUV and BIOVIRKE not used;
@@ -38,8 +38,8 @@
 #      species group mapped
 # 10.  Warnings: unknown species group, over-bark diameters, over-bark price
 #      volume, unsupported volume method (solid volume used), volume top
-#      position differs, length margins, two groups as one species with a
-#      renamed duplicate
+#      position differs, length margins; two groups as one species with a
+#      renamed duplicate are noted in info only (no warning)
 # 11.  Run (100-tree list) with the imported scenario: every product used,
 #      logs inside their limits and lengths, no forbidden cell chosen, price
 #      volumes of REDACTED23 on the class lower limit, no
@@ -48,9 +48,17 @@
 #      them differs, and a comparison prices REDACTED23 on 365 cm in
 #      A and 370 cm in B (separate candidate passes)
 # 13.  A fully forbidden inner diameter class (all 120 mm cells of 197
-#      Massevirke) stays as empty rows 12-15 cm: imported with a warning,
+#      Massevirke) stays as empty rows 12-15 cm: imported (noted in info, not shown),
 #      valid, kept by the scenario xlsx and long CSV round trips and by a grid
 #      edit elsewhere, and never chosen in a run (chosen without it)
+# 14.  Large files: only the part before the first stem record is parsed;
+#      a stem before the products makes it read the whole file; "<Stem>"
+#      inside a biomass function is not a stem; .hpr.gz and .hpr in a .zip
+#      give the same definitions; a zip without an .hpr is an error
+# 15.  Import message: the fixture import shows no warnings (rounding,
+#      whole-cm classes, the mm volume diameter and forbidden cells are info);
+#      a skipped product, a dropped length class and a replaced volume
+#      method are warnings
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -153,13 +161,12 @@ ok1 <- isTRUE(h$ok) && identical(h$species$key, c("445", "446", "447", "448")) &
   identical(h$species$name, c("FURU", "GRAN", "LAUV", "BIOVIRKE")) &&
   all(h$species$best_grade == 1) &&
   setequal(pk, c("7949", "7953", "8015", "8016", "8017", "8019", "7973", "7974")) &&
-  identical(names(h$stems), c("key", "species_key", "has_profile", "diameter_category")) &&
-  nrow(h$stems) == 1L
-rec("Check 01: Species groups, classified products and a stem index without coordinates",
-    ok(ok1), sprintf("ok %s | groups %s | best grades %s | products %s | stem index columns %s, %d stem(s)",
+  is.null(h$stems) && identical(h$header$read, "prefix")
+rec("Check 01: Species groups and classified products, read from the part before the first stem",
+    ok(ok1), sprintf("ok %s | groups %s | best grades %s | products %s | read %s (%s of %s MB), stems not read %s",
                      isTRUE(h$ok), paste(h$species$key, h$species$name, collapse = ", "),
                      paste(h$species$best_grade, collapse = ","), paste(pk, collapse = ","),
-                     paste(names(h$stems), collapse = ","), nrow(h$stems)))
+                     h$header$read, h$header$mb_read, h$header$mb_file, is.null(h$stems)))
 
 
 # ==============================================================================
@@ -204,7 +211,7 @@ tab <- hpr_product_table(h, sp_map)
 off <- tab$key[!tab$default & tab$species != "none"]
 h4 <- h; h4$products[["8016"]]$grades <- NULL
 tab4 <- hpr_product_table(h4, sp_map)
-ok4 <- identical(off, "8016") && grepl("best grade", tab$reason[tab$key == "8016"]) &&
+ok4 <- identical(off, "8016") && identical(tab$reason[tab$key == "8016"], "Only for lower quality grades") &&
   isTRUE(tab4$default[tab4$key == "8016"]) && is.na(tab4$grade_ok[tab4$key == "8016"])
 rec("Check 04: Products without the best grade unticked by default (only 100 Energi)",
     ok(ok4), sprintf("unticked (mapped species): %s ('%s') | without permitted grades: kept %s",
@@ -353,6 +360,7 @@ warn_of <- function(f, map = sp_map) {
   x <- read_hpr(f); s <- hpr_to_scenario(x, map, base_defs = base_defs)
   c(x$warnings, s$warnings)
 }
+info_of <- function(f, map = sp_map) hpr_to_scenario(read_hpr(f), map, base_defs = base_defs)$info
 w10 <- list(
   unknown_group = warn_of(variant(function(l) in_prod(l, "7953", "<SpeciesGroupKey>445</SpeciesGroupKey>",
                                                       "<SpeciesGroupKey>999</SpeciesGroupKey>"))),
@@ -361,19 +369,21 @@ w10 <- list(
   method        = warn_of(variant(function(l) in_prod(l, "8019", ">Calculated Norwegian mid<", ">Mid<"))),
   top_position  = warn_of(variant(function(l) in_prod(l, "8019", 'volumeDiameterTopPosition="10"',
                                                       'volumeDiameterTopPosition="20"'))),
-  margin        = warn_of(variant(function(l) in_prod(l, "8015", "<LengthClassMargin>0", "<LengthClassMargin>5"))),
-  one_species   = warn_of(variant(function(l) in_prod(l, "7953", "200 Massevirke", "197 Massevirke")),
-                          map = map_both_spruce))
+  margin        = warn_of(variant(function(l) in_prod(l, "8015", "<LengthClassMargin>0", "<LengthClassMargin>5"))))
 pat10 <- c(unknown_group = "missing or unknown species group", dia_over_bark = "Diameters over bark",
            vol_over_bark = "Price volume over bark", method = "'Mid' is not available",
-           top_position = "Volume top position 20 cm", margin = "margins ignored",
-           one_species = "are all spruce")
+           top_position = "Volume top position 20 cm", margin = "margins ignored")
 hit10 <- mapply(function(w, p) any(grepl(p, w, fixed = TRUE)), w10[names(pat10)], pat10)
-renamed <- any(grepl("Renamed a second '197 Massevirke'", w10$one_species, fixed = TRUE))
+# Two groups as one species with a duplicate name: it is renamed, and that is
+# noted in info (not shown); so is the merged species.
+dup <- hpr_to_scenario(read_hpr(variant(function(l) in_prod(l, "7953", "200 Massevirke", "197 Massevirke"))),
+                       map_both_spruce, base_defs = base_defs)
+renamed <- isTRUE(dup$ok) && any(grepl("Renamed a second '197 Massevirke'", dup$info, fixed = TRUE)) &&
+  any(grepl("are all spruce", dup$info, fixed = TRUE)) && length(dup$warnings) == 0L
 rec("Check 10: Partial problems are warnings and the rest imports",
     ok(all(hit10) && renamed),
     paste(c(sprintf("%s: %s", names(pat10), ifelse(hit10, "ok", "MISSING")),
-            sprintf("duplicate renamed: %s", renamed)), collapse = " | "))
+            sprintf("duplicate renamed and merged species noted in info, no warning: %s", renamed)), collapse = " | "))
 
 
 # ==============================================================================
@@ -451,7 +461,8 @@ if (isTRUE(r13$ok)) {
   rows13 <- as.integer(rownames(g13))
   empty_ok <- identical(rows13, 4:20) && all(is.na(as.matrix(g13[as.character(12:15), ]))) &&
     all(!is.na(as.matrix(g13[as.character(c(4:11, 16:20)), ])))
-  warn13 <- any(grepl("12, 13, 14, 15 cm fully forbidden: empty rows", r13$warnings, fixed = TRUE))
+  warn13 <- any(grepl("12, 13, 14, 15 cm fully forbidden: empty rows", r13$info, fixed = TRUE)) &&
+    !any(grepl("fully forbidden", r13$warnings, fixed = TRUE))   # info, not shown
   valid13 <- isTRUE(check_price_set(r13$defs, r13$pm)$ok)
   # Scenario file (wide sheets) and long CSV round trips keep the empty rows.
   fx13 <- tempfile(fileext = ".xlsx"); scenario_export(r13$defs, r13$pm, fx13)
@@ -496,6 +507,67 @@ if (isTRUE(r13$ok)) {
 }
 rec("Check 13: A fully forbidden inner diameter class stays as empty rows, valid and never chosen",
     ok(ok13), det13)
+
+
+# ==============================================================================
+section("14. Large files: the part before the first stem, .gz and .zip")
+same_defs <- function(a, b) isTRUE(a$ok) && identical(a$species, h$species) && identical(a$products, h$products)
+# A stem before the products: the definitions are not all before it, so the
+# whole file is read.
+stem_first <- function(l) {
+  s <- grep("<Stem>", l, fixed = TRUE)[1L]; e <- grep("</Stem>", l, fixed = TRUE)[1L]
+  p <- grep("<ProductDefinition>", l, fixed = TRUE)[1L]
+  append(l[-(s:e)], l[s:e], after = p - 1L)
+}
+h_whole <- read_hpr(variant(stem_first))
+# "<Stem>" inside a species group's biomass function is not a stem record.
+biomass <- function(l) {
+  i <- grep("<SpeciesGroupName>", l, fixed = TRUE)[1L]
+  append(l, "<BioMassFunctions><Detailed><Stem>370</Stem></Detailed></BioMassFunctions>", after = i)
+}
+h_bio <- read_hpr(variant(biomass))
+gz <- tempfile(fileext = ".hpr.gz"); con <- gzfile(gz, "wb"); writeLines(fx, con, useBytes = TRUE); close(con)
+h_gz <- read_hpr(gz, "fixture.hpr.gz")
+zd <- tempfile("zipsrc"); dir.create(zd); file.copy(FIXTURE, file.path(zd, "fixture.hpr"))
+zf <- tempfile(fileext = ".zip"); zip::zipr(zf, file.path(zd, "fixture.hpr"))
+h_zip <- read_hpr(zf, "fixture.zip")
+writeLines("no hpr here", file.path(zd, "readme.txt"))
+zn <- tempfile(fileext = ".zip"); zip::zipr(zn, file.path(zd, "readme.txt"))
+h_nozip <- read_hpr(zn, "other.zip")
+ok14 <- identical(h$header$read, "prefix") && h$header$mb_read < h$header$mb_file &&
+  identical(h_whole$header$read, "whole") && same_defs(h_whole) &&
+  identical(h_bio$header$read, "prefix") && isTRUE(h_bio$ok) && identical(h_bio$products, h$products) &&
+  identical(h_gz$header$read, "prefix") && same_defs(h_gz) &&
+  same_defs(h_zip) && !isTRUE(h_nozip$ok) && any(grepl("contains no .hpr file", h_nozip$errors, fixed = TRUE))
+rec("Check 14: Only the part before the first stem is read (whole file if needed); .gz and .zip",
+    ok(ok14), sprintf("fixture: %s, %s of %s MB | stem before the products: %s, same definitions %s | <Stem> in a biomass function: %s, same products %s | .gz: %s, same %s | .zip: same %s | zip without .hpr: '%s'",
+                      h$header$read, h$header$mb_read, h$header$mb_file, h_whole$header$read, same_defs(h_whole),
+                      h_bio$header$read, identical(h_bio$products, h$products), h_gz$header$read, same_defs(h_gz),
+                      same_defs(h_zip), paste(h_nozip$errors, collapse = " ")))
+unlink(c(gz, zf, zn, zd), recursive = TRUE)
+
+
+# ==============================================================================
+section("15. Import message: warnings only for what is lost or replaced")
+# The fixture import loses nothing: no warnings; rounding, whole-cm classes,
+# the mm volume diameter and forbidden cells are info (documented rules).
+info_pat <- c("rounded up to whole dm", "not in whole cm", "forbidden cell", "Volume diameter")
+in_info <- vapply(info_pat, function(p) any(grepl(p, r$info, fixed = TRUE)), logical(1))
+in_warn <- vapply(info_pat, function(p) any(grepl(p, r$warnings, fixed = TRUE)), logical(1))
+# Something lost: a product without priced cells (ticked anyway), a length
+# class without a whole-dm length; replaced: an unsupported volume method.
+no_cells <- variant(function(l) in_prod(l, "8017", "<BuckingCriteria>No limit</BuckingCriteria>",
+                                        sprintf("<BuckingCriteria>%s</BuckingCriteria>", HPR_FORBIDDEN), all = TRUE))
+h15 <- read_hpr(no_cells)
+r15 <- hpr_to_scenario(h15, sp_map, keep = c("7949", "8017", "8019"), base_defs = base_defs)
+w_skip <- any(grepl("154 Kubb not imported: no priced cells", r15$warnings, fixed = TRUE))
+w_drop <- any(grepl("301 cm dropped", r6$warnings, fixed = TRUE))
+w_meth <- any(grepl("solid volume used", w10$method, fixed = TRUE))
+ok15 <- length(r$warnings) == 0L && all(in_info) && !any(in_warn) && w_skip && w_drop && w_meth
+rec("Check 15: The import shows warnings only when something is lost or replaced",
+    ok(ok15), sprintf("fixture import: %d warnings, info has %s | skipped product warned %s | dropped length class warned %s | replaced volume method warned %s",
+                      length(r$warnings), paste(sprintf("%s=%s", info_pat, in_info), collapse = ", "),
+                      w_skip, w_drop, w_meth))
 unlink(c(f11, f12))
 
 
