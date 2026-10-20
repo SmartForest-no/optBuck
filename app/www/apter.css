@@ -125,6 +125,15 @@ details.apter-card { margin-bottom: 16px; }
 .note-error { color: var(--apter-danger); }
 .note-warn  { color: var(--apter-warning); }
 .note-muted { color: var(--apter-muted); font-size: 0.85rem; }
+
+/* ---- altitude range slider (the app's one slider; ion.rangeSlider) ----------- */
+.irs--shiny .irs-line { background: var(--apter-secondary); border: none; }
+.irs--shiny .irs-bar { background: var(--apter-primary); border: none; }
+.irs--shiny .irs-handle { border-color: var(--apter-primary); box-shadow: none; }
+.irs--shiny .irs-from, .irs--shiny .irs-to, .irs--shiny .irs-single {
+  background: var(--apter-primary); font-size: 0.75rem; }
+.irs--shiny .irs-min, .irs--shiny .irs-max {
+  background: var(--apter-field); color: var(--apter-muted); font-size: 0.75rem; }
 .stat-strip {
   background: var(--apter-panel); border-radius: 6px; padding: 7px 12px;
   font-size: 0.88em; color: var(--apter-muted); margin-bottom: 10px;

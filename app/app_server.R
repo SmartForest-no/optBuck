@@ -41,7 +41,8 @@ server <- function(input, output, session) {
     abon    <- as.integer(input$abonitet)
     if (length(hkl_raw) == 0L || length(abon) == 0L)
       return(div(class = "note-error", "Select at least one maturity class and one site class."))
-    if (count_eligible_plots(plots_prod, hkl_raw, abon, selected_fylnr(input$fylnr_sel)) == 0L)
+    if (count_eligible_plots(plots_prod, hkl_raw, abon, selected_fylnr(input$fylnr_sel),
+                             selected_hoh(input$hoh_range)) == 0L)
       div(class = "note-error", "No plots match this selection.")
   })
 

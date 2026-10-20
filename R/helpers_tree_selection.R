@@ -56,6 +56,9 @@ select_nfi_trees <- function(trees_all, params) {
     trees_filt <- trees_filt[
       trees_filt$fylnr %in% as.character(fylnr_vec), , drop = FALSE]
 
+  # Altitude (hoh, m a.s.l.) is a plot attribute (one value per plot), so this
+  # is a plot-level filter. Inclusive bounds; a set bound excludes plots with
+  # missing altitude. The app sends bounds only for a narrowed range.
   if (!is.null(hoh_min_val))
     trees_filt <- trees_filt[
       !is.na(trees_filt$hoh) & trees_filt$hoh >= hoh_min_val, , drop = FALSE]

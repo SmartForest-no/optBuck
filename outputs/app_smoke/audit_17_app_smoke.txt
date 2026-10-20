@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-19 14:06:00.767721
+  Run: 2026-10-20 10:59:17.37718
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpOCU3A3/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/Rtmp8kXEbd/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -20,6 +20,7 @@
   [PASS  ] Check 04c: count_eligible_plots() matches direct filter | HKL4/ab17/all: 248 vs 248; HKL4/ab14,17/fylnr 03: 8 vs 8
   [PASS  ] Check 04d: Default assortment table gives the base products | ProductData identical: TRUE
   [PASS  ] Check 04e: Live tree counts select exactly the trees and plots the run bucks | all plots: '801 plots · 12,427 spruce ·  4,166 pine trees' (run: 16593 trees, 801 plots) same | 5 plots: '5 plots · 71 spruce · 18 pine trees' (run: 89 trees, 5 plots) same
+  [PASS  ] Check 04f: Altitude filter: full range unchanged, narrowed band fewer plots and trees, missing altitude | slider 0-1100 m; full range: params identical TRUE, 801 plots / 16593 trees (no slider: 801 / 16593) | 200-400 m: 301 plots / 6571 trees, all inside TRUE, run same trees TRUE, count_eligible_plots 301 vs direct 301 | NA-altitude plot kept at full range TRUE, dropped when narrowed TRUE
 
 --- 05-23. Browser checks ---
   [PASS  ] Check 05: AppDriver starts the app | app started
@@ -39,25 +40,26 @@
   [PASS  ] Check 13: Summary shows the nine fields; no Diagnostics tab | labels: 'Run time|Plots|Trees|Trees with logs|Logs|Commercial volume (m³ u.b.)|Total value (NOK)|NOK per m³|Price volume (m³)' | plots: '5' | Diagnostics tabs: 0
   [PASS  ] Check 14: Selected logs preview (Scenario A, first 20), readable headers, CSV of all logs | label: 'Scenario A: the first 20 of 334 logs. Download all logs for the full table.' | preview rows: 20 | sorting/paging controls: 0 | logs in run: 334 | CSV rows 334, scenarios A | headers: Plot|Tree|Species|Assortment|StartPos|StopPos|Length (cm)|Length class (dm)|Top Ø over bark (mm)|Top Ø under bark (mm)|Diameter class (cm)|Price class used (cm)|Price (NOK/m³)|Price volume (m³)|Commercial volume u.b. (m³)|Value (NOK)
   [PASS  ] Check 15: Per m3 tab renders; Trees preview (Scenario A, first 20), selected tree's logs, CSV; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | label: 'Scenario A: the first 20 of 113 trees. Download all trees for the full table.' | preview rows: 20 of 113 | controls: 0 | headers: |Plot|Tree|Species|DBH (cm)|Height (m)|Height source|Logs|Value (NOK)|Commercial volume u.b. (m³)|NOK per m³ | CSV rows 113, scenarios A | log detail shown: TRUE | per-ha text hits: 0
-  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | grid columns per scenario: 2,2 | logs CSV: A 334, B 335 | trees CSV: A 113, B 113 | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded prices of Spruce sawlog from file2df05e8d4de.csv.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
+  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | grid columns per scenario: 2,2 | logs CSV: A 334, B 335 | trees CSV: A 113, B 113 | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded prices of Spruce sawlog from file37ac7906431c.csv.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
   [PASS  ] Check 17: Assortment removed from B only drops it from B's run | 'Removed Spruce pulpwood from Scenario B.' (B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | B's panel: 'Not in this scenario.
                           Add from A' | spruce pulpwood value A 1292, B 0 | back in B after Add from A: TRUE | error notifications: 0
   [PASS  ] Check 18: Stale notice after a price edit | after runs: '' / '' | after resetting B: 'Assortments or prices changed since this run.'
   [PASS  ] Check 19: No 'default'/'price set' in the page text | none found
   [PASS  ] Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed | form: removed fields present 0, backdrop filter 'none' | add: 'Added Spruce poles to both scenarios.', rows 7, selected: Spruce poles grid | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove from both: rows A 6, B 6
-  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'file2df07b92acb.csv: 12 trees, 12 within taperNOR's range.
+  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'file37ac735fa35.csv: 12 trees, 12 within taperNOR's range.
 Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). Thes' | banner: 'Heights: 
   Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height source column: TRUE | error notifications: 0
   [PASS  ] Check 26: Live tree counts in the sidebar match the run | box: '5 plots · 113 spruce trees Estimated run time: about 20 s' (run: 5 plots, 113 trees) | both species: '5 plots · 78 spruce · 9 pine trees Estimated run time: about 20 s' | back to spruce: same TRUE | tree list: '2 plots · 9 spruce · 3 pine trees Estimated run time: about 20 s'
+  [PASS  ] Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them | start 0-1100 m, labels inside the input edges by 0, 0 px (left, right) | 200-400 m: '5 plots · 47 spruce trees Estimated run time: about 20 s' (expected '5 plots · 47 spruce trees') | full range again: same as before TRUE, slider 0-1100 m
   [PASS  ] Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B | rows A: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | rows B: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | start marks 0 | B rule highlighted: A 1, B 1 | only in B: 1 (A shows 'Not in A': 1, A rows 7) | removed from B: 'Not in B' 1 | comparison tab TRUE, poles in products TRUE | Make assortment equal to B (spruce sawlog): 'Spruce sawlog is equal to Scenario B.' | after Scenario A downloaded and uploaded to B: 0 marks
   [PASS  ] Check 27: Tree and log figures render (single run and comparison) | single run: logs fig_log_lengths:959,fig_log_volume:959, trees fig_dbh:450,fig_height:450 | comparison: logs fig_log_lengths:959,fig_log_volume:959, trees fig_dbh:450,fig_height:450 (id:image width px)
   [PASS  ] Check 22: Screenshots saved for review | 18 of 18 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
-  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 113.6 s (threshold: 300 s)
+  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 106.6 s (threshold: 300 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 33
+1   PASS 35
 
   Verdict: PASS 
 ============================================================= 

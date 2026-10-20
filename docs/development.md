@@ -398,7 +398,7 @@ trees the run will buck (audit 17 check 4e). Don't reimplement it.
   to `species_group` and keeps only spruce and pine; broadleaves and other
   species are dropped before sanitization. They are never counted or bucked.
 - **Plots are selected by tree species, not by dominant species.** The
-  stratum filter (maturity class, site class, county) is applied to the
+  stratum filter (maturity class, site class, county, altitude) is applied to the
   trees of the chosen species group; a plot is eligible if it has at least
   one such tree. There is no dominant-species rule.
 - **Only trees of the chosen species are bucked.** With "Spruce", the pine
@@ -409,6 +409,16 @@ trees the run will buck (audit 17 check 4e). Don't reimplement it.
   counted even if all its trees fail it.
 - The app uses all eligible plots (`all_plots = TRUE`); scripts and audits
   can sample `n_plots` complete plots instead (seed 42).
+- **Altitude (`hoh`, m a.s.l.)** is a plot attribute (one value per plot,
+  integer, recorded to 5 m), already in the sanitized data; no Oracle
+  extraction or preparation script was changed for it. The sidebar slider
+  covers 0–1,100 m (`HOH_RANGE` in `app/setup.R`: all HKL 3–5 plots, 0–1,080
+  m, rounded out to the 50 m step). At the full range `build_run_params()`
+  sends no bounds (`selected_hoh()`), so the params are identical to those
+  without the filter; a narrowed range sends inclusive `hoh_min`/`hoh_max`,
+  and `select_nfi_trees()` then also excludes plots with missing altitude.
+  No plot has missing altitude (0 of 6,348 sanitized plots, 0 of 10,495 in
+  the raw extract; script 00 would drop them), so that rule is defensive.
 
 Default stratum (HKL 4, bonitet 11/14/17, all counties):
 
@@ -420,6 +430,17 @@ Default stratum (HKL 4, bonitet 11/14/17, all counties):
 
 655 plots have spruce, 477 have pine and 331 have both, so "Spruce and
 pine" adds 146 pine-only plots to the spruce plots.
+
+Altitude of the default stratum's plots (m a.s.l.; 2026-10-20):
+
+| Species group | Min | 5% | 25% | Median | 75% | 95% | Max |
+|---|---|---|---|---|---|---|---|
+| Spruce (655 plots) | 10 | 54 | 188 | 320 | 473 | 680 | 910 |
+| Spruce and pine (801 plots) | 5 | 50 | 170 | 305 | 465 | 690 | 910 |
+
+Spruce plots per 100 m band from 0 m: 63, 109, 117, 128, 103, 68, 38, 16,
+11, 2. The band 200–400 m keeps 301 of the 801 "Spruce and pine" plots
+(6,571 trees; audit 17 check 4f).
 
 ---
 

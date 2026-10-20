@@ -33,6 +33,11 @@
 #        e. live tree counts (layout-and-figures): select_nfi_trees() gives
 #           exactly the trees and plots prepare_sampled_job() bucks (all
 #           plots and a 5-plot sample, both species); tree_counts() text
+#        f. altitude filter: the full slider range gives the same params and
+#           trees as no slider; a narrowed band (200-400 m) gives fewer plots
+#           and trees, all inside it, and the run bucks the same trees;
+#           count_eligible_plots() matches a direct filter; a plot with
+#           missing altitude (synthetic) counts at the full range only
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
 #  6.  Layout: two tabs, "Assortments and prices" first and open, then
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
@@ -133,6 +138,10 @@
 # 27.  Figures: DBH and height densities (Trees card) and log length /
 #      top-diameter bars (Selected logs) render as images for a single run
 #      and after a comparison
+# 28.  Altitude slider: starts at the full range; its value labels stay
+#      within the other inputs' edges; 200-400 m changes the
+#      counts to select_nfi_trees() for that band; the full range restores
+#      the earlier text (check 12 then runs at the full range)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -361,6 +370,46 @@ if (!nzchar(helpers_err)) {
   }
   rec("Check 04e: Live tree counts select exactly the trees and plots the run bucks",
       if (ok_e) PASS else FAIL, paste(det_e, collapse = " | "))
+  # f. altitude filter: the full range is no filter (same params and trees as
+  #    without the slider); a narrowed band gives fewer plots and trees, all
+  #    inside it, and the run bucks the same trees; plots with missing
+  #    altitude count at the full range only
+  in_f   <- list(species_group = "both", hkl_group = "4",
+                 abonitet = c("11", "14", "17"), fylnr_sel = "__all__")
+  band_f <- c(200, 400)
+  p_none <- H$build_run_params(in_f)
+  p_full <- H$build_run_params(c(in_f, list(hoh_range = H$HOH_RANGE)))
+  p_band <- H$build_run_params(c(in_f, list(hoh_range = band_f)))
+  s_none <- select_nfi_trees(H$trees_meta, p_none)
+  s_full <- select_nfi_trees(H$trees_meta, p_full)
+  s_band <- select_nfi_trees(H$trees_meta, p_band)
+  job_f  <- tryCatch(prepare_sampled_job(p_band, root = root_dir), error = function(e) conditionMessage(e))
+  same_run_f <- is.list(job_f) &&
+    identical(sort(as.character(s_band$trees$treid)), sort(as.character(job_f$tree_data$treid)))
+  n_cnt_band <- H$count_eligible_plots(pp, c(41L, 42L), c(11L, 14L, 17L), NULL, band_f)
+  n_dir_band <- sum(pp$hogstkl %in% c(41L, 42L) & pp$abonitet %in% c(11L, 14L, 17L) &
+                    pp$hoh >= band_f[1L] & pp$hoh <= band_f[2L])
+  # synthetic NA altitude (the real data has none): one selected plot set to NA
+  tm_na  <- H$trees_meta
+  na_pl  <- s_full$plots[1L]
+  tm_na$hoh[tm_na$plot_id_github == na_pl] <- NA
+  na_full_in <- na_pl %in% select_nfi_trees(tm_na, p_full)$plots
+  na_band_in <- na_pl %in% select_nfi_trees(tm_na, H$build_run_params(
+    c(in_f, list(hoh_range = c(H$HOH_RANGE[1L], H$HOH_RANGE[2L] - 50)))))$plots
+  ok_f <- identical(p_full, p_none) && is.null(p_full$hoh_min) &&
+    identical(s_full$plots, s_none$plots) && identical(s_full$trees$treid, s_none$trees$treid) &&
+    identical(c(p_band$hoh_min, p_band$hoh_max), band_f) &&
+    length(s_band$plots) < length(s_full$plots) && nrow(s_band$trees) < nrow(s_full$trees) &&
+    nrow(s_band$trees) > 0L && all(s_band$trees$hoh >= band_f[1L] & s_band$trees$hoh <= band_f[2L]) &&
+    same_run_f && identical(n_cnt_band, n_dir_band) && na_full_in && !na_band_in
+  rec("Check 04f: Altitude filter: full range unchanged, narrowed band fewer plots and trees, missing altitude",
+      if (ok_f) PASS else FAIL,
+      sprintf("slider %s-%s m; full range: params identical %s, %d plots / %d trees (no slider: %d / %d) | %s-%s m: %d plots / %d trees, all inside %s, run same trees %s, count_eligible_plots %d vs direct %d | NA-altitude plot kept at full range %s, dropped when narrowed %s",
+              H$HOH_RANGE[1L], H$HOH_RANGE[2L], identical(p_full, p_none),
+              length(s_full$plots), nrow(s_full$trees), length(s_none$plots), nrow(s_none$trees),
+              band_f[1L], band_f[2L], length(s_band$plots), nrow(s_band$trees),
+              all(s_band$trees$hoh >= band_f[1L] & s_band$trees$hoh <= band_f[2L]),
+              same_run_f, n_cnt_band, n_dir_band, na_full_in, !na_band_in))
 } else {
   rec("Check 04: Pure app helpers", FAIL,
       paste("sourcing backend/app files failed:", helpers_err))
@@ -391,7 +440,8 @@ browser_checks <- c(
   "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B",
   "Check 25: Row selection, detail panel, selection synced between A and B, flat price field",
   "Check 26: Live tree counts in the sidebar match the run",
-  "Check 27: Tree and log figures render (single run and comparison)")
+  "Check 27: Tree and log figures render (single run and comparison)",
+  "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -722,6 +772,22 @@ if (!browser_ok) {
       c26$spruce <- counts_after(abonitet = "17")
       c26$both <- counts_after(species_group = "both")
       c26$back <- counts_after(species_group = "spruce")
+    })
+    # 28. Altitude slider: starts at the full range; a narrowed band changes
+    # the counts to exactly select_nfi_trees() for that band; the full range
+    # restores the earlier text (the run in check 12 then uses the full range).
+    c28 <- list()
+    # The value labels stay within the other inputs' edges (Run button).
+    edges28 <- function(app) js(app, paste0(
+      "(() => { const b = s => document.querySelector(s).getBoundingClientRect();",
+      " const r = b('#run_btn'), f = b('.irs--shiny .irs-from'), t = b('.irs--shiny .irs-to');",
+      " return [Math.round(f.left - r.left), Math.round(r.right - t.right)]; })()"))
+    e28 <- try_drv({
+      c28$start <- app$get_value(input = "hoh_range")
+      c28$edges_full <- edges28(app)
+      c28$band  <- counts_after(hoh_range = c(200, 400))
+      c28$full  <- counts_after(hoh_range = H$HOH_RANGE)
+      c28$end   <- app$get_value(input = "hoh_range")
     })
     num_of <- function(x, pat) suppressWarnings(as.integer(gsub(",", "", sub(pat, "\\1", regmatches(x, regexpr(pat, x, perl = TRUE))))))
     # 12. run with B = A (default selection: spruce, HKL 4; bonitet 17)
@@ -1069,6 +1135,21 @@ if (!browser_ok) {
         sprintf("box: '%s' (run: %s plots, %s trees) | both species: '%s' | back to spruce: same %s | tree list: '%s'%s",
                 gsub("\\s+", " ", trimws(c26$spruce)), plots_val, n_trees_run, gsub("\\s+", " ", trimws(c26$both)),
                 identical(c26$back, c26$spruce), gsub("\\s+", " ", trimws(c26$tl)), err_txt(e26)))
+    # 28. altitude slider (the app samples APTER_N_PLOTS plots, so the band is
+    # compared with the selection code's own text for that band)
+    in28  <- list(species_group = "spruce", hkl_group = "4", abonitet = "17", fylnr_sel = "__all__")
+    sel28 <- select_nfi_trees(H$trees_meta, H$build_run_params(
+      c(in28, list(hoh_range = c(200, 400))), n_plots = as.integer(Sys.getenv("APTER_N_PLOTS", "5"))))
+    exp28 <- H$tree_counts(sel28$trees$species_group, length(sel28$plots))$text
+    ok28 <- !nzchar(e28) && identical(as.numeric(c28$start), as.numeric(H$HOH_RANGE)) &&
+      grepl(exp28, c28$band, fixed = TRUE) && !identical(c28$band, c26$spruce) &&
+      identical(c28$full, c26$spruce) && identical(as.numeric(c28$end), as.numeric(H$HOH_RANGE)) &&
+      length(c28$edges_full) == 2L && all(unlist(c28$edges_full) >= 0)
+    rec(browser_checks[24], if (ok28) PASS else FAIL,
+        sprintf("start %s m, labels inside the input edges by %s px (left, right) | 200-400 m: '%s' (expected '%s') | full range again: same as before %s, slider %s m%s",
+                paste(c28$start, collapse = "-"), paste(unlist(c28$edges_full), collapse = ", "),
+                gsub("\\s+", " ", trimws(c28$band)), exp28,
+                identical(c28$full, c26$spruce), paste(c28$end, collapse = "-"), err_txt(e28)))
     # 24. Scenario B's own assortments (Phase 4d, independent scenarios)
     # B made equal to A as a user does it: download Scenario A, upload to B.
     a_to_b <- function(app) {
@@ -1143,7 +1224,7 @@ if (!browser_ok) {
         sprintf("%d of 18 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:18, 20:23)]) rec(ck, FAIL, "skipped: app did not start")
+    for (ck in browser_checks[c(2:18, 20:24)]) rec(ck, FAIL, "skipped: app did not start")
   }
   # 23. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])

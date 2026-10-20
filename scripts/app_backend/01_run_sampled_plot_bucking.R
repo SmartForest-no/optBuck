@@ -342,7 +342,9 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
 #'   Optional: all_plots (TRUE: every eligible plot, no sampling; the app,
 #'   Phase 4d), n_plots (default 10, max 50; ignored with all_plots), seed
 #'   (default 42),
-#'   fylnr (character vector or NULL), hoh_min, hoh_max (numeric or NULL),
+#'   fylnr (character vector or NULL), hoh_min, hoh_max (altitude in m,
+#'   numeric or NULL; inclusive, plot level, a set bound excludes plots with
+#'   missing altitude),
 #'   stump_height_cm (default 10), start_pos_step_cm (default 10).
 #' @param price_matrix_path "default_2021" (default) or a path to a CSV/RDS
 #'   file in PriceMatrix_long format.
