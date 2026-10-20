@@ -108,8 +108,8 @@ scenario_server <- function(input, output, session) {
 
   # One scenario's table: its own assortments only. Cells that differ from
   # the same assortment in the other scenario are highlighted (differences in
-  # fields only in the form mark the name), and rows not in the other
-  # scenario are highlighted as a whole. Columns cannot be sorted.
+  # fields only in the form mark the name). Rows the other scenario lacks
+  # are not highlighted. Columns cannot be sorted.
   render_asm <- function(side) renderReactable({
     d <- defs(side); o <- defs(other(side))
     disp <- asm_display(d, prices(side)); disp_o <- asm_display(o, prices(other(side)))
@@ -122,7 +122,7 @@ scenario_server <- function(input, output, session) {
       cell[i, ] <- unlist(disp[i, ]) != unlist(disp_o[j, ])
       if (any(rd$diff[i, HIDDEN_ASM_COLS])) cell[i, "Assortment"] <- TRUE
     }
-    cls <- ifelse(rd$status == "only", "asm-only", "")
+    cls <- rep("", nrow(d))   # rows the other scenario lacks are not shaded
     all_rows <- d
     ord <- asm_order(all_rows)
     disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
@@ -446,15 +446,22 @@ scenario_server <- function(input, output, session) {
     })
   })
   # The uploaded file is kept for the session (hpr Phase B bucks its stems
-  # later) in a folder of its own, removed when the session ends.
+  # later): moved out of Shiny's upload folder into a folder of the session's
+  # own, one file at a time (a new upload replaces it). When the session ends
+  # the folder and the upload folders are deleted.
   hpr_dir  <- file.path(tempdir(), paste0("apter_hpr_", session$token))
   hpr_kept <- reactiveVal(NULL)   # list(name, path, mb)
-  session$onSessionEnded(function() unlink(hpr_dir, recursive = TRUE))
+  hpr_uploads <- character(0)     # Shiny's upload folders of this session
+  session$onSessionEnded(function() unlink(c(hpr_dir, hpr_uploads), recursive = TRUE))
   observeEvent(input$hpr_file, {
     f <- input$hpr_file; req(f, hpr())
+    hpr_uploads <<- unique(c(hpr_uploads, dirname(f$datapath)))
+    unlink(hpr_dir, recursive = TRUE)                   # the previous upload
     dir.create(hpr_dir, showWarnings = FALSE, recursive = TRUE)
     kept <- file.path(hpr_dir, basename(f$name))
-    if (!isTRUE(file.copy(f$datapath, kept, overwrite = TRUE))) kept <- f$datapath
+    moved <- isTRUE(file.rename(f$datapath, kept)) ||
+      (isTRUE(file.copy(f$datapath, kept, overwrite = TRUE)) && isTRUE(file.remove(f$datapath)))
+    if (!moved) kept <- f$datapath
     hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
     data <- withProgress(message = sprintf("Reading %s...", f$name), value = 0.5,
                          read_hpr(kept, f$name))
@@ -462,6 +469,9 @@ scenario_server <- function(input, output, session) {
     hpr_err(NULL)
   })
   hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
+  # Test mode only (shinytest2): where the kept file is, so audit 17 can check
+  # that it is deleted when the session ends.
+  exportTestValues(hpr_kept_path = hpr_kept()$path)
   observe(updateActionButton(session, "hpr_apply", disabled = !isTRUE(hpr_data()$ok)))
 
   output$hpr_check <- renderUI({
@@ -580,8 +590,12 @@ scenario_server <- function(input, output, session) {
     g <- pm_to_grid(pm, id)
     has_other <- id %in% keys_of(do)[do$PriceType == "matrix"] &&
                  any(po$ProductKey == id & !is.na(po$LengthClass_dm))
+    # Compared only with the same assortment in the other scenario: if that
+    # scenario lacks it, nothing is highlighted (the grid is its own
+    # reference); if it prices it flat, every cell differs.
     def <- if (has_other) pm_default_aligned(po, pm, id)
-           else matrix(NA_real_, nrow(g), ncol(g))
+           else if (id %in% keys_of(do)) matrix(NA_real_, nrow(g), ncol(g))
+           else as.matrix(g)
     pm_widget(g, id, unname(def))
   })
   output$pm_a <- render_grid("A")
@@ -685,7 +699,8 @@ scenario_server <- function(input, output, session) {
       k <- selected(); req(k, sel_state(side) == "flat")
       o <- other(side); mine <- flat_price(side, k)
       theirs <- if (sel_state(o) == "flat") flat_price(o, k) else NA_real_
-      differs <- !isTRUE(all.equal(mine, theirs))
+      # Only an assortment both scenarios have can differ.
+      differs <- sel_state(o) != "none" && !isTRUE(all.equal(mine, theirs))
       session$sendCustomMessage("apter_toggle_class",
                                 list(id = paste0("flat_wrap_", s), cls = "is-diff", on = differs))
       span(class = paste("asm-flat-other", if (differs) "asm-diff"),

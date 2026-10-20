@@ -117,7 +117,7 @@
 # 23.  Total browser runtime under 300 s (REVIEW if above)
 # 24.  Scenario B's assortments (Phase 4d): a B rule change (spruce sawlog
 #      min top 14 cm) is highlighted on both sides; an assortment added to B
-#      only is highlighted in B and not listed in A; one removed from B only
+#      only is not listed in A and not highlighted in B; one removed from B only
 #      is not listed in B; Run -> comparison with B's products (poles); each
 #      table lists its own assortments in the fixed order (species, sawlog,
 #      pulpwood, waste, custom), no struck-through rows; "Make assortment equal to B" in A copies spruce sawlog;
@@ -145,7 +145,10 @@
 #      shows its error and Replace stays disabled; from B the fixture's
 #      species (pine, spruce, not used x2) and products (100 Energi
 #      unticked) are prefilled; Replace Scenario B closes the dialog, B holds
-#      the imported assortments, A is unchanged, differences are highlighted
+#      the imported assortments, A is unchanged, nothing is highlighted (the
+#      only shared assortments, Waste, are equal; B-only rows are not shaded)
+# 30.  The kept .hpr upload (path exported in test mode) exists during the
+#      session and is deleted, with its folder, when the session ends
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -446,7 +449,8 @@ browser_checks <- c(
   "Check 26: Live tree counts in the sidebar match the run",
   "Check 27: Tree and log figures render (single run and comparison)",
   "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them",
-  "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only")
+  "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only",
+  "Check 30: The kept .hpr upload is deleted when the session ends")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -1177,7 +1181,12 @@ if (!browser_ok) {
                      asm_min_top = 15, asm_min_len = 800, asm_max_len = 1200, asm_price = 900,
                      asm_both = FALSE, wait_ = FALSE)
       app$click("asm_save"); app$wait_for_idle()
-      n24$only_b <- js(app, "document.querySelectorAll('#tbl_asm_b .asm-only').length")
+      # The B-only row (Poles) is not highlighted: no highlighted row or cell.
+      n24$only_b <- js(app, paste0(
+        "Array.from(document.querySelectorAll('#tbl_asm_b .rt-tbody .rt-tr'))",
+        ".filter(function(r){ return r.textContent.indexOf('Poles') >= 0; })",
+        ".map(function(r){ return r.querySelectorAll('.asm-diff').length + r.querySelectorAll('.asm-only').length",
+        " + (r.classList.contains('asm-only') ? 1 : 0); }).reduce(function(a, b){ return a + b; }, 0)"))
       n24$a_rows <- n_tbl_rows(app, "tbl_asm_a")
       # pine pulpwood removed from B only
       pick(app, "b", "pine_pulpwood"); app$click("asm_remove_b"); app$wait_for_idle()
@@ -1208,14 +1217,14 @@ if (!browser_ok) {
     })
     ok24 <- !nzchar(paste0(e24, e24b)) && identical(n24$start, 0L) &&
       isTRUE(n24$diff_a >= 1L) && isTRUE(n24$diff_b >= 1L) &&
-      isTRUE(n24$only_b >= 1L) && identical(n24$a_rows, 6L) && identical(n24$struck, 0L) && cmp24 &&
+      identical(n24$only_b, 0L) && identical(n24$a_rows, 6L) && identical(n24$struck, 0L) && cmp24 &&
       identical(n24$rows_a, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine") &&
       identical(n24$rows_b, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Waste Pine") &&
       grepl("Spruce poles", prod24, fixed = TRUE) &&
       grepl("Value A", prod24, fixed = TRUE) && grepl("Spruce sawlog is equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | only in B highlighted: %s (A rows %s) | struck rows %s | comparison tab %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
+        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | B-only row highlighted (expected 0): %s (A rows %s) | struck rows %s | comparison tab %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
                 n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$a_rows, n24$struck,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
@@ -1274,17 +1283,36 @@ if (!browser_ok) {
       !grepl("Warning", c29$msg, fixed = TRUE) && !grepl("Not taken over", c29$dialog, fixed = TRUE) &&
       grepl("Only for lower quality grades", c29$dialog, fixed = TRUE) &&
       grepl("REDACTED23", c29$b_rows, fixed = TRUE) && !grepl("Sawlog Spruce", c29$b_rows, fixed = TRUE) &&
-      identical(c29$a_after, c29$a_before) && isTRUE(c29$marks > 0L) && identical(n_err_notif(app), 0L)
+      identical(c29$a_after, c29$a_before) && identical(c29$marks, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[25], if (ok29) PASS else FAIL,
         sprintf("from A: '%s'; broken file: '%s', Replace disabled %s | from B: species %s, ticked %s, Replace enabled %s | after Replace: dialog open %s, '%s' | B rows: %s | A unchanged %s | highlighted %s%s",
                 c29$title_a, substr(gsub("\\s+", " ", c29$err), 1, 80), c29$bad_disabled, c29$species,
                 c29$ticked, c29$ok_enabled, c29$open, substr(gsub("\\s+", " ", c29$msg), 1, 90),
                 substr(c29$b_rows, 1, 160), identical(c29$a_after, c29$a_before), c29$marks, err_txt(e29)))
+    # 30. The kept .hpr upload is deleted when the session ends: its path
+    # (exported in test mode) exists during the session; after the browser
+    # closes the session, the file and its folder are gone.
+    c30 <- list()
+    e30 <- try_drv({
+      c30$path <- app$get_values(export = TRUE)$export$hpr_kept_path
+      c30$during <- !is.null(c30$path) && file.exists(c30$path)
+      app$run_js("Shiny.shinyapp.$socket.close();")
+      for (i in 1:40) { if (!file.exists(or_default(c30$path, ""))) break; Sys.sleep(0.25) }
+      c30$after_file <- file.exists(or_default(c30$path, ""))
+      c30$after_dir <- dir.exists(dirname(or_default(c30$path, "")))
+    })
+    ok30 <- !nzchar(e30) && isTRUE(c30$during) && identical(c30$after_file, FALSE) &&
+      identical(c30$after_dir, FALSE)
+    rec(browser_checks[26], if (ok30) PASS else FAIL,
+        sprintf("kept file %s during the session: %s | after the session ended: file %s, folder %s%s",
+                basename(or_default(c30$path, "(none)")), c30$during,
+                if (isTRUE(c30$after_file)) "still there" else "deleted",
+                if (isTRUE(c30$after_dir)) "still there" else "deleted", err_txt(e30)))
     rec(browser_checks[18], if (length(shots) == 20L) PASS else REVIEW,
         sprintf("%d of 20 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:18, 20:25)]) rec(ck, FAIL, "skipped: app did not start")
+    for (ck in browser_checks[c(2:18, 20:26)]) rec(ck, FAIL, "skipped: app did not start")
   }
   # 23. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])

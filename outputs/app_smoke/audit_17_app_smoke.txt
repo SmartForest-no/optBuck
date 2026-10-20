@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: Shiny app headless smoke
-  Run: 2026-10-20 15:47:32.982478
+  Run: 2026-10-20 16:04:50.37612
 ============================================================= 
 
 --- 01. shinytest2 / chromote / Chrome ---
@@ -11,7 +11,7 @@
 
 --- 03. Root resolution ---
   [PASS  ] Check 03a: Env unset -> resolves to project root | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter' (expected 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter')
-  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/RtmpeuWlug/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
+  [PASS  ] Check 03b: APTER_ROOT = temp dir -> clear error | error: Project root 'C:/Users/leno/AppData/Local/Temp/11/Rtmpeo2QKf/audit17_not_a_root' (from APTER_ROOT) does not contain R/helpers_paths.R. Set APTER_ROOT to the project directory, or run shiny::runApp("app") from the project root.
   [PASS  ] Check 03c: APTER_ROOT = project root -> resolves | resolved 'S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter'
 
 --- 04. Pure app helpers ---
@@ -40,26 +40,27 @@
   [PASS  ] Check 13: Summary shows the nine fields; no Diagnostics tab | labels: 'Run time|Plots|Trees|Trees with logs|Logs|Commercial volume (m³ u.b.)|Total value (NOK)|NOK per m³|Price volume (m³)' | plots: '5' | Diagnostics tabs: 0
   [PASS  ] Check 14: Selected logs preview (Scenario A, first 20), readable headers, CSV of all logs | label: 'Scenario A: the first 20 of 334 logs. Download all logs for the full table.' | preview rows: 20 | sorting/paging controls: 0 | logs in run: 334 | CSV rows 334, scenarios A | headers: Plot|Tree|Species|Assortment|StartPos|StopPos|Length (cm)|Length class (dm)|Top Ø over bark (mm)|Top Ø under bark (mm)|Diameter class (cm)|Price class used (cm)|Price (NOK/m³)|Price volume (m³)|Commercial volume u.b. (m³)|Value (NOK)
   [PASS  ] Check 15: Per m3 tab renders; Trees preview (Scenario A, first 20), selected tree's logs, CSV; no per-ha text | per-m3 rows: 2 | assortment rows: 4 | Trees card starts closed: TRUE | label: 'Scenario A: the first 20 of 113 trees. Download all trees for the full table.' | preview rows: 20 of 113 | controls: 0 | headers: |Plot|Tree|Species|DBH (cm)|Height (m)|Height source|Logs|Value (NOK)|Commercial volume u.b. (m³)|NOK per m³ | CSV rows 113, scenarios A | log detail shown: TRUE | per-ha text hits: 0
-  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | grid columns per scenario: 2,2 | logs CSV: A 334, B 335 | trees CSV: A 113, B 113 | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded prices of Spruce sawlog from filef50438a17bba.csv.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
+  [PASS  ] Check 16: Comparison runs automatically when B differs | summary: 'Run time|Plots|Trees|Scenario A|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)|Scenario B|Total value (NOK)|Commercial volume (m³ u.b.)|NOK per m³|Price volume (m³)' | grid columns per scenario: 2,2 | logs CSV: A 334, B 335 | trees CSV: A 113, B 113 | highlighted cells B 234, A 234; cells differing in B's download: 351 | upload: 'Loaded prices of Spruce sawlog from filed01056e76bed.csv.' | comparison tab: TRUE | delta rows 1 | patterns: '4 of 113 trees changed their cutting pattern' | stem diagram: TRUE | error notifications: 0
   [PASS  ] Check 17: Assortment removed from B only drops it from B's run | 'Removed Spruce pulpwood from Scenario B.' (B products: pine_pulpwood,pine_sawlog,pine_waste,spruce_sawlog,spruce_waste) | selected in A: B panel hidden TRUE, row in B FALSE, struck rows 0 | spruce pulpwood value A 1292, B 0 | error notifications: 0
   [PASS  ] Check 18: Stale notice after a price edit | after runs: '' / '' | after resetting B: 'Assortments or prices changed since this run.'
   [PASS  ] Check 19: No 'default'/'price set' in the page text | none found
   [PASS  ] Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed | form: removed fields present 0, backdrop filter 'none' | add: 'Added Spruce poles to both scenarios.', rows 7, selected: Spruce poles grid | edit: 'Saved Spruce poles.', prices kept TRUE | selected in run: TRUE | reset: rows 7, base prices back TRUE | remove from both: rows A 6, B 5 (before: 5)
-  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'filef5047fab43b5.csv: 12 trees, 12 within taperNOR's range.
-Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). The' | banner: 'Heights: 
+  [PASS  ] Check 21: Uploaded tree list validates, runs and reports height sources | panel: 'filed010136b2a4.csv: 12 trees, 12 within taperNOR's range.
+Warning: Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). Thes' | banner: 'Heights: 
   Heights for 3 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independen' | Height source column: TRUE | error notifications: 0
   [PASS  ] Check 26: Live tree counts in the sidebar match the run | box: '5 plots · 113 spruce trees Estimated run time: about 20 s' (run: 5 plots, 113 trees) | both species: '5 plots · 78 spruce · 9 pine trees Estimated run time: about 20 s' | back to spruce: same TRUE | tree list: '2 plots · 9 spruce · 3 pine trees Estimated run time: about 20 s'
   [PASS  ] Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them | start 0-1100 m, labels inside the input edges by 0, 0 px (left, right) | 200-400 m: '5 plots · 47 spruce trees Estimated run time: about 20 s' (expected '5 plots · 47 spruce trees') | full range again: same as before TRUE, slider 0-1100 m
-  [PASS  ] Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B | rows A: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | rows B: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Waste Pine | start marks 0 | B rule highlighted: A 1, B 1 | only in B highlighted: 1 (A rows 6) | struck rows 0 | comparison tab TRUE, poles in products TRUE | Make assortment equal to B (spruce sawlog): 'Spruce sawlog is equal to Scenario B.' | after Scenario A downloaded and uploaded to B: 0 marks
+  [PASS  ] Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B | rows A: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine | rows B: Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Waste Pine | start marks 0 | B rule highlighted: A 1, B 1 | B-only row highlighted (expected 0): 0 (A rows 6) | struck rows 0 | comparison tab TRUE, poles in products TRUE | Make assortment equal to B (spruce sawlog): 'Spruce sawlog is equal to Scenario B.' | after Scenario A downloaded and uploaded to B: 0 marks
   [PASS  ] Check 27: Tree and log figures render (single run and comparison) | single run: logs fig_log_lengths:959,fig_log_volume:959, trees fig_dbh:450,fig_height:450 | comparison: logs fig_log_lengths:959,fig_log_volume:959, trees fig_dbh:450,fig_height:450 (id:image width px)
-  [PASS  ] Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only | from A: 'Import from .hpr into Scenario A'; broken file: 'The file cannot be imported: filef50417505c45.hpr is not a readable XML file.', Replace disabled TRUE | from B: species pine,spruce,none,none, ticked 111011, Replace enabled TRUE | after Replace: dialog open 0, 'Imported 5 assortments from hpr_example_synthetic.hpr into Scenario B.' | B rows: 154 Kubb Spruce 12–23.9 30 310–310 Solid volume Matrix | REDACTED25 Spruce 14.2–60 65 370–550 Norwegian mid Matrix | 197 Massevirke Spruce 4–70 70 300–52 | A unchanged TRUE | highlighted 20
+  [PASS  ] Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only | from A: 'Import from .hpr into Scenario A'; broken file: 'The file cannot be imported: filed0106ea236be.hpr is not a readable XML file.', Replace disabled TRUE | from B: species pine,spruce,none,none, ticked 111011, Replace enabled TRUE | after Replace: dialog open 0, 'Imported 5 assortments from hpr_example_synthetic.hpr into Scenario B.' | B rows: 154 Kubb Spruce 12–23.9 30 310–310 Solid volume Matrix | REDACTED25 Spruce 14.2–60 65 370–550 Norwegian mid Matrix | 197 Massevirke Spruce 4–70 70 300–52 | A unchanged TRUE | highlighted 0
+  [PASS  ] Check 30: The kept .hpr upload is deleted when the session ends | kept file hpr_example_synthetic.hpr during the session: TRUE | after the session ended: file deleted, folder deleted
   [PASS  ] Check 22: Screenshots saved for review | 20 of 20 screenshots in S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/app_smoke/screenshots
-  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 151.7 s (threshold: 300 s)
+  [PASS  ] Check 23: Browser runtime under 300 s | browser checks took 122.2 s (threshold: 300 s)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 36
+1   PASS 37
 
   Verdict: PASS 
 ============================================================= 

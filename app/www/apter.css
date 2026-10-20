@@ -222,9 +222,8 @@ details.apter-card { margin-bottom: 16px; }
   white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
 }
 .reactable .rt-th { display: flex; align-items: flex-end; }
-/* Assortment tables: rows only in this scenario and cells that differ from
-   the same assortment in the other scenario in pale green. */
-.reactable .asm-only { background: var(--apter-diff); }
+/* Assortment tables: cells that differ from the same assortment in the
+   other scenario in pale green (rows the other scenario lacks are not). */
 .reactable .asm-diff { background: var(--apter-diff); font-weight: 600; color: var(--apter-ink); }
 
 /* ---- notifications ---------------------------------------------------------- */

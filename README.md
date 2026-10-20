@@ -118,8 +118,8 @@ volume.
 **Two scenarios.** B starts as an exact copy of A; after that the two are
 independent and both can be edited. Each scenario lists only its own
 assortments. Values that differ from the same assortment in the other
-scenario are highlighted on both sides, and so are assortments that the
-other scenario does not have. Each
+scenario are highlighted on both sides; an assortment that only one
+scenario has is not highlighted. Each
 assortment's pricing (price matrix or flat price) is set per scenario, so,
 for example, spruce pulpwood can have a price matrix in A and a flat price in
 B. Selecting an assortment in one scenario selects it in the other too; if
