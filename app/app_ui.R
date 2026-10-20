@@ -56,7 +56,8 @@ scenario_column <- function(s) {
     div(class = "pm-actions",
       btn(paste0("asm_add_", s), "Add assortment", "btn-primary btn-sm"),
       btn(paste0("asm_reset_", s), "Reset to defaults"),
-      downloadButton(paste0("dl_scen_", s), "Download scenario (xlsx)", class = "btn-secondary btn-sm")),
+      downloadButton(paste0("dl_scen_", s), "Download scenario (xlsx)", class = "btn-secondary btn-sm"),
+      btn(paste0("hpr_import_", s), "Import from .hpr")),
     fileInput(paste0("scen_", s, "_upload"),
               "Upload scenario (xlsx), or a price file for all assortments (xlsx or CSV)",
               accept = c(".xlsx", ".csv"), width = "100%")

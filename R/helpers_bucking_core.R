@@ -147,6 +147,11 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
       rownames(ra) <- rownames(rb) <- rownames(la) <- rownames(lb) <- NULL
       lcols <- intersect(names(la), names(lb))
       if (!identical(ra, rb) || !identical(la[lcols], lb[lcols])) return(FALSE)
+      # Price-volume lengths (hpr imports; the column may be in one run only).
+      plen <- function(l) { p <- if ("PriceLength_cm" %in% names(l)) as.numeric(l$PriceLength_cm)
+                                  else rep(NA_real_, nrow(l))
+                            ifelse(is.na(p), as.numeric(l$LogLength), p) }
+      if (!identical(plen(la), plen(lb))) return(FALSE)
     }
     TRUE
   }

@@ -79,7 +79,8 @@ scenario_server <- function(input, output, session) {
 
 
   # ---- assortment tables ----------------------------------------------------
-  dash <- function(x) ifelse(is.finite(x), format(x, trim = TRUE), "–")
+  # Each value formatted on its own ("4", "14.2"; not "4.0" next to 14.2).
+  dash <- function(x) ifelse(is.finite(x), vapply(x, function(v) format(v, trim = TRUE), ""), "–")
   rng  <- function(lo, hi) ifelse(is.na(lo), "–",
                                   ifelse(is.finite(hi), sprintf("%s–%s", dash(lo), dash(hi)),
                                          sprintf("≥ %s", dash(lo))))
@@ -94,7 +95,7 @@ scenario_server <- function(input, output, session) {
       Pricing = ifelse(d$PriceType == "matrix", "Matrix", "Flat"),
       check.names = FALSE, stringsAsFactors = FALSE)
   }
-  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm")
+  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm")
 
   # Fixed row order, the same in both tables so rows line up: by species
   # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
@@ -279,6 +280,7 @@ scenario_server <- function(input, output, session) {
     same_pricing <- !is.null(old_row) && identical(old_row$PriceType, ptype)
     if (same_pricing && ptype == "matrix") {   # lengths stay the matrix columns
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm
+      rows$PriceLengths_cm <- old_row$PriceLengths_cm   # hidden (hpr imports); kept on edits
     }
     errs <- character(0); start <- NULL
     if (!same_pricing) {
@@ -426,6 +428,116 @@ scenario_server <- function(input, output, session) {
       sc[[side]]$defs(res$defs); sc[[side]]$pm(res$pm); redraw()
       say(side, "ok", sprintf("Loaded %s: %d assortment(s) with prices.", f$name, nrow(res$defs)), res$warnings)
     })
+  })
+
+  # ---- import from .hpr (R/helpers_hpr.R; hpr Phase A) ---------------------------
+  # A dialog per scenario: read the file, confirm each species group's
+  # species (guessed from its name) and the products to import (those
+  # without the best grade start unticked), then the file's products and
+  # prices replace this scenario's. The other scenario is not changed.
+  hpr <- reactiveVal(NULL)    # list(side, data = read_hpr() result, file)
+  hpr_err <- reactiveVal(NULL)
+  SP_CHOICES <- c("Spruce" = "spruce", "Pine" = "pine", "Not used" = "none")
+
+  hpr_modal <- function(side) modalDialog(
+    title = sprintf("Import from .hpr into Scenario %s", side),
+    size = "xl", easyClose = FALSE, fade = FALSE,
+    p(class = "note-muted", sprintf(paste(
+      "The products and price matrices of a StanForD 2010 .hpr file replace Scenario %s's",
+      "assortments and prices. Scenario %s is not changed."), side, other(side))),
+    fileInput("hpr_file", "Harvester production file (.hpr)", accept = ".hpr", width = "100%"),
+    uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
+    uiOutput("hpr_msg"),
+    footer = tagList(modalButton("Cancel"),
+                     actionButton("hpr_apply", sprintf("Replace Scenario %s", side),
+                                  class = "btn-primary", disabled = TRUE)))
+
+  for (side in c("A", "B")) local({
+    side <- side
+    observeEvent(input[[paste0("hpr_import_", low(side))]], {
+      hpr(list(side = side)); hpr_err(NULL); showModal(hpr_modal(side))
+    })
+  })
+  observeEvent(input$hpr_file, {
+    f <- input$hpr_file; req(f, hpr())
+    hpr(utils::modifyList(hpr(), list(data = read_hpr(f$datapath, f$name), file = f$name)))
+    hpr_err(NULL)
+  })
+  hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
+  observe(updateActionButton(session, "hpr_apply", disabled = !isTRUE(hpr_data()$ok)))
+
+  output$hpr_check <- renderUI({
+    d <- hpr_data(); req(d)
+    tagList(
+      if (length(d$errors)) div(class = "pm-msg-error", paste(c("The file cannot be imported:", d$errors),
+                                                              collapse = "\n")),
+      if (isTRUE(d$ok)) div(class = "hpr-summary", sprintf("%d species groups · %d products with prices",
+                                                           nrow(d$species), length(d$products))),
+      if (length(d$warnings)) div(class = "hpr-warn", paste("Warning:", d$warnings, collapse = "\n")))
+  })
+
+  # Species group key -> "spruce" / "pine" / "none": the dialog's choice,
+  # or the guess before the selects exist.
+  hpr_map <- reactive({
+    d <- hpr_data(); req(isTRUE(d$ok))
+    guess <- guess_hpr_species(d$species$name, d$species$user_id)
+    setNames(vapply(seq_len(nrow(d$species)), function(i)
+      or_default(input[[paste0("hpr_sp_", d$species$key[i])]], guess[i]), ""), d$species$key)
+  })
+
+  output$hpr_species <- renderUI({
+    d <- hpr_data(); req(isTRUE(d$ok))
+    guess <- guess_hpr_species(d$species$name, d$species$user_id)
+    tagList(
+      div(class = "section-hdr", "Species groups"),
+      tags$table(class = "hpr-table",
+        tags$thead(tags$tr(tags$th("Key"), tags$th("Species group"), tags$th("User ID"),
+                           tags$th("Products"), tags$th("Apter species"))),
+        tags$tbody(lapply(seq_len(nrow(d$species)), function(i) tags$tr(
+          tags$td(d$species$key[i]), tags$td(d$species$name[i]),
+          tags$td(or_default(d$species$user_id[i], "")), tags$td(d$species$n_products[i]),
+          tags$td(selectInput(paste0("hpr_sp_", d$species$key[i]), NULL, SP_CHOICES,
+                              isolate(or_default(input[[paste0("hpr_sp_", d$species$key[i])]], guess[i])),
+                              width = "130px")))))))
+  })
+
+  output$hpr_products <- renderUI({
+    d <- hpr_data(); req(isTRUE(d$ok))
+    tab <- hpr_product_table(d, hpr_map())
+    tagList(
+      div(class = "section-hdr", "Products"),
+      tags$table(class = "hpr-table",
+        tags$thead(tags$tr(tags$th("Import"), tags$th("Product"), tags$th("Species group"),
+                           tags$th("Species"), tags$th("Top Ø classes"), tags$th("Length classes (cm)"),
+                           tags$th("Forbidden cells"), tags$th(""))),
+        tags$tbody(lapply(seq_len(nrow(tab)), function(i) tags$tr(
+          class = if (!tab$default[i]) "hpr-off",
+          tags$td(class = "hpr-tick", if (tab$species[i] == "none") "–"
+                  else checkboxInput(paste0("hpr_pr_", tab$key[i]), NULL, tab$default[i], width = "auto")),
+          tags$td(tab$name[i]), tags$td(tab$group[i]),
+          tags$td(if (tab$species[i] == "none") "Not used" else tools::toTitleCase(tab$species[i])),
+          tags$td(class = "hpr-nowrap", tab$diameters[i]), tags$td(class = "hpr-nowrap", tab$lengths[i]),
+          tags$td(tab$forbidden[i]), tags$td(class = "note-muted", tab$reason[i]))))),
+      div(class = "note-muted", HPR_NOTE))
+  })
+  output$hpr_msg <- renderUI({
+    e <- hpr_err(); if (!is.null(e)) div(class = "pm-msg-error", paste(e, collapse = "\n"))
+  })
+
+  observeEvent(input$hpr_apply, {
+    h <- hpr(); d <- h$data; req(isTRUE(d$ok)); side <- h$side
+    map <- hpr_map()
+    tab <- hpr_product_table(d, map)
+    keep <- tab$key[tab$species != "none" &
+                    vapply(tab$key, function(k) isTRUE(input[[paste0("hpr_pr_", k)]]), logical(1))]
+    if (length(keep) == 0L) return(hpr_err("Tick at least one product to import."))
+    res <- hpr_to_scenario(d, map, keep, base_defs = APP_DEFS)
+    if (!isTRUE(res$ok)) return(hpr_err(c(sprintf("%s was not imported:", h$file), res$errors)))
+    if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
+    selected(keys_of(res$defs)[asm_order(res$defs)][1L])
+    redraw(); removeModal()
+    say(side, "ok", sprintf("Imported %d assortment(s) from %s into Scenario %s (replaced).",
+                            sum(res$defs$Type != "waste"), h$file, side), res$warnings)
   })
 
   msg_ui <- function(m) {

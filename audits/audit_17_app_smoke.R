@@ -142,6 +142,11 @@
 #      within the other inputs' edges; 200-400 m changes the
 #      counts to select_nfi_trees() for that band; the full range restores
 #      the earlier text (check 12 then runs at the full range)
+# 29.  Import from .hpr (hpr Phase A): the dialog opens from A; a broken file
+#      shows its error and Replace stays disabled; from B the fixture's
+#      species (pine, spruce, not used x2) and products (100 Energi
+#      unticked) are prefilled; Replace Scenario B closes the dialog, B holds
+#      the imported assortments, A is unchanged, differences are highlighted
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -441,7 +446,8 @@ browser_checks <- c(
   "Check 25: Row selection, detail panel, selection synced between A and B, flat price field",
   "Check 26: Live tree counts in the sidebar match the run",
   "Check 27: Tree and log figures render (single run and comparison)",
-  "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them")
+  "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them",
+  "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -1220,11 +1226,63 @@ if (!browser_ok) {
     rec(browser_checks[23], if (ok27) PASS else FAIL,
         sprintf("single run: logs %s, trees %s | comparison: logs %s, trees %s (id:image width px)%s",
                 c27$logs1, c27$trees1, c27$logs2, c27$trees2, err_txt(e27)))
-    rec(browser_checks[18], if (length(shots) == 18L) PASS else REVIEW,
-        sprintf("%d of 18 screenshots in %s", length(shots), shot_dir))
+    # 29. Import from .hpr (last: it replaces Scenario B). The dialog opens
+    # from A; a broken file shows its error and cannot be applied; from B
+    # the fixture's species and products are prefilled, and Replace
+    # Scenario B changes B only.
+    c29 <- list()
+    own_rows <- function(app, s) js(app, sprintf(paste0(
+      "Array.from(document.querySelectorAll('#tbl_asm_%s .rt-tbody .rt-tr'))",
+      ".filter(function(r){ return !r.classList.contains('asm-none'); })",
+      ".map(function(r){ return r.innerText.replace(/\\s+/g, ' ').trim(); }).join(' | ')"), s))
+    cancel <- function(app) {
+      app$run_js("document.querySelector('.modal-footer [data-bs-dismiss], .modal-footer [data-dismiss]').click()")
+      app$wait_for_idle()
+    }
+    e29 <- try_drv({
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      c29$a_before <- own_rows(app, "a")
+      app$click("hpr_import_a"); app$wait_for_idle()
+      c29$title_a <- txt(app, ".modal-title")
+      bad <- tempfile(fileext = ".hpr"); writeLines("not an hpr file", bad)
+      app$upload_file(hpr_file = bad); app$wait_for_idle()
+      c29$err <- txt(app, "#hpr_check")
+      c29$bad_disabled <- isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
+      cancel(app)
+      app$click("hpr_import_b"); app$wait_for_idle()
+      c29$title_b <- txt(app, ".modal-title")
+      app$upload_file(hpr_file = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+      app$wait_for_idle()
+      c29$species <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_species select'))",
+                                    ".map(function(s){ return s.value; }).join(',')"))
+      c29$ticked <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_products input[type=checkbox]'))",
+                                   ".map(function(c){ return c.checked ? 1 : 0; }).join('')"))
+      c29$ok_enabled <- !isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
+      shoot(app, "11_hpr_import_dialog")
+      app$click("hpr_apply"); app$wait_for_idle()
+      c29$open <- js(app, "document.querySelectorAll('.modal.show').length")
+      c29$msg <- txt(app, "#msg_b")
+      c29$b_rows <- own_rows(app, "b"); c29$a_after <- own_rows(app, "a")
+      c29$marks <- marks(app)
+      shoot(app, "12_scenario_B_after_hpr_import")
+    })
+    ok29 <- !nzchar(e29) && grepl("Scenario A", c29$title_a, fixed = TRUE) &&
+      grepl("not a readable XML", c29$err, fixed = TRUE) && c29$bad_disabled &&
+      grepl("Scenario B", c29$title_b, fixed = TRUE) && identical(c29$species, "pine,spruce,none,none") &&
+      identical(c29$ticked, "111011") && c29$ok_enabled && identical(c29$open, 0L) &&
+      grepl("Imported 5 assortment(s)", c29$msg, fixed = TRUE) &&
+      grepl("REDACTED23", c29$b_rows, fixed = TRUE) && !grepl("Sawlog Spruce", c29$b_rows, fixed = TRUE) &&
+      identical(c29$a_after, c29$a_before) && isTRUE(c29$marks > 0L) && identical(n_err_notif(app), 0L)
+    rec(browser_checks[25], if (ok29) PASS else FAIL,
+        sprintf("from A: '%s'; broken file: '%s', Replace disabled %s | from B: species %s, ticked %s, Replace enabled %s | after Replace: dialog open %s, '%s' | B rows: %s | A unchanged %s | highlighted %s%s",
+                c29$title_a, substr(gsub("\\s+", " ", c29$err), 1, 80), c29$bad_disabled, c29$species,
+                c29$ticked, c29$ok_enabled, c29$open, substr(gsub("\\s+", " ", c29$msg), 1, 90),
+                substr(c29$b_rows, 1, 160), identical(c29$a_after, c29$a_before), c29$marks, err_txt(e29)))
+    rec(browser_checks[18], if (length(shots) == 20L) PASS else REVIEW,
+        sprintf("%d of 20 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:18, 20:24)]) rec(ck, FAIL, "skipped: app did not start")
+    for (ck in browser_checks[c(2:18, 20:25)]) rec(ck, FAIL, "skipped: app did not start")
   }
   # 23. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])

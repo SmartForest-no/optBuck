@@ -19,6 +19,8 @@ optimizer finds the cutting pattern that maximizes total timber value. It is
 for comparing price matrices and planning bucking, not an inventory or
 estimation tool. Trees come from sanitized NFI data (all plots of the selected
 stratum) or an uploaded tree list (Phase 5); stem profile import is planned.
+Products and prices can be imported from StanForD 2010 .hpr files into a
+scenario (hpr Phase A); bucking .hpr stems is planned (hpr Phase B).
 A Shiny app (`app/`) exposes the pipeline. **The app shows the name
 "optBuck"** (title, navbar, browser tab, download file names; Phase 4d,
 `APP_DISPLAY_NAME` in `app/helpers_ui.R`). The repository, paths, code and
@@ -64,11 +66,19 @@ docs keep the name Apter.
 | Tree-list heights | measured heights kept exactly. Missing heights per species: **≥ 10 measured** (`HEIGHT_MIN_MEASURED_PER_SPECIES`; 10 chosen from a synthetic test, 49/50 fits within 2 m) → fieldPlot `fitHD_Plot()` (Näslund, plot random effect; plot-level prediction where the plot has measured heights of the species, else the species curve `level = 0`), `fitHD()` (nls) with < 2 plots, an error or the time limit; **1–9** → FinnHoyde × ratio, ratio = Σh_measured / ΣFinnHoyde(d) over that species' measured trees (NFI tariff method; warning outside 0.7–1.3); **none** → FinnHoyde uncalibrated with the site-independence warning. Each tree reports `height_source` (NFI trees: "NFI") (decided 2026-10-13) | `R/helpers_heights.R`; audit 21 checks 1–4 |
 | FinnHoyde curves | spruce d < 15: 1.3 + 0.6d (Eid & Fitje 1993), d ≥ 15: −14.17 + 20.86·log10(d) (Fitje & Vestjordet 1977); pine d < 10: 1.3 + 0.65456d (Eid & Fitje 1993), 10 ≤ d < 35: 0.39 + 0.852d − 0.010644d² (Vestjordet 1968), d ≥ 35: 13.35 + 0.107d (Eid & Fitje 1993); d cm, h m | `finnhoyde_height()`; audit 21 check 1 |
 | nlme time limit | 30 s per species fit (`HEIGHT_FIT_TIMEOUT_S`), enforced by Apter with `setTimeLimit()`; fieldPlot's own `timeout` is passed as `Inf` because it never interrupts nlme. fitHD_Plot() catches the time-limit error and returns its nls fallback, so a timeout is recognised by elapsed time | `R/helpers_heights.R`; audit 21 check 4 |
+| hpr import (Phase A, 2026-10-20) | "Import from .hpr" per scenario **replaces** that scenario's assortments and prices (the other is untouched), after a dialog that confirms each species group's species and the products to import. Parser ported from optBuck's getters onto xml2 (read, not vendored; no optBuck dependency). Each product → one **matrix-priced** row per mapped species (+ the base Waste row per species, 0 NOK/m³); min top = `DiameterMINTop`, max top = `DiameterClassMAX`, max butt = `DiameterMAXButt` (mm ÷ 10, may be e.g. 14.2 cm), min butt 0; `DiameterTopPosition` kept; volume method Top / Calculated Norwegian mid / All diameters (solid volume) mapped 1:1, any other → solid volume + warning; Type from ProductGroupName (Tømmer/Sag* → sawlog, Massevirke/Energi → pulpwood, else `custom_type()`). Under-bark flags false, other volume rounding/length rules, margins: warnings (all limits read under bark). Errors block (not XML, wrong root/message type, units other than mm/cm, no Machine, duplicate keys, no groups/products, no group mapped, scenario fails `check_price_set()`); partial problems are warnings | `R/helpers_hpr.R`, `app/server_scenarios.R`; audits 25, 17 check 29 |
+| hpr lengths and cells | **Length classes round UP** to whole dm (365 → 37 dm: the log stays in its class; optBuck floors, 360); a class with no whole-dm length below the next class (or LengthClassMAX) is dropped. Diameter rows: whole cm from the first to the last priced class, row c = the largest file class ≤ c·10 mm (so 20.7–20.99 cm gets the 190 mm price; warning). **"Forbidden to buck the log even manually" cells are left empty** (never chosen; optBuck ignores BuckingCriteria); "Only logs bucked manually allowed" stays priced; fully forbidden end classes narrow min/max top; a fully forbidden inner class stays as **empty rows** (NA prices, never chosen; warning). `pm_drop_empty_cells()` keeps a whole empty class in the grid, scenario files and uploads so classes stay consecutive (a class missing altogether is still a gap error); partly empty rows drop their empty cells as before (decided 2026-10-20) | `.hpr_grid()`; audit 25 checks 6–7, 13 |
+| hpr price length | Products whose file says "Length as defined in LengthClasses" (not solid volume) price their volume on the **class lower limit**, not the cut (cut 370 → priced on 365; the extra length is unpaid trim, as in StanForD). Hidden assortment field `PriceLengths_cm` (comma-separated limits; empty for everything else) → `LengthClasses$PriceLength_cm`, added only when some row has it, so base tables and all baselines are unchanged; kept on edits and in scenario files; `.prepare_runs()` treats a different price length as a different definition (decided 2026-10-20) | `price_lengths()` in `R/helpers_products.R`, `price_len_of()` in `R/helpers_candidate_generation.R`; audit 25 checks 8, 11–12 |
+| hpr species and grades | Species guessed from SpeciesGroupName + SpeciesGroupUserID letter tokens: prefixes gran/spruce/picea/kuusi/fichte → spruce, furu/fura/tall/pine/pinus/mänty/kiefer → pine; none or both → Not used; the user confirms. Several groups → one species: their products all become that species' rows (a duplicate name gets " (GROUP)"), warning that stems can then take either group's products. Best grade = the lowest GradeNumber of the product's group; products whose PermittedGradeNumber lacks it start **unticked** (stems are defect-free); products without permitted grades are kept. Grades are otherwise ignored | `guess_hpr_species()`, `hpr_best_grade_ok()`; audit 25 checks 3–4 |
 
 ## Known out-of-scope items (don't assume these are bugs)
 
-- No HPR/StanForD import — trees come from NFI data or uploaded tree lists
-  (stem profile import is planned, phase 6)
+- .hpr files: only products, prices and species groups are imported (hpr
+  Phase A, 2026-10-20; reverses the earlier "no HPR/StanForD import").
+  Stems from .hpr files are not bucked yet (hpr Phase B, planned); trees
+  come from NFI data or uploaded tree lists (CSV stem profile import is
+  planned, phase 6). Quality grades are out of scope except the best-grade
+  product filter
 - No per-ha, plot-level, stratum or NFI-expansion outputs: results describe
   the selected trees only (plots are only how NFI trees are sampled). Never
   reintroduce per-ha values; audits 16 (check 10) and 17 (check 16) fail on them
@@ -90,7 +100,12 @@ Recorded so far: price-volume methods follow optBuck's `PriceVolumeCalc.R`
 StanForD categories, with two deliberate departures — the frustum taper is
 1 cm/m (optBuck had 0.01), and Norwegian mid fixes optBuck's units and uses
 the Målereglement's 3.14 (see the accepted assumptions). Apter's solid
-volume stays its own rule, not optBuck's "All diameters".
+volume stays its own rule, not optBuck's "All diameters". The .hpr import
+(2026-10-20) follows optBuck's getters with four departures: min/max top and
+max butt from `DiameterMINTop` / `DiameterClassMAX` / `DiameterMAXButt`,
+length classes rounded up (optBuck floors), forbidden cells empty (optBuck
+ignores BuckingCriteria), and the class lower limit as price length without
+optBuck's `PriceVolumeCalc()` off-by-one.
 
 ## Data privacy — read before touching plot/coordinate data
 
@@ -116,6 +131,16 @@ access, writes nothing into the repository, and its output rows carry no
 plot IDs of any kind. It is not used by the app or the pipeline, and it does
 not make coordinates available for features: a map or location feature is
 still out of bounds.
+
+**.hpr files carry exact stem coordinates and personal names** (StemCoordinates
+with WGS84 latitude/longitude, ObjectName, operators, contacts). The parser
+(`R/helpers_hpr.R`) must never read those elements, and no real .hpr file goes
+into the repository (optBuck's `example.hpr` included). Tests use
+`inputs/test_fixtures/hpr_example_synthetic.hpr`, built by
+`scripts/make_hpr_test_fixture.R` from a whitelist (species groups, products,
+prices) plus one invented stem; that script refuses to write a file containing
+coordinate or contact fields. Phase B (bucking .hpr stems) must keep stem
+coordinates out of every result table.
 
 ## Architecture notes
 
@@ -230,6 +255,14 @@ still out of bounds.
   plot ID goes in the `plot_id_github` column so the comparison and app code
   stay shared (it is the user's data, not an NFI plot ID). Stem-profile ends:
   candidates never end past the profile (heights that are not whole dm).
+- **hpr import (Phase A):** `R/helpers_hpr.R` (sourced by the backend):
+  `read_hpr()` → `hpr_product_table()` (the dialog's rows and default ticks)
+  → `hpr_to_scenario()` (defs + prices, `check_price_set()`). The dialog is in
+  `scenario_server()` (`hpr_import_a/b`, `hpr_file`, `hpr_sp_<key>`,
+  `hpr_pr_<key>`, `hpr_apply`) and ends in `commit()`, like a scenario upload.
+  Phase B (".hpr stems" as a third Simulator source, never selected
+  automatically; stump 0 because position 0 is the felling cut) is planned in
+  PLAN.md; nothing of it is built.
 - **fieldPlot is a dependency, not vendored.** Use only its exported
   `fitHD_Plot()` / `fitHD()` through `impute_heights()`. Don't call
   `predictMissingHeights()`: it always fits species codes 1–3 and errors

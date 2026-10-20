@@ -7,7 +7,8 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 ## Scope
 
 - Apter is a general bucking simulator for Norway spruce and Scots pine, for industry partners: compare and improve price matrices and plan bucking. It is not an inventory or estimation tool, and NFI is not emphasised.
-- Tree sources: NFI data (all plots of a stratum), uploaded tree lists, and (Phase 6) uploaded stem profiles. Results describe the selected trees only. No per-ha, plot-level or stratum outputs.
+- Tree sources: NFI data (all plots of a stratum), uploaded tree lists, (hpr Phase B) stems from .hpr files and (Phase 6) uploaded stem profiles. Results describe the selected trees only. No per-ha, plot-level or stratum outputs.
+- Assortments and prices: the base set, user-added assortments, scenario and price files, and (hpr Phase A) products and prices imported from .hpr files.
 - Values are NOK per m³ of commercial solid volume under bark (definition in CLAUDE.md).
 - Deployment: NIBIO Linux server with many cores; testing on Lennart's remote desktop.
 
@@ -28,6 +29,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | Restyle | Option 3 "Combination" look |
 | Layout and figures | One flow per scenario card with a shared selection; live tree counts from the run's own selection code; ggplot2 tree and log figures; light grey page behind white cards |
 | Altitude filter | Altitude range slider (m a.s.l., 50 m step) as an NFI selection variable |
+| hpr Phase A | Import from .hpr per scenario: StanForD 2010 products, price matrices and species groups into Scenario A or B |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -75,9 +77,28 @@ Built on branch `layout-and-figures` and merged into main. Interface work; resul
 3. **Filter.** Plot level, inside `select_nfi_trees()`, combined with the other strata; inclusive bounds. At the full range the app sends no bounds, so params and results are identical to before (plots with missing altitude stay in); a narrowed range excludes them. "No plots match this selection." also covers an empty altitude band.
 4. **Audit 17.** Check 4f (full range identical to no filter; 200–400 m gives fewer plots and trees, all inside the band, and the run bucks the same trees; synthetic missing altitude) and check 28 (the slider in the browser).
 
+## hpr Phase A: import products and prices from .hpr (done, 2026-10-20, branch `hpr-import`)
+
+Reverses the earlier "Reading StanForD .hpr files is out of scope". Decisions in CLAUDE.md (accepted assumptions "hpr …").
+
+1. **Parser.** `R/helpers_hpr.R` on xml2, ported from optBuck's getters (no dependency): species groups, classified products (limits, length and diameter classes, volume rules, permitted grades, price cells with BuckingCriteria), and a stem index for Phase B. Never reads coordinates, dates, operators, object names or contacts.
+2. **Import from .hpr** per scenario (Assortments and prices tab): a dialog with the file's validation (errors block, warnings listed), a species table (Spruce / Pine / Not used, guessed from the group name and ID) and a product table (products without the best grade start unticked). "Replace Scenario A/B" replaces that scenario only.
+3. **Mapping.** One matrix-priced assortment per product and species, plus Waste per species; limits from DiameterMINTop / DiameterClassMAX / DiameterMAXButt; length classes rounded up to whole dm; forbidden cells empty; whole-cm diameter rows; a fully forbidden inner diameter class stays as empty rows (never chosen; `pm_drop_empty_cells()` keeps whole empty classes in grids, scenario files and uploads).
+4. **Price length.** Products priced on "Length as defined in LengthClasses" use the class lower limit as price-volume length (hidden `PriceLengths_cm`; base tables unchanged).
+5. **Audits.** New audit 25 (13 checks, synthetic fixture `inputs/test_fixtures/hpr_example_synthetic.hpr`); audit 17 check 29 (dialog from A and B, broken file blocked, prefilled species and products, Replace Scenario B changes B only).
+
+## hpr Phase B: bucking .hpr stems (planned)
+
+- ".hpr stems" as a third Data source in the Simulator, **never selected automatically** (also not after an import into a scenario). Its panel: file input (offering the file imported this session), validation, and the species table (prefilled from the import's confirmed map).
+- `hpr_stem_profiles()`: per stem with `StemDiameters`, the over-bark profile (diameterPosition, DiameterValue), DBH from the file (at DBHHeight), height = profile end; tree key = StemKey, no plot. Positions not on the 10 cm grid are interpolated.
+- `prepare_hpr_job()` / `run_hpr_bucking()`: profiles → `profiles_to_profile_vectors()` → `add_under_bark_profile()` (barkNOR with the file's DBH) → `.new_job("hpr", …, stump_cm = 0)`, because position 0 is the felling cut; then `buck_job()` / `finish_job()` and a `.result_hpr()` like `.result_tree_list()`. Candidates never end past the profile.
+- Stem validation. Errors: no Stem with StemDiameters, or none left after mapping. Warnings: under-bark profiles, multi-tree or diameter-less stems, stems of Not-used species (excluded, counts), off-grid positions (interpolated), missing DBH (read from the profile), diameters above 1,500 mm (likely unit error). Stem grades and the recorded logs are ignored (one note).
+- Privacy: stem coordinates, dates and operators are never read; no coordinate-like column in any result.
+- Audits: stems → profiles, stump 0, a run with logs inside the profile, the third source in audit 17 (not auto-selected, runs).
+
 ## Phase 6: stem profile import
 
-- Long format (CSV or xlsx): `tree_id`, `species` (spruce/pine), `height` (m along the stem), `diameter` (cm, over bark), optional `plot_id`. Downloadable template. Reading StanForD .hpr files is out of scope.
+- Long format (CSV or xlsx): `tree_id`, `species` (spruce/pine), `height` (m along the stem), `diameter` (cm, over bark), optional `plot_id`. Downloadable template. (.hpr stems are hpr Phase B.)
 - Profiles are over bark. Under-bark diameters with barkNOR (B ≥ 0 floor); dbh is read from the profile at 1.3 m.
 - Interpolate to the 10 cm grid and feed the profiles straight into candidate generation, bypassing taperNOR.
 - Non-monotonic profiles are valid: no warnings or errors for local diameter increases.
@@ -89,5 +110,11 @@ Built on branch `layout-and-figures` and merged into main. Interface work; resul
 
 - **Sensitivity tool** (undecided): show how cutting patterns and NOK/m³ respond to ±x % changes in a price cell or assortment. A price-matrix optimiser would need an explicit objective (e.g. target volume shares), to be defined by Lennart first.
 - **Negative pine bark in barkNOR:** the B ≥ 0 floor is provisional; ask the taperNOR authors whether the pine behaviour near the top is intended and whether Hansen et al. (2023) refitted the coefficients.
+- **optBuck fixes** (Lennart's package, found while porting the .hpr parser, 2026-10-20; Apter's own parser already avoids them):
+  - `getProductData()` takes the minimum top diameter from the first `DiameterClassLowerLimit` instead of `DiameterMINTop` (example.hpr REDACTED23: 130 instead of 140 mm).
+  - The maximum top diameter is lost: the column named `DiameterClassMAX` holds `DiameterMAXButt`, so `buckStem()` limits the top diameter by the butt limit (600 instead of 500 mm).
+  - `BuckingCriteria` is ignored: cells marked "Forbidden to buck the log even manually" stay priced and can be chosen (35 of 126 cells in REDACTED23, several priced 200 as placeholders).
+  - `PriceVolumeCalc()` off-by-one: `LengthClass[max(which(LogLength > LengthClass))]` gives a log cut exactly at a class's lower limit the previous class's length (should be `>=`).
+  - `buckStem()` uses its own 1 cm/m frustum for every product, whatever the product's volume method, and floors length classes to 10 cm (365 → 360, below the class's lower limit).
 - **fieldPlot fixes** (Lennart's package, separate session): loop over species present; error handling around the fitHD() fallback; a working timeout; species curve for plots without heights; nlme:: calls; README install URL. Apter's wrapper works around these meanwhile.
 - **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores.

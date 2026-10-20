@@ -116,7 +116,20 @@ pm_to_grid <- function(pm, id) {
   out <- data.frame(ProductKey = id, LengthClass_dm = d$LengthClass_dm,
                     PriceDiameterClass_cm = d$PriceDiameterClass_cm,
                     PriceNOKperM3 = as.numeric(m), stringsAsFactors = FALSE)
-  out[!is.na(out$PriceNOKperM3), , drop = FALSE]
+  pm_drop_empty_cells(out)
+}
+
+#' Drop the empty (NA-price) cells of matrix rows, except where a whole
+#' diameter class is empty: that class keeps its rows with NA prices (an
+#' "empty row", e.g. a class forbidden in an .hpr file), so the classes stay
+#' consecutive and the class is never chosen (its lookup is NA, unpriced).
+#' A class missing altogether is still a gap (validate_scenario_pm()).
+pm_drop_empty_cells <- function(long) {
+  na <- is.na(long$PriceNOKperM3)
+  if (!any(na)) return(long)
+  cls <- paste(long$ProductKey, long$PriceDiameterClass_cm)
+  all_na <- tapply(na, cls, all)
+  long[!na | unname(all_na[cls]), , drop = FALSE]
 }
 
 #' Write a grid back into a (minimal) long price matrix, replacing that
@@ -303,7 +316,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, "Type"), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm")), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]
@@ -594,7 +607,7 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
   long <- data.frame(ProductKey = id, LengthClass_dm = as.integer(lens[d$c]),
                      PriceDiameterClass_cm = as.integer(diams[d$r]),
                      PriceNOKperM3 = vals[cbind(d$r, d$c)], stringsAsFactors = FALSE)
-  list(long = long[!is.na(long$PriceNOKperM3), , drop = FALSE], id = id, errors = character(0))
+  list(long = pm_drop_empty_cells(long), id = id, errors = character(0))
 }
 
 #' Read an uploaded price file; detect long or wide layout.

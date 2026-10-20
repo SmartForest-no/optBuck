@@ -121,8 +121,15 @@ products_for_species <- function(species_group, ProductData = NULL) {
     min_len <- or_default(prow$MinLength, 0L)
     max_len <- or_default(prow$MaxLength, Inf)
     ok <- lc_sp$ProductKey == pk & lc_sp$LogLength >= min_len & lc_sp$LogLength <= max_len
+    # Price-volume length per allowed length (hpr imports: the class lower
+    # limit, LengthClasses$PriceLength_cm); NULL = the cut length.
+    price_len <- if ("PriceLength_cm" %in% names(lc_sp)) {
+      pl <- as.numeric(lc_sp$PriceLength_cm[ok]); cut <- as.numeric(lc_sp$LogLength[ok])
+      pl[is.na(pl)] <- cut[is.na(pl)]
+      if (isTRUE(all(pl == cut))) NULL else pl
+    }
     list(pk = pk, product_type = prow$ProductType,
-         lengths = lc_sp$LogLength[ok],
+         lengths = lc_sp$LogLength[ok], price_len = price_len,
          min_len = min_len, max_len = max_len,
          min_top = or_default(prow$MinTopDiameter, 0), max_top = or_default(prow$MaxTopDiameter, Inf),
          min_butt = or_default(prow$MinButtDiameter, 0), max_butt = or_default(prow$MaxButtDiameter, Inf),
@@ -137,6 +144,12 @@ products_for_species <- function(species_group, ProductData = NULL) {
        needs_ub = "DiameterUnderBark" %in% names(pd_sp) &&
          any(as.logical(pd_sp$DiameterUnderBark) %in% TRUE))
 }
+
+#' Price-volume length (cm) of a product's candidates: the cut length, or
+#' for hpr-imported products the length class's lower limit
+#' (plan product $price_len, aligned with $lengths).
+price_len_of <- function(p, log_len)
+  if (is.null(p$price_len)) log_len else p$price_len[match(log_len, p$lengths)]
 
 #' Candidate-generation parameters for every species of a run, built once.
 #'
@@ -266,7 +279,7 @@ products_for_species <- function(species_group, ProductData = NULL) {
         start_pos <- start_pos[ii]; log_len <- log_len[ii]; stop_pos <- stop_pos[ii]
         top <- top[ii]
         price_vol <- price_volume_m3(method = p$method, top_d_mm = top,
-                                     length_cm = log_len, start_pos = start_pos,
+                                     length_cm = price_len_of(p, log_len), start_pos = start_pos,
                                      stop_pos = stop_pos, solid_vol = ser$solid_vol,
                                      adjustment = p$adjustment)
         if (anyNA(price_vol)) {
@@ -289,7 +302,7 @@ products_for_species <- function(species_group, ProductData = NULL) {
       # Price volume by the product's volume method; NA if ineligible.
       price_vol <- ifelse(
         eligible,
-        price_volume_m3(method = p$method, top_d_mm = top, length_cm = log_len,
+        price_volume_m3(method = p$method, top_d_mm = top, length_cm = price_len_of(p, log_len),
                         start_pos = start_pos, stop_pos = stop_pos,
                         solid_vol = ser$solid_vol, adjustment = p$adjustment),
         NA_real_)

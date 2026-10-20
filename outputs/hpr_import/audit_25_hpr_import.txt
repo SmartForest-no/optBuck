@@ -1,0 +1,53 @@
+============================================================= 
+  Audit: import from .hpr (Phase A)
+  Run: 2026-10-20 13:37:27.28784
+============================================================= 
+
+--- 01. Reading ---
+  [PASS  ] Check 01: Species groups, classified products and a stem index without coordinates | ok TRUE | groups 445 FURU, 446 GRAN, 447 LAUV, 448 BIOVIRKE | best grades 1,1,1,1 | products 7949,7953,8015,8016,8017,8019,7973,7974 | stem index columns key,species_key,has_profile,diameter_category, 1 stem(s)
+
+--- 02. Product definitions ---
+  [PASS  ] Check 02: Product definitions as in the file (8 products) | limits, classes, volume methods, grades, cells and forbidden cells all as in the file
+
+--- 03. Species guess ---
+  [PASS  ] Check 03: Species guessed from group names and user IDs | FURU, GRAN, LAUV, BIOVIRKE, 'Gran tynning', 'Tall', user ID 'SE_gran', 'Furu/Gran blanding' -> pine, spruce, none, none, spruce, pine, spruce, none
+
+--- 04. Grade filter ---
+  [PASS  ] Check 04: Products without the best grade unticked by default (only 100 Energi) | unticked (mapped species): 8016 ('Does not allow the best grade') | without permitted grades: kept TRUE
+
+--- 05. Mapping onto the assortment table ---
+  [PASS  ] Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid | keys pine_240_sag_REDACTED34,pine_200_massevirke,spruce_197_massevirke,spruce_154_kubb,spruce_140_sca_sagt_mmer,pine_waste,spruce_waste | pine sawlog top 14-50, butt <= 60, top position 10, Top | SCA min top 14.2, Calculated Norwegian mid | price lengths on: pine_240_sag_REDACTED34 | valid TRUE
+
+--- 06. Lengths round up ---
+  [PASS  ] Check 06: Length classes round up to whole dm; a class without a whole-dm length is dropped | REDACTED23 37,38,40,41,43,46,49,52,55 dm | Kubb 31 dm | 301+305 cm classes: '154 Kubb: Length class(es) 301 cm dropped: no whole-dm length inside the class.', columns 31
+
+--- 07. Forbidden cells and diameter rows ---
+  [PASS  ] Check 07: Forbidden cells empty, all other cells the file's price; whole-cm rows | REDACTED23 rows 14-36 cm (no 13), 46 empty cells, 0 cells wrong | 20 cm @37 dm = 584 (190 mm), 21 cm = 575 (207 mm) | SCA first row 14 cm = 650 (142 mm)
+
+--- 08. Price length ---
+  [PASS  ] Check 08: Price volume on the class lower limit for REDACTED23 only; base products unchanged | 37 dm log, top 250.4 mm: price volume 0.20660 (365 cm: 0.20660, 370 cm: 0.20983) | 41 dm on 410 cm: TRUE | SCA on cut length: TRUE | base LengthClasses columns: ProductKey,LogLength,LogLength_dm
+
+--- 09. Errors ---
+  [PASS  ] Check 09: File errors are reported and block the import | not_xml: ok | root: ok | message: ok | unit: ok | machine: ok | dup_key: ok | no_groups: ok | no_prods: ok | no_species: ok
+
+--- 10. Warnings ---
+  [PASS  ] Check 10: Partial problems are warnings and the rest imports | unknown_group: ok | dia_over_bark: ok | vol_over_bark: ok | method: ok | top_position: ok | margin: ok | one_species: ok | duplicate renamed: TRUE
+
+--- 11. Run with the imported scenario ---
+  [PASS  ] Check 11: A tree-list run with the imported scenario respects limits, lengths and forbidden cells | 314 logs | products not used: none | top limits TRUE | lengths TRUE | no forbidden cell TRUE | REDACTED23 price volume on class limits TRUE (59 logs) | coordinate-like columns: none
+
+--- 12. Scenario file and comparison ---
+  [PASS  ] Check 12: Price lengths survive the scenario file; a scenario without them differs and is priced on the cut | round trip TRUE, price lengths kept TRUE | differs without them TRUE, equal after round trip TRUE | comparison: A on 365 cm, B on 370 cm TRUE
+
+--- 13. Fully forbidden inner diameter class ---
+  [PASS  ] Check 13: A fully forbidden inner diameter class stays as empty rows, valid and never chosen | imported, rows 4-20, 12-15 cm empty and the rest priced TRUE | warning TRUE | valid TRUE | scenario xlsx round trip TRUE | long CSV round trip TRUE | grid edit keeps them TRUE | run: 0 logs in 12-15 cm (44 without the forbidden class), 206 197 Massevirke logs
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 13
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/hpr_import/audit_25_hpr_import.csv

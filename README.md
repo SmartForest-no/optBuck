@@ -34,6 +34,7 @@ the simulator appears as **optBuck**.
 | **NFI data.** Spruce and pine from the Norwegian National Forest Inventory. The app takes every plot of the selected maturity class, site class, county and altitude range (metres above sea level, in 50 m steps) that has trees of the selected species, and bucks the trees of that species (spruce, pine or both) with a diameter at breast height of at least 5 cm and a height of at least 4.5 m. Other tree species are not included. Results describe the selected trees only. | Available |
 | **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
+| **Harvester stems (.hpr).** Buck the stems a harvester measured, read from a StanForD 2010 .hpr file. (Products and prices can already be imported from .hpr files; see *Assortments and prices*.) | Planned |
 
 ### Tree lists
 
@@ -84,7 +85,7 @@ The app opens on *Assortments and prices*, with **Scenario A** and
 **Scenario B** as two white cards side by side on a light grey page (one
 above the other on narrow screens). Each card runs from top to bottom: the
 assortment table, the selected assortment with its prices, and the
-scenario's own buttons (add, reset, download, upload). Each
+scenario's own buttons (add, reset, download, upload, import from .hpr). Each
 scenario has its own assortments and its own price matrices. Apter ships
 with this base set and the 2021 price matrices for spruce and pine
 (diameters under bark); both scenarios start from it:
@@ -142,6 +143,50 @@ assortments), uploaded and downloaded on their own.
 file with its assortments (sheet `assortments`) and its prices (one sheet
 per price matrix plus `flat_prices`). A file loaded into one scenario
 replaces that scenario's assortments and prices.
+
+**Importing from a harvester file (.hpr).** *Import from .hpr* (each
+scenario's buttons) reads the products and price matrices of a StanForD 2010
+harvester production file and replaces that scenario's assortments and
+prices; the other scenario is not changed. Before anything is replaced, a
+dialog shows what the file contains and what will be imported:
+
+- **Species groups.** Each of the file's species groups is set to Spruce, Pine
+  or Not used. The app suggests a choice from the group's name and ID (for
+  example GRAN → Spruce, FURU → Pine, LAUV → Not used); products of groups
+  set to Not used are not imported.
+- **Products.** Every product is listed with its diameter and length classes.
+  Products that do not allow the best quality grade of their species group
+  (for example an energy-wood product for rotten wood only) start unticked,
+  since the simulated stems have no defects. Any product can be ticked or
+  unticked.
+
+Each imported product becomes a matrix-priced assortment, and a Waste
+assortment at 0 NOK/m³ is added for each species:
+
+- The minimum and maximum top diameter and the maximum butt diameter are
+  the product's own, under bark, as is the position where the top diameter
+  is measured.
+- Length classes become whole-dm lengths, rounded up so the log stays
+  inside its class (a 365 cm class is cut at 370 cm). A class too narrow for
+  a whole-dm length is left out.
+- Diameter classes become whole-cm rows, each with the price of the class it
+  falls in. Where a class starts between whole centimetres (e.g. 207 mm),
+  the price changes at the whole centimetre.
+- Price cells marked as forbidden to cut are left empty: such logs are never
+  chosen. A diameter class forbidden at every length stays in the matrix as
+  an empty row.
+- The price volume follows the product's volume method (top, Norwegian mid
+  or solid volume). For products priced on the length class, the price
+  volume uses the class's lower limit (365 cm), not the cut length.
+
+What the file says that has no counterpart is listed as a warning in the
+dialog and after the import: for example rounded lengths, forbidden cells,
+diameter classes that do not start at a whole centimetre, or a volume
+method the app does not have (solid volume is used instead). The file's
+bark functions, quality grades, length margins and distribution settings
+are not used, and prices are read as NOK/m³ under bark. Only the products,
+prices and species groups are read; stems, coordinates, dates and names in
+the file are not.
 
 A matrix's columns are the assortment's allowed lengths and its rows its
 top-diameter classes. Lengths can be added and removed (a removed length is
@@ -267,7 +312,7 @@ Requirements: R and these packages:
 
 ```r
 install.packages(c("shiny", "bslib", "reactable", "rhandsontable", "readxl",
-                   "writexl", "arrow", "dplyr", "readr"))
+                   "writexl", "arrow", "dplyr", "readr", "xml2"))
 
 # taperNOR and fieldPlot are not on CRAN:
 devtools::install_git("https://github.com/SmartForest-no/taperNOR")
