@@ -89,6 +89,9 @@ HPR_MAX_UPLOAD_MB <- local({
 })
 options(shiny.maxRequestSize = HPR_MAX_UPLOAD_MB * 1024^2)
 
+# Apter species of an .hpr species group (import dialog and ".hpr stems").
+HPR_SPECIES_CHOICES <- c("Spruce" = "spruce", "Pine" = "pine", "Not used" = "none")
+
 # ---- release version (repo-root VERSION file; internal, not shown) ------------
 APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))
 

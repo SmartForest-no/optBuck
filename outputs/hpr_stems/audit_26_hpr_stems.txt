@@ -1,0 +1,50 @@
+============================================================= 
+  Audit: .hpr stems (hpr Phase B)
+  Run: 2026-10-21 14:35:50.454388
+============================================================= 
+
+--- 01. Reading the fixture's stems ---
+  [PASS  ] Check 01: The fixture's 13 stems are read as written, chunk size and extractor do not matter | 13 stems, keys 1,2,3,4,5,6,7,8,9,2,11,12,13 | kinds single,single,single,single,single,single,multi,single,single,single,single,single,single | stem 1: 181 points | DBHHeight 120/110/110/110 -> offsets 10/20/20/20 | 512 B / 4 KB chunks identical TRUE/TRUE | xml2 = regex TRUE
+
+--- 02. Robustness of the reader ---
+  [PASS  ] Check 02: Unusual but valid XML is read as intended (regex, xml2 for entities and CDATA) | attr_order ok | single_quote ok | newlines ok | comment_val ok | comment_stem ok | cdata_key ok | entity_value ok | stem_attr ok | self_closing ok | biomass ok
+
+--- 03. Heights above ground, DBH and the profile grid ---
+  [PASS  ] Check 03: DBH is the over-bark profile at 1.3 m above ground (130 - DBHHeight from the cut), never the file's DBH; 10 cm grid to the last measured point | DBH stem 1 (GRAN, at 110 cm) 31.40 cm, stem 2 (FURU, at 120 cm; file DBH 999 mm) 28.30 cm, stem 5 (no DBH in file) 19.80 cm | stem 4: positions every 25 cm to 1012 -> grid 0-1010, interpolated TRUE | offsets TRUE | stem 3 increase kept TRUE
+
+--- 04. Stump 0 ---
+  [PASS  ] Check 04: Bucking starts at the felling cut (stump 0), whatever params say | job stump 0 cm (params asked 30) | stem 1: 13450 candidates, first start 0 | first log per stem: 1:0 2:0 3:0 4:0 5:0
+
+--- 05. Nothing above the last measured point ---
+  [PASS  ] Check 05: No candidate or selected log ends above the last measured point | stem 1: measured to 1800, profile end 1800, candidates to 1800, logs to 1800 | stem 2: measured to 1500, profile end 1500, candidates to 1500, logs to 1500 | stem 3: measured to 1200, profile end 1200, candidates to 1200, logs to 1200 | stem 4: measured to 1012, profile end 1010, candidates to 1010, logs to 1010 | stem 5: measured to 600, profile end 600, candidates to 600, logs to 600
+
+--- 06. Under bark ---
+  [PASS  ] Check 06: Under-bark profiles are barkNOR with the profile DBH along the whole stem | 5 stems | stem 1 at 0 cm: 330.0 mm over, 312.4 mm under bark
+
+--- 07. Species mapping and dropped stems ---
+  [PASS  ] Check 07: Species mapping; dropped stems with one warning per reason | read 13, used 5 (1 spruce, 2 pine, 3 spruce, 4 spruce, 5 spruce) | warnings: 1 stem dropped: multi-tree stem (no single-stem profile). / 1 stem dropped: no stem profile (StemDiameters). / 1 stem dropped: profile recorded 'Under bark', not over bark (not supported). / 1 stem dropped: StemKey already used by an earlier stem. / 1 stem dropped: species group LAUV (447) is set to Not used. / 1 stem dropped: profile does not start at the felling cut (position 0). / 1 stem dropped: a diameter above 1,500 mm (likely a unit error). / 1 stem dropped: profile ends below 1.3 m above ground (no DBH). | GRAN Not used: 7 stems dropped: species group GRAN (446) is set to Not used. | all Not used: No stems are left to buck: every stem was dropped (see the warnings), or all species groups are set to Not used.
+
+--- 08. .hpr.gz and .hpr in a .zip ---
+  [PASS  ] Check 08: .hpr.gz and .hpr in a .zip give the same stems; a zip without an .hpr is an error | .gz same TRUE | .zip same TRUE | zip without .hpr: 'other.zip contains no .hpr file.'
+
+--- 09. Files without stem profiles or without stems ---
+  [PASS  ] Check 09: Stems without profiles (logs only) and a file without stems are errors | 'logs_only.hpr has 2 stems but none with a stem profile (StemDiameters): there is nothing to buck.' | 'no_stems.hpr contains no stems.'
+
+--- 10. Privacy: coordinates, dates, operators and names are never read ---
+  [PASS  ] Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output | 17 tables, 60 columns | coordinate-like columns: none | invented values found: none | stem table columns: stem_key,species_key,kind,category,n_points
+
+--- 11. End-to-end A/B run ---
+  [PASS  ] Check 11: An A/B run on the fixture's stems: stems as trees, no plots, a comparison, higher NOK/m3 at higher sawlog prices | source hpr | trees 1,2,3,4,5 | plots 0 | excluded 8 | compared 5, changed 3 | NOK/m3 361.3 -> 468.6 | 15 logs in A
+
+--- 12. Results do not depend on the number of workers ---
+  [PASS  ] Check 12: The same results on 1 worker and on 2 workers in chunks of 2 stems | tree_summary identical | selected_logs_all identical | per_m3_summary identical | per_m3_by_assortment identical
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 12
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/hpr_stems/audit_26_hpr_stems.csv

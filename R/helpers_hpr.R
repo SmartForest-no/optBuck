@@ -5,8 +5,8 @@
 #           (2026-10-20): read the species groups, products, price matrices
 #           and permitted grades, and turn them into a scenario (assortment
 #           table and prices) for "Import from .hpr" on the Assortments and
-#           prices tab. Stems are only indexed (count, species, profile type);
-#           bucking .hpr stems is Phase B (docs/plans/PLAN.md).
+#           prices tab. Stems are not read here: hpr Phase B reads them in
+#           R/helpers_hpr_stems.R (".hpr stems" tree source).
 #
 # Source  : ported from optBuck (SmartForest-no/optBuck: getSpeciesGroup-
 #           Definition(), getProductData(), getPriceMatrices(),
@@ -181,8 +181,9 @@ HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
 #' @param filename Name shown in messages (its extension decides .zip).
 #' @return list(ok, errors, warnings, header (file, version, read: "prefix"
 #'   or "whole", mb_read, mb_file), species (data.frame: key, name, user_id,
-#'   best_grade, start_grade, n_products), products (list, one per
-#'   classified product)). Stems are not read (hpr Phase B).
+#'   best_grade, start_grade, dbh_height (cm from the felling cut; NA if
+#'   absent), n_products), products (list, one per classified product)).
+#'   Stems are not read here (R/helpers_hpr_stems.R).
 read_hpr <- function(path, filename = basename(path)) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   src <- .hpr_source(path, filename)
@@ -240,6 +241,7 @@ read_hpr <- function(path, filename = basename(path)) {
       g <- suppressWarnings(as.numeric(.hall(s, "./Grades/Grade/GradeNumber")))
       if (any(!is.na(g))) min(g, na.rm = TRUE) else NA_real_ }, 0),
     start_grade = vapply(sgs, .hnum, 0, "./Grades/StartGrade"),
+    dbh_height  = vapply(sgs, .hnum, 0, "./DBHHeight"),    # cm from the felling cut (hpr stems)
     stringsAsFactors = FALSE)
   if (nrow(species) == 0L) errors <- c(errors, "The file defines no species groups.")
   if (any(duplicated(species$key)))

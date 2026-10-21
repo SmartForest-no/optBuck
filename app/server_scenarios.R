@@ -422,7 +422,7 @@ scenario_server <- function(input, output, session) {
   # prices replace this scenario's. The other scenario is not changed.
   hpr <- reactiveVal(NULL)    # list(side, data = read_hpr() result, file)
   hpr_err <- reactiveVal(NULL)
-  SP_CHOICES <- c("Spruce" = "spruce", "Pine" = "pine", "Not used" = "none")
+  SP_CHOICES <- HPR_SPECIES_CHOICES
 
   hpr_modal <- function(side) modalDialog(
     title = sprintf("Import from .hpr into Scenario %s", side),
@@ -445,20 +445,24 @@ scenario_server <- function(input, output, session) {
       hpr(list(side = side)); hpr_err(NULL); showModal(hpr_modal(side))
     })
   })
-  # The uploaded file is kept for the session (hpr Phase B bucks its stems
-  # later): moved out of Shiny's upload folder into a folder of the session's
-  # own, one file at a time (a new upload replaces it). When the session ends
-  # the folder and the upload folders are deleted.
+  # The uploaded file is kept for the session: moved out of Shiny's upload
+  # folder into a folder of the session's own (upload/, one file at a time: a
+  # new upload replaces it). When it is imported, it moves to imported/ with
+  # the confirmed species map (hpr_imported), so the ".hpr stems" source can
+  # buck it (hpr Phase B) even after a later upload that was cancelled. When
+  # the session ends the folder and the upload folders are deleted.
   hpr_dir  <- file.path(tempdir(), paste0("apter_hpr_", session$token))
   hpr_kept <- reactiveVal(NULL)   # list(name, path, mb)
+  hpr_imported <- reactiveVal(NULL)   # list(name, path, side, map)
   hpr_uploads <- character(0)     # Shiny's upload folders of this session
   session$onSessionEnded(function() unlink(c(hpr_dir, hpr_uploads), recursive = TRUE))
   observeEvent(input$hpr_file, {
     f <- input$hpr_file; req(f, hpr())
     hpr_uploads <<- unique(c(hpr_uploads, dirname(f$datapath)))
-    unlink(hpr_dir, recursive = TRUE)                   # the previous upload
-    dir.create(hpr_dir, showWarnings = FALSE, recursive = TRUE)
-    kept <- file.path(hpr_dir, basename(f$name))
+    up_dir <- file.path(hpr_dir, "upload")
+    unlink(up_dir, recursive = TRUE)                    # the previous upload
+    dir.create(up_dir, showWarnings = FALSE, recursive = TRUE)
+    kept <- file.path(up_dir, basename(f$name))
     moved <- isTRUE(file.rename(f$datapath, kept)) ||
       (isTRUE(file.copy(f$datapath, kept, overwrite = TRUE)) && isTRUE(file.remove(f$datapath)))
     if (!moved) kept <- f$datapath
@@ -471,7 +475,7 @@ scenario_server <- function(input, output, session) {
   hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
   # Test mode only (shinytest2): where the kept file is, so audit 17 can check
   # that it is deleted when the session ends.
-  exportTestValues(hpr_kept_path = hpr_kept()$path)
+  exportTestValues(hpr_kept_path = or_default(hpr_kept()$path, hpr_imported()$path))
   observe(updateActionButton(session, "hpr_apply", disabled = !isTRUE(hpr_data()$ok)))
 
   output$hpr_check <- renderUI({
@@ -542,6 +546,16 @@ scenario_server <- function(input, output, session) {
     if (!isTRUE(res$ok)) return(hpr_err(c(sprintf("%s was not imported:", h$file), res$errors)))
     if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
     selected(keys_of(res$defs)[asm_order(res$defs)][1L])
+    # Keep the imported file and the confirmed map for the ".hpr stems" source.
+    k <- hpr_kept()
+    if (!is.null(k) && file.exists(k$path)) {
+      imp_dir <- file.path(hpr_dir, "imported")
+      unlink(imp_dir, recursive = TRUE); dir.create(imp_dir, showWarnings = FALSE, recursive = TRUE)
+      dest <- file.path(imp_dir, basename(k$path))
+      if (!isTRUE(file.rename(k$path, dest))) dest <- if (isTRUE(file.copy(k$path, dest))) dest else k$path
+      hpr_kept(NULL)
+      hpr_imported(list(name = h$file, path = dest, side = side, map = map))
+    }
     redraw(); removeModal()
     n <- sum(res$defs$Type != "waste")
     say(side, "ok", sprintf("Imported %d assortment%s from %s into Scenario %s.",
@@ -748,5 +762,6 @@ scenario_server <- function(input, output, session) {
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
        differ = differ, pm_state = pm_state, key_label = key_label,
-       hpr_file = hpr_kept)   # the session's uploaded .hpr (hpr Phase B)
+       hpr_file = hpr_kept,          # the session's last upload (not yet imported)
+       hpr_imported = hpr_imported)  # the file imported into a scenario, with its species map
 }

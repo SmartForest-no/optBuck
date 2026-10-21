@@ -1,10 +1,10 @@
 ============================================================= 
   Audit: import from .hpr (Phase A)
-  Run: 2026-10-21 09:30:18.161478
+  Run: 2026-10-21 14:35:32.359052
 ============================================================= 
 
 --- 01. Reading ---
-  [PASS  ] Check 01: Species groups and classified products, read from the part before the first stem | ok TRUE | groups 445 FURU, 446 GRAN, 447 LAUV, 448 BIOVIRKE | best grades 1,1,1,1 | products 7949,7953,8015,8016,8017,8019,7973,7974 | read prefix (0.23 of 0.24 MB), stems not read TRUE
+  [PASS  ] Check 01: Species groups and classified products, read from the part before the first stem | ok TRUE | groups 445 FURU, 446 GRAN, 447 LAUV, 448 BIOVIRKE | best grades 1,1,1,1 | products 7949,7953,8015,8016,8017,8019,7973,7974 | read prefix (0.22 of 0.37 MB), stems not read TRUE
 
 --- 02. Product definitions ---
   [PASS  ] Check 02: Product definitions as in the file (8 products) | limits, classes, volume methods, grades, cells and forbidden cells all as in the file
@@ -43,7 +43,7 @@
   [PASS  ] Check 13: A fully forbidden inner diameter class stays as empty rows, valid and never chosen | imported, rows 4-20, 12-15 cm empty and the rest priced TRUE | warning TRUE | valid TRUE | scenario xlsx round trip TRUE | long CSV round trip TRUE | grid edit keeps them TRUE | run: 0 logs in 12-15 cm (44 without the forbidden class), 206 197 Massevirke logs
 
 --- 14. Large files: the part before the first stem, .gz and .zip ---
-  [PASS  ] Check 14: Only the part before the first stem is read (whole file if needed); .gz and .zip | fixture: prefix, 0.23 of 0.24 MB | stem before the products: whole, same definitions TRUE | <Stem> in a biomass function: prefix, same products TRUE | .gz: prefix, same TRUE | .zip: same TRUE | zip without .hpr: 'other.zip contains no .hpr file.'
+  [PASS  ] Check 14: Only the part before the first stem is read (whole file if needed); .gz and .zip | fixture: prefix, 0.22 of 0.37 MB | stem before the products: whole, same definitions TRUE | <Stem> in a biomass function: prefix, same products TRUE | .gz: prefix, same TRUE | .zip: same TRUE | zip without .hpr: 'other.zip contains no .hpr file.'
 
 --- 15. Import message: warnings only for what is lost or replaced ---
   [PASS  ] Check 15: The import shows warnings only when something is lost or replaced | fixture import: 0 warnings, info has rounded up to whole dm=TRUE, not in whole cm=TRUE, forbidden cell=TRUE, Volume diameter=TRUE | skipped product warned TRUE | dropped length class warned TRUE | replaced volume method warned TRUE

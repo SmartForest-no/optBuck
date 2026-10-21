@@ -61,16 +61,17 @@ build_run_params <- function(input_list, hkl_map = HKL_MAP,
 #' rows prepare_tree_list_job() bucks (in_range) and their distinct plot_id.
 #'
 #' @return list(n_plots, n_trees, by_species (named counts), text).
-tree_counts <- function(species, n_plots = NA_integer_) {
+tree_counts <- function(species, n_plots = NA_integer_, unit = c("tree", "stem")) {
+  unit <- match.arg(unit)
   by <- vapply(c("spruce", "pine"), function(s) sum(species == s), integer(1))
   by <- by[by > 0L]
   fmt <- function(n) format(n, big.mark = ",")
   parts <- c(if (!is.na(n_plots)) sprintf("%s plot%s", fmt(n_plots), if (n_plots == 1L) "" else "s"),
              sprintf("%s %s", fmt(by), names(by)))
   if (length(by)) parts[length(parts)] <- paste(parts[length(parts)],
-                                                 if (sum(by) == 1L) "tree" else "trees")
+                                                 if (sum(by) == 1L) unit else paste0(unit, "s"))
   list(n_plots = n_plots, n_trees = sum(by), by_species = by,
-       text = if (sum(by) == 0L) "No trees" else paste(parts, collapse = " · "))
+       text = if (sum(by) == 0L) sprintf("No %ss", unit) else paste(parts, collapse = " · "))
 }
 
 
