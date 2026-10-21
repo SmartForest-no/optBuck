@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: custom assortments and volume methods
-  Run: 2026-10-20 15:51:26.683071
+  Run: 2026-10-21 09:28:28.366525
 ============================================================= 
 
 --- 01-03. Formula methods by hand ---
@@ -35,7 +35,7 @@
   [PASS  ] Check 10: length not 10 cm -> rejected | spruce_poles: lengths must be positive multiples of 10 cm
   [PASS  ] Check 10: min > max top -> rejected | MaxTopDiameter must be >= MinTopDiameter: spruce_poles
   [PASS  ] Check 10: min > max butt -> rejected | MaxButtDiameter must be >= MinButtDiameter: spruce_poles
-  [PASS  ] Check 10: unknown method -> rejected | VolumeDiameterCategory must be one of: Top cylinder; Top; All diameters (solid volume); Calculated Norwegian mid: spruce_poles
+  [PASS  ] Check 10: unknown method -> rejected | VolumeDiameterCategory must be one of: Top cylinder; Top; All diameters (solid volume); Calculated Norwegian mid; Mid: spruce_poles
   [PASS  ] Check 10: solid + rounding -> rejected | solid volume is never rounded; use VolumeDiameterAdjustment = None: spruce_poles
   [PASS  ] Check 10: class waste -> rejected | ProductType 'waste' is reserved for the base waste products: Poles
   [PASS  ] Check 10: bad PriceType -> rejected | PriceType must be 'matrix' or 'flat': spruce_poles
@@ -59,16 +59,21 @@
 --- 13. Comparison, scenario-only assortment (backend runs) ---
   [PASS  ] Check 13a: Every tree using the scenario-only assortment counts as changed | 46 trees use spruce_poles; 46 changed in total
   [PASS  ] Check 13b: Per-m3 shows 'poles' in Total and 'spruce_poles' within spruce (and in the comparison, 0 in default) | Total poles share 0.814
-  [PASS  ] Check 13c: Commercial volume of a fixed pattern does not depend on the volume method (price volumes do) | commercial 0.50954 m3; price volumes Top cylinder 0.33846, Top 0.41989, All diameters (solid volume) 0.50954, Calculated Norwegian mid 0.40989
+  [PASS  ] Check 13c: Commercial volume of a fixed pattern does not depend on the volume method (price volumes do) | commercial 0.50954 m3; price volumes Top cylinder 0.33846, Top 0.41989, All diameters (solid volume) 0.50954, Calculated Norwegian mid 0.40989, Mid 0.50698
 
 --- 14. Editing an assortment keeps existing prices ---
   [PASS  ] Check 14a: Edited grid (renamed, a length removed and one added, max class raised) keeps default and scenario prices of existing cells; new cells at the starting price; removed cells dropped | spruce 40/35: default 811 (want 811), scenario 911 (want 911); new 60 dm 650, new 73 cm 650 (want 650); kept 82/82 of 184 (want 82 each); 50 dm rows left: 0
   [PASS  ] Check 14b: Flat price kept when lengths change; a new species gets the starting price; flat -> grid keeps no cells | spruce 950 (want 950), pine 500 (want 500); flat->grid kept 0
+
+--- 15. Mid: diameter at the middle of the log ---
+  [PASS  ] Check 15a: Mid by hand: 10-410 cm (Dmid 279 -> 270 mm) = 0.22902 m3; 10-380 cm (mid 195 cm off the grid, Dmid 280.5 -> 280 mm) = 0.22783 m3; price_volume_m3() and candidates agree | hand 0.22902, 0.22783; price_volume_m3 0.22902, 0.22783; candidates 0.22902, 0.22783
+  [PASS  ] Check 15b: Mid on a curved stem reads Dmid (275.055 -> 270 mm) at the log's middle, not top + taper; price class still from the top (239.4 mm -> 23) | volume 0.21185 (want 0.21185); top 239.4 mm, class 23
+  [PASS  ] Check 15c: The backend's usable-only candidates give the same Mid volume; Mid without a mid diameter is an error | usable-only 0.21185; error: Mid needs mid_d_mm (the diameter at the middle of the log).
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 40
+1   PASS 43
 
   Verdict: PASS 
 ============================================================= 

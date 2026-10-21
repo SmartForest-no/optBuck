@@ -105,7 +105,7 @@
 # 19.  No "default" or "price set" (as words) anywhere in the page text
 #      (Phase 4d: "Scenario A/B" is the user-facing term)
 # 20.  Custom assortment through the form in A (spruce poles, price matrix,
-#      12-30 cm, 600-1000 cm, 2000 NOK/m3): the form has no Type, Length step
+#      12-30 cm, 600-1000 cm, volume method Mid, 2000 NOK/m3): the form has no Type, Length step
 #      or Diameter rounding and no blurred backdrop; listed and selected
 #      (its matrix grid shown), edit keeps its prices; a run selects it; Reset to defaults
 #      keeps it and restores the base rows; Remove (from both) drops it
@@ -1051,11 +1051,14 @@ if (!browser_ok) {
       app$set_inputs(asm_name = "Poles", asm_species = "spruce",
                      asm_min_top = 12, asm_max_top = 30, asm_price_type = "matrix",
                      asm_min_len = 600, asm_max_len = 1000,
-                     asm_method = "All diameters (solid volume)", asm_price = 2000,
+                     asm_method = "Mid", asm_price = 2000,
                      wait_ = FALSE)
       app$click("asm_save"); app$wait_for_idle()
     })
     msg20a <- txt(app, "#msg_a")
+    # The form offers Mid (a value outside the choices would not be kept).
+    d20 <- scen_of(app, "a")$defs
+    method20 <- if (is.null(d20)) NA else d20$VolumeDiameterCategory[d20$Name == "Poles"][1]
     n_asm1 <- n_tbl_rows(app, "tbl_asm_a")
     # The new assortment is selected, its matrix grid shown.
     pm_opts <- paste(head_of(app, "a"), if (shown(app, "#pm_a")) "grid" else "no grid")
@@ -1092,6 +1095,7 @@ if (!browser_ok) {
     n_asm_rm_b <- n_tbl_rows(app, "tbl_asm_b")
     ok20 <- !nzchar(paste0(e20, e20b, e20c, e20d, e20e)) &&
       grepl("Added Spruce poles", msg20a, fixed = TRUE) && identical(n_asm1, 7L) &&
+      identical(method20, "Mid") &&
       identical(pm_opts, "Spruce poles grid") &&
       grepl("Saved Spruce poles", msg20b, fixed = TRUE) && kept &&
       grepl("Spruce poles", prod20, fixed = TRUE) &&
@@ -1099,8 +1103,8 @@ if (!browser_ok) {
       identical(n_asm_rm_b, n_b0) && identical(form20, 0L) && identical(blur20, "none") &&
       identical(n_err_notif(app), 0L)
     rec(browser_checks[16], if (ok20) PASS else FAIL,
-        sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', rows %s, selected: %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s (before: %s)%s",
-                form20, blur20, trimws(msg20a), n_asm1, pm_opts, trimws(msg20b), kept,
+        sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', volume method %s, rows %s, selected: %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s (before: %s)%s",
+                form20, blur20, trimws(msg20a), method20, n_asm1, pm_opts, trimws(msg20b), kept,
                 grepl("Spruce poles", prod20, fixed = TRUE), n_asm_reset, base_back, n_asm_rm, n_asm_rm_b, n_b0,
                 err_txt(e20, e20b, e20c, e20d, e20e)))
     # 21. uploaded tree list (template)

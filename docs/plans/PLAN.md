@@ -30,6 +30,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | Layout and figures | One flow per scenario card with a shared selection; live tree counts from the run's own selection code; ggplot2 tree and log figures; light grey page behind white cards |
 | Altitude filter | Altitude range slider (m a.s.l., 50 m step) as an NFI selection variable |
 | hpr Phase A | Import from .hpr per scenario: StanForD 2010 products, price matrices and species groups into Scenario A or B |
+| Volume method Mid | StanForD "Mid" price volume (diameter at the middle of the log); imported from .hpr instead of solid volume |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -88,6 +89,15 @@ Reverses the earlier "Reading StanForD .hpr files is out of scope". Decisions in
 5. **Assortment tables.** Each scenario lists only its own assortments (the struck-through "Not in A/B" rows, "Not in this scenario" and "Add from A/B" were removed); cells that differ on assortments both scenarios have stay highlighted; assortments only one scenario has are not highlighted.
 6. **Audits.** New audit 25 (15 checks, synthetic fixture `inputs/test_fixtures/hpr_example_synthetic.hpr`); audit 17 check 29 (dialog from A and B, broken file blocked, prefilled species and products, Replace Scenario B changes B only).
 
+## Volume method Mid (done, 2026-10-21, branch `volume-mid`)
+
+Closes the open item noted 2026-10-20 (5 of 27 products in one of the owner's real files use it). Decision in CLAUDE.md (accepted assumption "Mid").
+
+1. **Rule.** StanForD 2010 VolumeDiameterCategory 3: V = π/4 · Dmid² · L. Dmid is the under-bark diameter read from the stem profile at the middle of the cut log, (StartPos + StopPos)/2 (interpolated; off the 10 cm grid for e.g. 370 cm logs), rounded down to whole cm. L is the price length (the cut, or the class lower limit for products priced on length classes). Limits and the price class still use the top diameter. optBuck has no Mid.
+2. **Code.** `price_volume_m3(..., mid_d_mm)` in `R/helpers_volume_methods.R`; `.candidate_columns()` reads Dmid only for Mid products, so the other methods are untouched (`scripts/performance_check.R`: every case identical to the main baseline).
+3. **Import and app.** The .hpr import maps Mid 1:1 (no warning); Mid is in the assortment form's Volume method list and the scenario files.
+4. **Audits.** Audit 20 check 15 (by hand on synthetic stems, off-grid midpoint, curved stem, backend path); audit 25 check 16 (an imported Mid product, priced on the class lower limit, chosen in a run) and check 10 now uses an invented unsupported method; audit 17 check 20 adds its custom assortment with Mid.
+
 ## hpr Phase B: bucking .hpr stems (planned)
 
 - ".hpr stems" as a third Data source in the Simulator, **never selected automatically** (also not after an import into a scenario). Its panel: file input (offering the file imported this session), validation, and the species table (prefilled from the import's confirmed map).
@@ -112,7 +122,6 @@ Reverses the earlier "Reading StanForD .hpr files is out of scope". Decisions in
 
 - **Sensitivity tool** (undecided): show how cutting patterns and NOK/m³ respond to ±x % changes in a price cell or assortment. A price-matrix optimiser would need an explicit objective (e.g. target volume shares), to be defined by Lennart first.
 - **Negative pine bark in barkNOR:** the B ≥ 0 floor is provisional; ask the taperNOR authors whether the pine behaviour near the top is intended and whether Hansen et al. (2023) refitted the coefficients.
-- **hpr volume method "Mid"** (open, noted 2026-10-20): StanForD 2010 VolumeDiameterCategory 3 = the diameter measured at the middle of the log (not calculated from the top like "Calculated Norwegian mid"); used for German mid-measured logs. In one of the owner's real files 5 of 27 products use it, all sawlogs (3 pine, 2 spruce; diameter in mm, length as defined in LengthClasses, under bark). The import replaces it with solid volume (warning). Decide whether to add a mid-diameter price volume (pi/4 x Dmid^2 x L, Dmid read under bark at the log's midpoint, rounding per VolumeDiameterAdjustment) before relying on those prices.
 - **optBuck fixes** (Lennart's package, found while porting the .hpr parser, 2026-10-20; Apter's own parser already avoids them):
   - `getProductData()` takes the minimum top diameter from the first `DiameterClassLowerLimit` instead of `DiameterMINTop` (example.hpr REDACTED23: 130 instead of 140 mm).
   - The maximum top diameter is lost: the column named `DiameterClassMAX` holds `DiameterMAXButt`, so `buckStem()` limits the top diameter by the butt limit (600 instead of 500 mm).

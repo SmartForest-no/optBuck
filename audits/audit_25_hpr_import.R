@@ -37,7 +37,8 @@
 #      no Machine, duplicate product key, no species groups, no products, no
 #      species group mapped
 # 10.  Warnings: unknown species group, over-bark diameters, over-bark price
-#      volume, unsupported volume method (solid volume used), volume top
+#      volume, unsupported volume method (an invented one; solid volume
+#      used), volume top
 #      position differs, length margins; two groups as one species with a
 #      renamed duplicate are noted in info only (no warning)
 # 11.  Run (100-tree list) with the imported scenario: every product used,
@@ -59,6 +60,11 @@
 #      whole-cm classes, the mm volume diameter and forbidden cells are info);
 #      a skipped product, a dropped length class and a replaced volume
 #      method are warnings
+# 16.  Imported Mid product (2026-10-21): REDACTED23 switched to
+#      VolumeDiameterCategory Mid imports as Mid without a warning (keeps its
+#      price lengths); a 37 dm candidate is priced on the under-bark diameter
+#      at the middle of the cut log over 365 cm, price class from the top;
+#      a run with the scenario chooses it
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -366,12 +372,12 @@ w10 <- list(
                                                       "<SpeciesGroupKey>999</SpeciesGroupKey>"))),
   dia_over_bark = warn_of(variant(function(l) in_prod(l, "8015", "<DiameterUnderBark>true", "<DiameterUnderBark>false"))),
   vol_over_bark = warn_of(variant(function(l) in_prod(l, "8015", "<VolumeUnderBark>true", "<VolumeUnderBark>false"))),
-  method        = warn_of(variant(function(l) in_prod(l, "8019", ">Calculated Norwegian mid<", ">Mid<"))),
+  method        = warn_of(variant(function(l) in_prod(l, "8019", ">Calculated Norwegian mid<", ">Unsupported method<"))),
   top_position  = warn_of(variant(function(l) in_prod(l, "8019", 'volumeDiameterTopPosition="10"',
                                                       'volumeDiameterTopPosition="20"'))),
   margin        = warn_of(variant(function(l) in_prod(l, "8015", "<LengthClassMargin>0", "<LengthClassMargin>5"))))
 pat10 <- c(unknown_group = "missing or unknown species group", dia_over_bark = "Diameters over bark",
-           vol_over_bark = "Price volume over bark", method = "'Mid' is not available",
+           vol_over_bark = "Price volume over bark", method = "'Unsupported method' is not available",
            top_position = "Volume top position 20 cm", margin = "margins ignored")
 hit10 <- mapply(function(w, p) any(grepl(p, w, fixed = TRUE)), w10[names(pat10)], pat10)
 # Two groups as one species with a duplicate name: it is renamed, and that is
@@ -568,7 +574,50 @@ rec("Check 15: The import shows warnings only when something is lost or replaced
     ok(ok15), sprintf("fixture import: %d warnings, info has %s | skipped product warned %s | dropped length class warned %s | replaced volume method warned %s",
                       length(r$warnings), paste(sprintf("%s=%s", info_pat, in_info), collapse = ", "),
                       w_skip, w_drop, w_meth))
-unlink(c(f11, f12))
+
+
+# ==============================================================================
+section("16. Imported Mid product")
+# REDACTED23 (pine, length as defined in LengthClasses, diameter in
+# mm) with VolumeDiameterCategory Mid, like the Mid sawlogs of a real file.
+f16 <- variant(function(l) in_prod(l, "7949", ">Top</VolumeDiameterCategory>", ">Mid</VolumeDiameterCategory>"))
+h16 <- read_hpr(f16)
+r16 <- hpr_to_scenario(h16, sp_map, base_defs = base_defs)
+d16 <- r16$defs[assortment_table_keys(r16$defs) == K_PINE_SAW, , drop = FALSE]
+imp16 <- isTRUE(r16$ok) && identical(h16$products[["7949"]]$volume_method, "Mid") &&
+  length(c(h16$warnings, r16$warnings)) == 0L && nrow(d16) == 1L &&
+  identical(d16$VolumeDiameterCategory, "Mid") &&
+  identical(d16$PriceLengths_cm, row(K_PINE_SAW)$PriceLengths_cm) &&
+  any(grepl("REDACTED23: Volume diameter 'Measured diameter in mm': Apter rounds the mid diameter",
+            r16$info, fixed = TRUE))
+# Candidates on check 8's pine stem: a 37 dm log is priced on the under-bark
+# diameter at the middle of the cut log, over the class lower limit (365 cm);
+# the price class still comes from the top diameter.
+p16 <- products_from_defs(r16$defs, r16$pm)
+c16 <- generate_candidate_logs_one_tree(pv, p16$pd, p16$lc, stump_height_cm = 10L)
+c16 <- c16[c16$ProductKey == K_PINE_SAW & c16$LogLength == 370 & c16$eligible, ][1L, ]
+pvu <- add_under_bark_profile(pv)
+mid16 <- approx(pvu$diameterPosition, pvu$DiameterValueUB, (c16$StartPos + c16$StopPos) / 2)$y
+v16 <- price_volume_m3("Mid", NA, 365, adjustment = VOLUME_ROUND_DOWN_CM, mid_d_mm = mid16)
+v16cut <- price_volume_m3("Mid", NA, 370, adjustment = VOLUME_ROUND_DOWN_CM, mid_d_mm = mid16)
+cand16 <- isTRUE(all.equal(c16$price_volume_m3, v16)) && !isTRUE(all.equal(v16, v16cut)) &&
+  !isTRUE(all.equal(v16, c37$price_volume_m3)) &&
+  identical(c16$PriceDiameterClass_cm, as.integer(floor(c16$TopDiameter / 10)))
+# A run with the imported scenario chooses the Mid product.
+f16pm <- tempfile(fileext = ".csv"); pm_export(r16$pm, f16pm)
+res16 <- tryCatch(run_tree_list_bucking(tl, f16pm, root_dir, products = p16$pd, length_classes = p16$lc),
+                  error = function(e) conditionMessage(e))
+run16 <- is.list(res16) && any(res16$selected_logs_all$ProductKey == K_PINE_SAW) &&
+  all(!is.na(res16$selected_logs_all$price_volume_m3[res16$selected_logs_all$ProductKey == K_PINE_SAW]))
+rec("Check 16: An imported Mid product maps to Mid without a warning, is priced on the mid diameter over the class lower limit, and is chosen in a run",
+    ok(imp16 && cand16 && run16),
+    sprintf("import: Mid %s, %d warnings, price lengths kept %s | 37 dm log from %d cm: mid %.1f mm, top %.1f mm (class %s), price volume %.5f (365 cm: %.5f, cut 370 cm: %.5f, Top: %.5f) | run: %s",
+            identical(d16$VolumeDiameterCategory, "Mid"), length(c(h16$warnings, r16$warnings)),
+            identical(d16$PriceLengths_cm, row(K_PINE_SAW)$PriceLengths_cm), c16$StartPos, mid16,
+            c16$TopDiameter, c16$PriceDiameterClass_cm, c16$price_volume_m3, v16, v16cut, c37$price_volume_m3,
+            if (is.list(res16)) sprintf("%d Mid logs", sum(res16$selected_logs_all$ProductKey == K_PINE_SAW))
+            else paste("failed:", res16)))
+unlink(c(f11, f12, f16, f16pm))
 
 
 # ==============================================================================
