@@ -76,7 +76,7 @@ for (.h in c("helpers_utils", "helpers_paths", "helpers_volume_methods", "helper
              "helpers_candidate_generation", "helpers_dp_optimizer", "helpers_bucking_core",
              "helpers_parallel",
              "helpers_price_matrix", "helpers_comparison", "helpers_heights",
-             "helpers_tree_list", "helpers_tree_selection", "helpers_hpr")) {
+             "helpers_tree_list", "helpers_tree_selection", "helpers_hpr", "helpers_hpr_stems")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -705,9 +705,69 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
                        excluded = excluded, profile_failures = profile_failures))
 }
 
-# The tree-list result for one run's result tables.
+#' Buck the stems of a StanForD 2010 .hpr file (hpr Phase B): each stem's
+#' measured over-bark profile, from the felling cut (stump 0) to its last
+#' measured position; under bark with barkNOR and DBH from the profile at
+#' 1.3 m above ground (R/helpers_hpr_stems.R).
+#'
+#' @param prepared Result of hpr_stem_profiles(read_hpr_stems(...), species_map).
+#' @param params   Optional list stored in the result (e.g. file name).
+#' @return The tree-list result structure, with tree_source = "hpr", treid =
+#'   StemKey, no plots, and the dropped stems as excluded_trees.
+run_hpr_bucking <- function(prepared,
+                            price_matrix_path = "default_2021",
+                            root = get_root_dir(),
+                            products = NULL,
+                            length_classes = NULL,
+                            params = list(),
+                            scenario = NULL,
+                            workers = apter_workers()) {
+  job <- prepare_hpr_job(prepared, price_matrix_path, root, products,
+                         length_classes, params, scenario)
+  finish_job(job, buck_job(job, workers))
+}
+
+#' The preparation part of run_hpr_bucking(): profile vectors, under bark,
+#' products and prices. The stump is 0 whatever params say: position 0 is the
+#' felling cut.
+prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
+                            root = get_root_dir(), products = NULL,
+                            length_classes = NULL, params = list(), scenario = NULL) {
+  t_start <- Sys.time()
+  if (!isTRUE(prepared$ok)) stop("The .hpr stems did not pass validation.")
+  step_cm <- as.integer(or_default(params$start_pos_step_cm, 10L))
+  params$stump_height_cm <- 0L
+  pps <- .load_runs(price_matrix_path, root, products, length_classes, scenario)
+  t0_conv <- proc.time()
+  pvs <- profiles_to_profile_vectors(prepared$profiles)
+  prepared$profiles <- NULL                      # the job keeps the profile vectors only
+  t_conv <- .pt(t0_conv)
+  t0_ub <- proc.time()
+  bark_model <- get_bark_model()
+  pvs <- lapply(pvs, add_under_bark_profile, model = bark_model)
+  t_ub <- .pt(t0_ub)
+  .new_job("hpr", t_start, pvs, prepared$tree_data, pps, 0L, step_cm,
+           timings = c(load_data = 0, filter_stratum_and_sample_plots = 0, tree_filtering = 0,
+                       load_products_and_prices = sum(vapply(pps, `[[`, 0, "secs")),
+                       load_precomputed_taper_profiles = 0,
+                       profile_vector_conversion = t_conv, under_bark_profiles = t_ub),
+           meta = list(params = params, trees = prepared$tree_data, prepared = prepared,
+                       excluded = prepared$excluded, profile_failures = data.frame()))
+}
+
+#' prepare_hpr_job() from read stems and a species map (the app runs this on
+#' a worker: building the profiles takes a few seconds on large files).
+prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "default_2021",
+                                  root = get_root_dir(), products = NULL,
+                                  length_classes = NULL, params = list(), scenario = NULL) {
+  prepare_hpr_job(hpr_stem_profiles(stems, species_map), price_matrix_path, root, products,
+                  length_classes, params, scenario)
+}
+
+# The tree-list result for one run's result tables (also .hpr stems: kind "hpr").
 .result_tree_list <- function(job, core, pp, elapsed) {
   m <- job$meta
+  hpr <- identical(job$kind, "hpr")
   trees <- m$trees
   plots <- sort(unique(as.character(trees$plot_id[!is.na(trees$plot_id)])))
   n_zero_log <- sum(core$tree_summary$n_logs_selected == 0L)
@@ -717,8 +777,8 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
     .assert_no_plot_id(x, "tree list result")
 
   list(
-    run_id                  = paste0("treelist_", format(Sys.time(), "%Y%m%d_%H%M%S")),
-    tree_source             = "tree_list",
+    run_id                  = paste0(if (hpr) "hpr_" else "treelist_", format(Sys.time(), "%Y%m%d_%H%M%S")),
+    tree_source             = if (hpr) "hpr" else "tree_list",
     params                  = utils::modifyList(list(species_group = paste(
                                 sort(unique(trees$species_group)), collapse = " + ")), m$params),
     n_eligible_plots        = length(plots),
@@ -735,14 +795,15 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
     zero_log_trees          = core$zero_log_trees,
     price_validation_checks = pp$checks,
     profile_failures        = m$profile_failures,
-    heights                 = m$prepared$heights,
-    height_warnings         = m$prepared$warnings,
+    heights                 = if (hpr) NULL else m$prepared$heights,
+    height_warnings         = if (hpr) character(0) else m$prepared$warnings,
     excluded_trees          = m$excluded,
     diagnostics             = list(
-      n_trees_in_list                   = nrow(m$prepared$trees),
+      n_trees_in_list                   = if (hpr) m$prepared$n_read else nrow(m$prepared$trees),
       n_trees_excluded_out_of_range     = nrow(m$excluded),
       n_trees_entering_optimizer        = length(job$pvs),
-      taper_source                      = "taperNOR at run time",
+      taper_source                      = if (hpr) "measured stem profiles (.hpr)" else "taperNOR at run time",
+      stump_height_cm                   = job$stump_cm,
       bark_model                        = job$bark_model,
       n_zero_log_trees                  = n_zero_log,
       n_unpriced_candidates             = core$n_unpriced_total,
@@ -750,7 +811,8 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
       elapsed_seconds                   = elapsed,
       stage_timings                     = .stage_timings(job, core, elapsed),
       workers                           = core$workers),
-    label                   = paste("Results describe the uploaded trees only.",
+    label                   = paste(if (hpr) "Results describe the stems of the .hpr file only (measured part)."
+                                    else "Results describe the uploaded trees only.",
                                     "Values are NOK per m³ of commercial volume under bark."),
     elapsed_seconds         = elapsed
   )

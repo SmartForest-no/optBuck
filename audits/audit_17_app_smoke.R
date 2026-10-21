@@ -148,7 +148,13 @@
 #      the imported assortments, A is unchanged, nothing is highlighted (the
 #      only shared assortments, Waste, are equal; B-only rows are not shaded)
 # 30.  The kept .hpr upload (path exported in test mode) exists during the
-#      session and is deleted, with its folder, when the session ends
+#      session and is deleted, with its folder, when the session ends (since
+#      hpr Phase B the imported file, kept in imported/)
+# 31.  .hpr stems (hpr Phase B), run before 30: after the import the source is
+#      still NFI; ".hpr stems" uses the imported file with its confirmed
+#      species map; 13 stems read, 5 used, 8 dropped-stem warnings; live
+#      counts in stems; a comparison runs; no Plots in the Summary and no
+#      Plot column in the logs and trees; "Measured length (m)"
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -450,7 +456,8 @@ browser_checks <- c(
   "Check 27: Tree and log figures render (single run and comparison)",
   "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them",
   "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only",
-  "Check 30: The kept .hpr upload is deleted when the session ends")
+  "Check 30: The kept .hpr upload is deleted when the session ends",
+  "Check 31: .hpr stems: not selected automatically; the imported file and species map are reused; a comparison runs on the stems, without plots")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -1293,6 +1300,56 @@ if (!browser_ok) {
                 c29$title_a, substr(gsub("\\s+", " ", c29$err), 1, 80), c29$bad_disabled, c29$species,
                 c29$ticked, c29$ok_enabled, c29$open, substr(gsub("\\s+", " ", c29$msg), 1, 90),
                 substr(c29$b_rows, 1, 160), identical(c29$a_after, c29$a_before), c29$marks, err_txt(e29)))
+    # 31. .hpr stems (hpr Phase B), after the import into B (check 29): the
+    # source stays NFI until chosen; then the imported file is used with the
+    # confirmed species map (groups with stems: FURU, GRAN, LAUV), the
+    # fixture's 13 stems give one line and the dropped-stem warnings; a run
+    # compares A and B (B was imported) on the 5 stems, without Plot columns.
+    c31 <- list()
+    e31 <- try_drv({
+      c31$src_before <- app$get_value(input = "tree_source")
+      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tree_source = "hpr", wait_ = FALSE)
+      app$wait_for_js("document.querySelector('#hs_validation .pm-msg-ok, #hs_validation .pm-msg-error') !== null",
+                      timeout = 60 * 1000)
+      app$wait_for_idle()
+      c31$file <- txt(app, "#hs_file_ui")
+      c31$species <- js(app, paste0("Array.from(document.querySelectorAll('#hs_species_ui select'))",
+                                    ".map(function(s){ return s.value; }).join(',')"))
+      c31$valid <- txt(app, "#hs_validation")
+      c31$n_warn <- js(app, "(document.querySelector('#hs_validation .pm-msg-warn') || {innerText: ''}).innerText.split('Warning:').length - 1")
+      c31$counts <- txt(app, "#tree_counts")
+      shoot(app, "13_hpr_stems_panel")
+      run(app)
+      app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
+      c31$summary <- txt(app, "#summary_cards")
+      c31$cmp_tab <- isTRUE(js(app, "Array.from(document.querySelectorAll('#result_tabs .nav-link')).some(function(a){ return a.getAttribute('data-value') === 'comparison' && a.offsetParent !== null; })"))
+      shoot(app, "14_hpr_stems_results")
+      app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
+      c31$logs_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_selected_logs .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
+      app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
+      open_trees(app)
+      c31$trees_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
+      c31$nerr <- n_err_notif(app)
+    })
+    hdr_cols <- function(h) strsplit(or_default(h, ""), "|", fixed = TRUE)[[1L]]
+    ok31 <- !nzchar(e31) && identical(c31$src_before, "nfi") &&
+      grepl("Using hpr_example_synthetic.hpr (imported into Scenario B)", c31$file, fixed = TRUE) &&
+      identical(c31$species, "pine,spruce,none") &&
+      grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
+      identical(as.integer(c31$n_warn), 8L) && grepl("4 spruce · 1 pine stems", c31$counts, fixed = TRUE) &&
+      grepl("Stems", c31$summary, fixed = TRUE) && !grepl("Plots", c31$summary, fixed = TRUE) &&
+      grepl("Scenario B", c31$summary, fixed = TRUE) && c31$cmp_tab &&
+      !"Plot" %in% hdr_cols(c31$logs_hdr) && "Tree" %in% hdr_cols(c31$logs_hdr) &&
+      !"Plot" %in% hdr_cols(c31$trees_hdr) && "Measured length (m)" %in% hdr_cols(c31$trees_hdr) &&
+      identical(c31$nerr, 0L)
+    rec(browser_checks[27], if (ok31) PASS else FAIL,
+        sprintf("source before: %s | file: '%s' | species %s | '%s' | %s warnings | counts '%s' | summary: %s | comparison tab %s | logs columns: %s | trees columns: %s | error notifications %s%s",
+                c31$src_before, substr(trimws(c31$file), 1, 80), c31$species,
+                substr(gsub("\\s+", " ", c31$valid), 1, 60), c31$n_warn, trimws(c31$counts),
+                substr(gsub("\\s+", " ", c31$summary), 1, 120), c31$cmp_tab,
+                substr(or_default(c31$logs_hdr, ""), 1, 80), substr(or_default(c31$trees_hdr, ""), 1, 100),
+                c31$nerr, err_txt(e31)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.
@@ -1312,11 +1369,11 @@ if (!browser_ok) {
                 basename(or_default(c30$path, "(none)")), c30$during,
                 if (isTRUE(c30$after_file)) "still there" else "deleted",
                 if (isTRUE(c30$after_dir)) "still there" else "deleted", err_txt(e30)))
-    rec(browser_checks[18], if (length(shots) == 20L) PASS else REVIEW,
-        sprintf("%d of 20 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[18], if (length(shots) == 22L) PASS else REVIEW,
+        sprintf("%d of 22 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
-    for (ck in browser_checks[c(2:18, 20:26)]) rec(ck, FAIL, "skipped: app did not start")
+    for (ck in browser_checks[c(2:18, 20:27)]) rec(ck, FAIL, "skipped: app did not start")
   }
   # 23. runtime
   t_el <- as.numeric((proc.time() - t_browser)["elapsed"])

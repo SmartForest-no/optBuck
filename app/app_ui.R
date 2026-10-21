@@ -80,7 +80,8 @@ simulator_sidebar <- sidebar(
 
   div(class = "sidebar-heading", "Trees"),
   radioButtons("tree_source", "Data source",
-               c("NFI data" = "nfi", "Uploaded tree list" = "list"), selected = "nfi"),
+               c("NFI data" = "nfi", "Uploaded tree list" = "list", ".hpr stems" = "hpr"),
+               selected = "nfi"),
   conditionalPanel("input.tree_source == 'nfi'",
     selectInput("species_group", "Species group",
                 choices = c("Spruce" = "spruce", "Pine" = "pine", "Spruce and pine" = "both"),
@@ -107,9 +108,16 @@ simulator_sidebar <- sidebar(
     fileInput("tl_upload", "Tree list (CSV or xlsx)", accept = c(".csv", ".xlsx"),
               width = "100%"),
     div(class = "note-muted",
-        "Columns: tree_id, species (spruce/pine), dbh (cm); optional height (m), plot_id. ",
+        "Columns: tree_id, species (spruce/pine), dbh (cm, over bark at 1.3 m); optional height (m), plot_id. ",
         downloadLink("dl_tree_template", "Download template (CSV)")),
     uiOutput("tl_validation")
+  ),
+  # hpr Phase B: the stems of an .hpr file (the file imported into a scenario
+  # this session, or another one), with its species groups mapped.
+  conditionalPanel("input.tree_source == 'hpr'",
+    uiOutput("hs_file_ui"),
+    uiOutput("hs_species_ui"),
+    uiOutput("hs_validation")
   ),
   uiOutput("tree_counts"),
 

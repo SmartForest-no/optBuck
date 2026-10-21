@@ -26,6 +26,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
 | Import from .hpr (hpr Phase A) | Audit 25 PASS (16/16, incl. an imported Mid product): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
+| .hpr stems (hpr Phase B) | Audit 26 PASS (12/12): reading the fixture's 13 stems (chunk size and extractor independent), unusual XML, DBH at 1.3 m above ground from the profile (not the file), the measured-only 10 cm grid, stump 0, nothing above the last measured point, barkNOR, species mapping and dropped stems, .gz/.zip, files without profiles or stems, no coordinates or names in any output, an A/B run, workers; audit 17 check 31 |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -86,6 +87,7 @@ R/                          Core engine helpers
   helpers_heights.R         Height imputation for tree lists (fieldPlot wrapper, FinnHoyde curves)
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
   helpers_hpr.R             StanForD 2010 .hpr: species groups, products, price matrices -> a scenario (Import from .hpr)
+  helpers_hpr_stems.R       .hpr stems (hpr Phase B): streamed stem reader, checks, measured profiles (stump 0)
   helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
                             used by the backend and the app's live tree counts
 
@@ -102,6 +104,7 @@ audits/
   audit_23_assortment_table_and_price_sets.R Assortment table, default limits, rows/columns, price set B
   audit_24_scenarios.R                       Scenarios A and B with their own assortments; demo files
   audit_25_hpr_import.R                      Import from .hpr (parser, mapping, price lengths, errors, warnings, run)
+  audit_26_hpr_stems.R                       .hpr stems (reader, profiles, stump 0, drops, privacy, A/B run)
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -118,7 +121,8 @@ scripts/
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
   make_demo_files.R                       Writes demo/ (scenario and price files, example tree list)
-  make_hpr_test_fixture.R                 Builds inputs/test_fixtures/hpr_example_synthetic.hpr from optBuck's example.hpr (whitelist, no stem or personal data)
+  make_hpr_test_fixture.R                 Builds inputs/test_fixtures/hpr_example_synthetic.hpr from optBuck's example.hpr (whitelist, no personal data; 13 invented stems)
+  hpr_stems_benchmark.R                   Time and memory of reading and an A/B run on real .hpr files (local only; output never committed)
   app_backend/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
     01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer): NFI
@@ -132,7 +136,7 @@ inputs/
   LengthClasses_spruce_pine_default.csv   Allowed log lengths per product
   price_matrices/           PriceMatrix_long and per-product matrices (default 2021)
   price_matrix_sources/     Source spreadsheets for the price matrices
-  test_fixtures/            hpr_example_synthetic.hpr: audit 25's .hpr file (definitions and prices only)
+  test_fixtures/            hpr_example_synthetic.hpr: audits 25 and 26's .hpr file (definitions, prices, invented stems)
 
 data_processed_github/      Sanitized NFI sample used by the app (committed)
   nfi_plots_github.parquet
@@ -247,7 +251,7 @@ Oracle or ForestSens assets.
 
 Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
-REVIEW, or FAIL. Re-run all audits (14–25) at the end of every development phase.
+REVIEW, or FAIL. Re-run all audits (14–26) at the end of every development phase.
 
 **Prerequisites**
 
@@ -278,6 +282,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 23 — assortment table and price sets | `Rscript audits/audit_23_assortment_table_and_price_sets.R` | readxl, writexl, taperNOR |
 | 24 — scenarios | `Rscript audits/audit_24_scenarios.R` | readxl, writexl, taperNOR, fieldPlot; `demo/` |
 | 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 26 — hpr stems | `Rscript audits/audit_26_hpr_stems.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -565,7 +570,8 @@ These keep the old name on purpose:
   definition.
 - **Test file.** The real example has exact stem coordinates and names, so
   it is not in the repository. `inputs/test_fixtures/hpr_example_synthetic.hpr`
-  holds its species groups, products and prices plus one invented stem
+  holds its species groups (with DBHHeight since Phase B; FURU set to 120),
+  products and prices plus 13 invented stems
   (`scripts/make_hpr_test_fixture.R`, run with the path to optBuck's
   `inst/extdata/example.hpr`).
 - **Example file contents** (optBuck @ 33ec887): species groups 445 FURU,
@@ -575,3 +581,40 @@ These keep the old name on purpose:
   345 Bjørk; 987 Biovirke), all under bark with the top diameter 10 cm below
   the cut; 35 forbidden cells in REDACTED23; 2 GRAN stems over bark
   every 10 cm from the felling cut (25.0 and 22.2 m measured).
+
+## .hpr stems (hpr Phase B, 2026-10-21)
+
+- **Reader.** `read_hpr_stems()` in `R/helpers_hpr_stems.R` streams 2 MB
+  chunks (`.hpr_stem_chunks()`): a stem record runs from one
+  `<Stem…><StemKey>` to the next, the last (incomplete) one carries over.
+  Each chunk's records go through `.hs_extract_regex()`, or
+  `.hs_extract_xml2()` when the chunk has `&` or CDATA. Work on bytes
+  (`Encoding = "bytes"`, `useBytes = TRUE`): R's char/byte offset conversion
+  is quadratic on long non-ASCII strings, and `substring()`'s default end is
+  1,000,000 characters (a bug lost one stem per chunk before it was fixed).
+  The definitions come from `read_hpr()` (which now also returns
+  `dbh_height` per species group).
+- **Checks and profiles.** `hpr_stem_checks()` decides which stems are
+  bucked (one warning per drop reason) without building profiles, so the app
+  can re-check as the species map changes; `hpr_stem_profiles()` builds the
+  10 cm profiles and DBH (at 1.3 m above ground via
+  `hpr_height_above_ground()`), in the long layout of
+  `profiles_to_profile_vectors()`.
+- **Backend.** `prepare_hpr_job()` / `run_hpr_bucking()` (stump forced to
+  0), `prepare_hpr_stems_job()` for the app's worker; `.result_tree_list()`
+  with `kind = "hpr"`.
+- **App.** Third radio choice; `hs_*` outputs; reading on a worker as an
+  ExtendedTask; the imported file is kept in the session's `imported/`
+  folder, uploads in `upload/`.
+- **Owner's files** (local, `C:/apter_private/hpr/`; 2026-10-21, 15 workers):
+
+  | File | Stems (about) | Read | A/B run |
+  |---|---|---|---|
+  | 46 MB | 7,000, none with a profile (an error) | 5.5 s | – |
+  | 52 MB | 3,000 | 6.1 s | 9.8 s |
+  | 124 MB | 7,500 | 12.5 s | 18.7 s (app, click to results: 22 s) |
+  | 142 MB | 11,650 | 15.9 s | 23.4 s |
+  | 151 MB | 7,500 | 14.9 s | 20.9 s |
+
+  Reading adds about 100 MB to the process; the 15 workers peak at about
+  2.3 GB together. No cap on the number of stems.

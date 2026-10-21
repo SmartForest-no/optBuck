@@ -8,8 +8,12 @@
 # Privacy : the example has exact stem coordinates and names. Only a
 #           whitelist is copied: species groups (key, name, user ID, grades)
 #           and products (definitions, price matrices, permitted grades).
-#           No machine, operator, object, contact, date or stem data; the one
-#           stem in the fixture is invented (a smooth spruce profile).
+#           No machine, operator, object, contact, date or stem data. DBHHeight
+#           is copied per species group (hpr Phase B), FURU's set to 120 cm so
+#           the groups differ. The stems are invented (hpr Phase B, audit 26):
+#           stem 1 is Phase A's smooth spruce profile, unchanged; stems 2-5 are
+#           bucked (pine, non-monotonic, off-grid, without DBH); stems 6-13
+#           are dropped, one per reason.
 #
 # Usage   : Rscript scripts/make_hpr_test_fixture.R <path to example.hpr>
 # ==============================================================================
@@ -33,8 +37,10 @@ copy <- function(to, from, path) {
 }
 for (sg in xml2::xml_find_all(m, "./SpeciesGroupDefinition")) {
   s <- xml2::xml_add_child(mo, "SpeciesGroupDefinition")
-  for (p in c("./SpeciesGroupUserID", "./SpeciesGroupName", "./Grades", "./SpeciesGroupKey"))
+  for (p in c("./SpeciesGroupUserID", "./SpeciesGroupName", "./Grades", "./DBHHeight", "./SpeciesGroupKey"))
     copy(s, sg, p)
+  if (identical(xml2::xml_text(xml2::xml_find_first(s, "./SpeciesGroupName")), "FURU"))
+    xml2::xml_set_text(xml2::xml_find_first(s, "./DBHHeight"), "120")
 }
 for (pd in xml2::xml_find_all(m, "./ProductDefinition")) {
   p <- xml2::xml_add_child(mo, "ProductDefinition")
@@ -47,17 +53,41 @@ for (pd in xml2::xml_find_all(m, "./ProductDefinition")) {
               "./SpeciesGroupKey"))
     copy(c2, cp, q)
 }
-# One invented spruce stem: over bark, every 10 cm from the felling cut, no
+# Invented stems: positions in cm from the felling cut, diameters in mm, no
 # coordinates, dates or logs.
-st <- xml2::xml_add_child(mo, "Stem")
-xml2::xml_add_child(st, "StemKey", "1")
-xml2::xml_add_child(st, "SpeciesGroupKey", "446")
-sp <- xml2::xml_add_child(st, "SingleTreeProcessedStem")
-xml2::xml_add_child(sp, "DBH", "300")
-sd <- xml2::xml_add_child(sp, "StemDiameters", diameterCategory = "Over bark")
-for (pos in seq(0, 1800, by = 10))
-  xml2::xml_add_child(sd, "DiameterValue", as.character(round(330 - pos * 0.15)),
-                      diameterPosition = as.character(pos), diameterMeasurementCategory = "First")
+add_stem <- function(key, sgk, pos = NULL, d = NULL, dbh = 300, kind = "SingleTreeProcessedStem",
+                     category = "Over bark") {
+  st <- xml2::xml_add_child(mo, "Stem")
+  xml2::xml_add_child(st, "StemKey", as.character(key))
+  xml2::xml_add_child(st, "SpeciesGroupKey", as.character(sgk))
+  sp <- xml2::xml_add_child(st, kind)
+  if (!is.null(dbh)) xml2::xml_add_child(sp, "DBH", as.character(dbh))
+  if (is.null(pos)) return(invisible())
+  sd <- xml2::xml_add_child(sp, "StemDiameters", diameterCategory = category)
+  for (i in seq_along(pos))
+    xml2::xml_add_child(sd, "DiameterValue", as.character(round(d[i])),
+                        diameterPosition = as.character(pos[i]), diameterMeasurementCategory = "First")
+}
+smooth <- function(top, d0, k) { p <- seq(0, top, by = 10); list(p = p, d = d0 - k * p) }
+s1 <- smooth(1800, 330, 0.15)
+add_stem(1, 446, s1$p, s1$d)                                  # spruce, Phase A's stem
+s2 <- smooth(1500, 300, 0.14)
+add_stem(2, 445, s2$p, s2$d, dbh = 999)                       # pine; the file DBH (999) is not used
+s3 <- smooth(1200, 280, 0.15); s3$d[s3$p >= 400 & s3$p <= 450] <- s3$d[s3$p >= 400 & s3$p <= 450] + 15
+add_stem(3, 446, s3$p, s3$d)                                  # spruce, a local diameter increase
+p4 <- c(seq(0, 1000, by = 25), 1012)
+add_stem(4, 446, p4, 260 - 0.16 * p4)                         # spruce, off the 10 cm grid
+s5 <- smooth(600, 220, 0.2)
+add_stem(5, 446, s5$p, s5$d, dbh = NULL)                      # spruce without DBH
+add_stem(6, 447, s1$p, s1$d)                                  # LAUV: Not used
+add_stem(7, 446, kind = "MultiTreeProcessedStem")             # multi-tree, no profile
+add_stem(8, 446)                                              # no StemDiameters
+add_stem(9, 446, s1$p, s1$d, category = "Under bark")         # under bark
+add_stem(2, 446, s1$p, s1$d)                                  # StemKey 2 again
+s11 <- smooth(100, 250, 0.2)
+add_stem(11, 446, s11$p, s11$d)                               # ends below 1.3 m above ground
+add_stem(12, 446, s1$p[-(1:2)], s1$d[-(1:2)])                 # starts at 20 cm, not at the cut
+add_stem(13, 446, s1$p, s1$d * 6)                             # 1,980 mm at the butt: a unit error
 
 dest <- file.path(root, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
 dir.create(dirname(dest), showWarnings = FALSE, recursive = TRUE)

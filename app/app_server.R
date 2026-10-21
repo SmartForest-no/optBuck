@@ -93,6 +93,116 @@ server <- function(input, output, session) {
     content  = function(file) tree_list_template(file))
 
 
+  # ---- .hpr stems (hpr Phase B; R/helpers_hpr_stems.R) ---------------------
+  # The file: one uploaded in this panel, else the file imported into a
+  # scenario this session (with its confirmed species map; a new import
+  # takes over again). Its stems are read once, on a worker, when the source
+  # is selected; the species map only re-checks them.
+  hs_own <- reactiveVal(NULL)       # list(name, path) uploaded here
+  hs_uploads <- character(0)        # Shiny's upload folders of this panel
+  session$onSessionEnded(function() unlink(hs_uploads, recursive = TRUE))
+  observeEvent(input$hs_upload, {
+    f <- input$hs_upload; req(f)
+    hs_uploads <<- unique(c(hs_uploads, dirname(f$datapath)))
+    hs_own(list(name = f$name, path = f$datapath))
+  })
+  observeEvent(sc$hpr_imported(), hs_own(NULL), ignoreInit = TRUE)
+  hs_file <- reactive({
+    own <- hs_own(); imp <- sc$hpr_imported()
+    if (!is.null(own)) return(list(name = own$name, path = own$path))
+    if (!is.null(imp)) return(list(name = imp$name, path = imp$path, side = imp$side, map = imp$map))
+    NULL
+  })
+
+  hs_stems   <- reactiveVal(NULL)   # read_hpr_stems() result, plus $path and $read_id
+  hs_reading <- reactiveVal(NULL)   # the file being read
+  hs_reads   <- 0L
+  hs_task <- ExtendedTask$new(function(path, name)
+    promises::catch(read_hpr_stems_async(path, name), function(e)
+      list(ok = FALSE, errors = sprintf("%s cannot be read: %s", name, conditionMessage(e)),
+           warnings = character(0), file = name)))
+  observe({
+    req(identical(input$tree_source, "hpr"))
+    f <- hs_file(); req(f)
+    if (hs_task$status() == "running" || identical(isolate(hs_stems())$path, f$path)) return()
+    hs_reading(f); hs_stems(NULL)
+    hs_task$invoke(f$path, f$name)
+  })
+  observeEvent(hs_task$result(), {
+    r <- hs_task$result(); f <- isolate(hs_reading())
+    hs_reads <<- hs_reads + 1L
+    r$path <- f$path; r$read_id <- hs_reads
+    hs_stems(r); hs_reading(NULL)
+    own <- isolate(hs_own())                       # an upload here is no longer needed
+    if (!is.null(own) && identical(own$path, f$path)) unlink(own$path)
+  })
+
+  output$hs_file_ui <- renderUI({
+    imp <- sc$hpr_imported(); own <- hs_own()
+    tagList(
+      if (!is.null(imp) && is.null(own))
+        div(class = "hs-file", sprintf("Using %s (imported into Scenario %s).", imp$name, imp$side)),
+      fileInput("hs_upload",
+                if (is.null(imp)) sprintf("Harvester production file (.hpr, or .hpr in .zip / .gz; up to %d MB)",
+                                          HPR_MAX_UPLOAD_MB)
+                else "Use another file", accept = c(".hpr", ".zip", ".gz"), width = "100%"))
+  })
+
+  # Species group key -> "spruce" / "pine" / "none": the panel's choice, else
+  # the import's confirmed map for that file, else the guess. Input IDs carry
+  # the read, so another file's groups start from their own defaults.
+  hs_sp_id <- function(st, key) sprintf("hs_sp_%d_%s", st$read_id, key)
+  hs_default <- function(st) {
+    guess <- setNames(guess_hpr_species(st$species$name, st$species$user_id), st$species$key)
+    f <- isolate(hs_file())
+    if (!is.null(f$map) && identical(f$path, st$path)) {
+      m <- f$map[st$species$key]; guess[!is.na(m)] <- m[!is.na(m)]
+    }
+    guess
+  }
+  hs_map <- reactive({
+    st <- hs_stems(); req(isTRUE(st$ok))
+    def <- hs_default(st)
+    setNames(vapply(st$species$key, function(k) or_default(input[[hs_sp_id(st, k)]], def[[k]]), ""),
+             st$species$key)
+  })
+  output$hs_species_ui <- renderUI({
+    st <- hs_stems(); req(isTRUE(st$ok))
+    def <- hs_default(st)
+    sp <- st$species[st$species$n_stems > 0L, , drop = FALSE]
+    tagList(
+      div(class = "section-hdr", "Species groups"),
+      tags$table(class = "hpr-table hs-species",
+        tags$thead(tags$tr(tags$th("Species group"), tags$th("Stems"), tags$th("Apter species"))),
+        tags$tbody(lapply(seq_len(nrow(sp)), function(i) tags$tr(
+          tags$td(sprintf("%s (%s)", sp$name[i], sp$key[i])),
+          tags$td(format(sp$n_profiles[i], big.mark = ",")),
+          tags$td(selectInput(hs_sp_id(st, sp$key[i]), NULL, HPR_SPECIES_CHOICES, def[[sp$key[i]]],
+                              width = "115px")))))))
+  })
+
+  # The stems the run will buck: hpr_stem_checks() (no profiles built).
+  hs_check <- reactive({
+    st <- hs_stems(); req(st)
+    if (!isTRUE(st$ok)) return(st)
+    hpr_stem_checks(st, hs_map())
+  })
+  output$hs_validation <- renderUI({
+    f <- hs_reading()
+    if (!is.null(f)) return(div(class = "note-muted", sprintf("Reading the stems of %s...", f$name)))
+    ck <- hs_check(); req(ck)
+    fmt <- function(n) format(n, big.mark = ",")
+    head <- if (!is.null(ck$n_read))
+      sprintf("%s: %s stems read, %s used.", ck$file, fmt(ck$n_read), fmt(ck$n_used))
+    tagList(
+      if (isTRUE(ck$ok)) div(class = "pm-msg-ok", head)
+      else div(class = "pm-msg-error", paste(c(if (!is.null(head)) head else sprintf("%s cannot be used:", ck$file),
+                                               ck$errors), collapse = "\n")),
+      if (length(ck$warnings) > 0L)
+        div(class = "pm-msg-warn", paste("Warning:", ck$warnings, collapse = "\n")))
+  })
+
+
   # Live tree counts: the trees the run will buck, from the cached data and
   # the run's own selection code (select_nfi_trees() with build_run_params(),
   # as Run uses them; for tree lists the rows in taperNOR's range), plus a
@@ -103,6 +213,10 @@ server <- function(input, output, session) {
       tr <- p$trees[p$trees$in_range, , drop = FALSE]
       pl <- unique(tr$plot_id[!is.na(tr$plot_id)])
       return(tree_counts(tr$species_group, if (length(pl)) length(pl) else NA_integer_))
+    }
+    if (identical(input$tree_source, "hpr")) {
+      ck <- hs_check(); req(isTRUE(ck$ok))
+      return(tree_counts(ck$species_used, NA_integer_, unit = "stem"))
     }
     req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
     sel <- select_nfi_trees(trees_meta, build_run_params(input))
@@ -161,10 +275,13 @@ server <- function(input, output, session) {
       session$sendCustomMessage("apter_progress_clear", TRUE)
       showNotification(msg, type = "error", duration = 10); run_rejected(TRUE)
     }
-    src <- if (identical(input$tree_source, "list")) "list" else "nfi"
+    src <- if (input$tree_source %in% c("list", "hpr")) input$tree_source else "nfi"
     tl  <- if (src == "list") tl_prepared() else NULL
     if (src == "list" && !isTRUE(tl$ok))
       return(reject("Upload a tree list that passes the checks first."))
+    hs <- if (src == "hpr") tryCatch(hs_check(), error = function(e) NULL)
+    if (src == "hpr" && !isTRUE(hs$ok))
+      return(reject("Choose an .hpr file whose stems pass the checks first."))
     if (src == "nfi" && (length(input$hkl_group) == 0L || length(input$abonitet) == 0L))
       return(reject("Select at least one maturity class and one site class."))
 
@@ -193,12 +310,13 @@ server <- function(input, output, session) {
       scenario <- list(price_matrix_path = path_b, products = pb$pd, length_classes = pb$lc)
     }
     spec <- list(src = src, params = if (src == "nfi") build_run_params(input) else list(),
-                 tl = tl, list_params = list(file = tl$file), path = path, pd = pd, lc = lc,
-                 scenario = scenario, files = files)
+                 tl = tl, list_params = list(file = if (src == "hpr") hs$file else tl$file),
+                 path = path, pd = pd, lc = lc, scenario = scenario, files = files)
+    if (src == "hpr") { spec$stems <- hs_stems(); spec$species_map <- hs_map() }
     run_src(src)
     run_progress(list(done = 0L, total = NA_integer_,
-                      what = if (src == "nfi") "Loading NFI data and taper profiles"
-                             else "Taper profiles"))
+                      what = switch(src, nfi = "Loading NFI data and taper profiles",
+                                    hpr = "Preparing stem profiles", "Taper profiles")))
     run_task$invoke(spec, list(price_matrix = a, price_matrix_b = if (compare) b$pm,
                                state = sc$pm_state(), t_click = t_click))
   })
@@ -230,7 +348,8 @@ server <- function(input, output, session) {
   # the stages' shares of the bar.
   STAGES <- list(nfi  = list("Bucking trees" = c(0.10, 0.95), "Summarising results" = c(0.95, 1)),
                  list = list("Taper profiles" = c(0, 0.40), "Bucking trees" = c(0.40, 0.95),
-                             "Summarising results" = c(0.95, 1)))
+                             "Summarising results" = c(0.95, 1)),
+                 hpr  = list("Bucking trees" = c(0.10, 0.95), "Summarising results" = c(0.95, 1)))
   output$run_status <- renderUI({
     if (!task_busy()) return(NULL)
     p <- run_progress()
@@ -287,7 +406,15 @@ server <- function(input, output, session) {
     PriceDiameterClass_cm_used = "Price class used (cm)",
     PriceNOKperM3 = "Price (NOK/m³)", price_volume_m3 = "Price volume (m³)",
     commercial_volume_m3 = "Commercial volume u.b. (m³)", value_nok = "Value (NOK)")
+  # .hpr stems (hpr Phase B): no plots, so no Plot column or Plots figure;
+  # stems instead of trees, measured length instead of tree height.
+  is_hpr <- reactive(has_result() && identical(result()$tree_source, "hpr"))
+  drop_plot <- function(df) if (isTRUE(is_hpr())) df[, setdiff(names(df), "Plot"), drop = FALSE] else df
+  unit_lbl  <- function(trees = "Trees") if (isTRUE(is_hpr())) sub("Tree", "Stem", trees) else trees
+  height_lbl <- function() if (isTRUE(is_hpr())) "Measured length (m)" else "Height (m)"
+
   readable_logs <- function(sl) {
+    if (isTRUE(is_hpr())) sl$plot_id_github <- NULL
     cols <- intersect(names(LOG_LABELS), names(sl))
     out <- sl[, cols, drop = FALSE]
     if ("ProductKey" %in% cols) out$ProductKey <- asm_label(out$ProductKey)
@@ -310,12 +437,13 @@ server <- function(input, output, session) {
     nok   <- function(r) { x <- tot(r)$nok_per_m3; if (is.na(x)) "–" else format(round(x, 1), nsmall = 1) }
     pvol  <- function(r) format(round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 2),
                                 nsmall = 2, big.mark = ",")
+    plots <- if (!isTRUE(is_hpr())) ro_field("Plots", fmt_int(r$n_plots_sampled))
     if (!compared())
       return(ro_field_row(
         ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
-        ro_field("Plots", fmt_int(r$n_plots_sampled)),
-        ro_field("Trees", fmt_int(r$n_trees_total)),
-        ro_field("Trees with logs", fmt_int(r$n_trees_with_logs)),
+        plots,
+        ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total)),
+        ro_field(unit_lbl("Trees with logs"), fmt_int(r$n_trees_with_logs)),
         ro_field("Logs", fmt_int(nrow(r$selected_logs_all))),
         ro_field("Commercial volume (m³ u.b.)", vol(r)),
         ro_field("Total value (NOK)", value(r)),
@@ -333,8 +461,8 @@ server <- function(input, output, session) {
     tagList(
       ro_field_row(
         ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
-        ro_field("Plots", fmt_int(r$n_plots_sampled)),
-        ro_field("Trees", fmt_int(r$n_trees_total))),
+        plots,
+        ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                      scen("Scenario A", r), scen("Scenario B", result_b())))
   })
@@ -389,14 +517,18 @@ server <- function(input, output, session) {
   TREE_PREVIEW_N <- 20L
   readable_trees <- function(r) {
     ts <- r$tree_summary
-    data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
-               Species = tools::toTitleCase(ts$species_group), `DBH (cm)` = ts$dbh_cm,
-               `Height (m)` = round(ts$height_m, 1), `Height source` = ts$height_source,
+    out <- data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
+               Species = tools::toTitleCase(ts$species_group),
+               `DBH (cm)` = if (isTRUE(is_hpr())) round(ts$dbh_cm, 1) else ts$dbh_cm,   # hpr: read from the profile
+               Height = round(ts$height_m, 1), `Height source` = ts$height_source,
                Logs = ts$n_logs_selected,
                `Value (NOK)` = round(ts$total_value_nok, 2),
                `Commercial volume u.b. (m³)` = round(ts$commercial_volume_m3, 4),
                `NOK per m³` = round(ts$nok_per_m3, 1),
                check.names = FALSE, stringsAsFactors = FALSE)
+    names(out)[names(out) == "Height"] <- height_lbl()
+    if (isTRUE(is_hpr())) out$`Height source` <- NULL   # Tree = the StemKey
+    drop_plot(out)
   }
   trees_preview <- reactive({
     req(has_result()); utils::head(readable_trees(result()), TREE_PREVIEW_N)
@@ -422,12 +554,15 @@ server <- function(input, output, session) {
     if (is.null(i) || length(i) == 0L || i[1L] > nrow(trees_preview()))
       return(div(class = "note-muted", "Select a tree to see its logs."))
     tr <- trees_preview()[i[1L], ]
+    plot <- if ("Plot" %in% names(tr)) tr$Plot else NA          # .hpr stems: no plots
     sl <- result()$selected_logs_all
-    logs <- sl[sl$plot_id_github %in% tr$Plot & sl$treid == tr$Tree, , drop = FALSE]   # plot may be NA
-    tagList(div(class = "section-hdr", sprintf("Logs of tree %s%s", tr$Tree,
-                                               if (!is.na(tr$Plot)) sprintf(" (plot %s)", tr$Plot) else "")),
+    logs <- sl[sl$plot_id_github %in% plot & sl$treid == tr$Tree, , drop = FALSE]   # plot may be NA
+    rl <- readable_logs(logs)
+    tagList(div(class = "section-hdr", sprintf("Logs of %s %s%s", if (isTRUE(is_hpr())) "stem" else "tree",
+                                               tr$Tree, if (!is.na(plot)) sprintf(" (plot %s)", plot) else "")),
             if (nrow(logs) == 0L) div(class = "note-muted", "No selected logs for this tree.")
-            else apter_reactable(readable_logs(logs)[, -(1:3)], page_size = 20L))
+            else apter_reactable(rl[, setdiff(names(rl), c("Plot", "Tree", "Species")), drop = FALSE],
+                                 page_size = 20L))
   })
 
   # DBH and height of the bucked trees per species (the same trees in A and
@@ -438,7 +573,9 @@ server <- function(input, output, session) {
   })
   output$fig_height <- renderPlot(res = 96, {
     req(has_result()); ts <- result()$tree_summary
-    apter_density_species(ts$height_m, ts$species_group, "Tree height (m)", "Height distribution")
+    if (isTRUE(is_hpr()))
+      apter_density_species(ts$height_m, ts$species_group, "Measured length (m)", "Measured length distribution")
+    else apter_density_species(ts$height_m, ts$species_group, "Tree height (m)", "Height distribution")
   })
 
 
@@ -570,13 +707,15 @@ server <- function(input, output, session) {
     r1 <- result(); r2 <- result_b()
     mk <- function(r, nm) {
       tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-      data.frame(Scenario = nm, Plots = r$n_plots_sampled, Trees = r$n_trees_total,
+      out <- data.frame(Scenario = nm, Plots = r$n_plots_sampled, Trees = r$n_trees_total,
                  `Trees with logs` = r$n_trees_with_logs,
                  `Value (NOK)` = round(sum(r$selected_logs_all$value_nok, na.rm = TRUE), 0),
                  `Price volume (m³)` = round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 3),
                  `Commercial volume u.b. (m³)` = round(tot$commercial_volume_m3, 3),
                  `NOK per m³` = round(tot$nok_per_m3, 1),
                  check.names = FALSE, stringsAsFactors = FALSE)
+      if (isTRUE(is_hpr())) { out$Plots <- NULL; names(out) <- sub("^Trees", "Stems", names(out)) }
+      out
     }
     rbind(mk(r1, "Scenario A"), mk(r2, "Scenario B"))
   })))
@@ -617,8 +756,8 @@ server <- function(input, output, session) {
   output$cmp_patterns <- renderUI({
     x <- cmp_trees()
     div(class = "stat-strip",
-        tags$strong(sprintf("%s of %s trees changed their cutting pattern",
-                            fmt_int(sum(x$changed)), fmt_int(nrow(x)))),
+        tags$strong(sprintf("%s of %s %s changed their cutting pattern",
+                            fmt_int(sum(x$changed)), fmt_int(nrow(x)), tolower(unit_lbl("Trees")))),
         if (sum(x$tie_only) > 0L)
           sprintf(" (%d more differ only by equal-value ties)", sum(x$tie_only)))
   })
@@ -627,7 +766,7 @@ server <- function(input, output, session) {
     x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
     x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
     fin <- function(v) ifelse(is.finite(v), v, NA_real_)   # a log not priced in the other scenario
-    data.frame(
+    drop_plot(data.frame(
       Plot = x$plot_id_github, Tree = x$treid, Species = tools::toTitleCase(x$species_group),
       `Logs A` = x$n_logs_default, `Logs B` = x$n_logs_scenario,
       `Value A (NOK)` = round(x$value_default, 2),
@@ -635,7 +774,7 @@ server <- function(input, output, session) {
       `Gain at B prices (NOK)` = round(fin(x$gain_at_scenario), 2),
       `Gain at A prices (NOK)` = round(fin(x$gain_at_default), 2),
       `Largest volume change (m³)` = round(x$max_volume_diff_m3, 4),
-      check.names = FALSE, stringsAsFactors = FALSE)
+      check.names = FALSE, stringsAsFactors = FALSE))
   })
   paged_table_server(input, output, session, "tbl_cmp_trees", cmp_changed_df, page_size = 15L,
                      filename = "optBuck_changed_trees.csv")
@@ -644,7 +783,8 @@ server <- function(input, output, session) {
   observe({
     req(compared()); x <- cmp_trees()
     x <- x[order(!x$changed, -abs(x$value_scenario - x$value_default)), , drop = FALSE]
-    lbl <- sprintf("%s / %s (%s%s)", x$plot_id_github, x$treid, x$species_group,
+    lbl <- sprintf("%s (%s%s)", if (isTRUE(is_hpr())) x$treid else paste(x$plot_id_github, x$treid, sep = " / "),
+                   x$species_group,
                    ifelse(x$changed, sprintf(", %+.1f NOK", x$value_scenario - x$value_default),
                           ", unchanged"))
     updateSelectizeInput(session, "cmp_tree", server = TRUE,
@@ -661,8 +801,11 @@ server <- function(input, output, session) {
     ts <- result()$tree_summary; tr <- ts[tk(ts) == k, , drop = FALSE]
     req(nrow(tr) == 1L)
     apter_stem_compare(l1, l2, tr$height_m,
-                       sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
-                               tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
+                       if (isTRUE(is_hpr()))
+                         sprintf("Stem %s (%s, dbh %.1f cm, measured length %.1f m)",
+                                 tr$treid, tr$species_group, tr$dbh_cm, tr$height_m)
+                       else sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
+                                    tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
   })
 
   output$tbl_cmp_products <- renderReactable({

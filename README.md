@@ -34,7 +34,7 @@ the simulator appears as **optBuck**.
 | **NFI data.** Spruce and pine from the Norwegian National Forest Inventory. The app takes every plot of the selected maturity class, site class, county and altitude range (metres above sea level, in 50 m steps) that has trees of the selected species, and bucks the trees of that species (spruce, pine or both) with a diameter at breast height of at least 5 cm and a height of at least 4.5 m. Other tree species are not included. Results describe the selected trees only. | Available |
 | **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
-| **Harvester stems (.hpr).** Buck the stems a harvester measured, read from a StanForD 2010 .hpr file. (Products and prices can already be imported from .hpr files; see *Assortments and prices*.) | Planned |
+| **Harvester stems (.hpr).** Buck the stems a harvester measured, read from a StanForD 2010 .hpr file (see below). Products and prices can be imported from the same files; see *Assortments and prices*. | Available |
 
 ### Tree lists
 
@@ -45,7 +45,7 @@ with one row per tree (a template can be downloaded there):
 |--------|---------|
 | `tree_id` | Required. Unique within its plot (or within the file if there are no plots) |
 | `species` | Required. `spruce` or `pine` |
-| `dbh` | Required. Diameter at breast height over bark, in cm |
+| `dbh` | Required. Diameter at breast height (1.3 m above ground) over bark, in cm |
 | `height` | Optional. Tree height in m; leave empty where not measured |
 | `plot_id` | Optional. Groups trees for the height model |
 
@@ -76,6 +76,36 @@ FinnHoyde curves (d in cm, h in m): spruce, d < 15: 1.3 + 0.6·d (Eid & Fitje
 1993); d ≥ 15: −14.17 + 20.86·log10(d) (Fitje & Vestjordet 1977). Pine,
 d < 10: 1.3 + 0.65456·d (Eid & Fitje 1993); 10 ≤ d < 35: 0.39 + 0.852·d −
 0.010644·d² (Vestjordet 1968); d ≥ 35: 13.35 + 0.107·d (Eid & Fitje 1993).
+
+### Harvester stems (.hpr)
+
+Choose *.hpr stems* in the Simulator. If you imported an .hpr file into a
+scenario in the same session, that file is used, with the species you
+confirmed there; otherwise choose a file (.hpr, or an .hpr in a .zip or .gz,
+up to 200 MB). Large files are read stem by stem; a 150 MB file takes about
+15 seconds. Each species group in the file is set to spruce, pine or not used.
+
+- **The measured stem is bucked as it is.** Positions are measured from the
+  felling cut, so there is no stump. Only the measured part is used: nothing
+  above the last measured diameter is simulated, and no taper model is
+  involved. Diameters that increase locally are kept.
+- **Bark and DBH.** The harvester's diameters are over bark; under-bark
+  diameters come from the same bark model as for other trees. DBH is read
+  from the profile at 1.3 m above ground: the stump height is taken as 130 cm
+  minus the file's DBH height (the height above the felling cut where the
+  harvester measures DBH).
+- **Stems that are not bucked** are reported with their number and reason:
+  multi-tree stems, stems without a diameter profile, profiles recorded under
+  bark, repeated stem keys, species groups set to not used, profiles that do
+  not start at the felling cut, diameters above 1,500 mm, and profiles that
+  end below 1.3 m.
+- **What is read.** Only each stem's key, species group and diameter
+  profile. Coordinates, dates, operators and names are never read. The logs
+  the harvester actually cut are not used yet; comparing them with the
+  optimal bucking is planned.
+
+The results are the same as for tree lists, with the stem key as tree ID and
+no plots. The height column shows the measured length.
 
 ---
 

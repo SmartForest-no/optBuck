@@ -7,7 +7,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 ## Scope
 
 - Apter is a general bucking simulator for Norway spruce and Scots pine, for industry partners: compare and improve price matrices and plan bucking. It is not an inventory or estimation tool, and NFI is not emphasised.
-- Tree sources: NFI data (all plots of a stratum), uploaded tree lists, (hpr Phase B) stems from .hpr files and (Phase 6) uploaded stem profiles. Results describe the selected trees only. No per-ha, plot-level or stratum outputs.
+- Tree sources: NFI data (all plots of a stratum), uploaded tree lists, stems from .hpr files (hpr Phase B) and (Phase 6) uploaded stem profiles. Results describe the selected trees only. No per-ha, plot-level or stratum outputs.
 - Assortments and prices: the base set, user-added assortments, scenario and price files, and (hpr Phase A) products and prices imported from .hpr files.
 - Values are NOK per m³ of commercial solid volume under bark (definition in CLAUDE.md).
 - Deployment: NIBIO Linux server with many cores; testing on Lennart's remote desktop.
@@ -31,6 +31,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | Altitude filter | Altitude range slider (m a.s.l., 50 m step) as an NFI selection variable |
 | hpr Phase A | Import from .hpr per scenario: StanForD 2010 products, price matrices and species groups into Scenario A or B |
 | Volume method Mid | StanForD "Mid" price volume (diameter at the middle of the log); imported from .hpr instead of solid volume |
+| hpr Phase B | ".hpr stems" as a tree source: the measured stem profiles of an .hpr file, stump 0, streamed reading |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -98,15 +99,19 @@ Closes the open item noted 2026-10-20 (5 of 27 products in one of the owner's re
 3. **Import and app.** The .hpr import maps Mid 1:1 (no warning); Mid is in the assortment form's Volume method list and the scenario files.
 4. **Audits.** Audit 20 check 15 (by hand on synthetic stems, off-grid midpoint, curved stem, backend path); audit 25 check 16 (an imported Mid product, priced on the class lower limit, chosen in a run) and check 10 now uses an invented unsupported method; audit 17 check 20 adds its custom assortment with Mid.
 
-## hpr Phase B: bucking .hpr stems (planned)
+## hpr Phase B: bucking .hpr stems (done, 2026-10-21, branch `hpr-stems`)
 
-- ".hpr stems" as a third Data source in the Simulator, **never selected automatically** (also not after an import into a scenario). Its panel: file input (offering the file imported this session), validation, and the species table (prefilled from the import's confirmed map).
-- Reuse the session's uploaded file (`scenario_server()` returns it as `hpr_file`); stems are read in a streaming pass (the definitions are parsed separately from the part before the first stem).
-- `hpr_stem_profiles()`: per stem with `StemDiameters`, the over-bark profile (diameterPosition, DiameterValue), DBH from the file (at DBHHeight), height = profile end; tree key = StemKey, no plot. Positions not on the 10 cm grid are interpolated.
-- `prepare_hpr_job()` / `run_hpr_bucking()`: profiles → `profiles_to_profile_vectors()` → `add_under_bark_profile()` (barkNOR with the file's DBH) → `.new_job("hpr", …, stump_cm = 0)`, because position 0 is the felling cut; then `buck_job()` / `finish_job()` and a `.result_hpr()` like `.result_tree_list()`. Candidates never end past the profile.
-- Stem validation. Errors: no Stem with StemDiameters, or none left after mapping. Warnings: under-bark profiles, multi-tree or diameter-less stems, stems of Not-used species (excluded, counts), off-grid positions (interpolated), missing DBH (read from the profile), diameters above 1,500 mm (likely unit error). Stem grades and the recorded logs are ignored (one note).
-- Privacy: stem coordinates, dates and operators are never read; no coordinate-like column in any result.
-- Audits: stems → profiles, stump 0, a run with logs inside the profile, the third source in audit 17 (not auto-selected, runs).
+Decisions in CLAUDE.md (accepted assumption "hpr stems").
+
+1. **Source.** ".hpr stems" is the Simulator's third data source, never selected automatically (also not after an import). It reuses the file imported into a scenario this session with its confirmed species map, or takes its own upload (.hpr, .gz, .zip). Panel: the file, a species table (stems per group), and one line ("hpr_example_synthetic.hpr: 13 stems read, 5 used.") with warnings only for dropped stems.
+2. **Reading.** `read_hpr_stems()` streams 2 MB chunks of complete stem records. It uses a regex whitelist, with xml2 for chunks with entities or CDATA. It was compared with xml2 on the owner's five files: identical results, 2× faster. The file's DBH, coordinates, dates and operators are never read. Owner's files: 3–16 s per file, +83–115 MB.
+3. **Profiles.** Positions from the felling cut, stump 0, only the measured part (the profiles end at DiameterMeasuredEndHeight). Heights above ground = position + (130 − DBHHeight) via `hpr_height_above_ground()`. DBHHeight counts from the cut: the file DBH equals the profile there in 99.6–100 % of stems. DBH = the profile at 1.3 m above ground; under bark with barkNOR. No total height (barkNOR needs none).
+4. **Dropped stems.** Multi-tree, no profile, under bark, duplicate key, species Not used (per group), not starting at 0, > 1,500 mm, ending below 1.3 m above ground. A file with logs only (one of the owner's) is an error.
+5. **Results.** The tree-list tables, `tree_source = "hpr"`, StemKey as tree ID, no plots; the app hides Plot columns and labels the height "Measured length (m)".
+6. **Performance.** No cap. The largest file (11,650 stems): A/B run ~23 s (script) / ~22 s in the app on 15 workers, workers ~2.3 GB.
+7. **Audits.** New audit 26 (12 checks, fixture extended with 12 invented stems and DBHHeight); audit 17 check 31; `scripts/hpr_stems_benchmark.R` for the owner's files (local only).
+
+Later: compare the recorded logs with the optimal bucking; under-bark profiles; multi-tree stems (they have no profiles in the owner's files).
 
 ## Phase 6: stem profile import
 
@@ -122,6 +127,7 @@ Closes the open item noted 2026-10-20 (5 of 27 products in one of the owner's re
 
 - **Sensitivity tool** (undecided): show how cutting patterns and NOK/m³ respond to ±x % changes in a price cell or assortment. A price-matrix optimiser would need an explicit objective (e.g. target volume shares), to be defined by Lennart first.
 - **Negative pine bark in barkNOR:** the B ≥ 0 floor is provisional; ask the taperNOR authors whether the pine behaviour near the top is intended and whether Hansen et al. (2023) refitted the coefficients.
+- **kublin_nor() species parameters (taperNOR 0.1.0, found 2026-10-21):** `kublin_nor()` uses `kublin_par_lme_spruce` for every species (sp 1, 2 and 3), so pine and birch are calibrated with spruce parameters. Ask the taperNOR authors together with the bark question. Apter does not call `kublin_nor()`.
 - **optBuck fixes** (Lennart's package, found while porting the .hpr parser, 2026-10-20; Apter's own parser already avoids them):
   - `getProductData()` takes the minimum top diameter from the first `DiameterClassLowerLimit` instead of `DiameterMINTop` (example.hpr REDACTED23: 130 instead of 140 mm).
   - The maximum top diameter is lost: the column named `DiameterClassMAX` holds `DiameterMAXButt`, so `buckStem()` limits the top diameter by the butt limit (600 instead of 500 mm).
@@ -129,4 +135,4 @@ Closes the open item noted 2026-10-20 (5 of 27 products in one of the owner's re
   - `PriceVolumeCalc()` off-by-one: `LengthClass[max(which(LogLength > LengthClass))]` gives a log cut exactly at a class's lower limit the previous class's length (should be `>=`).
   - `buckStem()` uses its own 1 cm/m frustum for every product, whatever the product's volume method, and floors length classes to 10 cm (365 → 360, below the class's lower limit).
 - **fieldPlot fixes** (Lennart's package, separate session): loop over species present; error handling around the fitHD() fallback; a working timeout; species curve for plots without heights; nlme:: calls; README install URL. Apter's wrapper works around these meanwhile.
-- **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores.
+- **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores. Memory: a large .hpr stems A/B run (11,650 stems, 142 MB file, 15 workers) peaks at about 2.3 GB across the workers, plus about 0.4 GB in the main process (measured 2026-10-21).
