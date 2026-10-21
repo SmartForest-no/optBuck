@@ -29,9 +29,12 @@
 #      ends above the profile end, and the profile end is at or below the last
 #      measured position
 #  6.  Under bark: barkNOR with the profile DBH along the whole stem
-#  7.  Species mapping and dropped stems: the 8 dropped stems, one per reason,
-#      with the exact warnings; GRAN set to Not used drops its stems with a
-#      per-group warning; everything Not used is an error
+#  7.  Species mapping and dropped stems: the 8 dropped stems, one per reason;
+#      warnings only for problems in the file (under bark, duplicate key, not
+#      starting at 0, > 1,500 mm), the expected drops (multi-tree, no profile,
+#      Not-used species, ending below 1.3 m) counted in info only; GRAN set to
+#      Not used drops its stems without a warning; everything Not used is an
+#      error
 #  8.  .hpr.gz and .hpr in a .zip give identical stems; a zip without an .hpr
 #      is an error
 #  9.  Errors: a file with stems but no profiles (logs only), and a file
@@ -249,13 +252,14 @@ rec("Check 06: Under-bark profiles are barkNOR with the profile DBH along the wh
 
 # ==============================================================================
 section("07. Species mapping and dropped stems")
-want_w <- c("1 stem dropped: multi-tree stem (no single-stem profile).",
-            "1 stem dropped: no stem profile (StemDiameters).",
-            "1 stem dropped: profile recorded 'Under bark', not over bark (not supported).",
+# Warnings only for problems in the file; expected drops are counted in info.
+want_w <- c("1 stem dropped: profile recorded 'Under bark', not over bark (not supported).",
             "1 stem dropped: StemKey already used by an earlier stem.",
-            "1 stem dropped: species group LAUV (447) is set to Not used.",
             "1 stem dropped: profile does not start at the felling cut (position 0).",
-            "1 stem dropped: a diameter above 1,500 mm (likely a unit error).",
+            "1 stem dropped: a diameter above 1,500 mm (likely a unit error).")
+want_i <- c("1 stem dropped: multi-tree stem (no single-stem profile).",
+            "1 stem dropped: no stem profile (StemDiameters).",
+            "1 stem dropped: species group LAUV (447) is set to Not used.",
             "1 stem dropped: profile ends below 1.3 m above ground (no DBH).")
 map_g <- map; map_g["446"] <- "none"
 p_g <- hpr_stem_profiles(st, map_g)
@@ -263,16 +267,18 @@ p_none <- hpr_stem_profiles(st, setNames(rep("none", 4L), names(map)))
 ok7 <- isTRUE(p$ok) && identical(p$n_read, 13L) && identical(p$n_used, 5L) &&
   identical(sort(td$treid), c("1", "2", "3", "4", "5")) &&
   identical(td$species_group[match(c("1", "2"), td$treid)], c("spruce", "pine")) &&
-  identical(p$warnings, want_w) &&
+  identical(p$warnings, want_w) && all(want_i %in% p$info) &&
   identical(p$excluded$treid, c("6", "7", "8", "9", "2", "11", "12", "13")) &&      # file order
   isTRUE(p_g$ok) && identical(p_g$tree_data$treid, "2") &&
   # stems 1, 3-5 and 11-13: the species check comes before the profile checks
-  any(p_g$warnings == "7 stems dropped: species group GRAN (446) is set to Not used.") &&
+  any(p_g$info == "7 stems dropped: species group GRAN (446) is set to Not used.") &&
+  !any(grepl("Not used", p_g$warnings, fixed = TRUE)) &&
   !isTRUE(p_none$ok) && grepl("No stems are left", p_none$errors)
-rec("Check 07: Species mapping; dropped stems with one warning per reason",
-    ok(ok7), sprintf("read %d, used %d (%s) | warnings: %s | GRAN Not used: %s | all Not used: %s",
+rec("Check 07: Species mapping; dropped stems: warnings only for problems in the file, expected drops in info",
+    ok(ok7), sprintf("read %d, used %d (%s) | warnings: %s | info: %s | GRAN Not used (info): %s | all Not used: %s",
                      p$n_read, p$n_used, paste(td$treid, td$species_group, collapse = ", "),
-                     paste(p$warnings, collapse = " / "), paste(p_g$warnings[grepl("GRAN", p_g$warnings)], collapse = ""),
+                     paste(p$warnings, collapse = " / "), paste(p$info[grepl("dropped", p$info)], collapse = " / "),
+                     paste(p_g$info[grepl("GRAN", p_g$info)], collapse = ""),
                      paste(p_none$errors, collapse = "")))
 
 

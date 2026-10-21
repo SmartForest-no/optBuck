@@ -94,11 +94,19 @@ up to 200 MB). Large files are read stem by stem; a 150 MB file takes about
   from the profile at 1.3 m above ground: the stump height is taken as 130 cm
   minus the file's DBH height (the height above the felling cut where the
   harvester measures DBH).
-- **Stems that are not bucked** are reported with their number and reason:
-  multi-tree stems, stems without a diameter profile, profiles recorded under
-  bark, repeated stem keys, species groups set to not used, profiles that do
-  not start at the felling cut, diameters above 1,500 mm, and profiles that
-  end below 1.3 m.
+- **Stems that are not bucked.** One line shows how many stems were read and
+  how many are used (for example "3,176 stems read, 2,676 used."). These
+  stems are left out without a warning, as expected:
+  - stems of species groups set to not used;
+  - multi-tree stems, and stems without a diameter profile;
+  - profiles that end below 1.3 m above ground (no DBH can be read).
+
+  These are left out with a warning, because they point to a problem in the
+  file (the warning gives the number of stems and the reason):
+  - profiles recorded under bark (not supported yet);
+  - diameters above 1,500 mm (likely a unit error);
+  - a stem key used twice (the later stems are left out);
+  - profiles that do not start at the felling cut.
 - **What is read.** Only each stem's key, species group and diameter
   profile. Coordinates, dates, operators and names are never read. The logs
   the harvester actually cut are not used yet; comparing them with the

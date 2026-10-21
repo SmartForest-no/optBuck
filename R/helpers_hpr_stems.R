@@ -30,7 +30,8 @@
 #           at 1.3 m above ground. Bucking stays in felling-cut positions.
 #
 # Errors  : as in R/helpers_hpr.R, errors, warnings and info come back as
-#           character vectors; warnings only when stems are dropped.
+#           character vectors; warnings only for stems dropped because of a
+#           problem in the file (hpr_stem_checks()); expected drops go to info.
 # ==============================================================================
 
 if (!exists("or_default", mode = "function"))   # helpers_utils.R
@@ -228,11 +229,16 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
 #' "spruce" / "pine" / "none"); cheap (no profiles built), for the app's
 #' message as the map changes.
 #'
-#' Dropped (one warning per reason, with counts, in this order): multi-tree
-#' stems, stems without diameters, profiles not over bark, duplicate
-#' StemKeys, species groups set to Not used (per group), unreadable values,
-#' profiles not starting at the felling cut, diameters above
-#' HPR_MAX_DIAMETER_MM, and profiles ending below 1.3 m above ground (no DBH).
+#' Dropped, in this order: multi-tree stems, stems without diameters,
+#' profiles not over bark, duplicate StemKeys, species groups set to Not used
+#' (per group), unreadable values, profiles not starting at the felling cut,
+#' diameters above HPR_MAX_DIAMETER_MM, and profiles ending below 1.3 m above
+#' ground (no DBH). Only real problems in the file are warnings (profiles not
+#' over bark, duplicate keys, unreadable values, not starting at 0, too large
+#' diameters; one per reason, with counts). Expected drops (multi-tree stems,
+#' stems without a profile, Not-used species, profiles ending below 1.3 m)
+#' are counted in info only: the summary line (stems read, used) covers them
+#' (decided 2026-10-21).
 #'
 #' @return list(ok, errors, warnings, info, file, n_read, n_used, use (row
 #'   indices of the stems bucked), species (per stem), offset, last (cm),
@@ -255,29 +261,33 @@ hpr_stem_checks <- function(st, species_map) {
   dbh_at <- HPR_DBH_ABOVE_GROUND_CM - offset                 # cm from the cut
 
   reason <- rep(NA_character_, n); seen <- character(0)    # reasons in the order checked
-  drop <- function(cond, why) { m <- is.na(reason) & (cond %in% TRUE)
+  warned <- character(0)                                   # reasons that are real problems
+  drop <- function(cond, why, warn) { m <- is.na(reason) & (cond %in% TRUE)
     reason[m] <<- if (length(why) == 1L) why else why[m]
-    seen <<- c(seen, unique(reason[m])) }
-  drop(s$kind == "multi", "multi-tree stem (no single-stem profile)")
-  drop(s$n_points == 0L | s$kind != "single", "no stem profile (StemDiameters)")
+    seen <<- c(seen, unique(reason[m]))
+    if (warn) warned <<- c(warned, unique(reason[m])) }
+  drop(s$kind == "multi", "multi-tree stem (no single-stem profile)", FALSE)
+  drop(s$n_points == 0L | s$kind != "single", "no stem profile (StemDiameters)", FALSE)
   drop(is.na(s$category) | s$category != "Over bark",
        ifelse(is.na(s$category), "profile without diameterCategory (over or under bark unknown)",
-              sprintf("profile recorded '%s', not over bark (not supported)", s$category)))
-  drop(duplicated(s$stem_key), "StemKey already used by an earlier stem")
-  drop(!species %in% c("spruce", "pine"), sprintf("species group %s is set to Not used", group))
-  drop(unreadable, "unreadable diameter values")
-  drop(first != 0, "profile does not start at the felling cut (position 0)")
+              sprintf("profile recorded '%s', not over bark (not supported)", s$category)), TRUE)
+  drop(duplicated(s$stem_key), "StemKey already used by an earlier stem", TRUE)
+  drop(!species %in% c("spruce", "pine"), sprintf("species group %s is set to Not used", group), FALSE)
+  drop(unreadable, "unreadable diameter values", TRUE)
+  drop(first != 0, "profile does not start at the felling cut (position 0)", TRUE)
   drop(dmax > HPR_MAX_DIAMETER_MM, sprintf("a diameter above %s mm (likely a unit error)",
-                                           format(HPR_MAX_DIAMETER_MM, big.mark = ",")))
-  drop(last < dbh_at, "profile ends below 1.3 m above ground (no DBH)")
+                                           format(HPR_MAX_DIAMETER_MM, big.mark = ",")), TRUE)
+  drop(last < dbh_at, "profile ends below 1.3 m above ground (no DBH)", FALSE)
 
   use <- which(is.na(reason)); dropped <- which(!is.na(reason))
   fmt <- function(k) prettyNum(k, big.mark = ",")
   tab <- table(factor(reason[dropped], levels = seen))
-  warnings <- c(st$warnings, if (length(tab))
-    sprintf("%s %s dropped: %s.", fmt(as.integer(tab)), ifelse(as.integer(tab) == 1L, "stem", "stems"), names(tab)))
+  lines <- if (length(tab))
+    sprintf("%s %s dropped: %s.", fmt(as.integer(tab)), ifelse(as.integer(tab) == 1L, "stem", "stems"), names(tab))
+  real <- names(tab) %in% warned
+  warnings <- c(st$warnings, lines[real])
   used_groups <- unique(gi[use]); used_groups <- used_groups[!is.na(used_groups)]
-  info <- c(st$info,
+  info <- c(st$info, lines[!real],
             if (length(used_groups))
               sprintf("Height above ground = position + %g cm (130 cm - DBHHeight %s) for %s.",
                       sp$offset_cm[used_groups],
@@ -285,7 +295,7 @@ hpr_stem_checks <- function(st, species_map) {
                              sprintf("%g cm", sp$dbh_height[used_groups])),
                       sp$name[used_groups]))
   errors <- if (length(use) == 0L)
-    "No stems are left to buck: every stem was dropped (see the warnings), or all species groups are set to Not used."
+    "No stems are left to buck: no stem has a usable profile in a species group set to spruce or pine."
   else character(0)
   list(ok = length(errors) == 0L, errors = errors, warnings = warnings, info = info,
        file = st$file, n_read = n, n_used = length(use), use = use, species = species,
