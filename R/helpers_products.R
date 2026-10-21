@@ -428,12 +428,30 @@ pre_phase4c_limits <- function(pd) {
 # row stays waste); user-added rows are always commercial (custom_type()).
 # custom_assortment_rows() / products_for_run() above are the Phase 4b
 # definition format, kept for the performance cases and audit 20.
+# PriceLengths_cm is hidden too (hpr import, 2026-10-20): the length-class
+# lower limits (cm, comma-separated) of a matrix product imported from an
+# .hpr file whose price volume uses "Length as defined in LengthClasses".
+# Each limit belongs to the matrix column it rounds up to (365 -> 37 dm),
+# and that column's price volume uses the limit, not the cut length
+# (price_lengths()). Empty (NA) for every other assortment: price volume on
+# the cut length, as before.
 
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
-  "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType")
+  "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm")
+
+#' Price-volume lengths (cm) of the given log lengths (cm): the class lower
+#' limit in `limits` (a PriceLengths_cm string) whose whole-dm round-up is
+#' the log length, else the log length itself.
+price_lengths <- function(limits, log_len) {
+  lim <- if (is.null(limits) || length(limits) == 0L || is.na(limits) || !nzchar(trimws(limits)))
+    numeric(0) else suppressWarnings(as.numeric(strsplit(as.character(limits), "[,; ]+")[[1L]]))
+  lim <- lim[!is.na(lim)]
+  i <- match(as.numeric(log_len), ceiling(lim / 10) * 10)
+  ifelse(is.na(i), as.numeric(log_len), lim[i])
+}
 
 #' Length step (cm) of flat-priced assortments (Phase 4d: fixed).
 FLAT_LENGTH_STEP_CM <- 10
@@ -461,9 +479,13 @@ assortment_table_keys <- function(defs) {
 # Column types of an assortment table.
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
-                                          "PriceType"))
+                                          "PriceType", "PriceLengths_cm"))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
+  # Tables without the hidden price lengths (all but hpr imports): none.
+  if (!"PriceLengths_cm" %in% names(d)) d$PriceLengths_cm <- rep(NA_character_, nrow(d))
+  pl <- trimws(as.character(d$PriceLengths_cm))
+  d$PriceLengths_cm <- ifelse(is.na(pl) | !nzchar(pl) | pl == "NA", NA_character_, pl)
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
@@ -547,6 +569,13 @@ products_from_defs <- function(defs, pm) {
                    LogLength = as.numeric(unlist(lens, use.names = FALSE)),
                    stringsAsFactors = FALSE)
   lc$LogLength_dm <- lc$LogLength / 10
+  # Price-volume lengths (hpr imports only): the column is added only when
+  # some row has them, so other tables give the same LengthClasses as before.
+  pl <- if ("PriceLengths_cm" %in% names(defs)) defs$PriceLengths_cm else rep(NA, nrow(defs))
+  if (any(!is.na(pl) & defs$PriceType == "matrix"))
+    lc$PriceLength_cm <- unlist(lapply(seq_along(lens), function(i)
+      if (identical(defs$PriceType[i], "matrix")) price_lengths(pl[i], lens[[i]])
+      else as.numeric(lens[[i]])), use.names = FALSE)
   list(pd = pd, lc = lc)
 }
 

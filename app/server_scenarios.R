@@ -57,8 +57,8 @@ scenario_server <- function(input, output, session) {
 
   # ---- the selected assortment (shared by A and B) ---------------------------
   # A row click in either table selects that assortment on both sides; a side
-  # without it shows "Not in this scenario" and "Add from A/B". If the key
-  # leaves both scenarios, the first row of A (or B) is selected.
+  # without it shows no detail panel. If the key leaves both scenarios, the
+  # first row of A (or B) is selected.
   first_key <- function() {
     d <- isolate(defs("A")); if (nrow(d) == 0L) d <- isolate(defs("B"))
     keys_of(d)[asm_order(d)][1L]
@@ -79,7 +79,8 @@ scenario_server <- function(input, output, session) {
 
 
   # ---- assortment tables ----------------------------------------------------
-  dash <- function(x) ifelse(is.finite(x), format(x, trim = TRUE), "–")
+  # Each value formatted on its own ("4", "14.2"; not "4.0" next to 14.2).
+  dash <- function(x) ifelse(is.finite(x), vapply(x, function(v) format(v, trim = TRUE), ""), "–")
   rng  <- function(lo, hi) ifelse(is.na(lo), "–",
                                   ifelse(is.finite(hi), sprintf("%s–%s", dash(lo), dash(hi)),
                                          sprintf("≥ %s", dash(lo))))
@@ -94,7 +95,7 @@ scenario_server <- function(input, output, session) {
       Pricing = ifelse(d$PriceType == "matrix", "Matrix", "Flat"),
       check.names = FALSE, stringsAsFactors = FALSE)
   }
-  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm")
+  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm")
 
   # Fixed row order, the same in both tables so rows line up: by species
   # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
@@ -105,11 +106,10 @@ scenario_server <- function(input, output, session) {
     order(sp, tp, ifelse(tp == 4L, tolower(d$Name), ""))
   }
 
-  # One scenario's table: cells that differ from the other scenario are
-  # highlighted (differences in fields only in the form mark the name), rows
-  # only in this scenario are highlighted, and the other scenario's
-  # assortments missing here are listed as a muted "Not in A/B" line, in
-  # the same place as in the other table. Columns cannot be sorted.
+  # One scenario's table: its own assortments only. Cells that differ from
+  # the same assortment in the other scenario are highlighted (differences in
+  # fields only in the form mark the name). Rows the other scenario lacks
+  # are not highlighted. Columns cannot be sorted.
   render_asm <- function(side) renderReactable({
     d <- defs(side); o <- defs(other(side))
     disp <- asm_display(d, prices(side)); disp_o <- asm_display(o, prices(other(side)))
@@ -122,17 +122,8 @@ scenario_server <- function(input, output, session) {
       cell[i, ] <- unlist(disp[i, ]) != unlist(disp_o[j, ])
       if (any(rd$diff[i, HIDDEN_ASM_COLS])) cell[i, "Assortment"] <- TRUE
     }
-    cls <- ifelse(rd$status == "only", "asm-only", "")
-    gone <- match(rd$other_only, ko)
+    cls <- rep("", nrow(d))   # rows the other scenario lacks are not shaded
     all_rows <- d
-    if (length(gone)) {
-      extra <- disp_o[gone, , drop = FALSE]
-      extra$Pricing <- paste("Not in", side)
-      disp <- rbind(disp, extra)
-      cell <- rbind(cell, matrix(FALSE, length(gone), ncol(cell)))
-      cls <- c(cls, rep("asm-none", length(gone)))
-      all_rows <- rbind(d, o[gone, , drop = FALSE])
-    }
     ord <- asm_order(all_rows)
     disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
     rownames(disp) <- NULL
@@ -279,6 +270,7 @@ scenario_server <- function(input, output, session) {
     same_pricing <- !is.null(old_row) && identical(old_row$PriceType, ptype)
     if (same_pricing && ptype == "matrix") {   # lengths stay the matrix columns
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm
+      rows$PriceLengths_cm <- old_row$PriceLengths_cm   # hidden (hpr imports); kept on edits
     }
     errs <- character(0); start <- NULL
     if (!same_pricing) {
@@ -354,20 +346,15 @@ scenario_server <- function(input, output, session) {
     })
 
     # One assortment (definition and prices) equal to the other scenario's.
-    # "Add from A/B" (the assortment is not here) does the same copy.
-    copy_one <- function(added) {
+    observeEvent(input[[paste0("asm_copy_one_", s)]], {
       o <- other(side); k <- selected()
       if (!isTRUE(k %in% keys_of(defs(o))))
         return(say(side, "error", sprintf("%s is not in Scenario %s.", key_label(k), o)))
       r <- copy_assortment(defs(o), prices(o), defs(side), prices(side), k)
       if (commit(side, r$defs, r$pm)) {
-        redraw()
-        say(side, "ok", sprintf(if (added) "Added %s from Scenario %s." else "%s is equal to Scenario %s.",
-                                key_label(k), o))
+        redraw(); say(side, "ok", sprintf("%s is equal to Scenario %s.", key_label(k), o))
       }
-    }
-    observeEvent(input[[paste0("asm_copy_one_", s)]], copy_one(FALSE))
-    observeEvent(input[[paste0("asm_add_from_", s)]], copy_one(TRUE))
+    })
 
     # Base assortments back to their defaults (definitions and prices);
     # custom ones stay.
@@ -428,6 +415,139 @@ scenario_server <- function(input, output, session) {
     })
   })
 
+  # ---- import from .hpr (R/helpers_hpr.R; hpr Phase A) ---------------------------
+  # A dialog per scenario: read the file, confirm each species group's
+  # species (guessed from its name) and the products to import (those
+  # without the best grade start unticked), then the file's products and
+  # prices replace this scenario's. The other scenario is not changed.
+  hpr <- reactiveVal(NULL)    # list(side, data = read_hpr() result, file)
+  hpr_err <- reactiveVal(NULL)
+  SP_CHOICES <- c("Spruce" = "spruce", "Pine" = "pine", "Not used" = "none")
+
+  hpr_modal <- function(side) modalDialog(
+    title = sprintf("Import from .hpr into Scenario %s", side),
+    size = "xl", easyClose = FALSE, fade = FALSE,
+    p(class = "note-muted", sprintf(paste(
+      "The products and price matrices of a StanForD 2010 .hpr file replace Scenario %s's",
+      "assortments and prices. Scenario %s is not changed."), side, other(side))),
+    fileInput("hpr_file", sprintf("Harvester production file (.hpr, or .hpr in .zip / .gz; up to %d MB)",
+                                  HPR_MAX_UPLOAD_MB),
+              accept = c(".hpr", ".zip", ".gz"), width = "100%"),
+    uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
+    uiOutput("hpr_msg"),
+    footer = tagList(modalButton("Cancel"),
+                     actionButton("hpr_apply", sprintf("Replace Scenario %s", side),
+                                  class = "btn-primary", disabled = TRUE)))
+
+  for (side in c("A", "B")) local({
+    side <- side
+    observeEvent(input[[paste0("hpr_import_", low(side))]], {
+      hpr(list(side = side)); hpr_err(NULL); showModal(hpr_modal(side))
+    })
+  })
+  # The uploaded file is kept for the session (hpr Phase B bucks its stems
+  # later): moved out of Shiny's upload folder into a folder of the session's
+  # own, one file at a time (a new upload replaces it). When the session ends
+  # the folder and the upload folders are deleted.
+  hpr_dir  <- file.path(tempdir(), paste0("apter_hpr_", session$token))
+  hpr_kept <- reactiveVal(NULL)   # list(name, path, mb)
+  hpr_uploads <- character(0)     # Shiny's upload folders of this session
+  session$onSessionEnded(function() unlink(c(hpr_dir, hpr_uploads), recursive = TRUE))
+  observeEvent(input$hpr_file, {
+    f <- input$hpr_file; req(f, hpr())
+    hpr_uploads <<- unique(c(hpr_uploads, dirname(f$datapath)))
+    unlink(hpr_dir, recursive = TRUE)                   # the previous upload
+    dir.create(hpr_dir, showWarnings = FALSE, recursive = TRUE)
+    kept <- file.path(hpr_dir, basename(f$name))
+    moved <- isTRUE(file.rename(f$datapath, kept)) ||
+      (isTRUE(file.copy(f$datapath, kept, overwrite = TRUE)) && isTRUE(file.remove(f$datapath)))
+    if (!moved) kept <- f$datapath
+    hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
+    data <- withProgress(message = sprintf("Reading %s...", f$name), value = 0.5,
+                         read_hpr(kept, f$name))
+    hpr(utils::modifyList(hpr(), list(data = data, file = f$name)))
+    hpr_err(NULL)
+  })
+  hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
+  # Test mode only (shinytest2): where the kept file is, so audit 17 can check
+  # that it is deleted when the session ends.
+  exportTestValues(hpr_kept_path = hpr_kept()$path)
+  observe(updateActionButton(session, "hpr_apply", disabled = !isTRUE(hpr_data()$ok)))
+
+  output$hpr_check <- renderUI({
+    d <- hpr_data(); req(d)
+    tagList(
+      if (length(d$errors)) div(class = "pm-msg-error", paste(c("The file cannot be imported:", d$errors),
+                                                              collapse = "\n")),
+      if (isTRUE(d$ok)) div(class = "hpr-summary", sprintf("%d species groups · %d products with prices",
+                                                           nrow(d$species), length(d$products))),
+      if (length(d$warnings)) div(class = "hpr-warn", paste("Warning:", d$warnings, collapse = "\n")))
+  })
+
+  # Species group key -> "spruce" / "pine" / "none": the dialog's choice,
+  # or the guess before the selects exist.
+  hpr_map <- reactive({
+    d <- hpr_data(); req(isTRUE(d$ok))
+    guess <- guess_hpr_species(d$species$name, d$species$user_id)
+    setNames(vapply(seq_len(nrow(d$species)), function(i)
+      or_default(input[[paste0("hpr_sp_", d$species$key[i])]], guess[i]), ""), d$species$key)
+  })
+
+  output$hpr_species <- renderUI({
+    d <- hpr_data(); req(isTRUE(d$ok))
+    guess <- guess_hpr_species(d$species$name, d$species$user_id)
+    tagList(
+      div(class = "section-hdr", "Species groups"),
+      tags$table(class = "hpr-table",
+        tags$thead(tags$tr(tags$th("Key"), tags$th("Species group"), tags$th("User ID"),
+                           tags$th("Products"), tags$th("Apter species"))),
+        tags$tbody(lapply(seq_len(nrow(d$species)), function(i) tags$tr(
+          tags$td(d$species$key[i]), tags$td(d$species$name[i]),
+          tags$td(or_default(d$species$user_id[i], "")), tags$td(d$species$n_products[i]),
+          tags$td(selectInput(paste0("hpr_sp_", d$species$key[i]), NULL, SP_CHOICES,
+                              isolate(or_default(input[[paste0("hpr_sp_", d$species$key[i])]], guess[i])),
+                              width = "130px")))))))
+  })
+
+  output$hpr_products <- renderUI({
+    d <- hpr_data(); req(isTRUE(d$ok))
+    tab <- hpr_product_table(d, hpr_map())
+    tagList(
+      div(class = "section-hdr", "Products"),
+      tags$table(class = "hpr-table",
+        tags$thead(tags$tr(tags$th("Import"), tags$th("Product"), tags$th("Species group"),
+                           tags$th("Species"), tags$th("Top Ø classes"), tags$th("Length classes (cm)"),
+                           tags$th("Forbidden cells"), tags$th(""))),
+        tags$tbody(lapply(seq_len(nrow(tab)), function(i) tags$tr(
+          class = if (!tab$default[i]) "hpr-off",
+          tags$td(class = "hpr-tick", if (tab$species[i] == "none") "–"
+                  else checkboxInput(paste0("hpr_pr_", tab$key[i]), NULL, tab$default[i], width = "auto")),
+          tags$td(tab$name[i]), tags$td(tab$group[i]),
+          tags$td(if (tab$species[i] == "none") "Not used" else tools::toTitleCase(tab$species[i])),
+          tags$td(class = "hpr-nowrap", tab$diameters[i]), tags$td(class = "hpr-nowrap", tab$lengths[i]),
+          tags$td(tab$forbidden[i]), tags$td(class = "note-muted", tab$reason[i]))))))
+  })
+  output$hpr_msg <- renderUI({
+    e <- hpr_err(); if (!is.null(e)) div(class = "pm-msg-error", paste(e, collapse = "\n"))
+  })
+
+  observeEvent(input$hpr_apply, {
+    h <- hpr(); d <- h$data; req(isTRUE(d$ok)); side <- h$side
+    map <- hpr_map()
+    tab <- hpr_product_table(d, map)
+    keep <- tab$key[tab$species != "none" &
+                    vapply(tab$key, function(k) isTRUE(input[[paste0("hpr_pr_", k)]]), logical(1))]
+    if (length(keep) == 0L) return(hpr_err("Tick at least one product to import."))
+    res <- hpr_to_scenario(d, map, keep, base_defs = APP_DEFS)
+    if (!isTRUE(res$ok)) return(hpr_err(c(sprintf("%s was not imported:", h$file), res$errors)))
+    if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
+    selected(keys_of(res$defs)[asm_order(res$defs)][1L])
+    redraw(); removeModal()
+    n <- sum(res$defs$Type != "waste")
+    say(side, "ok", sprintf("Imported %d assortment%s from %s into Scenario %s.",
+                            n, if (n == 1L) "" else "s", h$file, side), res$warnings)
+  })
+
   msg_ui <- function(m) {
     if (is.null(m)) return(NULL)
     tagList(
@@ -470,8 +590,12 @@ scenario_server <- function(input, output, session) {
     g <- pm_to_grid(pm, id)
     has_other <- id %in% keys_of(do)[do$PriceType == "matrix"] &&
                  any(po$ProductKey == id & !is.na(po$LengthClass_dm))
+    # Compared only with the same assortment in the other scenario: if that
+    # scenario lacks it, nothing is highlighted (the grid is its own
+    # reference); if it prices it flat, every cell differs.
     def <- if (has_other) pm_default_aligned(po, pm, id)
-           else matrix(NA_real_, nrow(g), ncol(g))
+           else if (id %in% keys_of(do)) matrix(NA_real_, nrow(g), ncol(g))
+           else as.matrix(g)
     pm_widget(g, id, unname(def))
   })
   output$pm_a <- render_grid("A")
@@ -575,7 +699,8 @@ scenario_server <- function(input, output, session) {
       k <- selected(); req(k, sel_state(side) == "flat")
       o <- other(side); mine <- flat_price(side, k)
       theirs <- if (sel_state(o) == "flat") flat_price(o, k) else NA_real_
-      differs <- !isTRUE(all.equal(mine, theirs))
+      # Only an assortment both scenarios have can differ.
+      differs <- sel_state(o) != "none" && !isTRUE(all.equal(mine, theirs))
       session$sendCustomMessage("apter_toggle_class",
                                 list(id = paste0("flat_wrap_", s), cls = "is-diff", on = differs))
       span(class = paste("asm-flat-other", if (differs) "asm-diff"),
@@ -622,5 +747,6 @@ scenario_server <- function(input, output, session) {
   })
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
-       differ = differ, pm_state = pm_state, key_label = key_label)
+       differ = differ, pm_state = pm_state, key_label = key_label,
+       hpr_file = hpr_kept)   # the session's uploaded .hpr (hpr Phase B)
 }

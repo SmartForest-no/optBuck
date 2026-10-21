@@ -25,6 +25,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, A downloaded and uploaded to B), Run disabled with progress while a run task runs |
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
+| Import from .hpr (hpr Phase A) | Audit 25 PASS (15/15): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -84,6 +85,7 @@ R/                          Core engine helpers
   helpers_comparison.R      A vs. B: pattern changes, NOK/m3 comparison
   helpers_heights.R         Height imputation for tree lists (fieldPlot wrapper, FinnHoyde curves)
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
+  helpers_hpr.R             StanForD 2010 .hpr: species groups, products, price matrices -> a scenario (Import from .hpr)
   helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
                             used by the backend and the app's live tree counts
 
@@ -99,6 +101,7 @@ audits/
   audit_22_performance_equivalence.R         Workers, chunking, comparisons, main baseline, app jobs
   audit_23_assortment_table_and_price_sets.R Assortment table, default limits, rows/columns, price set B
   audit_24_scenarios.R                       Scenarios A and B with their own assortments; demo files
+  audit_25_hpr_import.R                      Import from .hpr (parser, mapping, price lengths, errors, warnings, run)
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -115,6 +118,7 @@ scripts/
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
   make_demo_files.R                       Writes demo/ (scenario and price files, example tree list)
+  make_hpr_test_fixture.R                 Builds inputs/test_fixtures/hpr_example_synthetic.hpr from optBuck's example.hpr (whitelist, no stem or personal data)
   app_backend/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
     01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer): NFI
@@ -128,6 +132,7 @@ inputs/
   LengthClasses_spruce_pine_default.csv   Allowed log lengths per product
   price_matrices/           PriceMatrix_long and per-product matrices (default 2021)
   price_matrix_sources/     Source spreadsheets for the price matrices
+  test_fixtures/            hpr_example_synthetic.hpr: audit 25's .hpr file (definitions and prices only)
 
 data_processed_github/      Sanitized NFI sample used by the app (committed)
   nfi_plots_github.parquet
@@ -242,13 +247,14 @@ Oracle or ForestSens assets.
 
 Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
-REVIEW, or FAIL. Re-run all audits (14–23) at the end of every development phase.
+REVIEW, or FAIL. Re-run all audits (14–25) at the end of every development phase.
 
 **Prerequisites**
 
 ```r
 install.packages(c("arrow", "readr", "dplyr", "shiny", "bslib", "reactable",
-                   "rhandsontable", "readxl", "writexl", "future", "promises", "later"))
+                   "rhandsontable", "readxl", "writexl", "future", "promises", "later",
+                   "xml2"))   # xml2: .hpr import
 devtools::install_git("https://github.com/SmartForest-no/taperNOR")
 remotes::install_github("lennartnoordermeer/fieldPlot")   # tree-list heights (nlme)
 # Audit 17 only:
@@ -271,6 +277,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 22 — performance equivalence | `Rscript audits/audit_22_performance_equivalence.R` | future, promises, later, taperNOR; taper profile cache; `outputs/performance/baseline_main_3fa0a9d.rds`; uses up to 15 workers |
 | 23 — assortment table and price sets | `Rscript audits/audit_23_assortment_table_and_price_sets.R` | readxl, writexl, taperNOR |
 | 24 — scenarios | `Rscript audits/audit_24_scenarios.R` | readxl, writexl, taperNOR, fieldPlot; `demo/` |
+| 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -531,3 +538,40 @@ These keep the old name on purpose:
 - **Progress.** `www/apter.js` draws an indeterminate bar on click. The server
   then reports stages: loading NFI data and taper profiles (indeterminate),
   taperNOR chunks (tree lists, 0–40 %), bucking, and summarising.
+
+## Import from .hpr (hpr Phase A, 2026-10-20)
+
+- **Parser.** `R/helpers_hpr.R`, on xml2, ported from optBuck's getters
+  (read, not vendored). `read_hpr()` reads the species groups and classified
+  products (limits, classes, volume rules, permitted grades, price cells
+  with their BuckingCriteria) from the part of the file before the first
+  stem record (`.hpr_prefix()`, 4 MB chunks, fast fixed search for
+  `<StemKey>`; `.hpr_close_tags()` closes the open elements), or from the
+  whole file when that part lacks species groups or products. .gz via
+  gzfile(), .zip streamed with unz(). Stems are not read (Phase B). It never reads
+  coordinates, dates, operators, object names or contacts.
+- **Mapping.** `hpr_to_scenario()` builds an assortment table and prices
+  (one matrix-priced row per product and species, plus the base Waste row
+  per species) and checks them with `check_price_set()`.
+  `hpr_product_table()` gives the dialog's product rows and default ticks.
+  The decisions (rounding up, forbidden cells, class-limit price length,
+  species guess, best-grade filter) are recorded in CLAUDE.md.
+- **Price length.** The hidden assortment field `PriceLengths_cm` holds the
+  class lower limits of a product priced on "Length as defined in
+  LengthClasses"; `products_from_defs()` turns it into
+  `LengthClasses$PriceLength_cm` only when some row has it (the base tables
+  are unchanged), the candidate plan carries it (`price_len_of()`), and
+  `.prepare_runs()` treats a different price length as a different product
+  definition.
+- **Test file.** The real example has exact stem coordinates and names, so
+  it is not in the repository. `inputs/test_fixtures/hpr_example_synthetic.hpr`
+  holds its species groups, products and prices plus one invented stem
+  (`scripts/make_hpr_test_fixture.R`, run with the path to optBuck's
+  `inst/extdata/example.hpr`).
+- **Example file contents** (optBuck @ 33ec887): species groups 445 FURU,
+  446 GRAN, 447 LAUV, 448 BIOVIRKE (grades 1–16, best 1, StartGrade 2);
+  8 classified products (REDACTED23, 200 Massevirke for FURU;
+  197 Massevirke, 100 Energi, 154 Kubb, REDACTED25 for GRAN;
+  345 Bjørk; 987 Biovirke), all under bark with the top diameter 10 cm below
+  the cut; 35 forbidden cells in REDACTED23; 2 GRAN stems over bark
+  every 10 cm from the felling cut (25.0 and 22.2 m measured).

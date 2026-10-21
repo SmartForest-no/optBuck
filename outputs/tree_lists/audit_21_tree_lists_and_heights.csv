@@ -4,7 +4,7 @@ check,result,detail
 Check 03: >= 10 heights -> fieldPlot (plot / species curve for a plot without heights); none -> uncalibrated FinnHoyde; measured heights unchanged; every tree has a source,PASS,"spruce: 27 measured, model nlme; missing in measured plots: fieldPlot (plot); plot P9: fieldPlot (species curve) | pine: FinnHoyde (uncalibrated)"
 "Check 03b: Calibration by hand: ratio 53.5 / 44.603255 = 1.199464; a 22 cm spruce gets 16.592107 m, 'FinnHoyde (calibrated, n = 3)'",PASS,"ratio 1.199464 (summary 1.199464), height 16.592107, source 'FinnHoyde (calibrated, n = 3)'"
 "Check 03c: Ratio 1.8 warns, ratio 1.2 does not; site-independence warning only for the species without heights",PASS,"Spruce: measured heights are on average 80 % above the FinnHoyde curve (ratio 1.80, n = 3); check the heights or measure more trees. | Heights for 2 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. | (inside: 0 warnings)"
-Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights,PASS,"full fit: nlme in 0.59 s | limited: nls in 0.27 s, note 'nlme stopped at the 0.2 s time limit; nls used'"
+Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights,PASS,"full fit: nlme in 0.67 s | limited: nls in 0.29 s, note 'nlme stopped at the 0.2 s time limit; nls used'"
 Check 05: missing column -> rejected,PASS,Missing required column(s): dbh
 Check 05: empty -> rejected,PASS,The tree list is empty.
 Check 05: non-numeric dbh -> rejected,PASS,"Non-numeric dbh in 1 row(s) (rows 3), e.g. '30,5'."
