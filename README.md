@@ -179,8 +179,8 @@ assortment at 0 NOK/m³ is added for each species:
 - Price cells marked as forbidden to cut are left empty: such logs are never
   chosen. A diameter class forbidden at every length stays in the matrix as
   an empty row.
-- The price volume follows the product's volume method (top, Norwegian mid
-  or solid volume). For products priced on the length class, the price
+- The price volume follows the product's volume method (top, Norwegian mid,
+  mid or solid volume). For products priced on the length class, the price
   volume uses the class's lower limit (365 cm), not the cut length.
 
 After the import, one line says how many assortments were imported. A
@@ -293,7 +293,7 @@ The results have these tabs:
   top of large pines is clarified. The bark model is a replaceable
   component.
 - Stump height 10 cm; candidate logs on a 10 cm grid.
-- Sale volume is measured per product, with one of four methods:
+- Sale volume is measured per product, with one of five methods:
   - **Top cylinder** (sawlogs in the base set): a cylinder at the
     under-bark top diameter, rounded down to whole cm, over the log length.
   - **Top**: a frustum from the top diameter, widening by 1 cm per metre
@@ -305,6 +305,9 @@ The results have these tabs:
     (Norsk Virkesmåling, 2026, sections 4.1.3–4.1.4): the top diameter
     rounded down to whole cm plus 0.5 cm, plus 1 cm per metre over half the
     log length, V = 3.14/4 · D² · L.
+  - **Mid** (StanForD "Mid"): a cylinder at the under-bark diameter
+    measured at the middle of the log, rounded down to whole cm,
+    V = π/4 · D² · L. The price class still follows the top diameter.
 - A log with a top diameter above a price matrix's largest diameter class is
   priced at that class (50 cm in the 2021 sawlog matrices). The physical
   diameter is not changed.

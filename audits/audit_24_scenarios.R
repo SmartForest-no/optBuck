@@ -128,7 +128,8 @@ saw14 <- defs[keys == "spruce_sawlog", , drop = FALSE]; saw14$MinTopDiameter_cm 
 section("01. Derived fields")
 p1 <- products_from_defs(rbind(defs, poles), rbind(pm0, pm_poles))$pd
 rnd <- volume_rounding(VOLUME_METHODS)
-ok1 <- identical(unname(rnd), c(VOLUME_ROUND_DOWN_CM, VOLUME_ROUND_DOWN_CM, "None", VOLUME_ROUND_DOWN_CM)) &&
+ok1 <- identical(unname(rnd), c(VOLUME_ROUND_DOWN_CM, VOLUME_ROUND_DOWN_CM, "None", VOLUME_ROUND_DOWN_CM,
+                                     VOLUME_ROUND_DOWN_CM)) &&   # ... Norwegian mid, Mid
   identical(p1$VolumeDiameterAdjustment, unname(volume_rounding(p1$VolumeDiameterCategory))) &&
   identical(assortment_lengths(poles, pm_poles)$spruce_poles, seq(800, 1200, by = 10)) &&
   identical(custom_type(c("Waste", "Poles")), c("waste_commercial", "poles")) &&

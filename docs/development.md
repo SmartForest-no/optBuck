@@ -20,12 +20,12 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | App backend | Audit 16 PASS (15/15), including fast vs. reference optimizer equivalence |
 | Bark model and NOK/m³ denominator | Audit 18 PASS (13/13): barkNOR wrapper, B ≥ 0 floor, swappable model, synthetic stems, price independence |
 | Tie-breaking and price scenarios | Audit 19 PASS (26/26): synthetic ties, order independence, matrix helpers, long and wide uploads (class gaps rejected), pattern comparison |
-| Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (40/40): volume methods by hand, custom assortments winning and losing, default results identical to the pre-Phase-4b baseline (with the pre-Phase-4c limits), validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
+| Custom assortments and volume methods (Phase 4b) | Audit 20 PASS (43/43): volume methods by hand (Mid included), custom assortments winning and losing, default results identical to the pre-Phase-4b baseline (with the pre-Phase-4c limits), validation, upload round trips, per-product price cap, prices kept when an assortment is edited |
 | Tree lists and height imputation (Phase 5) | Audit 21 PASS (28/28): FinnHoyde curves and calibration by hand, fieldPlot wrapper (single species, time limit), validation of broken files, NFI trees as a tree list give identical results, end-to-end runs |
 | Shiny app (Phase 4d layout) | Audit 17 (headless shinytest2 smoke test with screenshots): two tabs, Scenarios A and B side by side, "optBuck" name, B states, rows and columns, automatic comparison when B differs, paged result tables, simplified assortment form without a blurred backdrop, a custom assortment through the form, an uploaded tree list, B's own assortments (rule change, B-only, removed from B only, comparison, A downloaded and uploaded to B), Run disabled with progress while a run task runs |
 | Assortment table and price sets A/B (Phase 4c) | Audit 23 PASS (10/10): base products through the table and back, default limits, derived Priority, lengths from the matrix columns, row/column helpers, class gaps, B states, xlsx round trip, B with its own lengths in the backend |
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
-| Import from .hpr (hpr Phase A) | Audit 25 PASS (15/15): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
+| Import from .hpr (hpr Phase A) | Audit 25 PASS (16/16, incl. an imported Mid product): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -67,7 +67,7 @@ R/                          Core engine helpers
   helpers_paths.R           Project root and path utilities (get_root_dir())
   helpers_products.R        Product definitions, assumption checks, the assortment table
                             (defs_from_products(), products_from_defs()), validate_products()
-  helpers_volume_methods.R  Price-volume methods (Top cylinder, Top frustum, solid volume, Norwegian mid)
+  helpers_volume_methods.R  Price-volume methods (Top cylinder, Top frustum, solid volume, Norwegian mid, Mid)
   helpers_valuation.R       Price matrix loading, validation, price lookup with per-product class cap
   helpers_audit.R           Audit logging framework
   helpers_taper.R           Taper profiles (wraps taperNOR)

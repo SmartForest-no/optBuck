@@ -20,6 +20,8 @@
 #                       rounded down to cm; volume rounded to 5 decimals.
 #       "Top"         : frustum, 1 cm/m taper.
 #       "Calculated Norwegian mid".
+#       "Mid"         : cylinder at the diameter at the log's middle,
+#                       (StartPos + StopPos)/2, interpolated from the profile.
 #       "All diameters (solid volume)" (default pulpwood, waste): Apter's
 #                       solid volume (section_volume_fun(), shared with the
 #                       NOK/m3 denominator); not rounded (2026-10-12).
@@ -268,6 +270,8 @@ price_len_of <- function(p, log_len)
       ser  <- if (p$ub) ser_ub else ser_ob
       butt <- at(ser, start_pos)
       top  <- at(ser, top_pos)
+      # Mid: the diameter at the middle of the cut log (often off the grid).
+      mid  <- if (identical(p$method, "Mid")) ser$fun((start_pos + stop_pos) / 2)
 
       eligible <- log_len >= p$min_len & log_len <= p$max_len &
                   top  >= p$min_top  & top  <= p$max_top &
@@ -277,11 +281,11 @@ price_len_of <- function(p, log_len)
         ii <- which(eligible)
         if (length(ii) == 0L) next
         start_pos <- start_pos[ii]; log_len <- log_len[ii]; stop_pos <- stop_pos[ii]
-        top <- top[ii]
+        top <- top[ii]; mid <- mid[ii]
         price_vol <- price_volume_m3(method = p$method, top_d_mm = top,
                                      length_cm = price_len_of(p, log_len), start_pos = start_pos,
                                      stop_pos = stop_pos, solid_vol = ser$solid_vol,
-                                     adjustment = p$adjustment)
+                                     adjustment = p$adjustment, mid_d_mm = mid)
         if (anyNA(price_vol)) {
           ii <- which(!is.na(price_vol))
           if (length(ii) == 0L) next
@@ -304,7 +308,8 @@ price_len_of <- function(p, log_len)
         eligible,
         price_volume_m3(method = p$method, top_d_mm = top, length_cm = price_len_of(p, log_len),
                         start_pos = start_pos, stop_pos = stop_pos,
-                        solid_vol = ser$solid_vol, adjustment = p$adjustment),
+                        solid_vol = ser$solid_vol, adjustment = p$adjustment,
+                        mid_d_mm = mid),
         NA_real_)
       n <- length(start_pos)
       top_ob <- at(ser_ob, top_pos)

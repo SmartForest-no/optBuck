@@ -53,6 +53,11 @@
 #      the starting price, removed cells are dropped; a flat price survives a
 #      length change, a newly added species starts fresh, flat -> grid keeps
 #      nothing
+# 15.  Mid (StanForD VolumeDiameterCategory 3, 2026-10-21) by hand on
+#      synthetic stems: Dmid read under bark at the log's middle (off the
+#      grid for a 370 cm log), rounded down to cm, pi/4 * Dmid^2 * L; on a
+#      curved stem Dmid is interpolated, not top + taper, and the price class
+#      still comes from the top; the backend's usable-only path agrees
 #
 # Verdict : PASS / ACCEPTED WITH REVIEW / FAIL (helpers_audit.R)
 #
@@ -369,7 +374,7 @@ cases10 <- list(
   "min > max top"        = list(d = mk_def(MinTopDiameter_cm = 30), pat = "MaxTopDiameter must be >="),
   "min > max butt"       = list(d = mk_def(MinButtDiameter_cm = 30, MaxButtDiameter_cm = 20),
                                 pat = "MaxButtDiameter must be >="),
-  "unknown method"       = list(d = mk_def(VolumeDiameterCategory = "Mid"),
+  "unknown method"       = list(d = mk_def(VolumeDiameterCategory = "Butt mid"),
                                 pat = "VolumeDiameterCategory must be"),
   "solid + rounding"     = list(d = mk_def(VolumeDiameterAdjustment = VOLUME_ROUND_DOWN_CM),
                                 pat = "solid volume is never rounded"),
@@ -561,6 +566,67 @@ rec("Check 14b: Flat price kept when lengths change; a new species gets the star
     if (ok14b) PASS else FAIL,
     sprintf("spruce %s (want 950), pine %s (want 500); flat->grid kept %s",
             at(kf, "spruce_poles", NA, NA), at(kf, "pine_poles", NA, NA), attr(km, "n_kept")))
+
+
+# ==============================================================================
+# Check 15: Mid (StanForD VolumeDiameterCategory 3) by hand on synthetic stems
+# ==============================================================================
+section("15. Mid: diameter at the middle of the log")
+
+# Stem with a linear under-bark profile set directly (no bark model):
+# 300 mm at the ground, 1 cm/m taper, 12 m; over bark 10 mm more.
+mid_pv <- function(ub) {
+  pos <- seq(0L, 1200L, by = 10L)
+  list(treid = "M1", plot_id = "P0", species_group = "spruce", DBH = ub(130) + 10,
+       height_cm = 1200L, diameterPosition = pos, DiameterValue = ub(pos) + 10,
+       DiameterValueUB = ub(pos))
+}
+pv15 <- mid_pv(function(z) 300 - 0.1 * z)
+p15  <- products_for_run(pd0, lc0, mk_def(Name = "Test", MaxTopDiameter_cm = Inf,
+                                          AllowedLengths_cm = "370;400", VolumeDiameterCategory = "Mid",
+                                          VolumeDiameterAdjustment = VOLUME_ROUND_DOWN_CM), "default")
+log15 <- function(pv, start, len) {
+  c15 <- generate_candidate_logs_one_tree(pv, p15$pd, p15$lc)
+  c15[c15$ProductKey == "spruce_test" & c15$StartPos == start & c15$LogLength == len, ]
+}
+# 10-410: middle at 210 cm, Dmid 279 mm -> 270; pi/4 * 0.27^2 * 4.0 = 0.22902 m3.
+# 10-380: middle at 195 cm (off the grid), Dmid 280.5 mm -> 280;
+#         pi/4 * 0.28^2 * 3.7 = 0.22783 m3.
+hand15a <- c(round(pi / 4 * 0.27^2 * 4.0, 5), round(pi / 4 * 0.28^2 * 3.7, 5))
+fun15a  <- c(price_volume_m3("Mid", NA, 400, adjustment = VOLUME_ROUND_DOWN_CM, mid_d_mm = 279),
+             price_volume_m3("Mid", NA, 370, adjustment = VOLUME_ROUND_DOWN_CM, mid_d_mm = 280.5))
+r15a <- rbind(log15(pv15, 10, 400), log15(pv15, 10, 370))
+rec("Check 15a: Mid by hand: 10-410 cm (Dmid 279 -> 270 mm) = 0.22902 m3; 10-380 cm (mid 195 cm off the grid, Dmid 280.5 -> 280 mm) = 0.22783 m3; price_volume_m3() and candidates agree",
+    if (all(abs(hand15a - c(0.22902, 0.22783)) <= TOL) && all(abs(fun15a - hand15a) <= TOL) &&
+        nrow(r15a) == 2L && all(abs(r15a$price_volume_m3 - hand15a) <= TOL)) PASS else FAIL,
+    sprintf("hand %s; price_volume_m3 %s; candidates %s", paste(sprintf("%.5f", hand15a), collapse = ", "),
+            paste(sprintf("%.5f", fun15a), collapse = ", "),
+            paste(sprintf("%.5f", r15a$price_volume_m3), collapse = ", ")))
+
+# Non-linear profile: Dmid is interpolated between the grid points around the
+# middle, not computed from the top diameter. ub(z) = 320 - 0.25 z + 1e-4 z^2:
+# d(190) = 276.11, d(200) = 274.00 -> Dmid(195) = 275.055 -> 270 mm,
+# V = pi/4 * 0.27^2 * 3.7 = 0.21185 m3. Top at 380 cm = 239.44 mm (class 23);
+# top + 1 cm/m over half the log would give 257.94 -> 250 mm (0.18162 m3).
+pv15b <- mid_pv(function(z) 320 - 0.25 * z + 1e-4 * z^2)
+r15b  <- log15(pv15b, 10, 370)
+hand15b <- round(pi / 4 * 0.27^2 * 3.7, 5)
+rec("Check 15b: Mid on a curved stem reads Dmid (275.055 -> 270 mm) at the log's middle, not top + taper; price class still from the top (239.4 mm -> 23)",
+    if (nrow(r15b) == 1L && abs(hand15b - 0.21185) <= TOL &&
+        abs(r15b$price_volume_m3 - hand15b) <= TOL && r15b$PriceDiameterClass_cm == 23L &&
+        abs(r15b$TopDiameter - 239.44) <= 0.05) PASS else FAIL,
+    sprintf("volume %.5f (want %.5f); top %.1f mm, class %s",
+            r15b$price_volume_m3, hand15b, r15b$TopDiameter, r15b$PriceDiameterClass_cm))
+
+# The backend's path (usable candidates only) prices the same volumes.
+plan15 <- .candidate_species_plan("spruce", p15$pd, p15$lc)
+j15 <- match("spruce_test", vapply(plan15$products, `[[`, "", "pk"))
+g15 <- .candidate_columns(pv15b, plan15, usable_only = TRUE)$cols
+u15 <- g15$price_volume_m3[g15$prod == j15 & g15$StartPos == 10 & g15$StopPos == 380]
+err15 <- tryCatch({ price_volume_m3("Mid", 200, 400); "" }, error = conditionMessage)
+rec("Check 15c: The backend's usable-only candidates give the same Mid volume; Mid without a mid diameter is an error",
+    if (length(u15) == 1L && abs(u15 - hand15b) <= TOL && grepl("mid_d_mm", err15)) PASS else FAIL,
+    sprintf("usable-only %s; error: %s", paste(sprintf("%.5f", u15), collapse = ", "), err15))
 
 
 # ==============================================================================

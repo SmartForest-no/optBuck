@@ -37,7 +37,7 @@ HPR_SPECIES_PATTERNS <- list(
 HPR_FORBIDDEN <- "Forbidden to buck the log even manually"
 
 #' StanForD volume categories Apter computes (others become solid volume).
-HPR_VOLUME_METHODS <- c("Top", "Calculated Norwegian mid", "All diameters (solid volume)")
+HPR_VOLUME_METHODS <- c("Top", "Calculated Norwegian mid", "Mid", "All diameters (solid volume)")
 
 #' Product group / name tokens of sawlogs and pulpwood (the hidden Type).
 HPR_SAWLOG_TOKENS   <- c("tømmer", "tommer", "sag", "timber", "saw", "kubb", "stock")
@@ -487,8 +487,8 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
       }
       if (method != "All diameters (solid volume)" &&
           !identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM))
-        pinfo <- c(pinfo, sprintf("Volume diameter '%s': Apter rounds the top diameter down to whole cm for this method.",
-                            p$volume_adjustment))
+        pinfo <- c(pinfo, sprintf("Volume diameter '%s': Apter rounds the %s diameter down to whole cm for this method.",
+                            p$volume_adjustment, if (method == "Mid") "mid" else "top"))
       len_rule <- or_default(p$volume_length, "Physical length cm")
       class_len <- identical(len_rule, "Length as defined in LengthClasses") &&
         method != "All diameters (solid volume)"

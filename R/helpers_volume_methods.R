@@ -31,35 +31,45 @@
 #                    and adds 0.5 mm (units bug); Apter follows optBuck with
 #                    the units fixed. Set DiameterTopPosition = 10 for the
 #                    rule's measuring point.
+#   "Mid"            StanForD 2010 VolumeDiameterCategory 3 (2026-10-21):
+#                    cylinder at the diameter measured at the middle of the
+#                    log, pi/4 * Dmid^2 * L. Dmid is read from the stem
+#                    profile (under bark) at the physical middle of the cut
+#                    log, (StartPos + StopPos)/2, not calculated from the top;
+#                    rounded down to whole cm, no class midpoint added. L is
+#                    the price length (the cut, or the class lower limit for
+#                    hpr products priced on length classes). optBuck has no
+#                    Mid branch. The top diameter still drives the limits and
+#                    the price class.
 #
 #   Dt is the product's measuring top diameter (mm): under or over bark per
 #   DiameterUnderBark, read DiameterTopPosition cm below the cut (the
 #   Norwegian rule measures 10 cm inside the top end).
 #
 #   VolumeDiameterAdjustment "Measured diameter rounded downwards to cm"
-#   applies to Dt for "Top cylinder" and "Top". "Calculated Norwegian mid"
-#   always floors (part of the rule). Solid volume never rounds; the
-#   combination is rejected by validate_products().
+#   applies to Dt for "Top cylinder" and "Top", and to Dmid for "Mid".
+#   "Calculated Norwegian mid" always floors (part of the rule). Solid volume
+#   never rounds; the combination is rejected by validate_products().
 #
 #   VolumeLengthCategory has no effect: Apter cuts logs at exactly their
 #   class length (no trim allowance), so physical, rounded-down and
 #   length-class lengths are the same.
 #
-#   The three formula methods are rounded to 5 decimals (m3), as the sawlog
+#   The four formula methods are rounded to 5 decimals (m3), as the sawlog
 #   top cylinder always was; solid volume is not rounded.
 # ==============================================================================
 
 #' Price-volume methods (ProductData$VolumeDiameterCategory).
 VOLUME_METHODS <- c("Top cylinder", "Top", "All diameters (solid volume)",
-                    "Calculated Norwegian mid")
+                    "Calculated Norwegian mid", "Mid")
 
 #' ProductData$VolumeDiameterAdjustment values.
 VOLUME_ROUND_DOWN_CM <- "Measured diameter rounded downwards to cm"
 VOLUME_DIAMETER_ADJUSTMENTS <- c("None", VOLUME_ROUND_DOWN_CM)
 
 #' The diameter rounding of each volume method (Phase 4d: fixed per method,
-#' no longer a setting): Top cylinder, Top and Norwegian mid round down to
-#' whole cm; solid volume never rounds.
+#' no longer a setting): Top cylinder, Top, Norwegian mid and Mid round down
+#' to whole cm; solid volume never rounds.
 volume_rounding <- function(method) {
   ifelse(as.character(method) == "All diameters (solid volume)", "None", VOLUME_ROUND_DOWN_CM)
 }
@@ -67,7 +77,7 @@ volume_rounding <- function(method) {
 #' Short labels of the volume methods for compact tables.
 VOLUME_METHOD_SHORT <- c("Top cylinder" = "Top cylinder", "Top" = "Top (frustum)",
                          "All diameters (solid volume)" = "Solid volume",
-                         "Calculated Norwegian mid" = "Norwegian mid")
+                         "Calculated Norwegian mid" = "Norwegian mid", "Mid" = "Mid")
 
 #' Frustum / Norwegian mid taper: 1 cm per metre = 0.1 mm per cm of length.
 VOLUME_TAPER_MM_PER_CM <- 0.1
@@ -86,11 +96,13 @@ VOLUME_NORWEGIAN_PI <- 3.14
 #' @param solid_vol   function(start, stop) from section_volume_fun() on the
 #'                    product's diameter series; used by solid volume only.
 #' @param adjustment  VolumeDiameterAdjustment (NA/NULL = "None").
-#' @return Numeric vector (m3). NA where the top diameter is NA or <= 0
-#'   (formula methods).
+#' @param mid_d_mm    Diameter (mm) at the middle of the log; Mid only.
+#' @return Numeric vector (m3). NA where the measuring diameter (top, or mid
+#'   for Mid) is NA or <= 0 (formula methods).
 price_volume_m3 <- function(method, top_d_mm, length_cm,
                             start_pos = NULL, stop_pos = NULL,
-                            solid_vol = NULL, adjustment = "None") {
+                            solid_vol = NULL, adjustment = "None",
+                            mid_d_mm = NULL) {
   if (length(method) != 1L || !method %in% VOLUME_METHODS)
     stop("Unknown volume method '", paste(method, collapse = ", "),
          "' (expected one of: ", paste(VOLUME_METHODS, collapse = ", "), ").")
@@ -100,6 +112,12 @@ price_volume_m3 <- function(method, top_d_mm, length_cm,
   }
   round_down <- !is.null(adjustment) && length(adjustment) == 1L &&
     !is.na(adjustment) && adjustment == VOLUME_ROUND_DOWN_CM
+  if (method == "Mid") {
+    if (is.null(mid_d_mm)) stop("Mid needs mid_d_mm (the diameter at the middle of the log).")
+    dm <- if (round_down) floor(mid_d_mm / 10) * 10 else mid_d_mm
+    v  <- pi * (dm / 2)^2 * length_cm / 1e8
+    return(ifelse(!is.na(mid_d_mm) & dm > 0, round(v, 5), NA_real_))
+  }
   dt <- if (round_down || method == "Calculated Norwegian mid")
     floor(top_d_mm / 10) * 10 else top_d_mm
   L  <- length_cm
