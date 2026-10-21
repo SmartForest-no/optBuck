@@ -152,7 +152,8 @@
 #      hpr Phase B the imported file, kept in imported/)
 # 31.  .hpr stems (hpr Phase B), run before 30: after the import the source is
 #      still NFI; ".hpr stems" uses the imported file with its confirmed
-#      species map; 13 stems read, 5 used, 8 dropped-stem warnings; live
+#      species map; 13 stems read, 5 used, 4 warnings for problems in the file
+#      (none for Not-used species, multi-tree or short stems); live
 #      counts in stems; a comparison runs; no Plots in the Summary and no
 #      Plot column in the logs and trees; "Measured length (m)"
 #
@@ -1337,7 +1338,8 @@ if (!browser_ok) {
       grepl("Using hpr_example_synthetic.hpr (imported into Scenario B)", c31$file, fixed = TRUE) &&
       identical(c31$species, "pine,spruce,none") &&
       grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
-      identical(as.integer(c31$n_warn), 8L) && grepl("4 spruce · 1 pine stems", c31$counts, fixed = TRUE) &&
+      identical(as.integer(c31$n_warn), 4L) && !grepl("Not used", c31$valid, fixed = TRUE) &&
+      !grepl("multi-tree", c31$valid, fixed = TRUE) && grepl("4 spruce · 1 pine stems", c31$counts, fixed = TRUE) &&
       grepl("Stems", c31$summary, fixed = TRUE) && !grepl("Plots", c31$summary, fixed = TRUE) &&
       grepl("Scenario B", c31$summary, fixed = TRUE) && c31$cmp_tab &&
       !"Plot" %in% hdr_cols(c31$logs_hdr) && "Tree" %in% hdr_cols(c31$logs_hdr) &&
