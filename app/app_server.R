@@ -581,9 +581,9 @@ server <- function(input, output, session) {
                    `Value (NOK)` = round(a$value_nok, 0), `NOK per m³` = round(a$nok_per_m3, 1)))
     b <- dbh_b()[match(paste(a$species_group, a$dbh_class),
                        paste(dbh_b()$species_group, dbh_b()$dbh_class)), ]
+    # Trees and commercial volume once (A's); B's NOK/m3 uses B's own volume.
     cbind(out,
           `Commercial volume A (m³ u.b.)` = round(a$commercial_volume_m3, 3),
-          `Commercial volume B (m³ u.b.)` = round(b$commercial_volume_m3, 3),
           `Value A (NOK)` = round(a$value_nok, 0), `Value B (NOK)` = round(b$value_nok, 0),
           `Value B − A (NOK)` = round(b$value_nok - a$value_nok, 0),
           `NOK per m³ A` = round(a$nok_per_m3, 1), `NOK per m³ B` = round(b$nok_per_m3, 1),

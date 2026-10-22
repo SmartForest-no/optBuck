@@ -117,7 +117,7 @@ Later: compare the recorded logs with the optimal bucking; under-bark profiles; 
 ## Result tables (done, 2026-10-22, branch `result-tables`)
 
 1. **Log tally (stocknota), Selected logs tab.** Logs or commercial volume u.b. per price-diameter class × length class of one assortment at a time, on its price grid ("–" = no price); flat-priced per length; A, B or B − A after a comparison; waste not tallied. xlsx (one sheet per assortment) and CSV downloads. Replaces the logs-per-length and volume-per-diameter figures (its totals).
-2. **Value by DBH class, Per m³ tab.** Trees, commercial volume, value and NOK/m³ per species and 5 cm class (open from 60 cm), A, B and B − A; CSV; one figure (trees per class, NOK/m³ per class for A and B) replacing the DBH density.
+2. **Value by DBH class, Per m³ tab.** Trees, commercial volume, value and NOK/m³ per species and 5 cm class (open from 60 cm); after a comparison trees and commercial volume once (A's), value and NOK/m³ for A, B and B − A (B's NOK/m³ on B's own volume); CSV; one figure (trees per class, NOK/m³ per class for A and B) replacing the DBH density.
 3. **Removed duplicates.** The comparison tab's A/B overview table (= the Summary's A/B grid; trees with logs A / B moved to the Summary) and its A/B value bars (= the Products tab's figure). Figures 11 → 8.
 4. **Audits.** New audit 27 (7 checks); audit 17 checks 14–16 and 27.
 

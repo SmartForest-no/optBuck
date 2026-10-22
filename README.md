@@ -301,8 +301,9 @@ The results have these tabs:
   and Scenario B side by side
 - **Per m³:** NOK/m³ in total, per species and by assortment; **value by
   DBH class**: trees, commercial volume, value and NOK/m³ per species and
-  5 cm DBH class (… 5–9.9, 10–14.9 … 55–59.9, ≥ 60 cm), for Scenario A and B
-  and the difference after a comparison, with a CSV download and one figure
+  5 cm DBH class (… 5–9.9, 10–14.9 … 55–59.9, ≥ 60 cm); after a comparison,
+  value and NOK/m³ for Scenario A and B and the difference (each scenario's
+  NOK/m³ on its own commercial volume), with a CSV download and one figure
   (trees per class, and NOK/m³ per class for A and B); and per-tree
   results: the height distribution per species, a preview of the
   first 20 trees of Scenario A (select a tree to
