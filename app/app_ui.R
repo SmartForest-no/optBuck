@@ -150,9 +150,15 @@ simulator_page <- nav_panel(
           plotOutput("bar_per_m3_contribution", height = "260px"),
           plotOutput("bar_volume_share",        height = "260px")
         ),
+        # Value by DBH class (2026-10-22): table, CSV and one figure (it
+        # replaces the DBH density of the Trees card).
+        div(class = "section-hdr", "By DBH class"),
+        reactableOutput("tbl_dbh_class"),
+        div(class = "tally-downloads",
+          downloadButton("dl_dbh_class", "Download DBH table (CSV)", class = "btn-secondary btn-sm")),
+        plotOutput("fig_dbh_class", height = "auto"),
         apter_card("Trees", collapsible = TRUE, open = FALSE,
-          layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-            plotOutput("fig_dbh",    height = "260px"),
+          layout_columns(col_widths = breakpoints(sm = 12, lg = 6),
             plotOutput("fig_height", height = "260px")
           ),
           uiOutput("trees_preview_note"),
@@ -171,16 +177,27 @@ simulator_page <- nav_panel(
       ),
 
       nav_panel("Selected logs", value = "logs",
-        plotOutput("fig_log_lengths", height = "auto"),
-        plotOutput("fig_log_volume",  height = "auto"),
+        # Log tally per price matrix (stocknota, 2026-10-22): replaces the
+        # logs-per-length and volume-per-diameter figures (its totals).
+        div(class = "section-hdr", "Log tally"),
+        div(class = "tally-controls",
+          selectInput("tally_key", "Assortment", choices = NULL, width = "260px"),
+          radioButtons("tally_measure", "Show", c("Logs" = "logs", "Volume (m³ u.b.)" = "volume"),
+                       inline = TRUE),
+          uiOutput("tally_scenario_ui")),
+        uiOutput("tally_note"),
+        reactableOutput("tbl_tally"),
+        div(class = "tally-downloads",
+          downloadButton("dl_tally_xlsx", "Download log tally (xlsx)", class = "btn-secondary btn-sm"),
+          downloadButton("dl_tally_csv", "Download log tally (CSV)", class = "btn-secondary btn-sm")),
+        div(class = "section-hdr", "Logs"),
         uiOutput("logs_preview_note"),
         reactableOutput("tbl_selected_logs"),
         downloadButton("dl_logs", "Download all logs (CSV)", class = "btn-secondary btn-sm")
       ),
 
       nav_panel("Scenario comparison", value = "comparison",
-        div(class = "section-hdr", "Scenario A and Scenario B"),
-        reactableOutput("tbl_cmp_overview"),
+        # A and B themselves are in the Summary (tbl_cmp_overview removed 2026-10-22).
         div(class = "section-hdr", "Difference (B − A)"),
         reactableOutput("tbl_cmp_delta"),
         div(class = "section-hdr", "NOK per m³ and volume share by assortment"),
@@ -192,11 +209,9 @@ simulator_page <- nav_panel(
         selectizeInput("cmp_tree", "Tree (changed trees first, largest value change first)",
                        choices = NULL, width = "100%"),
         plotOutput("stem_compare", height = "230px"),
+        # A and B per assortment are on the Products tab (bar_cmp_value removed 2026-10-22).
         div(class = "section-hdr", "Value by assortment"),
-        layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-          plotOutput("bar_cmp_value", height = "280px"),
-          plotOutput("bar_cmp_delta", height = "280px")
-        ),
+        plotOutput("bar_cmp_delta", height = "280px"),
         reactableOutput("tbl_cmp_products")
       )
     )

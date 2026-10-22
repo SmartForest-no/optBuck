@@ -175,16 +175,28 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   `apter_reactable()` (columns sized to content, headers wrap),
   `paged_table_ui()`/`paged_table_server()` (server-side pages for large
   result tables), `apter_barplot()`, `apter_barplot_ab()`, and the ggplot2
-  figures `apter_density_species()` (DBH and height densities in the Trees
-  card) and `apter_bars_by_assortment()` (logs per length class and
-  commercial volume per top-diameter class in Selected logs; facets
-  Scenario A | B after a comparison, species rows when both)) in
-  `app/helpers_ui.R`; ggplot2 figures use `theme_apter()` (`app/theme.R`)
+  figures `apter_density_species()` (height density in the Trees card) and
+  `apter_dbh_class_figure()` (trees and NOK/m³ by DBH class, Per m³; A
+  solid, B dashed)) in `app/helpers_ui.R`; ggplot2 figures use `theme_apter()` (`app/theme.R`)
   and Inter from `app/www/fonts/*.ttf`, registered with systemfonts and drawn
   by ragg; `app/www/apter.js` shows the progress bar as soon as
-  Run is clicked. After a comparison the Summary shows run time, plots and
-  trees once, then Scenario A and B side by side, each as a 2 × 2 grid
-  (value, commercial volume / NOK per m³, price volume). Selected logs is a
+  Run is clicked. After a comparison the Summary shows run time, plots,
+  trees and trees with logs (A / B) once, then Scenario A and B side by
+  side, each as a 2 × 2 grid (value, commercial volume / NOK per m³, price
+  volume); the comparison tab has no A/B overview table and no A/B value bar
+  (both duplicated other outputs; removed 2026-10-22). **Result tables
+  (2026-10-22, `R/helpers_result_tables.R`, audit 27):** the log tally
+  (stocknota, Selected logs: `tally_key`, `tally_measure`, `tally_scenario`,
+  `tbl_tally`, `dl_tally_xlsx`, `dl_tally_csv`) counts commercial logs (not
+  waste) per `PriceDiameterClass_cm_used` × `LengthClass_dm` on the
+  scenario's own price grid (`pm_to_grid()`: NA = no price, 0 = no logs;
+  logs above the largest class in it), flat-priced per length, volume =
+  `commercial_volume_m3` (grand total = the run's commercial volume); B − A
+  on the union of axes, per length when an assortment is matrix-priced in one
+  scenario and flat in the other. Value by DBH class (Per m³:
+  `tbl_dbh_class`, `dl_dbh_class`, `fig_dbh_class`): 5 cm classes from 0,
+  open from 60 cm (`dbh_class_summary()`); totals per species equal
+  `per_m3_summary`. Selected logs also has a
   preview (Scenario A's first 20 logs) plus `dl_logs`, a CSV of all logs
   with a Scenario column (both scenarios after a comparison). The Trees
   card (Per m³) works the same way: a preview of Scenario A's first 20 trees

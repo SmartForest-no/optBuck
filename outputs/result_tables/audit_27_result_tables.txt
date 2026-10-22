@@ -1,0 +1,35 @@
+============================================================= 
+  Audit: result tables (log tally, DBH classes)
+  Run: 2026-10-22 11:28:15.365694
+============================================================= 
+
+--- 01. Tally totals ---
+  [PASS  ] Check 01: The tally's logs and volume per assortment and in total equal the run's; waste is not tallied | 143 tally rows, 322 logs (run: 322, of which 0 waste) | logs per assortment TRUE | volume per assortment TRUE | grand total 36.1822 m3 = Total TRUE | a waste log is not tallied TRUE
+
+--- 02. Matrix grid layout ---
+  [PASS  ] Check 02: A matrix-priced tally is laid out on its price grid; NA only at unpriced cells; totals | spruce_sawlog: 39 x 9 grid (price grid 39 x 9) | axes TRUE | NA cells 0 (unpriced, no logs) TRUE | an unpriced cell is NA TRUE | cells TRUE | totals TRUE | 101 logs, 19.1676 m3
+
+--- 03. Price cap: logs above the largest class ---
+  [PASS  ] Check 03: Logs above the largest price class count in it (as priced) | B spruce_sawlog: 31 logs above 20 cm uncapped | rows up to 20 cm | 20 cm row: 36 logs
+
+--- 04. Flat-priced assortments ---
+  [PASS  ] Check 04: A flat-priced assortment is tallied per length class in one row | spruce_pulpwood: 26 length classes (30-55 dm), 94 logs, 3.0908 m3
+
+--- 05. B - A ---
+  [PASS  ] Check 05: B - A is B's grid minus A's; one-sided and matrix-vs-flat assortments | spruce_sawlog: 8 x 10 common cells equal B - A TRUE, total +6 TRUE | only in A: total -6, rows 20,21 | matrix in A, flat in B: per length 1/-2/-1
+
+--- 06. Value by DBH class ---
+  [PASS  ] Check 06: DBH classes: limits, species totals equal per_m3_summary, classes add up, NOK/m3 = value / volume | labels 0–4.9, 5–9.9, 5–9.9, 55–59.9, ≥ 60, ≥ 60 | 12 classes (10–14.9 15–19.9 20–24.9 25–29.9 30–34.9 35–39.9) | totals = per_m3_summary TRUE | classes add up TRUE | NOK/m3 TRUE
+
+--- 07. Downloads ---
+  [PASS  ] Check 07: The xlsx has a sheet per assortment (A, B, B - A on common axes) and the long table | sheets: spruce sawlog, spruce pulpwood, pine sawlog, pine pulpwood, long | long sheet = log_tally_long() TRUE (272 rows) | spruce sawlog blocks: A: Logs / B: Logs / A: Volume (m³ u.b.) / B: Volume (m³ u.b.) / B - A: Logs / B - A: Volume (m³ u.b.) | grand totals A 101, B 107, B - A 6
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result n
+1   PASS 7
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/result_tables/audit_27_result_tables.csv

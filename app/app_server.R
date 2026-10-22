@@ -462,7 +462,9 @@ server <- function(input, output, session) {
       ro_field_row(
         ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
         plots,
-        ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total))),
+        ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total)),
+        ro_field(paste(unit_lbl("Trees with logs"), "(A / B)"),
+                 sprintf("%s / %s", fmt_int(r$n_trees_with_logs), fmt_int(result_b()$n_trees_with_logs)))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                      scen("Scenario A", r), scen("Scenario B", result_b())))
   })
@@ -565,12 +567,43 @@ server <- function(input, output, session) {
                                  page_size = 20L))
   })
 
-  # DBH and height of the bucked trees per species (the same trees in A and
-  # B, so shown once).
-  output$fig_dbh <- renderPlot(res = 96, {
-    req(has_result()); ts <- result()$tree_summary
-    apter_density_species(ts$dbh_cm, ts$species_group, "DBH (cm)", "DBH distribution")
+  # Value by DBH class (R/helpers_result_tables.R; 5 cm classes): table, CSV
+  # and one figure (trees per class, NOK/m3 per class in A and B).
+  dbh_a <- reactive({ req(has_result()); dbh_class_summary(result()$tree_summary) })
+  dbh_b <- reactive({ req(compared()); dbh_class_summary(result_b()$tree_summary) })
+  dbh_table <- reactive({
+    a <- dbh_a()
+    out <- data.frame(Species = tools::toTitleCase(a$species_group),
+                      `DBH class (cm)` = a$dbh_class, Trees = a$trees,
+                      check.names = FALSE, stringsAsFactors = FALSE)
+    if (!compared())
+      return(cbind(out, `Commercial volume u.b. (m³)` = round(a$commercial_volume_m3, 3),
+                   `Value (NOK)` = round(a$value_nok, 0), `NOK per m³` = round(a$nok_per_m3, 1)))
+    b <- dbh_b()[match(paste(a$species_group, a$dbh_class),
+                       paste(dbh_b()$species_group, dbh_b()$dbh_class)), ]
+    # Trees and commercial volume once (A's); B's NOK/m3 uses B's own volume.
+    cbind(out,
+          `Commercial volume A (m³ u.b.)` = round(a$commercial_volume_m3, 3),
+          `Value A (NOK)` = round(a$value_nok, 0), `Value B (NOK)` = round(b$value_nok, 0),
+          `Value B − A (NOK)` = round(b$value_nok - a$value_nok, 0),
+          `NOK per m³ A` = round(a$nok_per_m3, 1), `NOK per m³ B` = round(b$nok_per_m3, 1),
+          `NOK per m³ B − A` = round(b$nok_per_m3 - a$nok_per_m3, 1))
   })
+  output$tbl_dbh_class <- renderReactable({
+    d <- dbh_table(); tot <- which(d$`DBH class (cm)` == "All")
+    apter_reactable(d, sortable = FALSE, page_size = 40L,
+                    row_class = function(i) if (i %in% tot) "tally-total")
+  })
+  output$dl_dbh_class <- downloadHandler(
+    filename = function() "optBuck_value_by_dbh_class.csv",
+    content  = function(file) utils::write.csv(dbh_table(), file, row.names = FALSE, fileEncoding = "UTF-8"))
+  output$fig_dbh_class <- renderPlot(res = 96, height = function() 420, {
+    req(has_result())
+    apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b())
+  })
+
+  # Height of the bucked trees per species (the same trees in A and B, so
+  # shown once).
   output$fig_height <- renderPlot(res = 96, {
     req(has_result()); ts <- result()$tree_summary
     if (isTRUE(is_hpr()))
@@ -659,41 +692,69 @@ server <- function(input, output, session) {
       utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
     })
 
-  # Figures of all selected logs (not the preview): bars by assortment over
-  # a class, summed per scenario (facets Scenario A | B after a comparison)
-  # and species (facet rows when both).
-  log_fig_data <- function(class_of, value_of, drop_waste = FALSE) {
-    one <- function(r, nm) {
-      sl <- r$selected_logs_all
-      if (drop_waste) sl <- sl[sl$ProductType != "waste", , drop = FALSE]
-      if (nrow(sl) == 0L) return(NULL)
-      data.frame(Scenario = nm, Species = tools::toTitleCase(sl$species_group),
-                 class = class_of(sl), Assortment = type_label(sub("^[^_]+_", "", sl$ProductKey)),
-                 Type = sl$ProductType, value = value_of(sl), stringsAsFactors = FALSE)
+  # Log tally per price matrix (stocknota; R/helpers_result_tables.R): the
+  # commercial logs per price-diameter class x length class of one
+  # assortment, laid out like its price grid; logs or volume; A, B or B - A.
+  tallies <- reactive({
+    req(has_result())
+    c(list(A = log_tally(result()$selected_logs_all, result()$price_matrix)),
+      if (compared()) list(B = log_tally(result_b()$selected_logs_all, result_b()$price_matrix)))
+  })
+  tally_pms <- reactive(c(list(A = result()$price_matrix),
+                          if (compared()) list(B = result_b()$price_matrix)))
+  observe({
+    keys <- do.call(log_tally_keys, unname(tallies()))
+    cur <- isolate(input$tally_key)
+    updateSelectInput(session, "tally_key", choices = setNames(keys, asm_label(keys)),
+                      selected = if (!is.null(cur) && cur %in% keys) cur else keys[1L])
+  })
+  output$tally_scenario_ui <- renderUI({
+    if (!compared()) return(NULL)
+    radioButtons("tally_scenario", "Scenario", c("A" = "A", "B" = "B", "B − A" = "diff"),
+                 selected = isolate(or_default(input$tally_scenario, "A")), inline = TRUE)
+  })
+  tally_view <- reactive(if (compared()) or_default(input$tally_scenario, "A") else "A")
+  tally_grid <- reactive({
+    t <- tallies(); p <- tally_pms(); k <- input$tally_key
+    req(!is.null(k), nzchar(k), k %in% do.call(log_tally_keys, unname(t)))
+    ms <- or_default(input$tally_measure, "logs"); v <- tally_view()
+    if (v == "diff") log_tally_diff_grid(t$A, p$A, t$B, p$B, k, ms)
+    else log_tally_grid(t[[v]], p[[v]], k, ms)
+  })
+  output$tally_note <- renderUI({
+    g <- tally_grid()
+    div(class = "note-muted", if (identical(g[[1L]][1L], "All diameters"))
+      "Flat-priced: logs per length class (dm). Waste is not tallied."
+      else "Price-diameter class (cm) down, length class (dm) across, as in the price matrix; – no price. Waste is not tallied.")
+  })
+  output$tbl_tally <- renderReactable({
+    g <- tally_grid(); ms <- or_default(input$tally_measure, "logs"); diff <- tally_view() == "diff"
+    num <- names(g)[-1L]
+    fmt <- function(x) {
+      s <- if (ms == "logs") format(round(x), big.mark = ",", trim = TRUE)
+           else formatC(x, format = "f", digits = 3, big.mark = ",")
+      s <- if (diff) ifelse(x > 0, paste0("+", s), s) else s
+      s[!is.na(x) & abs(x) < 1e-12] <- ""
+      s[is.na(x)] <- "–"
+      s
     }
-    d <- rbind(one(result(), "Scenario A"), if (compared()) one(result_b(), "Scenario B"))
-    if (is.null(d)) return(NULL)
-    stats::aggregate(value ~ Scenario + Species + class + Assortment + Type, data = d, FUN = sum)
-  }
-  # Height grows with the facet rows (both species).
-  log_fig_height <- function() {
-    if (!has_result()) return(300)
-    if (length(unique(result()$selected_logs_all$species_group)) > 1L) 520 else 300
-  }
-  output$fig_log_lengths <- renderPlot(res = 96, height = log_fig_height, {
-    req(has_result())
-    apter_bars_by_assortment(
-      log_fig_data(function(sl) sl$LengthClass_dm, function(sl) rep(1, nrow(sl))),
-      "Length class (dm)", "Logs", "Number of logs per length class")
+    show <- g; show[num] <- lapply(g[num], fmt)
+    names(show)[1L] <- if (identical(g[[1L]][1L], "All diameters")) " " else "Ø (cm)"
+    cols <- setNames(lapply(num, function(n) reactable::colDef(align = "right")), num)
+    last <- nrow(show)
+    apter_reactable(show, columns = cols, sortable = FALSE, pagination = FALSE,
+                    row_class = function(i) if (i == last) "tally-total")
   })
-  output$fig_log_volume <- renderPlot(res = 96, height = log_fig_height, {
-    req(has_result())
-    apter_bars_by_assortment(
-      log_fig_data(function(sl) floor(sl$TopDiameter_ub / 10), function(sl) sl$commercial_volume_m3,
-                   drop_waste = TRUE),
-      "Top diameter under bark (cm)", "Commercial volume (m³)",
-      "Commercial volume per top-diameter class")
-  })
+  output$dl_tally_xlsx <- downloadHandler(
+    filename = function() "optBuck_log_tally.xlsx",
+    content  = function(file) log_tally_xlsx(file, tallies(), tally_pms(), label = asm_label))
+  output$dl_tally_csv <- downloadHandler(
+    filename = function() "optBuck_log_tally.csv",
+    content  = function(file) {
+      l <- log_tally_long(tallies())
+      if (nrow(l)) l$Assortment <- asm_label(l$Assortment)
+      utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
+    })
 
 
   # ---- Scenario comparison (A vs B) ------------------------------------------
@@ -702,23 +763,6 @@ server <- function(input, output, session) {
     r1 <- result(); r2 <- result_b()
     compare_cutting_patterns(r1, r2, r1$price_matrix, r2$price_matrix)
   })
-
-  output$tbl_cmp_overview <- renderReactable(apter_reactable(local({
-    r1 <- result(); r2 <- result_b()
-    mk <- function(r, nm) {
-      tot <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-      out <- data.frame(Scenario = nm, Plots = r$n_plots_sampled, Trees = r$n_trees_total,
-                 `Trees with logs` = r$n_trees_with_logs,
-                 `Value (NOK)` = round(sum(r$selected_logs_all$value_nok, na.rm = TRUE), 0),
-                 `Price volume (m³)` = round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 3),
-                 `Commercial volume u.b. (m³)` = round(tot$commercial_volume_m3, 3),
-                 `NOK per m³` = round(tot$nok_per_m3, 1),
-                 check.names = FALSE, stringsAsFactors = FALSE)
-      if (isTRUE(is_hpr())) { out$Plots <- NULL; names(out) <- sub("^Trees", "Stems", names(out)) }
-      out
-    }
-    rbind(mk(r1, "Scenario A"), mk(r2, "Scenario B"))
-  })))
 
   output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
     r1 <- result(); r2 <- result_b()
@@ -830,12 +874,6 @@ server <- function(input, output, session) {
       `Volume share A (%)` = round(100 * share(result(), v$keys), 1),
       `Volume share B (%)` = round(100 * share(result_b(), v$keys), 1),
       check.names = FALSE, stringsAsFactors = FALSE), page_size = 20L)
-  })
-
-  output$bar_cmp_value <- renderPlot(res = 96, {
-    v <- products_ab(); req(v)
-    apter_barplot_ab(v$val_a, v$val_b, asm_label(v$keys),
-                     main = "Value by assortment", ylab = "NOK", fmt = fmt_int)
   })
 
   output$bar_cmp_delta <- renderPlot(res = 96, {
