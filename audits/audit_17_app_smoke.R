@@ -134,9 +134,11 @@
 #      species and a run time; it changes with the species group and
 #      matches the run's Plots and Trees; after a tree-list upload it
 #      counts the 12 trees
-# 27.  Figures: DBH and height densities (Trees card) and log length /
-#      top-diameter bars (Selected logs) render as images for a single run
-#      and after a comparison
+# 27.  Log tally (Selected logs; 2026-10-22, replaces the log figures): rows
+#      shown, its CSV volume equals the logs' commercial volume; after a
+#      comparison B − A is offered, shown signed, and the CSV holds A and B.
+#      The DBH-class figure (Per m³) and the height density (Trees card)
+#      render as images for a single run and after a comparison
 # 28.  Altitude slider: starts at the full range; its value labels stay
 #      within the other inputs' edges; 200-400 m changes the
 #      counts to select_nfi_trees() for that band; the full range restores
@@ -454,7 +456,7 @@ browser_checks <- c(
   "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B",
   "Check 25: Row selection, detail panel, selection synced between A and B, flat price field",
   "Check 26: Live tree counts in the sidebar match the run",
-  "Check 27: Tree and log figures render (single run and comparison)",
+  "Check 27: Log tally (volume = the logs' commercial volume; B − A after a comparison) and the DBH-class and height figures render",
   "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them",
   "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only",
   "Check 30: The kept .hpr upload is deleted when the session ends",
@@ -864,8 +866,26 @@ if (!browser_ok) {
       " return i + ':' + (m && m.complete ? m.naturalWidth : 0); }).join(',')"),
       paste0("'", ids, "'", collapse = ",")))
     fig_ok <- function(f) length(f) == 1L && !is.na(f) && !grepl(":0(,|$)", f)
-    c27 <- list(logs1 = figs(app, c("fig_log_lengths", "fig_log_volume")))
-    shoot(app, "02b_selected_logs_figures")
+    # Log tally (2026-10-22, replaces the log figures): rows shown, and the
+    # tally CSV's volume equals the logs' commercial volume (waste is 0).
+    read_tally_csv <- function(app) {
+      f <- tryCatch(app$get_download("dl_tally_csv"), error = function(e) NULL)
+      if (is.null(f)) return(NULL)
+      utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+    }
+    tally_state <- function(app, logs_csv) {
+      t <- read_tally_csv(app)
+      n <- n_tbl_rows(app, "tbl_tally")
+      vol_logs <- if (is.null(logs_csv)) NA else
+        sum(logs_csv[logs_csv$Scenario == "A", "Commercial volume u.b. (m³)"])
+      vol_tally <- if (is.null(t)) NA else sum(t[t$Scenario == "A", "Volume (m3 u.b.)"])
+      list(rows = n, scen = if (is.null(t)) "" else paste(unique(t$Scenario), collapse = "/"),
+           vol_logs = vol_logs, vol_tally = vol_tally,
+           ok = isTRUE(n >= 2L) && isTRUE(abs(vol_logs - vol_tally) < 0.01))
+    }
+    tally1 <- tally_state(app, read_logs_csv(app))
+    c27 <- list(logs1 = if (tally1$ok) "tbl_tally:ok" else "tbl_tally:0")
+    shoot(app, "02b_log_tally")
     ctrl14 <- js(app, paste0("document.querySelectorAll('#tbl_selected_logs .rt-pagination, ",
                              "#tbl_selected_logs [aria-sort], #tbl_selected_logs_sort, #tbl_selected_logs_next').length"))
     csv14 <- read_logs_csv(app)
@@ -893,7 +913,12 @@ if (!browser_ok) {
       app$wait_for_idle()
     }
     open_trees(app)
-    c27$trees1 <- figs(app, c("fig_dbh", "fig_height"))
+    c27$trees1 <- figs(app, c("fig_dbh_class", "fig_height"))
+    # Value by DBH class: the species totals ("All") add up to the run's trees.
+    dbh15 <- tryCatch(utils::read.csv(app$get_download("dl_dbh_class"), check.names = FALSE,
+                                      stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
+                      error = function(e) NULL)
+    n_dbh15 <- n_tbl_rows(app, "tbl_dbh_class")
     n_trees_rows <- n_tbl_rows(app, "tbl_trees")
     note15 <- txt(app, "#trees_preview_note")
     hdr15 <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')")
@@ -919,13 +944,16 @@ if (!browser_ok) {
       identical(n_trees_rows, min(20L, n_trees_run)) && grepl("Scenario A", note15, fixed = TRUE) &&
       identical(ctrl15, 0L) && !grepl("Status", hdr15, fixed = TRUE) && grepl("Logs", hdr15, fixed = TRUE) &&
       !is.null(csv15) && identical(nrow(csv15), n_trees_run) && identical(unique(csv15$Scenario), "A") &&
-      !"Status" %in% names(csv15) && isTRUE(n_detail >= 1L) && length(per_ha_hits) == 0L
+      !"Status" %in% names(csv15) && isTRUE(n_detail >= 1L) && length(per_ha_hits) == 0L &&
+      isTRUE(n_dbh15 >= 2L) && !is.null(dbh15) &&
+      identical(as.integer(sum(dbh15$Trees[dbh15$`DBH class (cm)` == "All"])), n_trees_run)
     rec(browser_checks[11], if (ok15) PASS else FAIL,
-        sprintf("per-m3 rows: %s | assortment rows: %s | Trees card starts closed: %s | label: '%s' | preview rows: %s of %s | controls: %s | headers: %s | CSV rows %s, scenarios %s | log detail shown: %s | per-ha text hits: %d%s",
+        sprintf("per-m3 rows: %s | assortment rows: %s | Trees card starts closed: %s | label: '%s' | preview rows: %s of %s | controls: %s | headers: %s | CSV rows %s, scenarios %s | log detail shown: %s | per-ha text hits: %d | DBH table rows %s, trees in its totals %s%s",
                 n_pm3, n_asort, trees_closed, trimws(note15), n_trees_rows, n_trees_run, ctrl15, hdr15,
                 if (is.null(csv15)) NA else nrow(csv15),
                 if (is.null(csv15)) "" else paste(unique(csv15$Scenario), collapse = "/"),
-                isTRUE(n_detail >= 1L), length(per_ha_hits), err_txt(e15)))
+                isTRUE(n_detail >= 1L), length(per_ha_hits), n_dbh15,
+                if (is.null(dbh15)) NA else sum(dbh15$Trees[dbh15$`DBH class (cm)` == "All"]), err_txt(e15)))
     stale_before <- txt(app, "#stale_notice")
     # 16. upload B (spruce sawlog x1.2), automatic comparison
     wide_csv <- tempfile(fileext = ".csv")
@@ -956,15 +984,21 @@ if (!browser_ok) {
                              ".map(function(r){ return getComputedStyle(r).gridTemplateColumns.split(' ').length; }).join(',')"))
     csv16 <- read_logs_csv(app)
     tcsv16 <- read_trees_csv(app)
-    exp16 <- paste(c("Run time", "Plots", "Trees", "Scenario A", "Total value (NOK)", "Commercial volume (m³ u.b.)",
+    exp16 <- paste(c("Run time", "Plots", "Trees", "Trees with logs (A / B)", "Scenario A", "Total value (NOK)",
+                     "Commercial volume (m³ u.b.)",
                      "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
     e27 <- try_drv({
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
-      c27$logs2 <- figs(app, c("fig_log_lengths", "fig_log_volume"))
-      shoot(app, "05a_selected_logs_figures_A_and_B")
+      app$set_inputs(tally_scenario = "diff", wait_ = FALSE); app$wait_for_idle()
+      tally2 <- tally_state(app, csv16)
+      c27$tally_diff_hdr <- txt(app, "#tally_scenario_ui")
+      c27$tally_signed <- isTRUE(js(app, "/[+-][0-9]/.test(document.querySelector('#tbl_tally').innerText)"))
+      c27$logs2 <- if (tally2$ok && identical(tally2$scen, "A/B") && grepl("B − A", c27$tally_diff_hdr, fixed = TRUE))
+        "tbl_tally:ok" else "tbl_tally:0"
+      shoot(app, "05a_log_tally_B_minus_A")
       app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
-      c27$trees2 <- figs(app, c("fig_dbh", "fig_height"))
+      c27$trees2 <- figs(app, c("fig_dbh_class", "fig_height"))
     })
     e16e <- try_drv({ app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle() })
     pat_txt  <- txt(app, "#cmp_patterns")
@@ -1244,8 +1278,10 @@ if (!browser_ok) {
     ok27 <- !nzchar(e27) && all(vapply(c27[c("logs1", "trees1", "logs2", "trees2")],
                                        function(f) isTRUE(fig_ok(f)), logical(1)))
     rec(browser_checks[23], if (ok27) PASS else FAIL,
-        sprintf("single run: logs %s, trees %s | comparison: logs %s, trees %s (id:image width px)%s",
-                c27$logs1, c27$trees1, c27$logs2, c27$trees2, err_txt(e27)))
+        sprintf("single run: tally %s (%s rows, volume %.3f vs logs %.3f m³), figures %s | comparison: tally %s (scenarios %s, B − A signed %s), figures %s (id:image width px)%s",
+                c27$logs1, tally1$rows, tally1$vol_tally, tally1$vol_logs, c27$trees1,
+                c27$logs2, if (exists("tally2")) tally2$scen else "", isTRUE(c27$tally_signed),
+                c27$trees2, err_txt(e27)))
     # 29. Import from .hpr (last: it replaces Scenario B). The dialog opens
     # from A; a broken file shows its error and cannot be applied; from B
     # the fixture's species and products are prefilled, and Replace

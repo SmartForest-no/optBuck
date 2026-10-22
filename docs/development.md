@@ -27,6 +27,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
 | Import from .hpr (hpr Phase A) | Audit 25 PASS (16/16, incl. an imported Mid product): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
 | .hpr stems (hpr Phase B) | Audit 26 PASS (12/12): reading the fixture's 13 stems (chunk size and extractor independent), unusual XML, DBH at 1.3 m above ground from the profile (not the file), the measured-only 10 cm grid, stump 0, nothing above the last measured point, barkNOR, species mapping and dropped stems, .gz/.zip, files without profiles or stems, no coordinates or names in any output, an A/B run, workers; audit 17 check 31 |
+| Result tables (log tally, DBH classes) | Audit 27 PASS (7/7): tally totals equal the run's per assortment and in total (waste not tallied), the price-grid layout with unpriced cells, logs above the cap in the top class, flat-priced per length, B − A (common axes, one-sided, matrix vs flat), DBH class limits and totals, xlsx/CSV downloads; audit 17 checks 14–16 and 27 |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -88,6 +89,7 @@ R/                          Core engine helpers
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
   helpers_hpr.R             StanForD 2010 .hpr: species groups, products, price matrices -> a scenario (Import from .hpr)
   helpers_hpr_stems.R       .hpr stems (hpr Phase B): streamed stem reader, checks, measured profiles (stump 0)
+  helpers_result_tables.R   Log tally per price matrix (stocknota) and value by DBH class
   helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
                             used by the backend and the app's live tree counts
 
@@ -105,6 +107,7 @@ audits/
   audit_24_scenarios.R                       Scenarios A and B with their own assortments; demo files
   audit_25_hpr_import.R                      Import from .hpr (parser, mapping, price lengths, errors, warnings, run)
   audit_26_hpr_stems.R                       .hpr stems (reader, profiles, stump 0, drops, privacy, A/B run)
+  audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads)
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -240,10 +243,18 @@ Oracle or ForestSens assets.
   grey because the sign is shown by bar direction. Log labels are dark on
   sand and grey.
 - Figures (2026-10-19): ggplot2 with `theme_apter()` (Inter, white
-  background, light grid). DBH and height densities per species in the
-  Trees card (spruce `#3F6E58`, pine `#C9A97A`: CVD dE 22.2, normal dE
-  27.1); logs per length class and commercial volume per top-diameter class
-  by assortment in Selected logs, Scenario A | B facets after a comparison.
+  background, light grid). Height density per species in the Trees card
+  (spruce `#3F6E58`, pine `#C9A97A`: CVD dE 22.2, normal dE 27.1). Since
+  2026-10-22 the DBH density and the two Selected-logs bar figures are
+  replaced by the result tables (below): the DBH-class figure (trees and
+  NOK/m³ per class, same species colours, A solid / B dashed) and the log
+  tally table.
+- Result tables (2026-10-22): `R/helpers_result_tables.R` (pure functions
+  on a run's selected logs and trees; audit 27): `log_tally()`,
+  `log_tally_grid()`, `log_tally_diff_grid()`, `log_tally_long()`,
+  `log_tally_xlsx()`, `dbh_class()`, `dbh_class_summary()`. The comparison
+  tab lost `tbl_cmp_overview` (= the Summary's A/B grid) and `bar_cmp_value`
+  (= the Products tab's A/B value figure).
 - Audit 17 saves screenshots of both tabs, the results and the comparison
   to `outputs/app_smoke/screenshots/` for review.
 
@@ -251,7 +262,7 @@ Oracle or ForestSens assets.
 
 Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
-REVIEW, or FAIL. Re-run all audits (14–26) at the end of every development phase.
+REVIEW, or FAIL. Re-run all audits (14–27) at the end of every development phase.
 
 **Prerequisites**
 
@@ -283,6 +294,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 24 — scenarios | `Rscript audits/audit_24_scenarios.R` | readxl, writexl, taperNOR, fieldPlot; `demo/` |
 | 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 26 — hpr stems | `Rscript audits/audit_26_hpr_stems.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 27 — result tables | `Rscript audits/audit_27_result_tables.R` | writexl, readxl, taperNOR |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check

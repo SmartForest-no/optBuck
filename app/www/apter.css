@@ -285,6 +285,12 @@ details.apter-card { margin-bottom: 16px; }
 .tree-counts-n { font-weight: 600; color: var(--apter-ink); font-variant-numeric: tabular-nums; }
 .tree-counts-time { color: var(--apter-muted); margin-top: 2px; }
 
+/* ---- log tally and DBH classes (result tables, 2026-10-22) ------------------- */
+.tally-controls { display: flex; flex-wrap: wrap; gap: 4px 28px; align-items: flex-end; }
+.tally-controls .shiny-input-container { margin-bottom: 6px; }
+.tally-downloads { display: flex; gap: 8px; margin: 8px 0 4px; }
+.tally-total { font-weight: 600; background: var(--apter-panel); }
+
 /* ---- tree lists (sidebar validation panel) --------------------------------- */
 .tl-excluded { font-size: 0.88rem; margin: 4px 0; }
 .tl-excluded ul { padding-left: 18px; margin-bottom: 4px; }

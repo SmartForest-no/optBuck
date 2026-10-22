@@ -32,6 +32,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | hpr Phase A | Import from .hpr per scenario: StanForD 2010 products, price matrices and species groups into Scenario A or B |
 | Volume method Mid | StanForD "Mid" price volume (diameter at the middle of the log); imported from .hpr instead of solid volume |
 | hpr Phase B | ".hpr stems" as a tree source: the measured stem profiles of an .hpr file, stump 0, streamed reading |
+| Result tables | Log tally per price matrix (stocknota) and value by DBH class; duplicate outputs removed |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -112,6 +113,13 @@ Decisions in CLAUDE.md (accepted assumption "hpr stems").
 7. **Audits.** New audit 26 (12 checks, fixture extended with 12 invented stems and DBHHeight); audit 17 check 31; `scripts/hpr_stems_benchmark.R` for the owner's files (local only).
 
 Later: compare the recorded logs with the optimal bucking; under-bark profiles; multi-tree stems (they have no profiles in the owner's files).
+
+## Result tables (done, 2026-10-22, branch `result-tables`)
+
+1. **Log tally (stocknota), Selected logs tab.** Logs or commercial volume u.b. per price-diameter class × length class of one assortment at a time, on its price grid ("–" = no price); flat-priced per length; A, B or B − A after a comparison; waste not tallied. xlsx (one sheet per assortment) and CSV downloads. Replaces the logs-per-length and volume-per-diameter figures (its totals).
+2. **Value by DBH class, Per m³ tab.** Trees, commercial volume, value and NOK/m³ per species and 5 cm class (open from 60 cm), A, B and B − A; CSV; one figure (trees per class, NOK/m³ per class for A and B) replacing the DBH density.
+3. **Removed duplicates.** The comparison tab's A/B overview table (= the Summary's A/B grid; trees with logs A / B moved to the Summary) and its A/B value bars (= the Products tab's figure). Figures 11 → 8.
+4. **Audits.** New audit 27 (7 checks); audit 17 checks 14–16 and 27.
 
 ## Phase 6: stem profile import
 
