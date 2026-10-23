@@ -267,29 +267,74 @@ apter_barplot <- function(vals, col, main, ylab, fmt = format) {
 }
 
 
-#' Grouped bars, Scenario A and Scenario B per assortment.
+#' Horizontal bars, one row per assortment, sorted by value (largest on top),
+#' so every assortment name is shown however many there are (2026-10-22:
+#' .hpr files bring 17 or more). Value labels sit at the bar ends, where
+#' they fit: the figure's height gives every bar a line of its own
+#' (hbar_height()), so labels never overlap, and the value axis keeps room
+#' for them. A missing bar (NA) gets no label.
+
+#' Plot height (px) for `n` rows; `ab`: two bars (A and B) per row.
+hbar_height <- function(n, ab = FALSE) 100 + max(n, 1L) * if (ab) 38 else 28
+
+.hbar_fmt_axis <- function(v) format(v, big.mark = ",", scientific = FALSE, trim = TRUE)
+
+#' Single-series horizontal bars (e.g. value change B - A): positive values
+#' right of zero, negative left; sorted with the largest value on top.
 #'
-#' @param a,b Numeric vectors (same order); labels: bar group labels.
-apter_barplot_ab <- function(a, b, labels, main, ylab, fmt = format) {
-  ch  <- APTER_CHART
-  old <- apter_par(mar = c(4, 6.5, 3, 1)); on.exit(graphics::par(old))
-  m <- rbind(a, b); colnames(m) <- gsub(" ", "\n", labels)
-  top <- max(m, 0, na.rm = TRUE)
-  graphics::barplot(m, beside = TRUE, col = NA, border = NA, axes = FALSE,
-                    ylim = c(0, if (top > 0) top * 1.18 else 1), las = 1, cex.names = 0.8,
-                    padj = 0.6, space = c(0, 0.9), main = main, ylab = "")
-  graphics::mtext(ylab, side = 2, line = 5, col = ch$muted, cex = 0.8)
-  graphics::abline(h = graphics::axTicks(2), col = ch$grid, lwd = 0.7)
-  bp <- graphics::barplot(m, beside = TRUE, col = c(ch$series1, ch$series2),
-                          border = ch$surface, lwd = 2, axes = FALSE, add = TRUE,
-                          space = c(0, 0.9), names.arg = rep("", ncol(m)))
-  graphics::axis(2, at = graphics::axTicks(2), col = NA, col.ticks = NA,
-                 labels = format(graphics::axTicks(2), big.mark = ",", scientific = FALSE, trim = TRUE))
-  graphics::abline(h = 0, col = ch$baseline)
-  graphics::text(bp, m, labels = fmt(m), pos = 3, col = ch$ink2, cex = 0.65, xpd = TRUE)
-  graphics::legend("topright", c("Scenario A", "Scenario B"), fill = c(ch$series1, ch$series2),
-                   border = NA, bty = "n", text.col = ch$ink, cex = 0.85)
-  invisible(bp)
+#' @param vals   Numeric vector; labels: one name per value.
+#' @param fmt    Function formatting the value labels.
+apter_hbar <- function(vals, labels, title, xlab, fmt = format, col = APTER_CHART$neutral) {
+  ch <- APTER_CHART
+  o <- order(vals)                                   # bottom to top: smallest first
+  d <- data.frame(name = factor(labels[o], levels = unique(labels[o])), value = vals[o])
+  d$lab <- fmt(d$value)
+  d$hjust <- ifelse(d$value >= 0, -0.12, 1.12)
+  neg <- any(d$value < 0); pos <- any(d$value > 0)
+  ggplot2::ggplot(d, ggplot2::aes(x = value, y = name)) +
+    ggplot2::geom_col(fill = col, width = 0.7) +
+    ggplot2::geom_vline(xintercept = 0, colour = ch$baseline, linewidth = 0.4) +
+    ggplot2::geom_text(ggplot2::aes(label = lab, hjust = hjust), colour = ch$ink2, size = 3,
+                       family = APTER_PLOT_FONT) +
+    ggplot2::scale_x_continuous(labels = .hbar_fmt_axis,
+                                expand = ggplot2::expansion(mult = c(if (neg) 0.2 else 0.02, if (pos) 0.2 else 0.02))) +
+    ggplot2::labs(x = xlab, y = NULL, title = title) +
+    theme_apter() +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(),
+                   panel.grid.major.x = ggplot2::element_line(colour = ch$grid, linewidth = 0.4),
+                   axis.line.x = ggplot2::element_blank(),
+                   axis.text.y = ggplot2::element_text(colour = ch$ink, size = ggplot2::rel(0.9)))
+}
+
+#' Scenario A and B side by side per assortment, horizontal, sorted by the
+#' larger of the two values (largest on top). NA (not in that scenario):
+#' no bar and no label.
+apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format) {
+  ch <- APTER_CHART
+  o <- order(pmax(a, b, na.rm = TRUE))
+  lv <- unique(labels[o])
+  d <- rbind(data.frame(name = labels, value = a, Scenario = "Scenario A"),
+             data.frame(name = labels, value = b, Scenario = "Scenario B"))
+  d <- d[!is.na(d$value), , drop = FALSE]
+  d$name <- factor(d$name, levels = lv)
+  # B first in the factor so that A is the upper bar of each pair.
+  d$Scenario <- factor(d$Scenario, levels = c("Scenario B", "Scenario A"))
+  d$lab <- fmt(d$value)
+  dodge <- ggplot2::position_dodge(width = 0.8, preserve = "single")
+  ggplot2::ggplot(d, ggplot2::aes(x = value, y = name, fill = Scenario)) +
+    ggplot2::geom_col(position = dodge, width = 0.75) +
+    ggplot2::geom_text(ggplot2::aes(label = lab, group = Scenario), position = dodge, hjust = -0.12,
+                       colour = ch$ink2, size = 2.8, family = APTER_PLOT_FONT) +
+    ggplot2::scale_fill_manual(values = c("Scenario A" = ch$series1, "Scenario B" = ch$series2),
+                               breaks = c("Scenario A", "Scenario B")) +
+    ggplot2::scale_x_continuous(labels = .hbar_fmt_axis, limits = c(0, NA),
+                                expand = ggplot2::expansion(mult = c(0, 0.18))) +
+    ggplot2::labs(x = xlab, y = NULL, title = title) +
+    theme_apter() +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(),
+                   panel.grid.major.x = ggplot2::element_line(colour = ch$grid, linewidth = 0.4),
+                   axis.line.x = ggplot2::element_blank(),
+                   axis.text.y = ggplot2::element_text(colour = ch$ink, size = ggplot2::rel(0.9)))
 }
 
 

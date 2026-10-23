@@ -27,7 +27,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Scenarios A and B (Phase 4d) | Audit 24 PASS (11/11): derived rounding/step/type, assortment only in B, a B rule change alone makes the scenarios differ, removed from B only, make equal (one assortment, whole scenario), backend comparison with B's own rules and a matrix-priced pulpwood in B, renamed Waste unchanged, scenario file round trip, demo files, price type per scenario and copy_prices() |
 | Import from .hpr (hpr Phase A) | Audit 25 PASS (16/16, incl. an imported Mid product): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
 | .hpr stems (hpr Phase B) | Audit 26 PASS (12/12): reading the fixture's 13 stems (chunk size and extractor independent), unusual XML, DBH at 1.3 m above ground from the profile (not the file), the measured-only 10 cm grid, stump 0, nothing above the last measured point, barkNOR, species mapping and dropped stems, .gz/.zip, files without profiles or stems, no coordinates or names in any output, an A/B run, workers; audit 17 check 31 |
-| Result tables (log tally, DBH classes) | Audit 27 PASS (7/7): tally totals equal the run's per assortment and in total (waste not tallied), the price-grid layout with unpriced cells, logs above the cap in the top class, flat-priced per length, B − A (common axes, one-sided, matrix vs flat), DBH class limits and totals, xlsx/CSV downloads; audit 17 checks 14–16 and 27 |
+| Result tables (log tally, DBH classes) | Audit 27 PASS (9/9): tally totals equal the run's per assortment and in total (waste not tallied), the price-grid layout with unpriced cells, logs above the cap in the top class, flat-priced per length, B − A (common axes, one-sided, matrix vs flat), DBH class limits and totals, xlsx/CSV downloads, B − A in the xlsx only for shared assortments, type groups (Sawlog, Pulpwood, Other) for scenarios with different assortments; audit 17 checks 14–17, 27 and 33 |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -107,7 +107,7 @@ audits/
   audit_24_scenarios.R                       Scenarios A and B with their own assortments; demo files
   audit_25_hpr_import.R                      Import from .hpr (parser, mapping, price lengths, errors, warnings, run)
   audit_26_hpr_stems.R                       .hpr stems (reader, profiles, stump 0, drops, privacy, A/B run)
-  audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads)
+  audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads, type groups)
   prototype_reference/      Frozen audits 05–12
 
 scripts/

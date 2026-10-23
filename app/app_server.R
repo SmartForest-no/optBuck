@@ -317,7 +317,11 @@ server <- function(input, output, session) {
     run_progress(list(done = 0L, total = NA_integer_,
                       what = switch(src, nfi = "Loading NFI data and taper profiles",
                                     hpr = "Preparing stem profiles", "Taper profiles")))
+    # Each scenario's assortments at run time: per-assortment B - A only for
+    # assortments both have (2026-10-22).
     run_task$invoke(spec, list(price_matrix = a, price_matrix_b = if (compare) b$pm,
+                               keys = list(A = assortment_table_keys(d),
+                                           B = if (compare) assortment_table_keys(b$defs)),
                                state = sc$pm_state(), t_click = t_click))
   })
 
@@ -327,6 +331,17 @@ server <- function(input, output, session) {
   })
   has_result <- reactive(input$run_btn > 0L && !task_busy() && !is.null(result()))
   compared   <- reactive(has_result() && !is.null(result()$scenario))
+
+  # Assortments of A and B in the last comparison: shared ones, and whether
+  # the two sets differ (then the comparison is also shown by type).
+  shared_keys <- reactive({ req(compared()); k <- result()$keys; intersect(k$A, k$B) })
+  asm_differ  <- reactive(compared() && !setequal(result()$keys$A, result()$keys$B))
+  # " (A only)" / " (B only)" after an assortment label in a comparison.
+  only_tag <- function(keys) {
+    if (!compared()) return(rep("", length(keys)))
+    k <- result()$keys
+    ifelse(!keys %in% k$B, " (A only)", ifelse(!keys %in% k$A, " (B only)", ""))
+  }
 
   # B's run (the backend's $scenario), with its prices.
   result_b <- reactive({
@@ -384,10 +399,17 @@ server <- function(input, output, session) {
 
   # ---- readable labels ----------------------------------------------------------
   # "spruce_sawlog" -> "Spruce sawlog"; assortment classes ("sawlog") -> "Sawlog".
+  # From the assortment's own name where a scenario has it ("Spruce 140 SCA
+  # Sagtømmer"; only the name's first letter lowercased, so "Spruce
+  # sawlog"), else from the key (2026-10-22: keys drop ø, å and capitals).
   asm_label  <- function(k) {
     k <- as.character(k)
     sp <- sub("_.*$", "", k); rest <- gsub("_", " ", sub("^[^_]+_", "", k))
-    ifelse(grepl("_", k), paste(tools::toTitleCase(sp), rest), k)
+    out <- ifelse(grepl("_", k), paste(tools::toTitleCase(sp), rest), k)
+    d <- isolate(rbind(sc$defs_a(), sc$defs_b())); dk <- assortment_table_keys(d)
+    i <- match(k, dk)
+    nm <- d$Name[i]; nm <- paste0(tolower(substring(nm, 1, 1)), substring(nm, 2))
+    ifelse(is.na(i), out, paste(tools::toTitleCase(d$Species[i]), nm))
   }
   type_label <- function(t) {
     t <- gsub("_", " ", as.character(t))
@@ -618,11 +640,14 @@ server <- function(input, output, session) {
     if (!compared()) return(NULL)
     p2 <- result_b()$product_summary
     keys <- union(p1$ProductKey, p2$ProductKey)
-    g <- function(p, col) { v <- p[[col]][match(keys, p$ProductKey)]; v[is.na(v)] <- 0; v }
+    # 0 for an assortment without logs; NA ("–") for one not in the scenario.
+    sk <- result()$keys
+    g <- function(p, col, in_s) { v <- p[[col]][match(keys, p$ProductKey)]; v[is.na(v)] <- 0
+                                  v[!keys %in% in_s] <- NA; v }
     list(keys = keys,
-         logs_a = g(p1, "n_logs"), logs_b = g(p2, "n_logs"),
-         vol_a = g(p1, "total_volume_m3"), vol_b = g(p2, "total_volume_m3"),
-         val_a = g(p1, "total_value_nok"), val_b = g(p2, "total_value_nok"))
+         logs_a = g(p1, "n_logs", sk$A), logs_b = g(p2, "n_logs", sk$B),
+         vol_a = g(p1, "total_volume_m3", sk$A), vol_b = g(p2, "total_volume_m3", sk$B),
+         val_a = g(p1, "total_value_nok", sk$A), val_b = g(p2, "total_value_nok", sk$B))
   })
 
   output$tbl_products <- renderReactable({
@@ -637,33 +662,30 @@ server <- function(input, output, session) {
         `Mean price (NOK/m³)` = round(ps$mean_value_nok_per_m3, 1),
         check.names = FALSE, stringsAsFactors = FALSE), page_size = 20L))
     }
-    apter_reactable(data.frame(
+    df <- data.frame(
       Assortment = asm_label(v$keys),
       `Logs A` = v$logs_a, `Logs B` = v$logs_b,
       `Price volume A (m³)` = round(v$vol_a, 3), `Price volume B (m³)` = round(v$vol_b, 3),
       `Value A (NOK)` = round(v$val_a, 0), `Value B (NOK)` = round(v$val_b, 0),
-      check.names = FALSE, stringsAsFactors = FALSE), page_size = 20L)
+      check.names = FALSE, stringsAsFactors = FALSE)
+    num <- names(df)[-1L]   # "–": not in that scenario
+    apter_reactable(df, columns = setNames(lapply(num, function(n) reactable::colDef(na = "–")), num),
+                    page_size = 20L)
   })
 
-  output$bar_value_by_product <- renderPlot(res = 96, {
+  # Value by assortment: horizontal bars sorted by value (every name shown,
+  # 2026-10-22); price volume is in the table only.
+  output$bar_value_by_product <- renderPlot(res = 96, height = function() {
+    v <- products_ab()
+    if (!is.null(v)) hbar_height(length(v$keys), ab = TRUE) else hbar_height(nrow(result()$product_summary))
+  }, {
     req(has_result()); v <- products_ab()
     if (!is.null(v))
-      return(apter_barplot_ab(v$val_a, v$val_b, asm_label(v$keys),
-                              main = "Value (NOK) by assortment", ylab = "NOK", fmt = fmt_int))
+      return(apter_hbar_ab(v$val_a, v$val_b, asm_label(v$keys),
+                           title = "Value (NOK) by assortment", xlab = "NOK", fmt = fmt_int))
     ps <- result()$product_summary; req(nrow(ps) > 0L)
-    apter_barplot(setNames(ps$total_value_nok, asm_label(ps$ProductKey)), col = APTER_CHART$series1,
-                  main = "Value (NOK) by assortment", ylab = "NOK", fmt = fmt_int)
-  })
-
-  output$bar_volume_by_product <- renderPlot(res = 96, {
-    req(has_result()); v <- products_ab()
-    f2 <- function(x) format(round(x, 1), nsmall = 1, trim = TRUE)
-    if (!is.null(v))
-      return(apter_barplot_ab(v$vol_a, v$vol_b, asm_label(v$keys),
-                              main = "Price volume (m³) by assortment", ylab = "m³", fmt = f2))
-    ps <- result()$product_summary; req(nrow(ps) > 0L)
-    apter_barplot(setNames(ps$total_volume_m3, asm_label(ps$ProductKey)), col = APTER_CHART$series1,
-                  main = "Price volume (m³) by assortment", ylab = "m³", fmt = f2)
+    apter_hbar(ps$total_value_nok, asm_label(ps$ProductKey), title = "Value (NOK) by assortment",
+               xlab = "NOK", fmt = fmt_int, col = APTER_CHART$series1)
   })
 
 
@@ -705,15 +727,27 @@ server <- function(input, output, session) {
   observe({
     keys <- do.call(log_tally_keys, unname(tallies()))
     cur <- isolate(input$tally_key)
-    updateSelectInput(session, "tally_key", choices = setNames(keys, asm_label(keys)),
+    updateSelectInput(session, "tally_key", choices = setNames(keys, paste0(asm_label(keys), only_tag(keys))),
                       selected = if (!is.null(cur) && cur %in% keys) cur else keys[1L])
+  })
+  # The views of the selected assortment: the scenarios that have it, and
+  # B − A only when both have it (2026-10-22).
+  tally_views <- reactive({
+    if (!compared()) return("A")
+    k <- or_default(input$tally_key, ""); sk <- result()$keys
+    v <- c(if (k %in% sk$A) "A", if (k %in% sk$B) "B", if (k %in% sk$A && k %in% sk$B) "diff")
+    if (length(v)) v else "A"
   })
   output$tally_scenario_ui <- renderUI({
     if (!compared()) return(NULL)
-    radioButtons("tally_scenario", "Scenario", c("A" = "A", "B" = "B", "B − A" = "diff"),
-                 selected = isolate(or_default(input$tally_scenario, "A")), inline = TRUE)
+    v <- tally_views(); cur <- isolate(input$tally_scenario)
+    radioButtons("tally_scenario", "Scenario", setNames(v, c(A = "A", B = "B", diff = "B − A")[v]),
+                 selected = if (!is.null(cur) && cur %in% v) cur else v[1L], inline = TRUE)
   })
-  tally_view <- reactive(if (compared()) or_default(input$tally_scenario, "A") else "A")
+  tally_view <- reactive({
+    v <- tally_views(); s <- or_default(input$tally_scenario, "A")
+    if (s %in% v) s else v[1L]
+  })
   tally_grid <- reactive({
     t <- tallies(); p <- tally_pms(); k <- input$tally_key
     req(!is.null(k), nzchar(k), k %in% do.call(log_tally_keys, unname(t)))
@@ -723,9 +757,8 @@ server <- function(input, output, session) {
   })
   output$tally_note <- renderUI({
     g <- tally_grid()
-    div(class = "note-muted", if (identical(g[[1L]][1L], "All diameters"))
-      "Flat-priced: logs per length class (dm). Waste is not tallied."
-      else "Price-diameter class (cm) down, length class (dm) across, as in the price matrix; – no price. Waste is not tallied.")
+    div(class = "note-muted", if (identical(g[[1L]][1L], "All diameters")) "Length class (dm)"
+                              else "Price-diameter class (cm) vs length class (dm)")
   })
   output$tbl_tally <- renderReactable({
     g <- tally_grid(); ms <- or_default(input$tally_measure, "logs"); diff <- tally_view() == "diff"
@@ -747,7 +780,8 @@ server <- function(input, output, session) {
   })
   output$dl_tally_xlsx <- downloadHandler(
     filename = function() "optBuck_log_tally.xlsx",
-    content  = function(file) log_tally_xlsx(file, tallies(), tally_pms(), label = asm_label))
+    content  = function(file) log_tally_xlsx(file, tallies(), tally_pms(), label = asm_label,
+                                             scenario_keys = if (compared()) result()$keys))
   output$dl_tally_csv <- downloadHandler(
     filename = function() "optBuck_log_tally.csv",
     content  = function(file) {
@@ -785,8 +819,12 @@ server <- function(input, output, session) {
       check.names = FALSE, stringsAsFactors = FALSE)
   })))
 
+  # Different assortments: by type (Sawlog, Pulpwood, Other) in every scope.
+  output$cmp_per_m3_hdr <- renderUI(div(class = "section-hdr",
+    if (asm_differ()) "NOK per m³ and volume share by assortment type"
+    else "NOK per m³ and volume share by assortment"))
   output$tbl_cmp_per_m3 <- renderReactable(apter_reactable(local({
-    x <- compare_per_m3(result(), result_b())
+    x <- compare_per_m3(result(), result_b(), by = if (asm_differ()) "type" else "assortment")
     data.frame(Scope = scope_label(x$scope), Assortment = per_m3_asm_label(x$scope, x$assortment),
                `NOK per m³ A` = round(x$nok_per_m3_default, 1),
                `NOK per m³ B` = round(x$nok_per_m3_scenario, 1),
@@ -852,8 +890,26 @@ server <- function(input, output, session) {
                                     tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
   })
 
+  # Value by assortment: per assortment when A and B have the same
+  # assortments; otherwise by type (Sawlog, Pulpwood, Other; all
+  # assortments) and per assortment for the shared ones only (2026-10-22).
+  # The shared assortments; with different assortments waste is left out
+  # (value 0, as in the type view).
+  cmp_shared <- reactive({
+    v <- products_ab(); req(v); i <- v$keys %in% shared_keys()
+    if (asm_differ()) {
+      l <- rbind(result()$selected_logs_all[, c("ProductKey", "ProductType")],
+                 result_b()$selected_logs_all[, c("ProductKey", "ProductType")])
+      i <- i & !v$keys %in% l$ProductKey[l$ProductType %in% "waste"]
+    }
+    lapply(v, function(x) x[i])
+  })
+  cmp_types <- reactive({ req(compared()); compare_by_type(result(), result_b()) })
+  output$cmp_value_hdr <- renderUI(div(class = "section-hdr",
+    if (asm_differ()) "Value by assortment type" else "Value by assortment"))
+
   output$tbl_cmp_products <- renderReactable({
-    v <- products_ab(); req(v)
+    v <- cmp_shared()
     pct <- function(a, b) ifelse(abs(b) > 1e-9, round((a - b) / abs(b) * 100, 2), 0)
     # Share of each run's total commercial volume under bark, per product.
     share <- function(r, keys) {
@@ -863,26 +919,75 @@ server <- function(input, output, session) {
         if (tot > 0) sum(sl$commercial_volume_m3[sl$ProductKey == k]) / tot else 0,
         numeric(1), USE.NAMES = FALSE)
     }
-    apter_reactable(data.frame(
-      Assortment = asm_label(v$keys),
-      `Value A (NOK)` = round(v$val_a, 0), `Value B (NOK)` = round(v$val_b, 0),
-      `Value change (NOK)` = round(v$val_b - v$val_a, 0),
-      `Value change (%)` = pct(v$val_b, v$val_a),
-      `Price volume A (m³)` = round(v$vol_a, 3), `Price volume B (m³)` = round(v$vol_b, 3),
-      `Volume change (m³)` = round(v$vol_b - v$vol_a, 3),
-      `Volume change (%)` = pct(v$vol_b, v$vol_a),
-      `Volume share A (%)` = round(100 * share(result(), v$keys), 1),
-      `Volume share B (%)` = round(100 * share(result_b(), v$keys), 1),
-      check.names = FALSE, stringsAsFactors = FALSE), page_size = 20L)
+    rows <- function(lbl, val_a, val_b, vol_a, vol_b, sh_a, sh_b) data.frame(
+      Assortment = lbl,
+      `Value A (NOK)` = round(val_a, 0), `Value B (NOK)` = round(val_b, 0),
+      `Value change (NOK)` = round(val_b - val_a, 0),
+      `Value change (%)` = pct(val_b, val_a),
+      `Price volume A (m³)` = round(vol_a, 3), `Price volume B (m³)` = round(vol_b, 3),
+      `Volume change (m³)` = round(vol_b - vol_a, 3),
+      `Volume change (%)` = pct(vol_b, vol_a),
+      `Volume share A (%)` = round(100 * sh_a, 1),
+      `Volume share B (%)` = round(100 * sh_b, 1),
+      check.names = FALSE, stringsAsFactors = FALSE)
+    out <- rows(asm_label(v$keys), v$val_a, v$val_b, v$vol_a, v$vol_b,
+                share(result(), v$keys), share(result_b(), v$keys))
+    n_type <- 0L
+    if (asm_differ()) {
+      t <- cmp_types(); n_type <- nrow(t)
+      out <- rbind(rows(sprintf("%s (type)", t$type), t$value_a, t$value_b, t$price_vol_a, t$price_vol_b,
+                        t$share_a, t$share_b), out)
+    }
+    apter_reactable(out, page_size = 20L,
+                    row_class = function(i) if (i <= n_type) "tally-total")   # the type rows
   })
 
-  output$bar_cmp_delta <- renderPlot(res = 96, {
+  # Value change (B − A): horizontal bars sorted by change; assortments with
+  # no change (to the NOK) are left out and counted in a line under the
+  # figure (2026-10-22). Sign is carried by the bar's side of zero and the
+  # signed label, so one neutral colour is used (no colour-only meaning).
+  delta_fmt <- function(x) ifelse(x > 0, paste0("+", fmt_int(x)), fmt_int(x))
+  delta_of <- function(a, b, labels) {
+    d <- b - a; ch <- !is.na(d) & round(d) != 0
+    list(value = d[ch], label = labels[ch], n_same = sum(!ch))
+  }
+  # "8 assortments unchanged" / "1 assortment type unchanged".
+  unchanged_note <- function(x) {
+    n <- x$n_same; if (n == 0L) return(NULL)
+    div(class = "fig-note", sprintf("%s%d %s unchanged", if (length(x$value) == 0L) "All " else "",
+                                    n, if (n == 1L) x$one else x$many))
+  }
+  delta_main <- reactive({
+    if (asm_differ()) {
+      t <- cmp_types()
+      return(c(delta_of(t$value_a, t$value_b, t$type), one = "assortment type", many = "assortment types"))
+    }
     v <- products_ab(); req(v)
-    # Sign is carried by bar direction from the zero baseline and the signed
-    # label, so one neutral colour is used (no colour-only meaning).
-    apter_barplot(setNames(v$val_b - v$val_a, asm_label(v$keys)), col = APTER_CHART$neutral,
-                  main = "Value change (B − A) by assortment", ylab = "NOK",
-                  fmt = function(x) ifelse(x > 0, paste0("+", fmt_int(x)), fmt_int(x)))
+    c(delta_of(v$val_a, v$val_b, asm_label(v$keys)), one = "assortment", many = "assortments")
+  })
+  delta_shared <- reactive({
+    v <- cmp_shared()
+    c(delta_of(v$val_a, v$val_b, asm_label(v$keys)), one = "shared assortment", many = "shared assortments")
+  })
+  delta_plot <- function(x, title) {
+    req(length(x$value) > 0L)
+    apter_hbar(x$value, x$label, title = title, xlab = "NOK", fmt = delta_fmt)
+  }
+  output$bar_cmp_delta <- renderPlot(res = 96, height = function() hbar_height(length(delta_main()$value)), {
+    x <- delta_main()
+    delta_plot(x, if (asm_differ()) "Value change (B − A) by assortment type" else "Value change (B − A) by assortment")
+  })
+  output$cmp_delta_note <- renderUI(unchanged_note(delta_main()))
+  # Different assortments: a second figure for the shared assortments only
+  # (none when no assortment is shared).
+  output$cmp_shared_ui <- renderUI({
+    if (!asm_differ() || length(cmp_shared()$keys) == 0L) return(NULL)
+    x <- delta_shared()
+    tagList(if (length(x$value)) plotOutput("bar_cmp_delta_shared", height = "auto"),
+            unchanged_note(x))
+  })
+  output$bar_cmp_delta_shared <- renderPlot(res = 96, height = function() hbar_height(length(delta_shared()$value)), {
+    delta_plot(delta_shared(), "Value change (B − A), assortments in both scenarios")
   })
 
 }  # end server

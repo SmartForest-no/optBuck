@@ -33,6 +33,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | Volume method Mid | StanForD "Mid" price volume (diameter at the middle of the log); imported from .hpr instead of solid volume |
 | hpr Phase B | ".hpr stems" as a tree source: the measured stem profiles of an .hpr file, stump 0, streamed reading |
 | Result tables | Log tally per price matrix (stocknota) and value by DBH class; duplicate outputs removed |
+| Roadmap Phase 1 | Grade rule for .hpr products (reference grades); Copy from A/B; tally caption; comparisons for different assortments (shared assortments, by type) |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -120,6 +121,49 @@ Later: compare the recorded logs with the optimal bucking; under-bark profiles; 
 2. **Value by DBH class, Per m³ tab.** Trees, commercial volume, value and NOK/m³ per species and 5 cm class (open from 60 cm); after a comparison trees and commercial volume once (A's), value and NOK/m³ for A, B and B − A (B's NOK/m³ on B's own volume); CSV; one figure (trees per class, NOK/m³ per class for A and B) replacing the DBH density.
 3. **Removed duplicates.** The comparison tab's A/B overview table (= the Summary's A/B grid; trees with logs A / B moved to the Summary) and its A/B value bars (= the Products tab's figure). Figures 11 → 8.
 4. **Audits.** New audit 27 (7 checks); audit 17 checks 14–16 and 27.
+
+## Roadmap (agreed 2026-10-22)
+
+1. **Phase 1 (now, branch `grades-and-comparisons`):**
+   - A grade rule for .hpr products: which products start unticked as "Only for lower quality grades".
+   - "Copy from A" in Scenario B and "Copy from B" in Scenario A: all assortments and prices, after a short confirmation.
+   - The caption under the log tally becomes "Price-diameter class (cm) vs length class (dm)".
+   - Comparisons for scenarios with different assortments: B − A per assortment (tally, value-change bars) only for assortments both scenarios share; a comparison by assortment type (sawlog, pulpwood, other) when the assortments differ. Totals, NOK/m³, DBH classes and changed patterns stay as they are.
+2. **Phase 2: cleaning .hpr stems** (broken tops, plateaus, sudden drops). Skogforsk's Stambas defaults are the starting point:
+   - check from 2 m up to a diameter of 10 cm;
+   - broken top above 200 mm;
+   - minimum diameter fall 1 mm over 30 dm;
+   - maximum fall 30 mm over 1 dm and 60 mm over 10 dm.
+3. **Phase 3: bulk editing of price matrices.** Selected cells ± or × %; a row price plus length corrections.
+4. **Later:**
+   - distribution bucking;
+   - actual vs optimal bucking (merge with optBuck; .hpr and quality layer);
+   - deployment.
+
+## Roadmap Phase 1: grades and comparisons (done, 2026-10-22, branch `grades-and-comparisons`)
+
+1. **Grade rule for .hpr products** (decision in CLAUDE.md, "hpr species and grades"). A report on the owner's five files (species groups, grade numbers and names, StartGrade, permitted grades) compared three rules: lowest grade (old), StartGrade, and most commonly permitted. The rule is now:
+   - Reference grades are the grade(s) permitted by the most products of each species group, ties kept. Fallbacks: StartGrade, then the lowest grade.
+   - A product without a reference grade starts unticked with "Only for grades set by the operator (special orders)".
+   - No exemption by product group or name. A sawlog-group exemption was proposed and rejected: special-order butt logs and poles would take every defect-free stem.
+   - In the largest test file, sawlogs restricted to grade 2 are now ticked; energy wood and special orders stay unticked.
+2. **Copy from A / Copy from B.** A button in each scenario's actions copies the whole other scenario (assortments and prices) after a confirmation.
+3. **Log tally caption.** "Price-diameter class (cm) vs length class (dm)" ("Length class (dm)" when flat-priced).
+4. **Comparisons for different assortments.** Runs store both scenarios' assortment keys.
+   - Per-assortment B − A is shown only for shared assortments: the tally's Scenario options, the xlsx, the value-change figure and the comparison table.
+   - When the scenarios' assortments differ, the comparison tab is by type (Sawlog, Pulpwood, Other; waste left out): NOK/m³ and volume share by type, value change by type, plus a figure of the shared assortments.
+   - The Products tab shows "–" for an assortment a scenario does not have.
+   - Totals, NOK/m³, DBH classes and changed patterns are unchanged.
+5. **Audits.**
+   - Audit 25 check 4: reference grades on invented groups (mode, tie, StartGrade, no exemption).
+   - Audit 27 checks 8–9: xlsx B − A only for shared assortments; type groups.
+   - Audit 17: check 17 rewritten for different assortments; new checks 32 (Copy from A/B) and 33 (B imported from .hpr: by type only).
+6. **Fixes before merging.**
+   - **Price grid rows.** The grid scrolled inside a 480 px box (about 18 rows) and was redrawn at the top after every change, so added rows fell out of view. It is now drawn at full height. "+ larger" stops at the max top diameter: a class above it was accepted before but can never be used.
+   - **Cap line.** A line under each matrix grid states the cap rule ("≥ 36 cm: priced as 36 up to max top 60 cm").
+   - **Bar figures with many assortments.** The Products value figure and the value-change figure are horizontal bars sorted by value, so every assortment name shows (17 assortments from one .hpr file). The value change hides unchanged assortments and counts them in a line under the figure. The Products tab keeps only the value figure.
+   - **Labels.** Assortment labels use the assortment's name ("Spruce REDACTED25", not "Spruce 140 sca sagt mmer").
+   - **Audits.** Audit 23 check 6: no class above the max top. Audit 17 check 11: cap line and full-height grid. Audit 17 check 17: one value figure, no volume figure.
 
 ## Phase 6: stem profile import
 

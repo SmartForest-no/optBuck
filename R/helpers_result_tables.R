@@ -189,23 +189,30 @@ log_tally_long <- function(tallies) {
 #' @param tallies Named list of log_tally() results: A, and B for a comparison.
 #' @param pms     Named list of the matching price matrices.
 #' @param label   function(key) -> sheet title (e.g. "Spruce sawlog").
-log_tally_xlsx <- function(path, tallies, pms, label = identity) {
+#' @param scenario_keys Optional list(A = , B = ) of each scenario's
+#'   assortment keys: an assortment only one scenario has gets only that
+#'   scenario's grids, without B - A (2026-10-22). NULL: every assortment
+#'   gets every scenario's grids.
+log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys = NULL) {
   keys <- do.call(log_tally_keys, unname(tallies))
-  two <- length(tallies) == 2L
   sheets <- lapply(keys, function(key) {
+    has <- if (is.null(scenario_keys)) rep(TRUE, length(tallies))
+           else vapply(names(tallies), function(n) key %in% scenario_keys[[n]], logical(1))
+    if (!any(has)) has[] <- TRUE
+    use <- which(has); two <- length(use) == 2L
     flat <- if (two) .tally_diff_flat(key, pms[[1]], pms[[2]], tallies[[1]], tallies[[2]])
-            else !key %in% .tally_matrix_keys(pms[[1]])
+            else !key %in% .tally_matrix_keys(pms[[use]])
     views <- list()
     for (ms in names(TALLY_MEASURES)) {
-      cells <- lapply(seq_along(tallies), function(s)
+      cells <- lapply(use, function(s)
         .tally_cells(tallies[[s]], pms[[s]], key, ms, collapse = flat))
       if (two) { a <- cells[[1]]; a$value <- -a$value; cells[[3]] <- .tally_merge(rbind(a, cells[[2]])) }
-      nms <- c(names(tallies), if (two) "B - A")
+      nms <- c(names(tallies)[use], if (two) "B - A")
       views[paste(nms, ms)] <- cells
     }
     all_cells <- do.call(rbind, views)
     rows <- sort(unique(all_cells$d)); cols <- sort(unique(all_cells$l))
-    order_v <- c(paste(names(tallies), "logs"), paste(names(tallies), "volume"),
+    order_v <- c(paste(names(tallies)[use], "logs"), paste(names(tallies)[use], "volume"),
                  if (two) c("B - A logs", "B - A volume"))
     do.call(rbind, lapply(order_v, function(v) {
       g <- .tally_grid(views[[v]], flat, rows, cols)

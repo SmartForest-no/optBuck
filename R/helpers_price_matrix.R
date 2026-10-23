@@ -208,12 +208,19 @@ pm_reset <- function(scenario, default, id) {
 
 #' Add a diameter class below the smallest ("low") or above the largest
 #' ("high") class of matrix `id`.
-pm_add_class <- function(pm, id, end = c("low", "high")) {
+#'
+#' @param max_top_cm The assortment's max top diameter (cm): a class above
+#'   floor(max_top_cm) is never used (a log's price class is its top
+#'   diameter rounded down), so it is not added (2026-10-22). Inf: no limit.
+pm_add_class <- function(pm, id, end = c("low", "high"), max_top_cm = Inf) {
   end <- match.arg(end); pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
   if (nrow(s) == 0L) stop("No matrix '", id, "'.")
   from <- if (end == "low") min(s$PriceDiameterClass_cm) else max(s$PriceDiameterClass_cm)
   to   <- from + if (end == "low") -1L else 1L
   if (to < 1L) stop("The smallest diameter class is 1 cm.")
+  if (end == "high" && isTRUE(to > floor(max_top_cm)))
+    stop(sprintf("The largest diameter class is %d cm: the max top diameter is %s cm.",
+                 as.integer(floor(max_top_cm)), format(max_top_cm)))
   new <- s[s$PriceDiameterClass_cm == from, , drop = FALSE]
   new$PriceDiameterClass_cm <- as.integer(to)
   pm_minimal(rbind(pm, new))

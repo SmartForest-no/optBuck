@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: assortment table and price sets A and B
-  Run: 2026-10-21 15:35:23.767284
+  Run: 2026-10-23 10:05:16.84237
 ============================================================= 
 
 --- 01. Round trip of the base products ---
@@ -19,7 +19,7 @@
   [PASS  ] Check 05: Matrix lengths from the columns, flat lengths from min/max by 10 cm | poles after removing 80 dm: 600,1000 | chips: 200-400 by 10 | spruce sawlog: 9 lengths | price set ok: TRUE
 
 --- 06. Rows and columns ---
-  [PASS  ] Check 06: Classes at the ends, lengths anywhere, neighbour prices, refusals | classes after adding: 11-51 | copies right: TRUE | back to the start: TRUE | refused: last_class ('A matrix needs at least one diameter class.'); last_length ('A matrix needs at least one length.'); existing ('Length 34 dm is already in the matrix.'); fraction ('A length is a positive whole number of dm.'); zero ('A length is a positive whole number of dm.')
+  [PASS  ] Check 06: Classes at the ends, lengths anywhere, neighbour prices, refusals | classes after adding: 11-51 | copies right: TRUE | back to the start: TRUE | refused: last_class ('A matrix needs at least one diameter class.'); last_length ('A matrix needs at least one length.'); existing ('Length 34 dm is already in the matrix.'); fraction ('A length is a positive whole number of dm.'); zero ('A length is a positive whole number of dm.'); above_max_top ('The largest diameter class is 50 cm: the max top diameter is 50.9 cm.')
 
 --- 07. Validation of classes ---
   [PASS  ] Check 07: Class gap is an error; classes above the minimum top diameter warn | gap: ok FALSE, 'Diameter classes must be consecutive whole cm (no gaps): spruce_sawlog' | smallest class 13: ok TRUE, 'spruce_sawlog: the smallest diameter class is 13 cm but the minimum top diameter is 12 cm; logs below 13 cm are unpriced.'

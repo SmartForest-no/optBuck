@@ -27,6 +27,15 @@
 #  7.  Downloads: the xlsx has one sheet per assortment (A, B and B - A
 #      blocks on common axes, logs and volume) and a "long" sheet equal to
 #      log_tally_long(); its grand totals equal the tally
+#  8.  Different assortments (2026-10-22): with each scenario's keys, an
+#      assortment only A has gets A's grids only (no B, no B - A); shared
+#      ones keep A, B and B - A
+#  9.  Type groups: type_group() maps sawlog, pulpwood, custom types and
+#      waste to Sawlog, Pulpwood, Other and NA; compare_by_type() per group
+#      equals the logs' sums, its groups plus waste add up to the run's
+#      value and commercial volume, a custom type counts in Other;
+#      compare_per_m3(by = "type") keeps the scope totals and its group
+#      contributions add up to each scope's NOK/m3
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -256,7 +265,60 @@ rec("Check 07: The xlsx has a sheet per assortment (A, B, B - A on common axes) 
     ok(ok7), sprintf("sheets: %s | long sheet = log_tally_long() %s (%d rows) | spruce sawlog blocks: %s | grand totals A %s, B %s, B - A %s",
                      paste(sh, collapse = ", "), long_ok, nrow(long), paste(tables, collapse = " / "),
                      gt("A: Logs"), gt("B: Logs"), gt("B - A: Logs")))
-unlink(c(fx, f_b))
+
+
+# ==============================================================================
+section("08. Downloads with different assortments")
+K2 <- setdiff(log_tally_keys(ta, tb), K)[1L]       # treated as only in A
+fx2 <- tempfile(fileext = ".xlsx")
+keys_ab <- list(A = log_tally_keys(ta, tb), B = setdiff(log_tally_keys(ta, tb), K2))
+log_tally_xlsx(fx2, list(A = ta, B = tb), list(A = pm_a, B = pm_b), label = function(k) gsub("_", " ", k),
+               scenario_keys = keys_ab)
+t_only <- unique(as.data.frame(readxl::read_xlsx(fx2, gsub("_", " ", K2)))$Table)
+t_shared <- unique(as.data.frame(readxl::read_xlsx(fx2, gsub("_", " ", K)))$Table)
+ok8 <- identical(t_only, c("A: Logs", "A: Volume (m³ u.b.)")) && identical(t_shared, tables)
+rec("Check 08: With different assortments the xlsx has B - A only for shared assortments",
+    ok(ok8), sprintf("%s (A only): %s | %s (shared): %s", K2, paste(t_only, collapse = " / "),
+                     K, paste(t_shared, collapse = " / ")))
+unlink(c(fx, fx2, f_b))
+
+
+# ==============================================================================
+section("09. Type groups")
+tg <- type_group(c("sawlog", "pulpwood", "poles", "waste", NA))
+tg_ok <- identical(tg, c("Sawlog", "Pulpwood", "Other", NA, NA))
+# B with one commercial assortment relabelled as a custom type (Other).
+rb2 <- rb; ko <- unique(rb2$selected_logs_all$ProductKey[rb2$selected_logs_all$ProductType == "pulpwood"])[1L]
+rb2$selected_logs_all$ProductType[rb2$selected_logs_all$ProductKey == ko] <- "poles"
+ct <- compare_by_type(r, rb2)
+by_logs <- function(l, grp) { g <- type_group(l$ProductType); k <- g %in% grp
+  c(value = sum(l$value_nok[k]), comm = sum(l$commercial_volume_m3[k]), price = sum(l$price_volume_m3[k]), n = sum(k)) }
+grp_ok <- all(vapply(seq_len(nrow(ct)), function(i) {
+  a <- by_logs(r$selected_logs_all, ct$type[i]); b <- by_logs(rb2$selected_logs_all, ct$type[i])
+  isTRUE(all.equal(unname(c(ct$value_a[i], ct$comm_vol_a[i], ct$price_vol_a[i], ct$logs_a[i])), unname(a))) &&
+    isTRUE(all.equal(unname(c(ct$value_b[i], ct$comm_vol_b[i], ct$price_vol_b[i], ct$logs_b[i])), unname(b)))
+}, logical(1)))
+wa <- r$selected_logs_all$ProductType == "waste"
+tot9 <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
+sum_ok <- isTRUE(all.equal(sum(ct$value_a) + sum(r$selected_logs_all$value_nok[wa]), tot9$value_nok)) &&
+  isTRUE(all.equal(sum(ct$comm_vol_a) + sum(r$selected_logs_all$commercial_volume_m3[wa]), tot9$commercial_volume_m3)) &&
+  isTRUE(all.equal(sum(ct$share_a), 1 - sum(r$selected_logs_all$commercial_volume_m3[wa]) / tot9$commercial_volume_m3))
+other_ok <- "Other" %in% ct$type && ct$logs_a[ct$type == "Other"] == 0L && ct$logs_b[ct$type == "Other"] > 0L
+pt <- compare_per_m3(r, rb2, by = "type")
+pa <- compare_per_m3(r, rb2)
+all_ok <- identical(pt[pt$assortment == "All", ], pa[pa$assortment == "All", ], ignore.environment = TRUE) ||
+  isTRUE(all.equal(pt[pt$assortment == "All", ], pa[pa$assortment == "All", ], check.attributes = FALSE))
+contrib_ok <- all(vapply(unique(pt$scope), function(s) {
+  x <- pt[pt$scope == s, ]; all1 <- x[x$assortment == "All", ]; g <- x[x$assortment != "All", ]
+  all(g$assortment %in% ASSORTMENT_TYPE_GROUPS) &&
+    isTRUE(all.equal(sum(g$nok_per_m3_default), all1$nok_per_m3_default)) &&
+    isTRUE(all.equal(sum(g$nok_per_m3_scenario), all1$nok_per_m3_scenario))
+}, logical(1)))
+ok9 <- tg_ok && grp_ok && sum_ok && other_ok && all_ok && contrib_ok
+rec("Check 09: Type groups: mapping, sums per group and in total, Other, NOK/m3 by type",
+    ok(ok9), sprintf("type_group %s | groups %s: sums = logs %s | + waste = run totals %s | %s as a custom type in B: Other A %s / B %s logs | per m3 by type: All rows kept %s, contributions add up %s",
+                     tg_ok, paste(ct$type, collapse = ","), grp_ok, sum_ok, ko,
+                     ct$logs_a[ct$type == "Other"], ct$logs_b[ct$type == "Other"], all_ok, contrib_ok))
 
 
 # ==============================================================================
