@@ -177,9 +177,10 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   result tables), the horizontal ggplot2 bars `apter_hbar()` /
   `apter_hbar_ab()` with `hbar_height()` (one row per assortment sorted by
   value, so every name shows with 17+ .hpr assortments), the ggplot2
-  figures `apter_density_species()` (heights) and
-  `apter_dbh_class_figure()` (trees and NOK/m³ by DBH class; A solid, B
-  dashed), and the base-graphics stem diagram `apter_stem_compare()`
+  figures `apter_distribution_figure()` (DBH and height densities per
+  species, two panels side by side) and `apter_dbh_class_figure()` (NOK/m³
+  by DBH class, lines only; A solid, B dashed), and the base-graphics stem
+  diagram `apter_stem_compare()`
   (`logs_scenario = NULL`: Scenario A alone)) in `app/helpers_ui.R`;
   ggplot2 figures use `theme_apter()` (`app/theme.R`)
   and Inter from `app/www/fonts/*.ttf`, registered with systemfonts and drawn
@@ -191,10 +192,11 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   `compared()`. The layout is the same for NFI data, tree lists and .hpr
   stems (`is_hpr()`: no Plot column, "Stems", "Measured length (m)").
   - *Summary* (`summary_cards`): after a comparison run time, plots, trees,
-    trees with logs (A / B) and "Trees with a changed cutting pattern"
-    ("n of N", `compare_cutting_patterns()`) once, then Scenario A and B side
-    by side, each a 2 × 2 grid (value, commercial volume / NOK per m³, price
-    volume).
+    trees with logs (A / B) and "Changed cutting patterns" ("Changed stems"
+    for .hpr stems; the count, `compare_cutting_patterns()`) once, then
+    Scenario A and B side by side, each a 2 × 2 grid (value, commercial
+    volume / NOK per m³, price volume). Card labels and values stay on one
+    line (`.ro-label`, `.ro-value` nowrap), so the cards are one height.
   - *Products*: `tbl_products` from `assortment_summary()`
     (`R/helpers_result_tables.R`, audit 27 check 10: sums of the selected
     logs; contribution = assortment value / the run's total commercial
@@ -208,7 +210,9 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
     out). After a comparison `cmp_value_ui`: `bar_cmp_delta`, the value
     change of the shared non-waste assortments, unchanged ones counted in
     `cmp_delta_note` ("No assortments in both scenarios." when none).
-  - *Trees*: `fig_dbh_class`, `fig_height`, the trees table `tbl_trees`
+  - *Trees*: `fig_distributions` (DBH and height, side by side),
+    `fig_dbh_class` (NOK/m³ lines; tree counts are not repeated), the trees
+    table `tbl_trees`
     (`paged_table_ui/server`, all trees, 15 per page, sortable; after a
     comparison Value A, Value B, Change; logs and NOK/m³ are A's), and
     `stem_compare` for the clicked row (the first row until one is

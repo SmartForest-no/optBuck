@@ -172,20 +172,21 @@ Later: compare the recorded logs with the optimal bucking; under-bark profiles; 
 Interface work for the demo; computations unchanged (`scripts/performance_check.R`: every case identical to the main baseline).
 
 1. **Four result tabs: Summary, Products, Trees, Logs.** The Scenario comparison tab is gone: comparison outputs sit in the tab of their content and show only after a comparison. The layout is the same for NFI data, tree lists and .hpr stems.
-2. **Summary.** As before, plus "Trees with a changed cutting pattern" after a comparison.
+2. **Summary.** As before, plus "Changed cutting patterns" ("Changed stems" for .hpr stems) after a comparison; every card has a one-line label and value, so the cards are one height.
 3. **Products.**
    - One table per assortment (`assortment_summary()`). A single run shows logs, price volume, value, NOK/m³ contribution and volume share. After a comparison it shows value and contribution as A, B and change, and the volume share as A and B; "–" where a scenario lacks the assortment.
    - A CSV download holds every column.
    - Below the table: the type table (NOK/m³ and volume share by sawlog, pulpwood and other) and NOK/m³ by assortment as horizontal bars.
    - After a comparison: the value change (B − A) of the shared assortments, with the "n assortments unchanged" line.
-4. **Trees** (replaces Per m³). The DBH-class and height figures and a table of all trees (pages, sortable; after a comparison value A, B and change). Clicking a tree shows its cutting pattern (A and B, or A alone). The downloads are all trees, value by DBH class and the changed trees.
+4. **Trees** (replaces Per m³). One figure with the DBH and height distributions side by side, then NOK per m³ by DBH class (lines only, A solid, B dashed), and a table of all trees (pages, sortable; after a comparison value A, B and change). Clicking a tree shows its cutting pattern (A and B, or A alone). The downloads are all trees, value by DBH class and the changed trees.
 5. **Logs** (renamed from Selected logs): unchanged.
 6. **Removed.**
    - The Difference (B − A) table and the cutting-pattern changes table with its tree picker.
    - The old Per m³ tables, the share figure and the DBH table (its CSV stays).
    - The Trees card and the selected tree's log table.
    - The Products value figure and the type rows.
-7. **Audits.** Audit 27 check 10 (`assortment_summary()`); audit 17 checks 12, 15–17, 21, 24, 31 and 33 for the new structure (31 screenshots).
+7. **Import dialog.** The intro text and the file label are gone; the 200 MB limit stays.
+8. **Audits.** Audit 27 check 10 (`assortment_summary()`); audit 17 checks 12, 15–17, 21, 24, 31 and 33 for the new structure (31 screenshots), with one-line, equal-height Summary cards in check 16.
 
 ## Phase 6: stem profile import
 

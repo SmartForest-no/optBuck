@@ -161,10 +161,10 @@ simulator_page <- nav_panel(
       ),
 
       nav_panel("Trees", value = "trees",
+        # DBH and height distributions side by side, then NOK/m3 by DBH class
+        # (lines; 2026-10-23).
+        plotOutput("fig_distributions", height = "300px"),
         plotOutput("fig_dbh_class", height = "auto"),
-        layout_columns(col_widths = breakpoints(sm = 12, lg = 6),
-          plotOutput("fig_height", height = "280px")
-        ),
         div(class = "section-hdr", "Trees"),
         paged_table_ui("tbl_trees"),
         div(class = "tally-downloads",

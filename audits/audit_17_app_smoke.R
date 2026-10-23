@@ -88,7 +88,7 @@
 #      headers (Plot, StartPos, StopPos; no ProductType, plot_id_github or
 #      underscores); "Download all logs (CSV)" holds every log with a
 #      Scenario column (A)
-# 15.  Trees tab (2026-10-23): the DBH-class and height figures render; the
+# 15.  Trees tab (2026-10-23): the distribution figure (DBH and height panels) and NOK per m³ by DBH class render; the
 #      trees table shows all trees on server-side pages (15 rows, "of N"),
 #      no Status column, one Value column; clicking a row draws the cutting
 #      pattern (Scenario A only); "Download all trees (CSV)" holds every
@@ -101,8 +101,8 @@
 # 16.  Automatic comparison: B's price matrix uploaded (spruce sawlog x1.2,
 #      wide CSV) -> differing cells highlighted in both grids, 351 cells
 #      differ in B's download; Run -> a comparison with the same four tabs
-#      (no comparison tab); the Summary has "Trees with a changed cutting
-#      pattern" ("n of N"); Trees: Value A, Value B and Change columns,
+#      (no comparison tab); the Summary has "Changed cutting patterns" (a
+#      count; every card label on one line, cards of one height); Trees: Value A, Value B and Change columns,
 #      sorted by change largest first, the row click draws A and B, the
 #      changed-trees CSV; Products: value and contribution A, B and change,
 #      volume share A and B, the value-change figure, the products CSV with
@@ -488,7 +488,7 @@ browser_checks <- c(
   "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B",
   "Check 25: Row selection, detail panel, selection synced between A and B, flat price field",
   "Check 26: Live tree counts in the sidebar match the run",
-  "Check 27: Log tally (volume = the logs' commercial volume; B − A after a comparison) and the DBH-class and height figures render",
+  "Check 27: Log tally (volume = the logs' commercial volume; B − A after a comparison) and the distribution and NOK-per-DBH-class figures render",
   "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them",
   "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only",
   "Check 30: The kept .hpr upload is deleted when the session ends",
@@ -589,7 +589,7 @@ if (!browser_ok) {
     rows_txt <- function(app, id) js(app, sprintf(paste0(
       "Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr')).map(function(r){",
       " return Array.from(r.querySelectorAll('.rt-td')).map(function(c){ return c.textContent.trim(); }).join(';'); }).join('|')"), id))
-    compared_now <- function(app) grepl("changed cutting pattern", txt(app, "#summary_cards"), fixed = TRUE)
+    compared_now <- function(app) grepl("Changed cutting patterns|Changed stems", txt(app, "#summary_cards"))
     # 06-07. layout and theme
     app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
     tabs <- js(app, paste0("Array.from(document.querySelectorAll('#main_nav .nav-link'))",
@@ -960,7 +960,7 @@ if (!browser_ok) {
     # table with all five columns, the type table and the contribution
     # figure; none of the removed outputs.
     e15 <- try_drv({ app$set_inputs(result_tabs = "trees"); app$wait_for_idle() })
-    c27$trees1 <- figs(app, c("fig_dbh_class", "fig_height"))
+    c27$trees1 <- figs(app, c("fig_distributions", "fig_dbh_class"))
     # Value by DBH class: the species totals ("All") add up to the run's trees.
     dbh15 <- tryCatch(utils::read.csv(app$get_download("dl_dbh_class"), check.names = FALSE,
                                       stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
@@ -1037,17 +1037,27 @@ if (!browser_ok) {
     e16c <- ""
     e16d <- try_drv({ app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle() })
     changed16 <- js(app, paste0("(function(){ var f = Array.from(document.querySelectorAll('#summary_cards .ro-field'))",
-                                ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Trees with a changed cutting pattern'; });",
+                                ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Changed cutting patterns'; });",
                                 " return f ? f.querySelector('.ro-value').textContent.trim() : ''; })()"))
     sum16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .section-hdr, #summary_cards .ro-label'))",
                             ".map(function(e){ return e.textContent.trim(); }).join('|')"))
     shoot(app, "04b_summary_A_and_B")
+    # The run's cards (first row): every label on one line (not cut off) and
+    # one height (2026-10-23).
+    c16 <- list()
+    c16$cards <- js(app, paste0("(function(){ var r = document.querySelector('#summary_cards .ro-row');",
+      " if (!r) return ''; var f = Array.from(r.querySelectorAll(':scope > .ro-field'));",
+      " return f.map(function(e){ var l = e.querySelector('.ro-label');",
+      " return (l.scrollWidth <= l.clientWidth + 1 ? 1 : 0) + ':' + e.offsetHeight; }).join(','); })()"))
+    cards16 <- strsplit(or_default(c16$cards, ""), ",", fixed = TRUE)[[1]]
+    c16$cards_ok <- length(cards16) >= 4L && all(startsWith(cards16, "1:")) &&
+      length(unique(sub("^[01]:", "", cards16))) == 1L
     grid16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .summary-scen .ro-row'))",
                              ".map(function(r){ return getComputedStyle(r).gridTemplateColumns.split(' ').length; }).join(',')"))
     csv16 <- read_logs_csv(app)
     tcsv16 <- read_trees_csv(app)
     exp16 <- paste(c("Run time", "Plots", "Trees", "Trees with logs (A / B)",
-                     "Trees with a changed cutting pattern", "Scenario A", "Total value (NOK)",
+                     "Changed cutting patterns", "Scenario A", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)",
                      "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
@@ -1061,13 +1071,12 @@ if (!browser_ok) {
         "tbl_tally:ok" else "tbl_tally:0"
       shoot(app, "05a_log_tally_B_minus_A")
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
-      c27$trees2 <- figs(app, c("fig_dbh_class", "fig_height"))
+      c27$trees2 <- figs(app, c("fig_distributions", "fig_dbh_class"))
     })
     # Trees after the comparison: Value A, Value B and Change; sorted by
     # change (largest first); a row click draws A and B. Products: value and
     # contribution A, B, change, volume share A, B; the value-change figure;
     # the products CSV with every column; the changed-trees CSV.
-    c16 <- list()
     e16e <- try_drv({
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c16$hdr <- headers_of(app, "tbl_trees")
@@ -1109,7 +1118,7 @@ if (!browser_ok) {
     ok16 <- !nzchar(paste0(e16, e16a, e16b, e16c)) && isTRUE(n_hl > 0L) && isTRUE(n_hl_a > 0L) &&
       isTRUE(n_diff16 == 351) &&
       !cmp_tab16 && identical(tabs16, RESULT_TABS) && ok16b &&
-      grepl("^[0-9,]+ of [0-9,]+$", pat_txt) &&
+      grepl("^[0-9,]+$", pat_txt) && isTRUE(c16$cards_ok) &&
       isTRUE(stem_img >= 1L) && identical(nerr16, 0L) && identical(sum16, exp16) &&
       !nzchar(paste0(e16d, e16e)) && identical(grid16, "2,2") &&
       !is.null(csv16) && identical(sort(unique(csv16$Scenario)), c("A", "B")) &&
@@ -1117,8 +1126,8 @@ if (!browser_ok) {
       !is.null(tcsv16) && identical(sort(unique(tcsv16$Scenario)), c("A", "B")) &&
       identical(sum(tcsv16$Scenario == "A"), sum(tcsv16$Scenario == "B"))
     rec(browser_checks[12], if (ok16) PASS else FAIL,
-        sprintf("summary: '%s' | grid columns per scenario: %s | logs CSV: %s | trees CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s, tabs '%s' | changed pattern: '%s' | stem diagram: %s | trees: headers %s, sorted by change %s (%d rows), note '%s', changed-trees CSV %s rows | products: headers '%s', value change figure %s, CSV columns %d | error notifications: %s%s",
-                sum16, grid16,
+        sprintf("summary: '%s' (cards one-line label:height %s) | grid columns per scenario: %s | logs CSV: %s | trees CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s, tabs '%s' | changed pattern: '%s' | stem diagram: %s | trees: headers %s, sorted by change %s (%d rows), note '%s', changed-trees CSV %s rows | products: headers '%s', value change figure %s, CSV columns %d | error notifications: %s%s",
+                sum16, c16$cards, grid16,
                 if (is.null(csv16)) "none" else paste(sprintf("%s %d", names(table(csv16$Scenario)), table(csv16$Scenario)), collapse = ", "),
                 if (is.null(tcsv16)) "none" else paste(sprintf("%s %d", names(table(tcsv16$Scenario)), table(tcsv16$Scenario)), collapse = ", "),
                 n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, tabs16,

@@ -320,9 +320,9 @@ in place; there is no separate comparison tab.
   assortment (A and B), and after a comparison the value change (B − A) of
   the assortments both scenarios have, largest gain first, with a line
   counting those whose value did not change.
-- **Trees:** trees and NOK/m³ by 5 cm DBH class (… 5–9.9, 10–14.9 …
-  55–59.9, ≥ 60 cm; A and B after a comparison), the height distribution
-  per species, and a table of all trees (in pages, sortable by any column;
+- **Trees:** the DBH and height distributions per species side by side,
+  NOK/m³ by 5 cm DBH class (… 5–9.9, 10–14.9 … 55–59.9, ≥ 60 cm; Scenario A
+  solid and B dashed after a comparison), and a table of all trees (in pages, sortable by any column;
   after a comparison with value A, value B and the change). Clicking a tree
   shows its cutting pattern, in Scenario A and B after a comparison.
   Downloads: all trees (after a comparison both scenarios, with a Scenario

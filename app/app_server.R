@@ -469,9 +469,10 @@ server <- function(input, output, session) {
         ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total)),
         ro_field(paste(unit_lbl("Trees with logs"), "(A / B)"),
                  sprintf("%s / %s", fmt_int(r$n_trees_with_logs), fmt_int(result_b()$n_trees_with_logs))),
-        # Trees whose cutting pattern changed (compare_cutting_patterns()).
-        ro_field(sprintf("%s with a changed cutting pattern", unit_lbl("Trees")),
-                 sprintf("%s of %s", fmt_int(sum(cmp_trees()$changed)), fmt_int(nrow(cmp_trees()))))),
+        # Trees whose cutting pattern changed (compare_cutting_patterns());
+        # a short one-line label, the total is the Trees card (2026-10-23).
+        ro_field(if (isTRUE(is_hpr())) "Changed stems" else "Changed cutting patterns",
+                 fmt_int(sum(cmp_trees()$changed)))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                      scen("Scenario A", r), scen("Scenario B", result_b())))
   })
@@ -707,18 +708,16 @@ server <- function(input, output, session) {
   output$dl_dbh_class <- downloadHandler(
     filename = function() "optBuck_value_by_dbh_class.csv",
     content  = function(file) utils::write.csv(dbh_table(), file, row.names = FALSE, fileEncoding = "UTF-8"))
-  output$fig_dbh_class <- renderPlot(res = 96, height = function() 420, {
+  output$fig_dbh_class <- renderPlot(res = 96, height = function() 320, {
     req(has_result())
     apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b())
   })
 
-  # Height of the bucked trees per species (the same trees in A and B, so
-  # shown once).
-  output$fig_height <- renderPlot(res = 96, {
+  # DBH and height distributions per species, side by side (the same trees
+  # in A and B, so shown once).
+  output$fig_distributions <- renderPlot(res = 96, {
     req(has_result()); ts <- result()$tree_summary
-    if (isTRUE(is_hpr()))
-      apter_density_species(ts$height_m, ts$species_group, "Measured length (m)", "Measured length distribution")
-    else apter_density_species(ts$height_m, ts$species_group, "Tree height (m)", "Height distribution")
+    apter_distribution_figure(ts$dbh_cm, ts$height_m, ts$species_group, height_lbl())
   })
 
 

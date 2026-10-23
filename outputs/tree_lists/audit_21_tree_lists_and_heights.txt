@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: tree lists and heights
-  Run: 2026-10-23 12:37:54.181504
+  Run: 2026-10-23 15:46:22.214099
 ============================================================= 
 
 --- 01. FinnHoyde reference curves by hand ---
@@ -15,7 +15,7 @@
   [PASS  ] Check 03c: Ratio 1.8 warns, ratio 1.2 does not; site-independence warning only for the species without heights | Spruce: measured heights are on average 80 % above the FinnHoyde curve (ratio 1.80, n = 3); check the heights or measure more trees. | Heights for 2 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. | (inside: 0 warnings)
 
 --- 04. Time limit on the nlme fit ---
-  [PASS  ] Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights | full fit: nlme in 0.57 s | limited: nls in 0.27 s, note 'nlme stopped at the 0.2 s time limit; nls used'
+  [PASS  ] Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights | full fit: nlme in 0.57 s | limited: nls in 0.26 s, note 'nlme stopped at the 0.2 s time limit; nls used'
 
 --- 05. Validation of broken tree lists ---
   [PASS  ] Check 05: missing column -> rejected | Missing required column(s): dbh

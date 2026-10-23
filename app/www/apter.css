@@ -110,9 +110,11 @@ details.apter-card { margin-bottom: 16px; }
   border: none; border-radius: 6px;
   padding: 10px 14px; background: var(--apter-panel); min-width: 0;
 }
-.ro-label { font-size: 0.75rem; color: var(--apter-muted); margin-bottom: 2px; }
-.ro-value { font-size: 1.25rem; font-weight: 500; line-height: 1.3; overflow-wrap: break-word;
-  font-variant-numeric: tabular-nums; }
+.ro-label { font-size: 0.75rem; color: var(--apter-muted); margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* one-line labels, equal cards */
+.ro-value { font-size: 1.25rem; font-weight: 500; line-height: 1.3; white-space: nowrap;
+  font-variant-numeric: tabular-nums; }   /* one line, like the labels (2026-10-23) */
+.ro-row:not(.ro-grid-2) .ro-value { font-size: 1.15rem; }   /* the run's five cards: "11,899 / 11,899" fits */
 .summary-scen .section-hdr { margin-top: 14px; }
 
 /* ---- status lines and notes ------------------------------------------------ */
