@@ -311,14 +311,38 @@ read_hpr <- function(path, filename = basename(path)) {
 
 # ---- products and the grade filter ----------------------------------------------------
 
-#' Whether a product permits its species group's best grade (the lowest
-#' GradeNumber): TRUE / FALSE, NA when the product has no permitted grades.
-hpr_best_grade_ok <- function(p, species) {
+#' Reason shown for products unticked by the grade rule.
+HPR_GRADE_REASON <- "Only for grades set by the operator (special orders)"
+
+#' Reference grades per species group (decided 2026-10-22): the grade(s)
+#' permitted by the most products of the group, each product counted once
+#' (ties keep all tied grades); if no product of the group lists permitted
+#' grades, its StartGrade, else its lowest GradeNumber. Grade names and
+#' product names are not used.
+#'
+#' @return Named list (species group key -> numeric grades; numeric(0) when
+#'   the group defines no grades).
+hpr_reference_grades <- function(hpr) {
+  sp <- hpr$species
+  out <- lapply(seq_len(NROW(sp)), function(i) {
+    g <- unlist(lapply(hpr$products, function(p)
+      if (sp$key[i] %in% p$species_keys) unique(p$grades[!is.na(p$grades)])))
+    if (length(g)) { n <- table(g); return(sort(as.numeric(names(n)[n == max(n)]))) }
+    if (!is.na(sp$start_grade[i])) return(sp$start_grade[i])
+    if (!is.na(sp$best_grade[i])) return(sp$best_grade[i])
+    numeric(0)
+  })
+  setNames(out, sp$key)
+}
+
+#' Whether a product permits a reference grade of any of its species groups
+#' (hpr_reference_grades()): TRUE / FALSE, NA when the product has no
+#' permitted grades or its groups no reference grade.
+hpr_grade_ok <- function(p, ref) {
   if (is.null(p$grades) || length(p$grades) == 0L) return(NA)
-  best <- species$best_grade[species$key %in% p$species_keys]
-  best <- best[!is.na(best)]
-  if (length(best) == 0L) return(NA)
-  min(best) %in% p$grades
+  r <- unlist(ref[intersect(p$species_keys, names(ref))])
+  if (length(r) == 0L) return(NA)
+  any(p$grades %in% r)
 }
 
 # "130–360 mm (14 classes)", "305 cm (1 class)".
@@ -332,20 +356,22 @@ hpr_best_grade_ok <- function(p, species) {
 
 #' One row per product for the import dialog: its species (after the
 #' species map), forbidden cells, and whether it is imported by default
-#' (not if its species is not used, it lacks the best grade, or it has no
-#' priced cells), with the reason.
+#' (not if its species is not used, it permits none of its species group's
+#' reference grades (hpr_reference_grades()), or it has no priced cells),
+#' with the reason.
 #'
 #' @param species_map Named character: species group key -> "spruce",
 #'   "pine" or "none".
 hpr_product_table <- function(hpr, species_map) {
   if (length(hpr$products) == 0L) return(data.frame())
+  ref <- hpr_reference_grades(hpr)
   rows <- lapply(hpr$products, function(p) {
     sp <- unique(unname(species_map[p$species_keys])); sp <- sp[!is.na(sp) & sp != "none"]
-    grade <- hpr_best_grade_ok(p, hpr$species)
+    grade <- hpr_grade_ok(p, ref)
     priced <- sum(!is.na(p$cells$price) & p$cells$criteria != HPR_FORBIDDEN)
     reason <- if (length(sp) == 0L) "Species group not used"
               else if (priced == 0L) "No priced cells"
-              else if (isFALSE(grade)) "Only for lower quality grades"
+              else if (isFALSE(grade)) HPR_GRADE_REASON
               else ""
     data.frame(key = p$key, name = p$name,
                group = paste(hpr$species$name[match(p$species_keys, hpr$species$key)], collapse = ", "),

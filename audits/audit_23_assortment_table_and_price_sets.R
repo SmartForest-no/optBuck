@@ -25,7 +25,8 @@
 #  6.  Rows and columns: classes added and removed at the ends with the
 #      neighbour's prices; lengths added (nearest column's prices) and
 #      removed; the last class or length cannot be removed; a length that is
-#      already there, not whole dm or not positive is refused
+#      already there, not whole dm or not positive is refused; a class
+#      above the max top diameter is refused (2026-10-22)
 #  7.  Validation: a gap in the diameter classes is an error; classes that
 #      start above the minimum top diameter give a warning
 #  8.  Prices of two scenarios (Phase 4d: independent scenarios replace the
@@ -204,9 +205,12 @@ e6 <- c(last_class = errmsg(pm_remove_class(one, "pine_sawlog", "low")),
         last_length = errmsg(pm_remove_length(one, "pine_sawlog", 31)),
         existing = errmsg(pm_add_length(pm0, "pine_sawlog", 34)),
         fraction = errmsg(pm_add_length(pm0, "pine_sawlog", 33.5)),
-        zero = errmsg(pm_add_length(pm0, "pine_sawlog", 0)))
+        zero = errmsg(pm_add_length(pm0, "pine_sawlog", 0)),
+        # 2026-10-22: no class above the max top diameter (50.9 -> 50 is the largest)
+        above_max_top = errmsg(pm_add_class(pm0, "pine_sawlog", "high", max_top_cm = 50.9)))
+max_ok <- identical(max(cls(pm_add_class(pm0, "pine_sawlog", "high", max_top_cm = 51), "pine_sawlog")), 51L)
 rec("Check 06: Classes at the ends, lengths anywhere, neighbour prices, refusals",
-    ok(ok6a && identical(back, pm0) && all(nzchar(e6))),
+    ok(ok6a && identical(back, pm0) && all(nzchar(e6)) && max_ok),
     sprintf("classes after adding: %d-%d | copies right: %s | back to the start: %s | refused: %s",
             min(cls(b, "pine_sawlog")), max(cls(b, "pine_sawlog")), ok6a, identical(back, pm0),
             paste(sprintf("%s ('%s')", names(e6), e6), collapse = "; ")))

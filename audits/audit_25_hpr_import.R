@@ -17,8 +17,11 @@
 #      grades, cells, forbidden cells) for all 8 products
 #  3.  Species guess: FURU pine, GRAN spruce, LAUV and BIOVIRKE not used;
 #      also "Gran tynning", "Tall", user ID only, and a mixed "Furu/Gran" name
-#  4.  Grade filter: only 100 Energi (grade 7 only) is unticked by default;
-#      a product without permitted grades is kept
+#  4.  Grade filter: only 100 Energi (grade 7 only) is unticked by default,
+#      with "Only for grades set by the operator (special orders)"; a product
+#      without permitted grades is kept. Invented groups: reference grades =
+#      the most commonly permitted (ties kept), else StartGrade, else none;
+#      a sawlog-group product with only grade 8 is unticked (no exemption)
 #  5.  Mapping: 5 assortments + Waste per species; min top from
 #      DiameterMINTop (14, 14.2), max top from DiameterClassMAX (50), max butt
 #      from DiameterMAXButt (60); top position 10; volume methods; types;
@@ -217,12 +220,40 @@ tab <- hpr_product_table(h, sp_map)
 off <- tab$key[!tab$default & tab$species != "none"]
 h4 <- h; h4$products[["8016"]]$grades <- NULL
 tab4 <- hpr_product_table(h4, sp_map)
-ok4 <- identical(off, "8016") && identical(tab$reason[tab$key == "8016"], "Only for lower quality grades") &&
-  isTRUE(tab4$default[tab4$key == "8016"]) && is.na(tab4$grade_ok[tab4$key == "8016"])
-rec("Check 04: Products without the best grade unticked by default (only 100 Energi)",
-    ok(ok4), sprintf("unticked (mapped species): %s ('%s') | without permitted grades: kept %s",
+# The rule on invented groups (decided 2026-10-22): reference grades = the
+# grade(s) permitted by the most products of the group (ties kept), else
+# StartGrade, else the lowest grade; no exemption by product group or name.
+gp <- function(key, sp, grades, group = "Massevirke")
+  list(key = key, name = key, group = group, species_keys = sp, grades = grades)
+h4s <- list(
+  species = data.frame(key = c("1", "2", "3", "4"), best_grade = c(1, 1, 1, NA),
+                       start_grade = c(2, 2, 3, NA), stringsAsFactors = FALSE),
+  products = list(
+    gp("saw_mode",  "1", 2, "Tømmer"),          # a sawlog permitting only the mode grade 2
+    gp("saw_mode2", "1", 2, "Tømmer"),
+    gp("pulp_wide", "1", c(1, 2, 3)),
+    gp("special",   "1", 8, "Tømmer"),          # special order: a sawlog group, grade 8 only
+    gp("energy",    "1", 5),                    # energy wood, grade 5 only
+    gp("no_grades", "1", NULL),
+    gp("tie_a", "2", c(1, 2)), gp("tie_b", "2", c(3, 4)),   # a tie: every grade counts once
+    gp("start_only", "3", NULL)))                            # group 3: no product lists grades
+ref4 <- hpr_reference_grades(h4s)
+ok_of <- vapply(h4s$products, function(p) as.character(hpr_grade_ok(p, ref4)), "")
+names(ok_of) <- vapply(h4s$products, `[[`, "", "key")
+exp_ok <- c(saw_mode = "TRUE", saw_mode2 = "TRUE", pulp_wide = "TRUE", special = "FALSE",
+            energy = "FALSE", no_grades = NA, tie_a = "TRUE", tie_b = "TRUE", start_only = NA)
+ok_ref <- identical(ref4[["1"]], 2) && identical(ref4[["2"]], c(1, 2, 3, 4)) &&
+  identical(ref4[["3"]], 3) && identical(ref4[["4"]], numeric(0))
+ok4 <- identical(off, "8016") && identical(tab$reason[tab$key == "8016"], HPR_GRADE_REASON) &&
+  identical(HPR_GRADE_REASON, "Only for grades set by the operator (special orders)") &&
+  isTRUE(tab4$default[tab4$key == "8016"]) && is.na(tab4$grade_ok[tab4$key == "8016"]) &&
+  ok_ref && identical(ok_of, exp_ok)
+rec("Check 04: Products without a reference grade (most commonly permitted) unticked by default",
+    ok(ok4), sprintf("fixture: unticked (mapped species) %s ('%s'); without permitted grades kept %s | invented groups: reference grades %s | permits one: %s",
                      paste(off, collapse = ","), tab$reason[tab$key == "8016"],
-                     isTRUE(tab4$default[tab4$key == "8016"])))
+                     isTRUE(tab4$default[tab4$key == "8016"]),
+                     paste(names(ref4), vapply(ref4, function(x) paste(x, collapse = "/"), ""), sep = ":", collapse = ", "),
+                     paste(names(ok_of), ok_of, sep = "=", collapse = ", ")))
 
 
 # ==============================================================================

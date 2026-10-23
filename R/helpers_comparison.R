@@ -105,11 +105,17 @@ compare_cutting_patterns <- function(r1, r2, pm1, pm2,
 
 #' NOK/m3 per scope and assortment under both price matrices.
 #'
+#' @param by "assortment" (the runs' per_m3_by_assortment: types in the
+#'   Total scope, assortments per species) or "type" (Sawlog, Pulpwood,
+#'   Other in every scope; waste left out), for scenarios with different
+#'   assortments.
 #' @return data.frame: scope, assortment, nok_per_m3_default,
 #'   nok_per_m3_scenario, delta_nok_per_m3, volume_share_default,
 #'   volume_share_scenario, delta_volume_share. Scope totals have assortment
 #'   "All" and NOK/m3 = scope value / scope commercial volume.
-compare_per_m3 <- function(r1, r2) {
+compare_per_m3 <- function(r1, r2, by = c("assortment", "type")) {
+  by <- match.arg(by)
+  if (by == "type") { r1 <- .per_m3_by_type(r1); r2 <- .per_m3_by_type(r2) }
   tot <- function(r) {
     s <- r$per_m3_summary
     data.frame(scope = s$scope, assortment = "All", nok = s$nok_per_m3,
@@ -128,7 +134,8 @@ compare_per_m3 <- function(r1, r2) {
   for (c in c("nok_default", "nok_scenario", "share_default", "share_scenario"))
     m[[c]][is.na(m[[c]]) & m$assortment != "All"] <- 0
   scope_order <- c("Total", sort(setdiff(unique(m$scope), "Total")))
-  m <- m[order(match(m$scope, scope_order), m$assortment != "All", m$assortment), ]
+  m <- m[order(match(m$scope, scope_order), m$assortment != "All",
+               match(m$assortment, ASSORTMENT_TYPE_GROUPS), m$assortment), ]
   data.frame(scope = m$scope, assortment = m$assortment,
              nok_per_m3_default = m$nok_default, nok_per_m3_scenario = m$nok_scenario,
              delta_nok_per_m3 = m$nok_scenario - m$nok_default,
@@ -136,4 +143,57 @@ compare_per_m3 <- function(r1, r2) {
              volume_share_scenario = m$share_scenario,
              delta_volume_share = m$share_scenario - m$share_default,
              stringsAsFactors = FALSE, row.names = NULL)
+}
+
+
+# ---- scenarios with different assortments (2026-10-22) -----------------------------
+# Per-assortment B - A only makes sense for assortments both scenarios have.
+# When their assortments differ, the comparison is also shown by assortment
+# type: sawlog, pulpwood and other (custom commercial types). Waste is left
+# out (value 0, as in the log tally).
+
+#' Type groups in display order.
+ASSORTMENT_TYPE_GROUPS <- c("Sawlog", "Pulpwood", "Other")
+
+#' The type group of each ProductType: "Sawlog", "Pulpwood", "Other", or NA
+#' for waste.
+type_group <- function(product_type) {
+  t <- as.character(product_type)
+  out <- ifelse(t %in% "sawlog", "Sawlog", ifelse(t %in% "pulpwood", "Pulpwood", "Other"))
+  out[t %in% "waste" | is.na(t)] <- NA_character_
+  out
+}
+
+# A run whose per_m3_by_assortment is by type group in every scope.
+.per_m3_by_type <- function(r) {
+  l <- r$selected_logs_all; g <- type_group(l$ProductType)
+  l <- l[!is.na(g), , drop = FALSE]; g <- g[!is.na(g)]
+  l$ProductType <- g; l$ProductKey <- g
+  r$per_m3_by_assortment <- summarise_per_m3(l, r$tree_summary)$by_assortment
+  r
+}
+
+#' Logs, value, price volume, commercial volume and share of commercial
+#' volume per type group in A (r1) and B (r2). Groups without logs in
+#' either scenario are left out.
+#'
+#' @return data.frame: type, logs_a, logs_b, value_a, value_b, price_vol_a,
+#'   price_vol_b, comm_vol_a, comm_vol_b, share_a, share_b.
+compare_by_type <- function(r1, r2) {
+  per <- function(r) {
+    l <- r$selected_logs_all; g <- type_group(l$ProductType); k <- !is.na(g)
+    f <- factor(g[k], levels = ASSORTMENT_TYPE_GROUPS)
+    s <- function(x) as.numeric(tapply(x[k], f, sum, na.rm = TRUE, default = 0))
+    tot <- sum(l$commercial_volume_m3, na.rm = TRUE)
+    list(logs = as.integer(table(f)), value = s(l$value_nok), price_vol = s(l$price_volume_m3),
+         comm_vol = s(l$commercial_volume_m3),
+         share = if (tot > 0) s(l$commercial_volume_m3) / tot else rep(NA_real_, length(ASSORTMENT_TYPE_GROUPS)))
+  }
+  a <- per(r1); b <- per(r2)
+  out <- data.frame(type = ASSORTMENT_TYPE_GROUPS, logs_a = a$logs, logs_b = b$logs,
+                    value_a = a$value, value_b = b$value,
+                    price_vol_a = a$price_vol, price_vol_b = b$price_vol,
+                    comm_vol_a = a$comm_vol, comm_vol_b = b$comm_vol,
+                    share_a = a$share, share_b = b$share, stringsAsFactors = FALSE)
+  out[out$logs_a > 0L | out$logs_b > 0L, , drop = FALSE]
 }

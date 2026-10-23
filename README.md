@@ -123,7 +123,8 @@ The app opens on *Assortments and prices*, with **Scenario A** and
 **Scenario B** as two white cards side by side on a light grey page (one
 above the other on narrow screens). Each card runs from top to bottom: the
 assortment table, the selected assortment with its prices, and the
-scenario's own buttons (add, reset, download, upload, import from .hpr). Each
+scenario's own buttons (add, reset, copy from the other scenario, download,
+upload, import from .hpr). Each
 scenario has its own assortments and its own price matrices. Apter ships
 with this base set and the 2021 price matrices for spruce and pine
 (diameters under bark); both scenarios start from it:
@@ -163,8 +164,9 @@ for example, spruce pulpwood can have a price matrix in A and a flat price in
 B. Selecting an assortment in one scenario selects it in the other too; if
 it is missing there, that side shows no details for it. *Make assortment equal to B* (left column) and
 *Make assortment equal to A* (right column) copy the selected assortment,
-rules and prices, from the other scenario. To copy a whole
-scenario, download it and upload the file to the other side. Both assortment tables list the
+rules and prices, from the other scenario. *Copy from A* (in Scenario B) and
+*Copy from B* (in Scenario A) copy the whole other scenario, all assortments
+and prices, after a confirmation. Both assortment tables list the
 assortments in the same order (by species: sawlog, pulpwood, waste, then
 added assortments). A new assortment can be added to both scenarios or to one;
 *Remove* asks whether to remove it from this scenario only or from both.
@@ -196,10 +198,13 @@ will be imported:
   example GRAN → Spruce, FURU → Pine, LAUV → Not used); products of groups
   set to Not used are not imported.
 - **Products.** Every product is listed with its diameter and length classes.
-  Products that do not allow the best quality grade of their species group
-  (for example an energy-wood product for rotten wood only) start unticked,
-  marked *Only for lower quality grades*, since the simulated stems have no
-  defects. Any product can be ticked or
+  In a harvester, some products are only given to logs for which the
+  operator sets a particular grade: energy wood for rotten logs, or special
+  orders such as poles. The app finds each species group's usual grade (the
+  grade most of its products allow; a tie keeps all tied grades). Products
+  that do not allow it start unticked, marked *Only for grades set by the
+  operator (special orders)*. Otherwise the simulated stems, which have no
+  defects, would take them everywhere. Any product can be ticked or
   unticked.
 
 Each imported product becomes a matrix-priced assortment, and a Waste
@@ -238,9 +243,11 @@ the file are not.
 A matrix's columns are the assortment's allowed lengths and its rows its
 top-diameter classes. Lengths can be added and removed (a removed length is
 no longer cut); diameter classes are added or removed at the smallest and
-largest end, so there are no gaps. A log with a top diameter above the
-largest class is priced at that class (50 cm in the 2021 matrices); its
-physical diameter is not changed.
+largest end, so there are no gaps, and never above the assortment's
+maximum top diameter (a larger class could not be used). A log with a top
+diameter above the largest class is priced at that class (50 cm in the 2021
+matrices); its physical diameter is not changed. A line under each matrix
+states this, for example "≥ 50 cm: priced as 50 up to max top 60 cm".
 
 **Uploading prices.** Prices can also be loaded on their own. A full price
 file dropped on a scenario's *Upload scenario* box sets the prices of all
@@ -311,22 +318,30 @@ The results have these tabs:
   bark, price-diameter class, volumes and value) and a CSV download of all
   trees (after a comparison, both scenarios, with a Scenario column)
 - **Products:** value and sale volume by assortment; after a comparison,
-  for Scenario A and Scenario B side by side
+  for Scenario A and Scenario B side by side, with a figure of the value
+  (one bar per assortment, largest first)
 - **Selected logs:** the **log tally** (stocknota) of one assortment at a
   time: the number of logs or their commercial volume (m³ under bark) per
   price-diameter class and length class, laid out like the assortment's
   price matrix ("–" where the matrix has no price; logs above the largest
   diameter class count in it, as they are priced). Flat-priced assortments
   are tallied per length. After a comparison it shows Scenario A, B or
-  B − A. Waste is not tallied. Downloads: an xlsx with one sheet per
-  assortment (logs and volume, A, B and B − A) and a CSV of all cells. Below
+  B − A; B − A only for assortments both scenarios have. Waste is not
+  tallied. Downloads: an xlsx with one sheet per assortment (logs and
+  volume, A, B and, for shared assortments, B − A) and a CSV of all cells. Below
   it, a preview of the first 20 logs of Scenario A, and a CSV download of
   every log cut (after a comparison, both scenarios, with a Scenario column)
 - **Scenario comparison** (when B differs from A): the differences in
   value, volume and NOK/m³, NOK/m³ by assortment under A and B, the trees whose cutting pattern
-  changed, and example stems bucked both ways. A tree counts as changed only
+  changed, and example stems bucked both ways. The value change by
+  assortment is a bar per changed assortment, largest gain first; a line
+  under it counts the assortments whose value did not change. A tree counts as changed only
   if the change alters its value or volume; patterns that differ only
-  between equal-value alternatives are not counted.
+  between equal-value alternatives are not counted. When the scenarios have
+  different assortments, value and NOK/m³ are compared by assortment type
+  (sawlog, pulpwood, other), and per assortment only for the assortments
+  both scenarios have; on the Products tab, "–" marks an assortment a
+  scenario does not have.
 
 ---
 

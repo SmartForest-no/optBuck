@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: import from .hpr (Phase A)
-  Run: 2026-10-21 15:35:42.700085
+  Run: 2026-10-23 10:05:40.278099
 ============================================================= 
 
 --- 01. Reading ---
@@ -13,7 +13,7 @@
   [PASS  ] Check 03: Species guessed from group names and user IDs | FURU, GRAN, LAUV, BIOVIRKE, 'Gran tynning', 'Tall', user ID 'SE_gran', 'Furu/Gran blanding' -> pine, spruce, none, none, spruce, pine, spruce, none
 
 --- 04. Grade filter ---
-  [PASS  ] Check 04: Products without the best grade unticked by default (only 100 Energi) | unticked (mapped species): 8016 ('Only for lower quality grades') | without permitted grades: kept TRUE
+  [PASS  ] Check 04: Products without a reference grade (most commonly permitted) unticked by default | fixture: unticked (mapped species) 8016 ('Only for grades set by the operator (special orders)'); without permitted grades kept TRUE | invented groups: reference grades 1:2, 2:1/2/3/4, 3:3, 4: | permits one: saw_mode=TRUE, saw_mode2=TRUE, pulp_wide=TRUE, special=FALSE, energy=FALSE, no_grades=NA, tie_a=TRUE, tie_b=TRUE, start_only=NA
 
 --- 05. Mapping onto the assortment table ---
   [PASS  ] Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid | keys pine_240_sag_REDACTED34,pine_200_massevirke,spruce_197_massevirke,spruce_154_kubb,spruce_140_sca_sagt_mmer,pine_waste,spruce_waste | pine sawlog top 14-50, butt <= 60, top position 10, Top | SCA min top 14.2, Calculated Norwegian mid | price lengths on: pine_240_sag_REDACTED34 | valid TRUE

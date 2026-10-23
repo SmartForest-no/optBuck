@@ -247,6 +247,8 @@ details.apter-card { margin-bottom: 16px; }
 .pm-grid .handsontable th { background: var(--apter-panel); color: var(--apter-muted); font-weight: 500; }
 .pm-axis { color: var(--apter-muted); font-size: 0.8rem; margin-bottom: 4px; }
 .pm-axes { margin: 8px 0; }
+.pm-cap { color: var(--apter-muted); font-size: 0.85rem; margin-top: 4px; }   /* the cap rule under a grid */
+.fig-note { color: var(--apter-muted); font-size: 0.85rem; margin: 2px 0 12px; }  /* e.g. "8 assortments unchanged" */
 .pm-axes-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
 .pm-axes-row .shiny-input-container { margin-bottom: 0; }
 .pm-axes-row .form-control, .pm-axes-row .selectize-input { padding: 3px 6px; min-height: 0; }

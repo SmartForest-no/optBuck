@@ -32,6 +32,7 @@ scenario_column <- function(s) {
         div(class = "pm-grid",
           div(class = "pm-axis", "Top diameter (cm) × length (dm), NOK/m³ under bark"),
           rHandsontableOutput(paste0("pm_", s)),
+          uiOutput(paste0("pm_", s, "_cap")),     # "≥ 36 cm: priced as 36 up to max top 60 cm"
           uiOutput(paste0("pm_", s, "_axes")))),
       conditionalPanel(state("== 'flat'"),
         div(class = "asm-flat", id = paste0("flat_wrap_", s),
@@ -53,6 +54,7 @@ scenario_column <- function(s) {
     div(class = "pm-actions",
       btn(paste0("asm_add_", s), "Add assortment", "btn-primary btn-sm"),
       btn(paste0("asm_reset_", s), "Reset to defaults"),
+      btn(paste0("scen_copy_", s), sprintf("Copy from %s", O)),
       downloadButton(paste0("dl_scen_", s), "Download scenario (xlsx)", class = "btn-secondary btn-sm"),
       btn(paste0("hpr_import_", s), "Import from .hpr")),
     fileInput(paste0("scen_", s, "_upload"),
@@ -170,10 +172,9 @@ simulator_page <- nav_panel(
 
       nav_panel("Products", value = "products",
         reactableOutput("tbl_products"),
-        layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-          plotOutput("bar_value_by_product",  height = "280px"),
-          plotOutput("bar_volume_by_product", height = "280px")
-        )
+        # Value only (price volume is in the table); horizontal bars, height
+        # from the number of assortments (2026-10-22).
+        plotOutput("bar_value_by_product", height = "auto")
       ),
 
       nav_panel("Selected logs", value = "logs",
@@ -200,7 +201,7 @@ simulator_page <- nav_panel(
         # A and B themselves are in the Summary (tbl_cmp_overview removed 2026-10-22).
         div(class = "section-hdr", "Difference (B − A)"),
         reactableOutput("tbl_cmp_delta"),
-        div(class = "section-hdr", "NOK per m³ and volume share by assortment"),
+        uiOutput("cmp_per_m3_hdr"),     # "... by assortment type" when A and B differ in assortments
         reactableOutput("tbl_cmp_per_m3"),
         div(class = "section-hdr", "Cutting-pattern changes"),
         uiOutput("cmp_patterns"),
@@ -210,8 +211,12 @@ simulator_page <- nav_panel(
                        choices = NULL, width = "100%"),
         plotOutput("stem_compare", height = "230px"),
         # A and B per assortment are on the Products tab (bar_cmp_value removed 2026-10-22).
-        div(class = "section-hdr", "Value by assortment"),
-        plotOutput("bar_cmp_delta", height = "280px"),
+        # Different assortments (2026-10-22): by type, and per assortment for
+        # the shared ones only (cmp_shared_ui).
+        uiOutput("cmp_value_hdr"),
+        plotOutput("bar_cmp_delta", height = "auto"),
+        uiOutput("cmp_delta_note"),     # "8 assortments unchanged"
+        uiOutput("cmp_shared_ui"),
         reactableOutput("tbl_cmp_products")
       )
     )

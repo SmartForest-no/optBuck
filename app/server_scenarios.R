@@ -9,10 +9,10 @@
 #           assortment table, pm = its prices). B starts as an exact copy of
 #           A; nothing is linked. Both sides are always editable; cells and
 #           rows that differ from the other scenario are highlighted on both
-#           sides. "Make assortment equal to A/B" and "Make matrix equal to
-#           A/B" copy one assortment or one matrix from the other scenario
-#           (R/helpers_price_matrix.R: copy_assortment(), copy_prices()); a
-#           whole scenario is copied by download and upload. A run compares A and B when
+#           sides. "Make assortment equal to A/B" copies one assortment from
+#           the other scenario (R/helpers_price_matrix.R: copy_assortment());
+#           "Copy from A/B" copies the whole other scenario (all assortments
+#           and prices, after a confirmation). A run compares A and B when
 #           scenarios_differ().
 #           Internal names: "default" and "scenario" in the backend mean A and B.
 
@@ -49,7 +49,9 @@ scenario_server <- function(input, output, session) {
     a <- isolate(defs("A")); b <- isolate(defs("B"))
     d <- rbind(a, b[!keys_of(b) %in% keys_of(a), , drop = FALSE])
     k <- keys_of(d); i <- match(keys, k)
-    ifelse(is.na(i), keys, sprintf("%s %s", tools::toTitleCase(d$Species[i]), tolower(d$Name[i])))
+    # Only the name's first letter lowercased: "Spruce sawlog", "Spruce REDACTED25".
+    nm <- paste0(tolower(substring(d$Name[i], 1, 1)), substring(d$Name[i], 2))
+    ifelse(is.na(i), keys, sprintf("%s %s", tools::toTitleCase(d$Species[i]), nm))
   }
   swap_prices <- function(pm, keys, new = NULL)
     pm_minimal(rbind(pm_minimal(pm)[!pm_minimal(pm)$ProductKey %in% keys, , drop = FALSE], new))
@@ -327,6 +329,7 @@ scenario_server <- function(input, output, session) {
 
   # ---- remove, copy, reset -----------------------------------------------------
   asm_removing <- reactiveVal(NULL)    # list(side, key)
+  scen_copying <- reactiveVal(NULL)    # the side being replaced
   for (side in c("A", "B")) local({
     side <- side; s <- low(side)
     observeEvent(input[[paste0("asm_remove_", s)]], {
@@ -354,6 +357,17 @@ scenario_server <- function(input, output, session) {
       if (commit(side, r$defs, r$pm)) {
         redraw(); say(side, "ok", sprintf("%s is equal to Scenario %s.", key_label(k), o))
       }
+    })
+
+    # The whole other scenario (all assortments and prices), after a
+    # confirmation (scen_copy_ok).
+    observeEvent(input[[paste0("scen_copy_", s)]], {
+      o <- other(side); scen_copying(side)
+      showModal(modalDialog(
+        title = sprintf("Copy Scenario %s to Scenario %s", o, side), easyClose = TRUE, fade = FALSE,
+        sprintf("All assortments and prices in Scenario %s are replaced by those of Scenario %s.", side, o),
+        footer = tagList(modalButton("Cancel"),
+                         actionButton("scen_copy_ok", "Copy", class = "btn-primary"))))
     })
 
     # Base assortments back to their defaults (definitions and prices);
@@ -385,6 +399,14 @@ scenario_server <- function(input, output, session) {
   }
   observeEvent(input$asm_rm_one,  do_remove(FALSE))
   observeEvent(input$asm_rm_both, do_remove(TRUE))
+
+  observeEvent(input$scen_copy_ok, {
+    side <- scen_copying(); req(side); o <- other(side)
+    removeModal(); scen_copying(NULL)
+    if (commit(side, defs(o), prices(o))) {
+      redraw(); say(side, "ok", sprintf("Scenario %s is now a copy of Scenario %s.", side, o))
+    }
+  })
 
 
   # ---- scenario files (assortments + prices, one xlsx per scenario) ----------
@@ -586,8 +608,10 @@ scenario_server <- function(input, output, session) {
   }
 
   pm_widget <- function(grid, id, def) {
+    # Full height, no scrolling inside the grid: every row is on the page
+    # (a 480 px box hid rows added at the end, 2026-10-22).
     w <- rhandsontable(grid, rowHeaders = rownames(grid), colHeaders = colnames(grid),
-                       rowHeaderWidth = 50, height = min(480, 34 + 24 * nrow(grid)),
+                       rowHeaderWidth = 50, height = 34 + 24 * nrow(grid),
                        stretchH = "all", matrix_id = id, def = def)
     w <- hot_cols(w, renderer = PM_DIFF_RENDERER, columnSorting = FALSE)
     w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
@@ -680,6 +704,17 @@ scenario_server <- function(input, output, session) {
 
   for (side in c("A", "B")) local({
     side <- side; s <- low(side); p <- paste0("pm_", s)
+    # The cap rule under the grid: logs above the largest class are priced
+    # at it, up to the max top diameter (price_class_used()).
+    output[[paste0(p, "_cap")]] <- renderUI({
+      pm_tick(); id <- selected(); req(id, sel_state(side) == "matrix")
+      cls <- suppressWarnings(max(as.integer(rownames(pm_to_grid(prices(side), id)))))
+      d <- defs(side); top <- d$MaxTopDiameter_cm[match(id, keys_of(d))]
+      req(is.finite(cls))
+      txt <- if (!is.finite(top)) sprintf("≥ %d cm: priced as %d", cls, cls)
+             else if (floor(top) > cls) sprintf("≥ %d cm: priced as %d up to max top %s cm", cls, cls, format(top))
+      if (!is.null(txt)) div(class = "pm-cap", txt)
+    })
     output[[paste0(p, "_axes")]] <- renderUI({
       pm_tick(); id <- selected(); req(id, sel_state(side) == "matrix")
       axes_ui(p, id, isolate(prices(side)))
@@ -691,7 +726,10 @@ scenario_server <- function(input, output, session) {
       sc[[side]]$pm(res); msgs[[side]](NULL); redraw()
     }
     observeEvent(input[[paste0(p, "_cls_add_lo")]], edit(function(pm, id) pm_add_class(pm, id, "low")))
-    observeEvent(input[[paste0(p, "_cls_add_hi")]], edit(function(pm, id) pm_add_class(pm, id, "high")))
+    observeEvent(input[[paste0(p, "_cls_add_hi")]], edit(function(pm, id) {
+      d <- isolate(defs(side))
+      pm_add_class(pm, id, "high", max_top_cm = d$MaxTopDiameter_cm[match(id, keys_of(d))])
+    }))
     observeEvent(input[[paste0(p, "_cls_rm_lo")]],  edit(function(pm, id) pm_remove_class(pm, id, "low")))
     observeEvent(input[[paste0(p, "_cls_rm_hi")]],  edit(function(pm, id) pm_remove_class(pm, id, "high")))
     observeEvent(input[[paste0(p, "_len_add")]],
