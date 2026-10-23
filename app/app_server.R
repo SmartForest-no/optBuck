@@ -332,10 +332,8 @@ server <- function(input, output, session) {
   has_result <- reactive(input$run_btn > 0L && !task_busy() && !is.null(result()))
   compared   <- reactive(has_result() && !is.null(result()$scenario))
 
-  # Assortments of A and B in the last comparison: shared ones, and whether
-  # the two sets differ (then the comparison is also shown by type).
+  # Assortments both scenarios of the last comparison have.
   shared_keys <- reactive({ req(compared()); k <- result()$keys; intersect(k$A, k$B) })
-  asm_differ  <- reactive(compared() && !setequal(result()$keys$A, result()$keys$B))
   # " (A only)" / " (B only)" after an assortment label in a comparison.
   only_tag <- function(keys) {
     if (!compared()) return(rep("", length(keys)))
@@ -349,16 +347,6 @@ server <- function(input, output, session) {
     s <- r$scenario; s$price_matrix <- r$price_matrix_b
     s
   })
-  # Shown when the last finished run compared A and B. While a run is busy
-  # the result is pending and this observer waits, so the tab stays as it
-  # is (hiding the open tab would leave its outputs stale).
-  observe({
-    show <- input$run_btn > 0L && !is.null(result()) && !is.null(result()$scenario)
-    if (show) return(nav_show("result_tabs", "comparison"))
-    if (identical(isolate(input$result_tabs), "comparison")) nav_select("result_tabs", "summary")
-    nav_hide("result_tabs", "comparison")
-  })
-
   # One bar over the whole run: loading (unknown length: animated), then
   # the stages' shares of the bar.
   STAGES <- list(nfi  = list("Bucking trees" = c(0.10, 0.95), "Summarising results" = c(0.95, 1)),
@@ -411,13 +399,7 @@ server <- function(input, output, session) {
     nm <- d$Name[i]; nm <- paste0(tolower(substring(nm, 1, 1)), substring(nm, 2))
     ifelse(is.na(i), out, paste(tools::toTitleCase(d$Species[i]), nm))
   }
-  type_label <- function(t) {
-    t <- gsub("_", " ", as.character(t))
-    paste0(toupper(substring(t, 1, 1)), substring(t, 2))
-  }
   scope_label <- function(s) ifelse(s == "Total", "Total", tools::toTitleCase(as.character(s)))
-  # Per-m3 assortments: classes in the Total scope, products per species.
-  per_m3_asm_label <- function(scope, a) ifelse(scope == "Total", type_label(a), asm_label(a))
 
   LOG_LABELS <- c(
     plot_id_github = "Plot", treid = "Tree", species_group = "Species",
@@ -486,59 +468,131 @@ server <- function(input, output, session) {
         plots,
         ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total)),
         ro_field(paste(unit_lbl("Trees with logs"), "(A / B)"),
-                 sprintf("%s / %s", fmt_int(r$n_trees_with_logs), fmt_int(result_b()$n_trees_with_logs)))),
+                 sprintf("%s / %s", fmt_int(r$n_trees_with_logs), fmt_int(result_b()$n_trees_with_logs))),
+        # Trees whose cutting pattern changed (compare_cutting_patterns());
+        # a short one-line label, the total is the Trees card (2026-10-23).
+        ro_field(if (isTRUE(is_hpr())) "Changed stems" else "Changed cutting patterns",
+                 fmt_int(sum(cmp_trees()$changed)))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                      scen("Scenario A", r), scen("Scenario B", result_b())))
   })
 
 
-  # ---- Per m3 -----------------------------------------------------------------
-  output$tbl_per_m3 <- renderReactable(apter_reactable(local({
-    req(has_result()); s <- result()$per_m3_summary
-    data.frame(Scope = scope_label(s$scope), Trees = s$n_trees,
-               `Value (NOK)` = round(s$value_nok, 2),
-               `Commercial volume u.b. (m³)` = round(s$commercial_volume_m3, 4),
-               `NOK per m³` = round(s$nok_per_m3, 1),
-               check.names = FALSE, stringsAsFactors = FALSE)
-  })))
+  # ---- Products (results restructure, 2026-10-23) --------------------------------
+  # One row per assortment (assortment_summary(), R/helpers_result_tables.R).
+  # A single run: logs, price volume, value, NOK/m3 contribution and volume
+  # share. After a comparison the table shows value and contribution as A,
+  # B and change and the volume share as A and B; the CSV has every column.
+  # "–": an assortment the scenario does not have.
+  asm_tab <- reactive({
+    req(has_result())
+    if (compared()) assortment_summary(result(), result_b(), keys = result()$keys)
+    else assortment_summary(result())
+  })
+  # Waste assortments (value 0): left out of the figures.
+  waste_keys <- reactive({
+    l <- result()$selected_logs_all[, c("ProductKey", "ProductType")]
+    if (compared()) l <- rbind(l, result_b()$selected_logs_all[, c("ProductKey", "ProductType")])
+    unique(l$ProductKey[l$ProductType %in% "waste"])
+  })
+  products_df <- function(full = FALSE) {
+    x <- asm_tab(); lbl <- asm_label(x$key)
+    if (!compared())
+      return(data.frame(Assortment = lbl, Logs = x$logs_a, `Price volume (m³)` = round(x$price_vol_a, 3),
+                        `Value (NOK)` = round(x$value_a, 0),
+                        `NOK per m³ (contribution)` = round(x$contrib_a, 1),
+                        `Volume share (%)` = round(100 * x$share_a, 1),
+                        check.names = FALSE, stringsAsFactors = FALSE))
+    ab <- function(nm, a, b, digits, change = TRUE) {
+      out <- list(round(a, digits), round(b, digits))
+      names(out) <- sprintf(nm, c("A", "B"))
+      if (change) out[[sprintf(nm, "change")]] <- round(b - a, digits)
+      out
+    }
+    cols <- c(list(Assortment = lbl),
+              if (full) ab("Logs %s", x$logs_a, x$logs_b, 0),
+              if (full) ab("Price volume %s (m³)", x$price_vol_a, x$price_vol_b, 3),
+              ab("Value %s (NOK)", x$value_a, x$value_b, 0),
+              ab("NOK per m³ %s (contribution)", x$contrib_a, x$contrib_b, 1),
+              ab("Volume share %s (%%)", 100 * x$share_a, 100 * x$share_b, 1, change = full))
+    as.data.frame(cols, check.names = FALSE, stringsAsFactors = FALSE)
+  }
+  output$tbl_products <- renderReactable({
+    df <- products_df(); num <- names(df)[-1L]
+    apter_reactable(df, columns = setNames(lapply(num, function(n) reactable::colDef(na = "–")), num),
+                    page_size = 25L)
+  })
+  output$dl_products <- downloadHandler(
+    filename = function() "optBuck_products.csv",
+    content  = function(file) utils::write.csv(products_df(full = TRUE), file, row.names = FALSE,
+                                               fileEncoding = "UTF-8", na = ""))
 
-  output$tbl_per_m3_assortment <- renderReactable(apter_reactable(local({
-    req(has_result()); a <- result()$per_m3_by_assortment
-    data.frame(Scope = scope_label(a$scope), Assortment = per_m3_asm_label(a$scope, a$assortment),
-               `Value (NOK)` = round(a$value_nok, 2),
-               `Commercial volume u.b. (m³)` = round(a$commercial_volume_m3, 4),
-               `NOK per m³ (contribution)` = round(a$nok_per_m3_contribution, 1),
-               `Volume share (%)` = round(100 * a$volume_share, 1),
-               check.names = FALSE, stringsAsFactors = FALSE)
+  # NOK/m3 and volume share by assortment type (Sawlog, Pulpwood, Other) per
+  # scope; always by type (per assortment is the table above).
+  output$tbl_per_m3_type <- renderReactable(apter_reactable(local({
+    req(has_result())
+    x <- compare_per_m3(result(), if (compared()) result_b() else result(), by = "type")
+    out <- data.frame(Scope = scope_label(x$scope), Assortment = x$assortment,
+                      check.names = FALSE, stringsAsFactors = FALSE)
+    if (!compared())
+      return(cbind(out, `NOK per m³` = round(x$nok_per_m3_default, 1),
+                   `Volume share (%)` = round(100 * x$volume_share_default, 1)))
+    cbind(out,
+          `NOK per m³ A` = round(x$nok_per_m3_default, 1),
+          `NOK per m³ B` = round(x$nok_per_m3_scenario, 1),
+          `Change (NOK per m³)` = round(x$delta_nok_per_m3, 1),
+          `Volume share A (%)` = round(100 * x$volume_share_default, 1),
+          `Volume share B (%)` = round(100 * x$volume_share_scenario, 1),
+          `Change (percentage points)` = round(100 * x$delta_volume_share, 1))
   }), page_size = 20L))
 
-  total_by_assortment <- function() {
-    a <- result()$per_m3_by_assortment
-    a[a$scope == "Total", , drop = FALSE]
-  }
-  output$bar_per_m3_contribution <- renderPlot(res = 96, {
-    req(has_result()); a <- total_by_assortment(); req(nrow(a) > 0L)
-    apter_barplot(setNames(a$nok_per_m3_contribution, type_label(a$assortment)),
-                  col = APTER_CHART$series1,
-                  main = "NOK per m³ by assortment (contribution)",
-                  ylab = "NOK / m³",
-                  fmt = function(v) format(round(v, 1), nsmall = 1, trim = TRUE))
+  # NOK/m3 by assortment (contribution): horizontal bars, A and B after a
+  # comparison (waste left out).
+  contrib_fig <- reactive({
+    x <- asm_tab(); x[!x$key %in% waste_keys(), , drop = FALSE]
+  })
+  fmt_nok1 <- function(v) format(round(v, 1), nsmall = 1, trim = TRUE)
+  output$bar_nok_contribution <- renderPlot(res = 96, height = function() hbar_height(nrow(contrib_fig()), ab = compared()), {
+    x <- contrib_fig(); req(nrow(x) > 0L)
+    ttl <- "NOK per m³ by assortment (contribution)"
+    if (compared())
+      return(apter_hbar_ab(x$contrib_a, x$contrib_b, asm_label(x$key), title = ttl, xlab = "NOK / m³", fmt = fmt_nok1))
+    apter_hbar(x$contrib_a, asm_label(x$key), title = ttl, xlab = "NOK / m³", fmt = fmt_nok1,
+               col = APTER_CHART$series1)
   })
 
-  output$bar_volume_share <- renderPlot(res = 96, {
-    req(has_result()); a <- total_by_assortment(); req(nrow(a) > 0L)
-    apter_barplot(setNames(100 * a$volume_share, type_label(a$assortment)),
-                  col = APTER_CHART$series1,
-                  main = "Share of commercial volume by assortment",
-                  ylab = "%",
-                  fmt = function(v) sprintf("%.1f %%", v))
+  # Value change (B − A) of the assortments both scenarios have (waste left
+  # out): horizontal bars sorted by change; no change (to the NOK) is left
+  # out and counted in a line under the figure. Sign is carried by the bar's
+  # side of zero and the signed label (one neutral colour).
+  delta_fmt <- function(x) ifelse(x > 0, paste0("+", fmt_int(x)), fmt_int(x))
+  delta_shared <- reactive({
+    x <- asm_tab(); x <- x[x$key %in% shared_keys() & !x$key %in% waste_keys(), , drop = FALSE]
+    d <- x$value_b - x$value_a; ch <- !is.na(d) & round(d) != 0
+    list(value = d[ch], label = asm_label(x$key[ch]), n = nrow(x), n_same = sum(!ch))
+  })
+  output$cmp_value_ui <- renderUI({
+    if (!compared()) return(NULL)
+    x <- delta_shared()
+    note <- if (x$n == 0L) "No assortments in both scenarios."
+            else if (x$n_same > 0L) sprintf("%s%d %s unchanged", if (length(x$value) == 0L) "All " else "",
+                                            x$n_same, if (x$n_same == 1L) "assortment" else "assortments")
+    tagList(
+      div(class = "section-hdr", "Value change (B − A)"),
+      if (length(x$value)) plotOutput("bar_cmp_delta", height = "auto"),
+      if (!is.null(note)) div(class = "fig-note", id = "cmp_delta_note", note))
+  })
+  output$bar_cmp_delta <- renderPlot(res = 96, height = function() hbar_height(length(delta_shared()$value)), {
+    x <- delta_shared(); req(length(x$value) > 0L)
+    apter_hbar(x$value, x$label, title = "Value change (B − A), assortments in both scenarios",
+               xlab = "NOK", fmt = delta_fmt)
   })
 
-  # Trees, as Selected logs: a preview of Scenario A's first trees (select
-  # one to see its logs below) and a CSV of all trees, with both scenarios
-  # and a Scenario column after a comparison. No Status column: a tree
-  # without logs shows Logs = 0.
-  TREE_PREVIEW_N <- 20L
+
+  # ---- Trees (replaces Per m3, 2026-10-23) ---------------------------------------
+  # Figures (DBH classes, heights), the trees table (all trees, server-side
+  # pages, sortable; after a comparison value A, B and change) and the
+  # cutting pattern of the tree clicked in it.
   readable_trees <- function(r) {
     ts <- r$tree_summary
     out <- data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
@@ -554,17 +608,23 @@ server <- function(input, output, session) {
     if (isTRUE(is_hpr())) out$`Height source` <- NULL   # Tree = the StemKey
     drop_plot(out)
   }
-  trees_preview <- reactive({
-    req(has_result()); utils::head(readable_trees(result()), TREE_PREVIEW_N)
+  tree_key <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
+  # The table: A's trees; after a comparison Value A, Value B and Change
+  # (B's value of the same tree); logs, volume and NOK/m3 are A's.
+  trees_df <- reactive({
+    req(has_result()); t <- readable_trees(result())
+    if (!compared()) return(t)
+    a <- result()$tree_summary; b <- result_b()$tree_summary
+    vb <- round(b$total_value_nok[match(tree_key(a), tree_key(b))], 2)
+    names(t)[names(t) == "Logs"] <- "Logs A"
+    names(t)[names(t) == "Commercial volume u.b. (m³)"] <- "Commercial volume u.b. A (m³)"
+    names(t)[names(t) == "NOK per m³"] <- "NOK per m³ A"
+    i <- match("Value (NOK)", names(t)); va <- t[[i]]
+    cbind(t[, seq_len(i - 1L), drop = FALSE], `Value A (NOK)` = va, `Value B (NOK)` = vb,
+          `Change (NOK)` = round(vb - va, 2), t[, -seq_len(i), drop = FALSE])
   })
-  output$trees_preview_note <- renderUI({
-    req(has_result()); n <- nrow(result()$tree_summary)
-    div(class = "note-muted", sprintf("Scenario A: the first %d of %s trees. Download all trees for the full table%s.",
-                                      min(TREE_PREVIEW_N, n), fmt_int(n),
-                                      if (compared()) " (both scenarios)" else ""))
-  })
-  output$tbl_trees <- renderReactable(
-    apter_reactable(trees_preview(), sortable = FALSE, pagination = FALSE, selection = "single"))
+  tree_sel <- paged_table_server(input, output, session, "tbl_trees", trees_df, page_size = 15L,
+                                 selection = TRUE, filename = "optBuck_trees_table.csv")
   output$dl_trees <- downloadHandler(
     filename = function() "optBuck_trees.csv",
     content  = function(file) {
@@ -573,24 +633,58 @@ server <- function(input, output, session) {
         t <- rbind(t, cbind(Scenario = "B", readable_trees(result_b()), stringsAsFactors = FALSE))
       utils::write.csv(t, file, row.names = FALSE, fileEncoding = "UTF-8")
     })
-  output$tree_logs <- renderUI({
-    i <- reactable::getReactableState("tbl_trees", "selected")
-    if (is.null(i) || length(i) == 0L || i[1L] > nrow(trees_preview()))
-      return(div(class = "note-muted", "Select a tree to see its logs."))
-    tr <- trees_preview()[i[1L], ]
-    plot <- if ("Plot" %in% names(tr)) tr$Plot else NA          # .hpr stems: no plots
-    sl <- result()$selected_logs_all
-    logs <- sl[sl$plot_id_github %in% plot & sl$treid == tr$Tree, , drop = FALSE]   # plot may be NA
-    rl <- readable_logs(logs)
-    tagList(div(class = "section-hdr", sprintf("Logs of %s %s%s", if (isTRUE(is_hpr())) "stem" else "tree",
-                                               tr$Tree, if (!is.na(plot)) sprintf(" (plot %s)", plot) else "")),
-            if (nrow(logs) == 0L) div(class = "note-muted", "No selected logs for this tree.")
-            else apter_reactable(rl[, setdiff(names(rl), c("Plot", "Tree", "Species")), drop = FALSE],
-                                 page_size = 20L))
+
+  # Cutting pattern of the clicked tree (the table's first row until one is
+  # clicked): A and B after a comparison, A alone otherwise.
+  output$stem_note <- renderUI({
+    req(has_result())
+    div(class = "note-muted", sprintf("Click a %s in the table to see its cutting pattern%s.",
+                                      if (isTRUE(is_hpr())) "stem" else "tree",
+                                      if (compared()) " in Scenario A and B" else ""))
+  })
+  output$stem_compare <- renderPlot(res = 96, {
+    req(has_result()); ts <- result()$tree_summary; req(nrow(ts) > 0L)
+    i <- or_default(tree_sel(), 1L); tr <- ts[i, , drop = FALSE]; k <- tree_key(tr)
+    l1 <- result()$selected_logs_all; l1 <- l1[tree_key(l1) == k, , drop = FALSE]
+    l2 <- if (compared()) { l <- result_b()$selected_logs_all; l[tree_key(l) == k, , drop = FALSE] }
+    apter_stem_compare(l1, l2, tr$height_m,
+                       if (isTRUE(is_hpr()))
+                         sprintf("Stem %s (%s, dbh %.1f cm, measured length %.1f m)",
+                                 tr$treid, tr$species_group, tr$dbh_cm, tr$height_m)
+                       else sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
+                                    tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
   })
 
-  # Value by DBH class (R/helpers_result_tables.R; 5 cm classes): table, CSV
-  # and one figure (trees per class, NOK/m3 per class in A and B).
+  # Per-tree pattern comparison (R/helpers_comparison.R): the Summary's
+  # count and the changed-trees CSV.
+  cmp_trees <- reactive({
+    r1 <- result(); r2 <- result_b()
+    compare_cutting_patterns(r1, r2, r1$price_matrix, r2$price_matrix)
+  })
+  cmp_changed_df <- reactive({
+    x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
+    x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
+    fin <- function(v) ifelse(is.finite(v), v, NA_real_)   # a log not priced in the other scenario
+    drop_plot(data.frame(
+      Plot = x$plot_id_github, Tree = x$treid, Species = tools::toTitleCase(x$species_group),
+      `Logs A` = x$n_logs_default, `Logs B` = x$n_logs_scenario,
+      `Value A (NOK)` = round(x$value_default, 2),
+      `Value B (NOK)` = round(x$value_scenario, 2),
+      `Gain at B prices (NOK)` = round(fin(x$gain_at_scenario), 2),
+      `Gain at A prices (NOK)` = round(fin(x$gain_at_default), 2),
+      `Largest volume change (m³)` = round(x$max_volume_diff_m3, 4),
+      check.names = FALSE, stringsAsFactors = FALSE))
+  })
+  output$dl_changed_trees_ui <- renderUI({
+    if (!compared()) return(NULL)
+    downloadButton("dl_changed_trees", "Download changed trees (CSV)", class = "btn-secondary btn-sm")
+  })
+  output$dl_changed_trees <- downloadHandler(
+    filename = function() "optBuck_changed_trees.csv",
+    content  = function(file) utils::write.csv(cmp_changed_df(), file, row.names = FALSE))
+
+  # Value by DBH class (R/helpers_result_tables.R; 5 cm classes): the figure
+  # (trees per class, NOK/m3 per class in A and B) and the CSV.
   dbh_a <- reactive({ req(has_result()); dbh_class_summary(result()$tree_summary) })
   dbh_b <- reactive({ req(compared()); dbh_class_summary(result_b()$tree_summary) })
   dbh_table <- reactive({
@@ -611,85 +705,23 @@ server <- function(input, output, session) {
           `NOK per m³ A` = round(a$nok_per_m3, 1), `NOK per m³ B` = round(b$nok_per_m3, 1),
           `NOK per m³ B − A` = round(b$nok_per_m3 - a$nok_per_m3, 1))
   })
-  output$tbl_dbh_class <- renderReactable({
-    d <- dbh_table(); tot <- which(d$`DBH class (cm)` == "All")
-    apter_reactable(d, sortable = FALSE, page_size = 40L,
-                    row_class = function(i) if (i %in% tot) "tally-total")
-  })
   output$dl_dbh_class <- downloadHandler(
     filename = function() "optBuck_value_by_dbh_class.csv",
     content  = function(file) utils::write.csv(dbh_table(), file, row.names = FALSE, fileEncoding = "UTF-8"))
-  output$fig_dbh_class <- renderPlot(res = 96, height = function() 420, {
+  output$fig_dbh_class <- renderPlot(res = 96, height = function() 320, {
     req(has_result())
     apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b())
   })
 
-  # Height of the bucked trees per species (the same trees in A and B, so
-  # shown once).
-  output$fig_height <- renderPlot(res = 96, {
+  # DBH and height distributions per species, side by side (the same trees
+  # in A and B, so shown once).
+  output$fig_distributions <- renderPlot(res = 96, {
     req(has_result()); ts <- result()$tree_summary
-    if (isTRUE(is_hpr()))
-      apter_density_species(ts$height_m, ts$species_group, "Measured length (m)", "Measured length distribution")
-    else apter_density_species(ts$height_m, ts$species_group, "Tree height (m)", "Height distribution")
+    apter_distribution_figure(ts$dbh_cm, ts$height_m, ts$species_group, height_lbl())
   })
 
 
-  # ---- Products -----------------------------------------------------------------
-  products_ab <- reactive({
-    req(has_result()); p1 <- result()$product_summary
-    if (!compared()) return(NULL)
-    p2 <- result_b()$product_summary
-    keys <- union(p1$ProductKey, p2$ProductKey)
-    # 0 for an assortment without logs; NA ("–") for one not in the scenario.
-    sk <- result()$keys
-    g <- function(p, col, in_s) { v <- p[[col]][match(keys, p$ProductKey)]; v[is.na(v)] <- 0
-                                  v[!keys %in% in_s] <- NA; v }
-    list(keys = keys,
-         logs_a = g(p1, "n_logs", sk$A), logs_b = g(p2, "n_logs", sk$B),
-         vol_a = g(p1, "total_volume_m3", sk$A), vol_b = g(p2, "total_volume_m3", sk$B),
-         val_a = g(p1, "total_value_nok", sk$A), val_b = g(p2, "total_value_nok", sk$B))
-  })
-
-  output$tbl_products <- renderReactable({
-    req(has_result())
-    v <- products_ab()
-    if (is.null(v)) {
-      ps <- result()$product_summary
-      return(apter_reactable(data.frame(
-        Assortment = asm_label(ps$ProductKey), Logs = ps$n_logs,
-        `Price volume (m³)` = round(ps$total_volume_m3, 3),
-        `Value (NOK)` = round(ps$total_value_nok, 0),
-        `Mean price (NOK/m³)` = round(ps$mean_value_nok_per_m3, 1),
-        check.names = FALSE, stringsAsFactors = FALSE), page_size = 20L))
-    }
-    df <- data.frame(
-      Assortment = asm_label(v$keys),
-      `Logs A` = v$logs_a, `Logs B` = v$logs_b,
-      `Price volume A (m³)` = round(v$vol_a, 3), `Price volume B (m³)` = round(v$vol_b, 3),
-      `Value A (NOK)` = round(v$val_a, 0), `Value B (NOK)` = round(v$val_b, 0),
-      check.names = FALSE, stringsAsFactors = FALSE)
-    num <- names(df)[-1L]   # "–": not in that scenario
-    apter_reactable(df, columns = setNames(lapply(num, function(n) reactable::colDef(na = "–")), num),
-                    page_size = 20L)
-  })
-
-  # Value by assortment: horizontal bars sorted by value (every name shown,
-  # 2026-10-22); price volume is in the table only.
-  output$bar_value_by_product <- renderPlot(res = 96, height = function() {
-    v <- products_ab()
-    if (!is.null(v)) hbar_height(length(v$keys), ab = TRUE) else hbar_height(nrow(result()$product_summary))
-  }, {
-    req(has_result()); v <- products_ab()
-    if (!is.null(v))
-      return(apter_hbar_ab(v$val_a, v$val_b, asm_label(v$keys),
-                           title = "Value (NOK) by assortment", xlab = "NOK", fmt = fmt_int))
-    ps <- result()$product_summary; req(nrow(ps) > 0L)
-    apter_hbar(ps$total_value_nok, asm_label(ps$ProductKey), title = "Value (NOK) by assortment",
-               xlab = "NOK", fmt = fmt_int, col = APTER_CHART$series1)
-  })
-
-
-  # ---- Selected logs ------------------------------------------------------------
+  # ---- Logs (renamed from Selected logs) ------------------------------------------------------------
   # A short preview (Scenario A's first logs); all logs are a CSV download,
   # with both scenarios and a Scenario column after a comparison.
   LOG_PREVIEW_N <- 20L
@@ -790,204 +822,5 @@ server <- function(input, output, session) {
       utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
     })
 
-
-  # ---- Scenario comparison (A vs B) ------------------------------------------
-  # Per-tree pattern comparison (R/helpers_comparison.R).
-  cmp_trees <- reactive({
-    r1 <- result(); r2 <- result_b()
-    compare_cutting_patterns(r1, r2, r1$price_matrix, r2$price_matrix)
-  })
-
-  output$tbl_cmp_delta <- renderReactable(apter_reactable(local({
-    r1 <- result(); r2 <- result_b()
-    v1 <- sum(r1$selected_logs_all$value_nok, na.rm = TRUE)
-    v2 <- sum(r2$selected_logs_all$value_nok, na.rm = TRUE)
-    m1 <- sum(r1$selected_logs_all$price_volume_m3, na.rm = TRUE)
-    m2 <- sum(r2$selected_logs_all$price_volume_m3, na.rm = TRUE)
-    t1 <- r1$per_m3_summary[r1$per_m3_summary$scope == "Total", ]
-    t2 <- r2$per_m3_summary[r2$per_m3_summary$scope == "Total", ]
-    pct <- function(a, b) if (abs(b) > 1e-9) round((a - b) / abs(b) * 100, 2) else 0
-    data.frame(
-      `Value (NOK)`                 = round(v2 - v1, 0),
-      `Value (%)`                   = pct(v2, v1),
-      `Price volume (m³)`           = round(m2 - m1, 3),
-      `Price volume (%)`            = pct(m2, m1),
-      `Commercial volume u.b. (m³)` = round(t2$commercial_volume_m3 - t1$commercial_volume_m3, 3),
-      `NOK per m³`                  = round(t2$nok_per_m3 - t1$nok_per_m3, 1),
-      `NOK per m³ (%)`              = pct(t2$nok_per_m3, t1$nok_per_m3),
-      `Trees changed`               = sum(cmp_trees()$changed),
-      check.names = FALSE, stringsAsFactors = FALSE)
-  })))
-
-  # Different assortments: by type (Sawlog, Pulpwood, Other) in every scope.
-  output$cmp_per_m3_hdr <- renderUI(div(class = "section-hdr",
-    if (asm_differ()) "NOK per m³ and volume share by assortment type"
-    else "NOK per m³ and volume share by assortment"))
-  output$tbl_cmp_per_m3 <- renderReactable(apter_reactable(local({
-    x <- compare_per_m3(result(), result_b(), by = if (asm_differ()) "type" else "assortment")
-    data.frame(Scope = scope_label(x$scope), Assortment = per_m3_asm_label(x$scope, x$assortment),
-               `NOK per m³ A` = round(x$nok_per_m3_default, 1),
-               `NOK per m³ B` = round(x$nok_per_m3_scenario, 1),
-               `Change (NOK per m³)` = round(x$delta_nok_per_m3, 1),
-               `Volume share A (%)` = round(100 * x$volume_share_default, 1),
-               `Volume share B (%)` = round(100 * x$volume_share_scenario, 1),
-               `Change (percentage points)` = round(100 * x$delta_volume_share, 1),
-               check.names = FALSE, stringsAsFactors = FALSE)
-  }), page_size = 20L))
-
-  output$cmp_patterns <- renderUI({
-    x <- cmp_trees()
-    div(class = "stat-strip",
-        tags$strong(sprintf("%s of %s %s changed their cutting pattern",
-                            fmt_int(sum(x$changed)), fmt_int(nrow(x)), tolower(unit_lbl("Trees")))),
-        if (sum(x$tie_only) > 0L)
-          sprintf(" (%d more differ only by equal-value ties)", sum(x$tie_only)))
-  })
-
-  cmp_changed_df <- reactive({
-    x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
-    x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
-    fin <- function(v) ifelse(is.finite(v), v, NA_real_)   # a log not priced in the other scenario
-    drop_plot(data.frame(
-      Plot = x$plot_id_github, Tree = x$treid, Species = tools::toTitleCase(x$species_group),
-      `Logs A` = x$n_logs_default, `Logs B` = x$n_logs_scenario,
-      `Value A (NOK)` = round(x$value_default, 2),
-      `Value B (NOK)` = round(x$value_scenario, 2),
-      `Gain at B prices (NOK)` = round(fin(x$gain_at_scenario), 2),
-      `Gain at A prices (NOK)` = round(fin(x$gain_at_default), 2),
-      `Largest volume change (m³)` = round(x$max_volume_diff_m3, 4),
-      check.names = FALSE, stringsAsFactors = FALSE))
-  })
-  paged_table_server(input, output, session, "tbl_cmp_trees", cmp_changed_df, page_size = 15L,
-                     filename = "optBuck_changed_trees.csv")
-
-  # Tree picker: server-side choices (all trees of a stratum).
-  observe({
-    req(compared()); x <- cmp_trees()
-    x <- x[order(!x$changed, -abs(x$value_scenario - x$value_default)), , drop = FALSE]
-    lbl <- sprintf("%s (%s%s)", if (isTRUE(is_hpr())) x$treid else paste(x$plot_id_github, x$treid, sep = " / "),
-                   x$species_group,
-                   ifelse(x$changed, sprintf(", %+.1f NOK", x$value_scenario - x$value_default),
-                          ", unchanged"))
-    updateSelectizeInput(session, "cmp_tree", server = TRUE,
-                         choices = setNames(paste(x$plot_id_github, x$treid, sep = "|"), lbl),
-                         selected = paste(x$plot_id_github, x$treid, sep = "|")[1L])
-  })
-
-  output$stem_compare <- renderPlot(res = 96, {
-    req(compared(), !is.null(input$cmp_tree), nzchar(input$cmp_tree))
-    k  <- input$cmp_tree
-    tk <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
-    l1 <- result()$selected_logs_all;   l1 <- l1[tk(l1) == k, , drop = FALSE]
-    l2 <- result_b()$selected_logs_all; l2 <- l2[tk(l2) == k, , drop = FALSE]
-    ts <- result()$tree_summary; tr <- ts[tk(ts) == k, , drop = FALSE]
-    req(nrow(tr) == 1L)
-    apter_stem_compare(l1, l2, tr$height_m,
-                       if (isTRUE(is_hpr()))
-                         sprintf("Stem %s (%s, dbh %.1f cm, measured length %.1f m)",
-                                 tr$treid, tr$species_group, tr$dbh_cm, tr$height_m)
-                       else sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
-                                    tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
-  })
-
-  # Value by assortment: per assortment when A and B have the same
-  # assortments; otherwise by type (Sawlog, Pulpwood, Other; all
-  # assortments) and per assortment for the shared ones only (2026-10-22).
-  # The shared assortments; with different assortments waste is left out
-  # (value 0, as in the type view).
-  cmp_shared <- reactive({
-    v <- products_ab(); req(v); i <- v$keys %in% shared_keys()
-    if (asm_differ()) {
-      l <- rbind(result()$selected_logs_all[, c("ProductKey", "ProductType")],
-                 result_b()$selected_logs_all[, c("ProductKey", "ProductType")])
-      i <- i & !v$keys %in% l$ProductKey[l$ProductType %in% "waste"]
-    }
-    lapply(v, function(x) x[i])
-  })
-  cmp_types <- reactive({ req(compared()); compare_by_type(result(), result_b()) })
-  output$cmp_value_hdr <- renderUI(div(class = "section-hdr",
-    if (asm_differ()) "Value by assortment type" else "Value by assortment"))
-
-  output$tbl_cmp_products <- renderReactable({
-    v <- cmp_shared()
-    pct <- function(a, b) ifelse(abs(b) > 1e-9, round((a - b) / abs(b) * 100, 2), 0)
-    # Share of each run's total commercial volume under bark, per product.
-    share <- function(r, keys) {
-      sl  <- r$selected_logs_all
-      tot <- sum(sl$commercial_volume_m3, na.rm = TRUE)
-      vapply(keys, function(k)
-        if (tot > 0) sum(sl$commercial_volume_m3[sl$ProductKey == k]) / tot else 0,
-        numeric(1), USE.NAMES = FALSE)
-    }
-    rows <- function(lbl, val_a, val_b, vol_a, vol_b, sh_a, sh_b) data.frame(
-      Assortment = lbl,
-      `Value A (NOK)` = round(val_a, 0), `Value B (NOK)` = round(val_b, 0),
-      `Value change (NOK)` = round(val_b - val_a, 0),
-      `Value change (%)` = pct(val_b, val_a),
-      `Price volume A (m³)` = round(vol_a, 3), `Price volume B (m³)` = round(vol_b, 3),
-      `Volume change (m³)` = round(vol_b - vol_a, 3),
-      `Volume change (%)` = pct(vol_b, vol_a),
-      `Volume share A (%)` = round(100 * sh_a, 1),
-      `Volume share B (%)` = round(100 * sh_b, 1),
-      check.names = FALSE, stringsAsFactors = FALSE)
-    out <- rows(asm_label(v$keys), v$val_a, v$val_b, v$vol_a, v$vol_b,
-                share(result(), v$keys), share(result_b(), v$keys))
-    n_type <- 0L
-    if (asm_differ()) {
-      t <- cmp_types(); n_type <- nrow(t)
-      out <- rbind(rows(sprintf("%s (type)", t$type), t$value_a, t$value_b, t$price_vol_a, t$price_vol_b,
-                        t$share_a, t$share_b), out)
-    }
-    apter_reactable(out, page_size = 20L,
-                    row_class = function(i) if (i <= n_type) "tally-total")   # the type rows
-  })
-
-  # Value change (B − A): horizontal bars sorted by change; assortments with
-  # no change (to the NOK) are left out and counted in a line under the
-  # figure (2026-10-22). Sign is carried by the bar's side of zero and the
-  # signed label, so one neutral colour is used (no colour-only meaning).
-  delta_fmt <- function(x) ifelse(x > 0, paste0("+", fmt_int(x)), fmt_int(x))
-  delta_of <- function(a, b, labels) {
-    d <- b - a; ch <- !is.na(d) & round(d) != 0
-    list(value = d[ch], label = labels[ch], n_same = sum(!ch))
-  }
-  # "8 assortments unchanged" / "1 assortment type unchanged".
-  unchanged_note <- function(x) {
-    n <- x$n_same; if (n == 0L) return(NULL)
-    div(class = "fig-note", sprintf("%s%d %s unchanged", if (length(x$value) == 0L) "All " else "",
-                                    n, if (n == 1L) x$one else x$many))
-  }
-  delta_main <- reactive({
-    if (asm_differ()) {
-      t <- cmp_types()
-      return(c(delta_of(t$value_a, t$value_b, t$type), one = "assortment type", many = "assortment types"))
-    }
-    v <- products_ab(); req(v)
-    c(delta_of(v$val_a, v$val_b, asm_label(v$keys)), one = "assortment", many = "assortments")
-  })
-  delta_shared <- reactive({
-    v <- cmp_shared()
-    c(delta_of(v$val_a, v$val_b, asm_label(v$keys)), one = "shared assortment", many = "shared assortments")
-  })
-  delta_plot <- function(x, title) {
-    req(length(x$value) > 0L)
-    apter_hbar(x$value, x$label, title = title, xlab = "NOK", fmt = delta_fmt)
-  }
-  output$bar_cmp_delta <- renderPlot(res = 96, height = function() hbar_height(length(delta_main()$value)), {
-    x <- delta_main()
-    delta_plot(x, if (asm_differ()) "Value change (B − A) by assortment type" else "Value change (B − A) by assortment")
-  })
-  output$cmp_delta_note <- renderUI(unchanged_note(delta_main()))
-  # Different assortments: a second figure for the shared assortments only
-  # (none when no assortment is shared).
-  output$cmp_shared_ui <- renderUI({
-    if (!asm_differ() || length(cmp_shared()$keys) == 0L) return(NULL)
-    x <- delta_shared()
-    tagList(if (length(x$value)) plotOutput("bar_cmp_delta_shared", height = "auto"),
-            unchanged_note(x))
-  })
-  output$bar_cmp_delta_shared <- renderPlot(res = 96, height = function() hbar_height(length(delta_shared()$value)), {
-    delta_plot(delta_shared(), "Value change (B − A), assortments in both scenarios")
-  })
 
 }  # end server

@@ -174,24 +174,58 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   (cards, summary boxes, grid renderers,
   `apter_reactable()` (columns sized to content, headers wrap),
   `paged_table_ui()`/`paged_table_server()` (server-side pages for large
-  result tables), `apter_barplot()` (Per m³ bars by type), the horizontal
-  ggplot2 bars `apter_hbar()` / `apter_hbar_ab()` with `hbar_height()`
-  (2026-10-22: Products value figure, value change B − A; one row per
-  assortment sorted by value so every name shows with 17+ .hpr assortments;
-  zero changes left out and counted in `cmp_delta_note`; the Products tab
-  has no price-volume figure), and the ggplot2
-  figures `apter_density_species()` (height density in the Trees card) and
-  `apter_dbh_class_figure()` (trees and NOK/m³ by DBH class, Per m³; A
-  solid, B dashed)) in `app/helpers_ui.R`; ggplot2 figures use `theme_apter()` (`app/theme.R`)
+  result tables), the horizontal ggplot2 bars `apter_hbar()` /
+  `apter_hbar_ab()` with `hbar_height()` (one row per assortment sorted by
+  value, so every name shows with 17+ .hpr assortments), the ggplot2
+  figures `apter_distribution_figure()` (DBH and height densities per
+  species, two panels side by side) and `apter_dbh_class_figure()` (NOK/m³
+  by DBH class, lines only; A solid, B dashed), and the base-graphics stem
+  diagram `apter_stem_compare()`
+  (`logs_scenario = NULL`: Scenario A alone)) in `app/helpers_ui.R`;
+  ggplot2 figures use `theme_apter()` (`app/theme.R`)
   and Inter from `app/www/fonts/*.ttf`, registered with systemfonts and drawn
   by ragg; `app/www/apter.js` shows the progress bar as soon as
-  Run is clicked. After a comparison the Summary shows run time, plots,
-  trees and trees with logs (A / B) once, then Scenario A and B side by
-  side, each as a 2 × 2 grid (value, commercial volume / NOK per m³, price
-  volume); the comparison tab has no A/B overview table and no A/B value bar
-  (both duplicated other outputs; removed 2026-10-22). **Result tables
-  (2026-10-22, `R/helpers_result_tables.R`, audit 27):** the log tally
-  (stocknota, Selected logs: `tally_key`, `tally_measure`, `tally_scenario`,
+  Run is clicked. **Result tabs (results restructure, 2026-10-23):
+  Summary, Products, Trees, Logs** (`result_tabs` values `summary`,
+  `products`, `trees`, `logs`); no comparison or Per m³ tab: comparison
+  outputs sit in the tab of their content and render only when
+  `compared()`. The layout is the same for NFI data, tree lists and .hpr
+  stems (`is_hpr()`: no Plot column, "Stems", "Measured length (m)").
+  - *Summary* (`summary_cards`): after a comparison run time, plots, trees,
+    trees with logs (A / B) and "Changed cutting patterns" ("Changed stems"
+    for .hpr stems; the count, `compare_cutting_patterns()`) once, then
+    Scenario A and B side by side, each a 2 × 2 grid (value, commercial
+    volume / NOK per m³, price volume). Card labels and values stay on one
+    line (`.ro-label`, `.ro-value` nowrap), so the cards are one height.
+  - *Products*: `tbl_products` from `assortment_summary()`
+    (`R/helpers_result_tables.R`, audit 27 check 10: sums of the selected
+    logs; contribution = assortment value / the run's total commercial
+    volume, so contributions add up to NOK/m³; share = its commercial volume
+    / the total; NA = not in that scenario, shown "–"). A single run: Logs,
+    Price volume, Value, NOK per m³ (contribution), Volume share. After a
+    comparison value and contribution A, B and change, volume share A and B
+    (decided 2026-10-23); `dl_products` has every column. `tbl_per_m3_type`:
+    NOK/m³ and volume share by type (`compare_per_m3(by = "type")`, always by
+    type). `bar_nok_contribution`: NOK/m³ by assortment (A and B; waste left
+    out). After a comparison `cmp_value_ui`: `bar_cmp_delta`, the value
+    change of the shared non-waste assortments, unchanged ones counted in
+    `cmp_delta_note` ("No assortments in both scenarios." when none).
+  - *Trees*: `fig_distributions` (DBH and height, side by side),
+    `fig_dbh_class` (NOK/m³ lines; tree counts are not repeated), the trees
+    table `tbl_trees`
+    (`paged_table_ui/server`, all trees, 15 per page, sortable; after a
+    comparison Value A, Value B, Change; logs and NOK/m³ are A's), and
+    `stem_compare` for the clicked row (the first row until one is
+    clicked). Downloads `dl_trees` (all trees, Scenario column),
+    `dl_dbh_class`, `dl_changed_trees` (after a comparison).
+  - *Logs* (renamed from Selected logs): the tally and the logs preview,
+    as below.
+  Removed 2026-10-23: the Difference (B − A) table, the cutting-pattern
+  changes table and tree picker, the old Per m³ tables and share figure,
+  the DBH table (its CSV stays), the Trees card and the selected tree's
+  log table, the Products value figure and the type rows.
+  **Result tables (2026-10-22, `R/helpers_result_tables.R`, audit 27):** the log tally
+  (stocknota, Logs tab: `tally_key`, `tally_measure`, `tally_scenario`,
   `tbl_tally`, `dl_tally_xlsx`, `dl_tally_csv`) counts commercial logs (not
   waste) per `PriceDiameterClass_cm_used` × `LengthClass_dm` on the
   scenario's own price grid (`pm_to_grid()`: NA = no price, 0 = no logs;
@@ -205,24 +239,14 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   (shared, whatever their rules or prices). The tally's Scenario radio
   offers the scenarios that have the selected key (B − A only when shared;
   dropdown "(A only)" / "(B only)"), and the xlsx has B − A only for shared
-  keys (`log_tally_xlsx(scenario_keys =)`). When the key sets differ
-  (`asm_differ()`), the comparison tab is by type group (`type_group()`,
+  keys (`log_tally_xlsx(scenario_keys =)`). Type groups (`type_group()`,
   `compare_by_type()`, `compare_per_m3(by = "type")` in
   `R/helpers_comparison.R`: Sawlog, Pulpwood, Other = custom commercial
-  types; waste left out): `tbl_cmp_per_m3` by type in every scope,
-  `bar_cmp_delta` by type plus `bar_cmp_delta_shared` (shared non-waste
-  assortments, in `cmp_shared_ui`, none if nothing is shared), and
-  `tbl_cmp_products` with "<Type> (type)" rows first, then the shared
-  assortments only. The Products tab shows "–" for an assortment a scenario
-  does not have. Totals, NOK/m³, DBH classes and changed patterns are
-  unchanged. Value by DBH class (Per m³:
-  `tbl_dbh_class`, `dl_dbh_class`, `fig_dbh_class`): 5 cm classes from 0,
-  open from 60 cm (`dbh_class_summary()`); totals per species equal
-  `per_m3_summary`. Selected logs also has a
-  preview (Scenario A's first 20 logs) plus `dl_logs`, a CSV of all logs
-  with a Scenario column (both scenarios after a comparison). The Trees
-  card (Per m³) works the same way: a preview of Scenario A's first 20 trees
-  (select one to see its logs), `dl_trees` for all trees, no Status column. The Summary's run time is
+  types; waste left out). Value by DBH class (`dbh_class_summary()`): 5 cm
+  classes from 0, open from 60 cm; totals per species equal
+  `per_m3_summary`. The Logs tab also has a preview (Scenario A's first 20
+  logs) plus `dl_logs`, a CSV of all logs with a Scenario column (both
+  scenarios after a comparison). The Summary's run time is
   the full time from clicking Run to the results (`elapsed_total_seconds`;
   the backend's `elapsed_seconds` counts only its own work). The SmartForest
   logo (`app/www/smartforest_logo.jpg`, `navbar_logo()`) sits at the right of

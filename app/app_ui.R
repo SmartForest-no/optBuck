@@ -136,6 +136,9 @@ simulator_page <- nav_panel(
     div(id = "run_status_box", uiOutput("run_status")),
     uiOutput("height_banner"),
 
+    # Four result tabs (results restructure, 2026-10-23): Summary, Products,
+    # Trees, Logs. Comparison outputs sit in the tab of their content and
+    # render only after a comparison; there is no comparison tab.
     navset_card_underline(id = "result_tabs",
 
       nav_panel("Summary", value = "summary",
@@ -143,43 +146,39 @@ simulator_page <- nav_panel(
         uiOutput("summary_cards")
       ),
 
-      nav_panel("Per m³", value = "per_m3",
-        div(class = "section-hdr", "NOK per m³ of commercial volume under bark"),
-        reactableOutput("tbl_per_m3"),
-        div(class = "section-hdr", "By assortment"),
-        reactableOutput("tbl_per_m3_assortment"),
-        layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-          plotOutput("bar_per_m3_contribution", height = "260px"),
-          plotOutput("bar_volume_share",        height = "260px")
-        ),
-        # Value by DBH class (2026-10-22): table, CSV and one figure (it
-        # replaces the DBH density of the Trees card).
-        div(class = "section-hdr", "By DBH class"),
-        reactableOutput("tbl_dbh_class"),
-        div(class = "tally-downloads",
-          downloadButton("dl_dbh_class", "Download DBH table (CSV)", class = "btn-secondary btn-sm")),
-        plotOutput("fig_dbh_class", height = "auto"),
-        apter_card("Trees", collapsible = TRUE, open = FALSE,
-          layout_columns(col_widths = breakpoints(sm = 12, lg = 6),
-            plotOutput("fig_height", height = "260px")
-          ),
-          uiOutput("trees_preview_note"),
-          reactableOutput("tbl_trees"),
-          downloadButton("dl_trees", "Download all trees (CSV)", class = "btn-secondary btn-sm"),
-          uiOutput("tree_logs")
-        )
-      ),
-
       nav_panel("Products", value = "products",
+        # One row per assortment (assortment_summary()); after a comparison
+        # value and NOK/m3 contribution A, B and change, volume share A and
+        # B; the CSV has every column.
         reactableOutput("tbl_products"),
-        # Value only (price volume is in the table); horizontal bars, height
-        # from the number of assortments (2026-10-22).
-        plotOutput("bar_value_by_product", height = "auto")
+        div(class = "tally-downloads",
+          downloadButton("dl_products", "Download products (CSV)", class = "btn-secondary btn-sm")),
+        div(class = "section-hdr", "NOK per m³ and volume share by assortment type"),
+        reactableOutput("tbl_per_m3_type"),
+        plotOutput("bar_nok_contribution", height = "auto"),
+        # After a comparison: value change of the shared assortments.
+        uiOutput("cmp_value_ui")
       ),
 
-      nav_panel("Selected logs", value = "logs",
-        # Log tally per price matrix (stocknota, 2026-10-22): replaces the
-        # logs-per-length and volume-per-diameter figures (its totals).
+      nav_panel("Trees", value = "trees",
+        # DBH and height distributions side by side, then NOK/m3 by DBH class
+        # (lines; 2026-10-23).
+        plotOutput("fig_distributions", height = "300px"),
+        plotOutput("fig_dbh_class", height = "auto"),
+        div(class = "section-hdr", "Trees"),
+        paged_table_ui("tbl_trees"),
+        div(class = "tally-downloads",
+          downloadButton("dl_trees", "Download all trees (CSV)", class = "btn-secondary btn-sm"),
+          downloadButton("dl_dbh_class", "Download value by DBH class (CSV)", class = "btn-secondary btn-sm"),
+          uiOutput("dl_changed_trees_ui", inline = TRUE)),
+        # Click a tree in the table: its cutting pattern in A (and B).
+        div(class = "section-hdr", "Cutting pattern"),
+        uiOutput("stem_note"),
+        plotOutput("stem_compare", height = "230px")
+      ),
+
+      nav_panel("Logs", value = "logs",
+        # Log tally per price matrix (stocknota, 2026-10-22).
         div(class = "section-hdr", "Log tally"),
         div(class = "tally-controls",
           selectInput("tally_key", "Assortment", choices = NULL, width = "260px"),
@@ -195,29 +194,6 @@ simulator_page <- nav_panel(
         uiOutput("logs_preview_note"),
         reactableOutput("tbl_selected_logs"),
         downloadButton("dl_logs", "Download all logs (CSV)", class = "btn-secondary btn-sm")
-      ),
-
-      nav_panel("Scenario comparison", value = "comparison",
-        # A and B themselves are in the Summary (tbl_cmp_overview removed 2026-10-22).
-        div(class = "section-hdr", "Difference (B − A)"),
-        reactableOutput("tbl_cmp_delta"),
-        uiOutput("cmp_per_m3_hdr"),     # "... by assortment type" when A and B differ in assortments
-        reactableOutput("tbl_cmp_per_m3"),
-        div(class = "section-hdr", "Cutting-pattern changes"),
-        uiOutput("cmp_patterns"),
-        paged_table_ui("tbl_cmp_trees"),
-        div(class = "section-hdr", "Example stems"),
-        selectizeInput("cmp_tree", "Tree (changed trees first, largest value change first)",
-                       choices = NULL, width = "100%"),
-        plotOutput("stem_compare", height = "230px"),
-        # A and B per assortment are on the Products tab (bar_cmp_value removed 2026-10-22).
-        # Different assortments (2026-10-22): by type, and per assortment for
-        # the shared ones only (cmp_shared_ui).
-        uiOutput("cmp_value_hdr"),
-        plotOutput("bar_cmp_delta", height = "auto"),
-        uiOutput("cmp_delta_note"),     # "8 assortments unchanged"
-        uiOutput("cmp_shared_ui"),
-        reactableOutput("tbl_cmp_products")
       )
     )
   )

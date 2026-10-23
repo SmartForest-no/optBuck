@@ -345,7 +345,8 @@ apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format) {
 #' (length in dm) so colour is never the only cue.
 #'
 #' @param logs_default,logs_scenario Selected logs of one tree under A and B
-#'   (StartPos, StopPos in cm; ProductType; LengthClass_dm).
+#'   (StartPos, StopPos in cm; ProductType; LengthClass_dm). logs_scenario
+#'   NULL (a single run): one bar, Scenario A (2026-10-23).
 #' @param height_m Tree height (m), for the x-axis extent.
 #' @param title    Plot title.
 apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
@@ -356,13 +357,14 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   custom <- length(setdiff(types, names(ch$assortment))) > 0L
   old <- apter_par(mar = c(3.5, 7.5, 3, 1)); on.exit(graphics::par(old))
   x_max <- max(c(height_m, logs_default$StopPos / 100, logs_scenario$StopPos / 100), na.rm = TRUE)
-  graphics::plot(NA, xlim = c(0, x_max), ylim = c(0.4, 2.9), axes = FALSE,
+  two <- !is.null(logs_scenario)
+  graphics::plot(NA, xlim = c(0, x_max), ylim = if (two) c(0.4, 2.9) else c(1.2, 2.9), axes = FALSE,
                  xlab = "", ylab = "", main = title)
   graphics::abline(v = graphics::axTicks(1), col = ch$grid, lwd = 0.7)
   graphics::axis(1, col = NA, col.ticks = NA)
   graphics::mtext("Height along the stem (m)", side = 1, line = 2.2,
                   col = ch$muted, cex = 0.8)
-  graphics::axis(2, at = c(2, 1), labels = c("Scenario A", "Scenario B"),
+  graphics::axis(2, at = if (two) c(2, 1) else 2, labels = if (two) c("Scenario A", "Scenario B") else "Scenario A",
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {
     graphics::rect(0, y - 0.32, height_m, y + 0.32, col = APTER_TOKENS$panel, border = NA)
@@ -379,7 +381,7 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
     graphics::text(((l$StartPos + l$StopPos) / 200)[wide], y, lab[wide],
                    col = ch$label_on[slot][wide], cex = 0.75, font = 2)
   }
-  draw(logs_default, 2); draw(logs_scenario, 1)
+  draw(logs_default, 2); if (two) draw(logs_scenario, 1)
   leg <- c(ch$assortment, if (custom) c("custom assortments" = ch$other))
   graphics::legend("top", horiz = TRUE, bty = "n", inset = c(0, -0.02),
                    legend = names(leg), fill = leg,
@@ -411,30 +413,39 @@ function(instance, td, row, col, prop, value, cellProperties) {
 # ---- ggplot2 figures (layout-and-figures) -------------------------------------------
 # Styled by theme_apter() (theme.R): Inter, white background, light grid.
 
-#' Overlapping density curves per species (alpha 0.45, thin outline in the
-#' species colour, legend when both species are present).
+#' DBH and height distributions side by side (2026-10-23, Trees tab): two
+#' panels of overlapping density curves per species (alpha 0.45, thin
+#' outline in the species colour, legend when both species are present),
+#' each on its own axis.
 #'
-#' @param x Numeric values (e.g. dbh in cm); species: "spruce"/"pine" per value.
-apter_density_species <- function(x, species, xlab, title) {
-  d <- data.frame(x = x, Species = factor(tools::toTitleCase(species), levels = names(APTER_SPECIES)))
+#' @param dbh,height Numeric per tree (cm, m); species: "spruce"/"pine".
+#' @param height_lbl Panel title of the heights ("Height (m)", or "Measured
+#'   length (m)" for .hpr stems).
+apter_distribution_figure <- function(dbh, height, species, height_lbl = "Height (m)") {
+  panels <- c("DBH (cm)", height_lbl)
+  sp <- factor(tools::toTitleCase(species), levels = names(APTER_SPECIES))
+  d <- rbind(data.frame(panel = panels[1], x = dbh, Species = sp),
+             data.frame(panel = panels[2], x = height, Species = sp))
+  d$panel <- factor(d$panel, panels)
   d <- d[is.finite(d$x) & !is.na(d$Species), , drop = FALSE]
-  keep <- names(which(table(d$Species) >= 2L))         # a density needs two values
-  d <- d[d$Species %in% keep, , drop = FALSE]
+  n <- table(d$panel, d$Species)                         # a density needs two values
+  d <- d[n[cbind(as.character(d$panel), as.character(d$Species))] >= 2L, , drop = FALSE]
   if (nrow(d) == 0L) return(NULL)
+  two_sp <- length(unique(d$Species)) > 1L
   ggplot2::ggplot(d, ggplot2::aes(x = x, fill = Species, colour = Species)) +
     ggplot2::geom_density(alpha = 0.45, linewidth = 0.5) +
+    ggplot2::facet_wrap(ggplot2::vars(panel), nrow = 1L, scales = "free") +
     ggplot2::scale_fill_manual(values = APTER_SPECIES, drop = TRUE) +
     ggplot2::scale_colour_manual(values = APTER_SPECIES, drop = TRUE) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.05))) +
-    ggplot2::guides(fill = if (length(keep) > 1L) "legend" else "none", colour = "none") +
-    ggplot2::labs(x = xlab, y = "Density", title = title) +
+    ggplot2::guides(fill = if (two_sp) "legend" else "none", colour = "none") +
+    ggplot2::labs(x = NULL, y = "Density", title = "DBH and height distribution") +
     theme_apter()
 }
 
-#' Trees and NOK per m³ by DBH class (2026-10-22; replaces the DBH density):
-#' two panels on one DBH-class axis. Top: trees per class, bars per species
-#' (the same trees in A and B). Bottom: NOK/m³ per class and species, points
-#' and lines; Scenario A solid, B dashed after a comparison.
+#' NOK per m³ by DBH class (2026-10-23: lines only; the tree counts are in
+#' the distribution figure): NOK/m³ per class and species, points and lines;
+#' Scenario A solid, B dashed after a comparison.
 #'
 #' @param a,b dbh_class_summary() of Scenario A and (optionally) B.
 apter_dbh_class_figure <- function(a, b = NULL) {
@@ -442,32 +453,23 @@ apter_dbh_class_figure <- function(a, b = NULL) {
   a <- cls(a); if (nrow(a) == 0L) return(NULL)
   lv <- unique(a$dbh_class[order(a$class_lo)])
   sp <- function(x) factor(tools::toTitleCase(x), levels = names(APTER_SPECIES))
-  panels <- c("Trees", "NOK per m³")
-  trees <- data.frame(panel = factor(panels[1], panels), class = factor(a$dbh_class, lv),
-                      Species = sp(a$species_group), value = a$trees)
-  nok <- function(d, nm) data.frame(panel = factor(panels[2], panels), class = factor(d$dbh_class, lv),
-                                    Species = sp(d$species_group), Scenario = nm, value = d$nok_per_m3)
+  nok <- function(d, nm) data.frame(class = factor(d$dbh_class, lv), Species = sp(d$species_group),
+                                    Scenario = nm, value = d$nok_per_m3)
   lines <- rbind(nok(a, "Scenario A"), if (!is.null(b)) nok(cls(b), "Scenario B"))
   lines <- lines[is.finite(lines$value), , drop = FALSE]
+  if (nrow(lines) == 0L) return(NULL)
   lines$Scenario <- factor(lines$Scenario, c("Scenario A", "Scenario B"))
-  two_sp <- length(unique(trees$Species)) > 1L
-  ggplot2::ggplot() +
-    ggplot2::geom_col(data = trees, ggplot2::aes(x = class, y = value, fill = Species),
-                      position = ggplot2::position_dodge(width = 0.8), width = 0.75) +
-    ggplot2::geom_line(data = lines, ggplot2::aes(x = class, y = value, colour = Species,
-                                                  linetype = Scenario,
-                                                  group = interaction(Species, Scenario)),
-                       linewidth = 0.7) +
-    ggplot2::geom_point(data = lines, ggplot2::aes(x = class, y = value, colour = Species), size = 1.8) +
-    ggplot2::facet_grid(rows = ggplot2::vars(panel), scales = "free_y", switch = "y") +
-    ggplot2::scale_fill_manual(values = APTER_SPECIES, drop = TRUE) +
+  two_sp <- length(unique(lines$Species)) > 1L
+  ggplot2::ggplot(lines, ggplot2::aes(x = class, y = value, colour = Species, linetype = Scenario,
+                                      group = interaction(Species, Scenario))) +
+    ggplot2::geom_line(linewidth = 0.7) +
+    ggplot2::geom_point(size = 1.8) +
     ggplot2::scale_colour_manual(values = APTER_SPECIES, drop = TRUE) +
     ggplot2::scale_linetype_manual(values = c("Scenario A" = "solid", "Scenario B" = "22"), drop = TRUE) +
     ggplot2::scale_y_continuous(labels = function(v) format(v, big.mark = ",", scientific = FALSE, trim = TRUE)) +
-    ggplot2::guides(fill = if (two_sp) "legend" else "none", colour = "none",
+    ggplot2::guides(colour = if (two_sp) "legend" else "none",
                     linetype = if (!is.null(b)) "legend" else "none") +
-    ggplot2::labs(x = "DBH class (cm)", y = NULL, fill = NULL, linetype = NULL,
-                  title = "Trees and NOK per m³ by DBH class") +
-    theme_apter() +
-    ggplot2::theme(strip.placement = "outside")
+    ggplot2::labs(x = "DBH class (cm)", y = "NOK / m³", colour = NULL, linetype = NULL,
+                  title = "NOK per m³ by DBH class") +
+    theme_apter()
 }

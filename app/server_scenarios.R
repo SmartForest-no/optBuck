@@ -449,12 +449,9 @@ scenario_server <- function(input, output, session) {
   hpr_modal <- function(side) modalDialog(
     title = sprintf("Import from .hpr into Scenario %s", side),
     size = "xl", easyClose = FALSE, fade = FALSE,
-    p(class = "note-muted", sprintf(paste(
-      "The products and price matrices of a StanForD 2010 .hpr file replace Scenario %s's",
-      "assortments and prices. Scenario %s is not changed."), side, other(side))),
-    fileInput("hpr_file", sprintf("Harvester production file (.hpr, or .hpr in .zip / .gz; up to %d MB)",
-                                  HPR_MAX_UPLOAD_MB),
-              accept = c(".hpr", ".zip", ".gz"), width = "100%"),
+    # No intro text and no label (2026-10-23); the upload limit stays
+    # (HPR_MAX_UPLOAD_MB, setup.R).
+    fileInput("hpr_file", NULL, accept = c(".hpr", ".zip", ".gz"), width = "100%"),
     uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
     uiOutput("hpr_msg"),
     footer = tagList(modalButton("Cancel"),
