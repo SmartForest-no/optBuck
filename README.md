@@ -299,28 +299,36 @@ All results describe the selected trees only. The headline figure is
   commercial volume), with each assortment's contribution and its share of
   the commercial volume.
 
-The results have these tabs:
+The results have four tabs. After a comparison each shows Scenario A and B
+in place; there is no separate comparison tab.
 
 - **Summary:** run time, plots, trees, trees with logs, logs, commercial
-  volume, total value, NOK per m³ and sale (price) volume; after a
-  comparison, run time, plots, trees and trees with logs (A / B) once, then
-  total value, commercial volume, NOK per m³ and price volume for Scenario A
-  and Scenario B side by side
-- **Per m³:** NOK/m³ in total, per species and by assortment; **value by
-  DBH class**: trees, commercial volume, value and NOK/m³ per species and
-  5 cm DBH class (… 5–9.9, 10–14.9 … 55–59.9, ≥ 60 cm); after a comparison,
-  value and NOK/m³ for Scenario A and B and the difference (each scenario's
-  NOK/m³ on its own commercial volume), with a CSV download and one figure
-  (trees per class, and NOK/m³ per class for A and B); and per-tree
-  results: the height distribution per species, a preview of the
-  first 20 trees of Scenario A (select a tree to
-  see its logs: position, length, assortment, top diameter over and under
-  bark, price-diameter class, volumes and value) and a CSV download of all
-  trees (after a comparison, both scenarios, with a Scenario column)
-- **Products:** value and sale volume by assortment; after a comparison,
-  for Scenario A and Scenario B side by side, with a figure of the value
-  (one bar per assortment, largest first)
-- **Selected logs:** the **log tally** (stocknota) of one assortment at a
+  volume, total value, NOK per m³ and sale (price) volume. After a
+  comparison: run time, plots, trees, trees with logs (A / B) and the
+  number of trees whose cutting pattern changed, then total value,
+  commercial volume, NOK per m³ and price volume for Scenario A and
+  Scenario B side by side. A tree counts as changed only if the change
+  alters its value or volume; patterns that differ only between
+  equal-value alternatives are not counted.
+- **Products:** one row per assortment with its logs, price volume, value,
+  contribution to NOK per m³ and share of the commercial volume. After a
+  comparison the table shows value and NOK/m³ contribution for A, B and
+  the change, and the volume share for A and B; "–" marks an assortment a
+  scenario does not have. A CSV download holds every column (logs and price
+  volume too). Below it: NOK per m³ and volume share by assortment type
+  (sawlog, pulpwood, other) per species, a figure of NOK per m³ by
+  assortment (A and B), and after a comparison the value change (B − A) of
+  the assortments both scenarios have, largest gain first, with a line
+  counting those whose value did not change.
+- **Trees:** trees and NOK/m³ by 5 cm DBH class (… 5–9.9, 10–14.9 …
+  55–59.9, ≥ 60 cm; A and B after a comparison), the height distribution
+  per species, and a table of all trees (in pages, sortable by any column;
+  after a comparison with value A, value B and the change). Clicking a tree
+  shows its cutting pattern, in Scenario A and B after a comparison.
+  Downloads: all trees (after a comparison both scenarios, with a Scenario
+  column), value by DBH class, and after a comparison the trees whose
+  cutting pattern changed.
+- **Logs:** the **log tally** (stocknota) of one assortment at a
   time: the number of logs or their commercial volume (m³ under bark) per
   price-diameter class and length class, laid out like the assortment's
   price matrix ("–" where the matrix has no price; logs above the largest
@@ -331,17 +339,9 @@ The results have these tabs:
   volume, A, B and, for shared assortments, B − A) and a CSV of all cells. Below
   it, a preview of the first 20 logs of Scenario A, and a CSV download of
   every log cut (after a comparison, both scenarios, with a Scenario column)
-- **Scenario comparison** (when B differs from A): the differences in
-  value, volume and NOK/m³, NOK/m³ by assortment under A and B, the trees whose cutting pattern
-  changed, and example stems bucked both ways. The value change by
-  assortment is a bar per changed assortment, largest gain first; a line
-  under it counts the assortments whose value did not change. A tree counts as changed only
-  if the change alters its value or volume; patterns that differ only
-  between equal-value alternatives are not counted. When the scenarios have
-  different assortments, value and NOK/m³ are compared by assortment type
-  (sawlog, pulpwood, other), and per assortment only for the assortments
-  both scenarios have; on the Products tab, "–" marks an assortment a
-  scenario does not have.
+
+The layout is the same for NFI data, tree lists and .hpr stems (stems have
+no plots, and their length is the measured length).
 
 ---
 

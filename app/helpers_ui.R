@@ -345,7 +345,8 @@ apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format) {
 #' (length in dm) so colour is never the only cue.
 #'
 #' @param logs_default,logs_scenario Selected logs of one tree under A and B
-#'   (StartPos, StopPos in cm; ProductType; LengthClass_dm).
+#'   (StartPos, StopPos in cm; ProductType; LengthClass_dm). logs_scenario
+#'   NULL (a single run): one bar, Scenario A (2026-10-23).
 #' @param height_m Tree height (m), for the x-axis extent.
 #' @param title    Plot title.
 apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
@@ -356,13 +357,14 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
   custom <- length(setdiff(types, names(ch$assortment))) > 0L
   old <- apter_par(mar = c(3.5, 7.5, 3, 1)); on.exit(graphics::par(old))
   x_max <- max(c(height_m, logs_default$StopPos / 100, logs_scenario$StopPos / 100), na.rm = TRUE)
-  graphics::plot(NA, xlim = c(0, x_max), ylim = c(0.4, 2.9), axes = FALSE,
+  two <- !is.null(logs_scenario)
+  graphics::plot(NA, xlim = c(0, x_max), ylim = if (two) c(0.4, 2.9) else c(1.2, 2.9), axes = FALSE,
                  xlab = "", ylab = "", main = title)
   graphics::abline(v = graphics::axTicks(1), col = ch$grid, lwd = 0.7)
   graphics::axis(1, col = NA, col.ticks = NA)
   graphics::mtext("Height along the stem (m)", side = 1, line = 2.2,
                   col = ch$muted, cex = 0.8)
-  graphics::axis(2, at = c(2, 1), labels = c("Scenario A", "Scenario B"),
+  graphics::axis(2, at = if (two) c(2, 1) else 2, labels = if (two) c("Scenario A", "Scenario B") else "Scenario A",
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {
     graphics::rect(0, y - 0.32, height_m, y + 0.32, col = APTER_TOKENS$panel, border = NA)
@@ -379,7 +381,7 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title) {
     graphics::text(((l$StartPos + l$StopPos) / 200)[wide], y, lab[wide],
                    col = ch$label_on[slot][wide], cex = 0.75, font = 2)
   }
-  draw(logs_default, 2); draw(logs_scenario, 1)
+  draw(logs_default, 2); if (two) draw(logs_scenario, 1)
   leg <- c(ch$assortment, if (custom) c("custom assortments" = ch$other))
   graphics::legend("top", horiz = TRUE, bty = "n", inset = c(0, -0.02),
                    legend = names(leg), fill = leg,

@@ -228,6 +228,47 @@ log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys =
 }
 
 
+# ---- per assortment (Products tab) ----------------------------------------------------
+
+#' Logs, price volume, value, NOK/m3 contribution and share of commercial
+#' volume per assortment, for one run or A and B (2026-10-23, Products tab).
+#' Sums of the selected logs (product_summary's columns, unrounded). The
+#' contribution is the assortment's value / the run's total commercial
+#' volume, so the contributions add up to the run's NOK/m3; the share is
+#' its commercial volume / the total.
+#'
+#' @param r_a,r_b Run results (r_b NULL: one run).
+#' @param keys    Optional list(A = , B = ) of each scenario's assortment
+#'   keys: an assortment a scenario does not have is NA there (shown "–");
+#'   one it has without logs is 0. NULL: missing means 0.
+#' @return data.frame: key, then logs, price_vol, value, contrib, share with
+#'   suffix _a (and _b); rows in order of first appearance (A, then B).
+assortment_summary <- function(r_a, r_b = NULL, keys = NULL) {
+  one <- function(r) {
+    l <- r$selected_logs_all; k <- unique(as.character(l$ProductKey))
+    tot <- sum(l$commercial_volume_m3, na.rm = TRUE)
+    s <- function(x) as.numeric(tapply(x, factor(l$ProductKey, levels = k), sum, na.rm = TRUE, default = 0))
+    v <- s(l$value_nok); cv <- s(l$commercial_volume_m3)
+    data.frame(key = k, logs = as.integer(table(factor(l$ProductKey, levels = k))),
+               price_vol = s(l$price_volume_m3), value = v,
+               contrib = if (tot > 0) v / tot else NA_real_,
+               share = if (tot > 0) cv / tot else NA_real_, stringsAsFactors = FALSE)
+  }
+  runs <- c(list(a = one(r_a)), if (!is.null(r_b)) list(b = one(r_b)))
+  all_keys <- unique(unlist(lapply(runs, `[[`, "key")))
+  out <- data.frame(key = all_keys, stringsAsFactors = FALSE)
+  for (s in names(runs)) {
+    x <- runs[[s]]; i <- match(all_keys, x$key)
+    has <- if (is.null(keys)) rep(TRUE, length(all_keys)) else all_keys %in% keys[[toupper(s)]]
+    for (col in c("logs", "price_vol", "value", "contrib", "share")) {
+      v <- x[[col]][i]; v[is.na(i)] <- 0; v[!has] <- NA
+      out[[paste(col, s, sep = "_")]] <- v
+    }
+  }
+  out
+}
+
+
 # ---- value by DBH class ----------------------------------------------------------------
 
 #' DBH class lower limit (cm) and label for dbh values (cm).

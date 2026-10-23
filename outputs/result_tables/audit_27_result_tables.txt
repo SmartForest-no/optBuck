@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: result tables (log tally, DBH classes)
-  Run: 2026-10-23 10:06:12.61175
+  Run: 2026-10-23 12:40:07.663716
 ============================================================= 
 
 --- 01. Tally totals ---
@@ -29,11 +29,14 @@
 
 --- 09. Type groups ---
   [PASS  ] Check 09: Type groups: mapping, sums per group and in total, Other, NOK/m3 by type | type_group TRUE | groups Sawlog,Pulpwood,Other: sums = logs TRUE | + waste = run totals TRUE | spruce_pulpwood as a custom type in B: Other A 0 / B 86 logs | per m3 by type: All rows kept TRUE, contributions add up TRUE
+
+--- 10. Products table (assortment_summary) ---
+  [PASS  ] Check 10: assortment_summary(): sums equal product_summary, contributions add up to NOK/m3, NA when a scenario lacks the assortment | one run: 4 assortments, sums and shapes TRUE, contributions 383.19 = NOK/m3 383.19 | A/B: spruce_pulpwood only in A -> B NA TRUE | rows only for assortments with logs TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
-  result n
-1   PASS 9
+  result  n
+1   PASS 10
 
   Verdict: PASS 
 ============================================================= 

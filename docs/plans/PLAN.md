@@ -34,6 +34,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | hpr Phase B | ".hpr stems" as a tree source: the measured stem profiles of an .hpr file, stump 0, streamed reading |
 | Result tables | Log tally per price matrix (stocknota) and value by DBH class; duplicate outputs removed |
 | Roadmap Phase 1 | Grade rule for .hpr products (reference grades); Copy from A/B; tally caption; comparisons for different assortments (shared assortments, by type) |
+| Results restructure | Four result tabs (Summary, Products, Trees, Logs); no comparison tab; merged per-assortment table; trees table with A/B and the cutting pattern on click |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -124,7 +125,8 @@ Later: compare the recorded logs with the optimal bucking; under-bark profiles; 
 
 ## Roadmap (agreed 2026-10-22)
 
-1. **Phase 1 (now, branch `grades-and-comparisons`):**
+0. **First task after the demo (Tuesday 2026-10-27): Norwegian language option** for the app's text (agreed 2026-10-23), before Phase 2.
+1. **Phase 1 (done, branch `grades-and-comparisons`):**
    - A grade rule for .hpr products: which products start unticked as "Only for lower quality grades".
    - "Copy from A" in Scenario B and "Copy from B" in Scenario A: all assortments and prices, after a short confirmation.
    - The caption under the log tally becomes "Price-diameter class (cm) vs length class (dm)".
@@ -164,6 +166,26 @@ Later: compare the recorded logs with the optimal bucking; under-bark profiles; 
    - **Bar figures with many assortments.** The Products value figure and the value-change figure are horizontal bars sorted by value, so every assortment name shows (17 assortments from one .hpr file). The value change hides unchanged assortments and counts them in a line under the figure. The Products tab keeps only the value figure.
    - **Labels.** Assortment labels use the assortment's name ("Spruce REDACTED25", not "Spruce 140 sca sagt mmer").
    - **Audits.** Audit 23 check 6: no class above the max top. Audit 17 check 11: cap line and full-height grid. Audit 17 check 17: one value figure, no volume figure.
+
+## Results restructure (2026-10-23, branch `results-restructure`)
+
+Interface work for the demo; computations unchanged (`scripts/performance_check.R`: every case identical to the main baseline).
+
+1. **Four result tabs: Summary, Products, Trees, Logs.** The Scenario comparison tab is gone: comparison outputs sit in the tab of their content and show only after a comparison. The layout is the same for NFI data, tree lists and .hpr stems.
+2. **Summary.** As before, plus "Trees with a changed cutting pattern" after a comparison.
+3. **Products.**
+   - One table per assortment (`assortment_summary()`). A single run shows logs, price volume, value, NOK/m³ contribution and volume share. After a comparison it shows value and contribution as A, B and change, and the volume share as A and B; "–" where a scenario lacks the assortment.
+   - A CSV download holds every column.
+   - Below the table: the type table (NOK/m³ and volume share by sawlog, pulpwood and other) and NOK/m³ by assortment as horizontal bars.
+   - After a comparison: the value change (B − A) of the shared assortments, with the "n assortments unchanged" line.
+4. **Trees** (replaces Per m³). The DBH-class and height figures and a table of all trees (pages, sortable; after a comparison value A, B and change). Clicking a tree shows its cutting pattern (A and B, or A alone). The downloads are all trees, value by DBH class and the changed trees.
+5. **Logs** (renamed from Selected logs): unchanged.
+6. **Removed.**
+   - The Difference (B − A) table and the cutting-pattern changes table with its tree picker.
+   - The old Per m³ tables, the share figure and the DBH table (its CSV stays).
+   - The Trees card and the selected tree's log table.
+   - The Products value figure and the type rows.
+7. **Audits.** Audit 27 check 10 (`assortment_summary()`); audit 17 checks 12, 15–17, 21, 24, 31 and 33 for the new structure (31 screenshots).
 
 ## Phase 6: stem profile import
 

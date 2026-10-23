@@ -36,6 +36,10 @@
 #      value and commercial volume, a custom type counts in Other;
 #      compare_per_m3(by = "type") keeps the scope totals and its group
 #      contributions add up to each scope's NOK/m3
+# 10.  Products table (2026-10-23): assortment_summary() for one run and A/B:
+#      logs, price volume and value equal product_summary; NOK/m3
+#      contributions add up to the Total NOK/m3 and volume shares to 1; an
+#      assortment a scenario does not have is NA, one without logs 0
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -319,6 +323,38 @@ rec("Check 09: Type groups: mapping, sums per group and in total, Other, NOK/m3 
     ok(ok9), sprintf("type_group %s | groups %s: sums = logs %s | + waste = run totals %s | %s as a custom type in B: Other A %s / B %s logs | per m3 by type: All rows kept %s, contributions add up %s",
                      tg_ok, paste(ct$type, collapse = ","), grp_ok, sum_ok, ko,
                      ct$logs_a[ct$type == "Other"], ct$logs_b[ct$type == "Other"], all_ok, contrib_ok))
+
+
+# ==============================================================================
+section("10. Products table (assortment_summary)")
+s1 <- assortment_summary(r)
+ps <- r$product_summary[match(s1$key, r$product_summary$ProductKey), ]
+tot10 <- r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
+one_ok <- identical(s1$key, as.character(r$product_summary$ProductKey)) &&
+  identical(as.integer(s1$logs_a), as.integer(ps$n_logs)) &&
+  isTRUE(all.equal(s1$price_vol_a, ps$total_volume_m3, tolerance = 1e-4)) &&   # product_summary rounds to 5 decimals
+  isTRUE(all.equal(s1$value_a, ps$total_value_nok, tolerance = 1e-6)) &&
+  isTRUE(all.equal(sum(s1$contrib_a), tot10$nok_per_m3)) &&
+  isTRUE(all.equal(sum(s1$share_a), 1)) && !any(c("logs_b", "value_b") %in% names(s1))
+# A/B, with an assortment only A has (K2 dropped from B's keys) and one B
+# has without logs (invented key).
+keys10 <- list(A = unique(r$selected_logs_all$ProductKey),
+               B = c(setdiff(unique(rb$selected_logs_all$ProductKey), K2), "spruce_no_logs"))
+s2 <- assortment_summary(r, rb, keys = keys10)
+tot10b <- rb$per_m3_summary[rb$per_m3_summary$scope == "Total", ]
+k2 <- s2$key == K2
+ab_ok <- all(c("logs_a", "logs_b", "price_vol_b", "value_b", "contrib_b", "share_b") %in% names(s2)) &&
+  all(is.na(unlist(s2[k2, c("logs_b", "price_vol_b", "value_b", "contrib_b", "share_b")]))) &&
+  isTRUE(all.equal(sum(s2$contrib_b, na.rm = TRUE), tot10b$nok_per_m3 -
+                     sum(rb$selected_logs_all$value_nok[rb$selected_logs_all$ProductKey == K2]) /
+                     tot10b$commercial_volume_m3)) &&
+  isTRUE(all.equal(sum(s2$contrib_a), tot10$nok_per_m3))
+no_logs <- assortment_summary(r, rb, keys = list(A = c(keys10$A, "spruce_no_logs"), B = keys10$B))
+nl_ok <- !"spruce_no_logs" %in% no_logs$key   # keys only appear with logs in a run
+ok10 <- one_ok && ab_ok && nl_ok
+rec("Check 10: assortment_summary(): sums equal product_summary, contributions add up to NOK/m3, NA when a scenario lacks the assortment",
+    ok(ok10), sprintf("one run: %d assortments, sums and shapes %s, contributions %.2f = NOK/m3 %.2f | A/B: %s only in A -> B NA %s | rows only for assortments with logs %s",
+                      nrow(s1), one_ok, sum(s1$contrib_a), tot10$nok_per_m3, K2, ab_ok, nl_ok))
 
 
 # ==============================================================================

@@ -75,27 +75,38 @@
 #      is at full height (34 + 24 px per row, no inner scrolling) and the
 #      line under it reads "≥ 50 cm: priced as 50 up to max top 60 cm"
 #      (then 51 after "+ larger")
-# 12.  Run with B = A: one run, no comparison tab, no error notification;
+# 12.  Run with B = A: one run, the result tabs are Summary, Products,
+#      Trees, Logs (results restructure, 2026-10-23; no comparison tab), no
+#      error notification;
 #      Run is disabled with progress while the task runs (REVIEW if the run
 #      finished before the driver looked)
 # 13.  Summary shows the nine fields (run time, plots, trees, trees with
 #      logs, logs, commercial volume, total value, NOK per m3, price
 #      volume); no Diagnostics tab
-# 14.  Selected logs: a preview of Scenario A's first 20 logs (one-line
+# 14.  Logs tab: a preview of Scenario A's first 20 logs (one-line
 #      label naming Scenario A, no sorting or paging controls); readable
 #      headers (Plot, StartPos, StopPos; no ProductType, plot_id_github or
 #      underscores); "Download all logs (CSV)" holds every log with a
 #      Scenario column (A)
-# 15.  Per m3 tab: tables render; the collapsed Trees card expands to a
-#      preview of Scenario A's first 20 trees (one-line label naming
-#      Scenario A, no sorting or paging controls, no Status column);
-#      selecting a tree shows its logs below; "Download all trees (CSV)"
-#      holds every tree with a Scenario column (A); no "per ha" /
-#      "ha-expanded" text
+# 15.  Trees tab (2026-10-23): the DBH-class and height figures render; the
+#      trees table shows all trees on server-side pages (15 rows, "of N"),
+#      no Status column, one Value column; clicking a row draws the cutting
+#      pattern (Scenario A only); "Download all trees (CSV)" holds every
+#      tree with a Scenario column (A); the DBH CSV's totals are the run's
+#      trees; the removed outputs (old Per m3 tables, Trees card, comparison
+#      tab, value figure) are gone; no "per ha" / "ha-expanded" text.
+#      Products tab: the merged table with Logs, Price volume, Value, NOK
+#      per m3 (contribution) and Volume share, the type table, the
+#      contribution figure, no value change
 # 16.  Automatic comparison: B's price matrix uploaded (spruce sawlog x1.2,
 #      wide CSV) -> differing cells highlighted in both grids, 351 cells
-#      differ in B's download; Run -> comparison tab shown, difference
-#      table, pattern line and stem diagram render, no error notification;
+#      differ in B's download; Run -> a comparison with the same four tabs
+#      (no comparison tab); the Summary has "Trees with a changed cutting
+#      pattern" ("n of N"); Trees: Value A, Value B and Change columns,
+#      sorted by change largest first, the row click draws A and B, the
+#      changed-trees CSV; Products: value and contribution A, B and change,
+#      volume share A and B, the value-change figure, the products CSV with
+#      logs and price volume; no error notification;
 #      the Summary shows the run once and Scenario A and B side by side,
 #      each as a 2 x 2 grid (value, commercial volume / NOK per m3, price
 #      volume); the logs and trees CSVs hold both scenarios (Scenario A and
@@ -103,14 +114,14 @@
 # 17.  Spruce pulpwood removed from B only: the comparison run's B has no
 #      spruce pulpwood; B's table has no row for it and, with it selected
 #      in A, B shows no detail panel; no struck-through rows anywhere.
-#      Different assortments (2026-10-22): the comparison is by type
-#      (headers "... by assortment type", rows "Sawlog (type)" and
-#      "Pulpwood (type)"), the value-change figure of shared assortments
-#      renders, spruce pulpwood has no B − A row; the Products tab shows "–"
-#      for B, which has one value figure (horizontal bars) and no price
+#      Different assortments (2026-10-22; tabs 2026-10-23): Products lists
+#      spruce pulpwood with "–" for B (value and change), no "(type)" rows,
+#      the type table by Sawlog and Pulpwood, the value-change figure of
+#      the shared assortments, the contribution figure and no value or
 #      volume figure; the tally offers only A for spruce pulpwood ("(A only)") and
 #      A, B, B − A for spruce sawlog; the tally caption is "Price-diameter
-#      class (cm) vs length class (dm)" (screenshots 15-18)
+#      class (cm) vs length class (dm)" (screenshots 15-18: Products, its
+#      value change, Trees, tally)
 # 18.  Stale notice: absent right after a run; after a price edit,
 #      "Assortments or prices changed since this run" shows
 # 19.  No "default" or "price set" (as words) anywhere in the page text
@@ -123,7 +134,7 @@
 # 21.  Tree list (Phase 5): upload the template -> validation panel lists 12
 #      trees and the height methods; Run -> the FinnHoyde height banner shows
 #      and the Trees table has a "Height source" column; no error notifications
-# 22.  Screenshots (29) of both tabs, the results and the comparisons saved to
+# 22.  Screenshots (31) of both tabs, the results and the comparisons saved to
 #      outputs/app_smoke/screenshots/ (for review)
 # 23.  Total browser runtime under 300 s (REVIEW if above)
 # 24.  Scenario B's assortments (Phase 4d): a B rule change (spruce sawlog
@@ -175,9 +186,10 @@
 #      Scenario B"), Cancel keeps B, Copy makes B equal to A, says so, and
 #      nothing is highlighted
 # 33.  After 29 (B imported from .hpr), an NFI comparison: A and B share only
-#      the Waste rows, so the value comparison is by type only (type figure,
-#      no shared-assortment figure, only "(type)" rows) and the tally offers
-#      only B for REDACTED25 (screenshots 20-21)
+#      the Waste rows, so Products shows no value-change figure ("No
+#      assortments in both scenarios."), lists A's and B's assortments (no
+#      "(type)" rows) and the type table; the tally offers only B for 140
+#      SCA Sagtømmer (screenshots 20-21)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -463,9 +475,9 @@ browser_checks <- c(
   "Check 11: Diameter classes and lengths added and removed",
   "Check 12: Run with B = A: single run, no comparison tab; Run disabled while running",
   "Check 13: Summary shows the nine fields; no Diagnostics tab",
-  "Check 14: Selected logs preview (Scenario A, first 20), readable headers, CSV of all logs",
-  "Check 15: Per m3 tab renders; Trees preview (Scenario A, first 20), selected tree's logs, CSV; no per-ha text",
-  "Check 16: Comparison runs automatically when B differs",
+  "Check 14: Logs tab preview (Scenario A, first 20), readable headers, CSV of all logs",
+  "Check 15: Trees tab (figures, paged trees table, row click draws the cutting pattern, CSVs) and Products tab after a single run; removed outputs gone; no per-ha text",
+  "Check 16: Comparison runs automatically when B differs; four tabs, changed patterns in the Summary, A/B in Products and Trees",
   "Check 17: Assortment removed from B only drops it from B's run",
   "Check 18: Stale notice after a price edit",
   "Check 19: No 'default'/'price set' in the page text",
@@ -482,7 +494,7 @@ browser_checks <- c(
   "Check 30: The kept .hpr upload is deleted when the session ends",
   "Check 31: .hpr stems: not selected automatically; the imported file and species map are reused; a comparison runs on the stems, without plots",
   "Check 32: Copy from A / Copy from B: confirmation, Cancel keeps the scenario, Copy makes it equal to the other",
-  "Check 33: Comparison with B imported from .hpr (no shared commercial assortments): by type only, tally without B − A")
+  "Check 33: Comparison with B imported from .hpr (no shared commercial assortments): no value-change figure, all assortments listed, tally without B − A")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -568,6 +580,16 @@ if (!browser_ok) {
     tab_shown <- function(app, value) isTRUE(js(app, sprintf(paste0(
       "(function(){ var a = document.querySelector('#result_tabs a[data-value=\"%s\"]');",
       " return !!a && a.offsetParent !== null; })()"), value)))
+    # The visible result tabs (results restructure, 2026-10-23).
+    result_tabs_txt <- function(app) js(app, "Array.from(document.querySelectorAll('#result_tabs .nav-link')).filter(function(a){ return a.offsetParent !== null; }).map(function(a){ return a.textContent.trim(); }).join('|')")
+    RESULT_TABS <- "Summary|Products|Trees|Logs"
+    # Column headers and the rows of a reactable ("a;b;c|d;e;f").
+    headers_of <- function(app, id) js(app, sprintf(
+      "Array.from(document.querySelectorAll('#%s .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')", id))
+    rows_txt <- function(app, id) js(app, sprintf(paste0(
+      "Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr')).map(function(r){",
+      " return Array.from(r.querySelectorAll('.rt-td')).map(function(c){ return c.textContent.trim(); }).join(';'); }).join('|')"), id))
+    compared_now <- function(app) grepl("changed cutting pattern", txt(app, "#summary_cards"), fixed = TRUE)
     # 06-07. layout and theme
     app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
     tabs <- js(app, paste0("Array.from(document.querySelectorAll('#main_nav .nav-link'))",
@@ -855,12 +877,13 @@ if (!browser_ok) {
     cards <- txt(app, "#summary_cards")
     nerr12 <- n_err_notif(app)
     cmp_tab12 <- tab_shown(app, "comparison")
+    tabs12 <- result_tabs_txt(app)
     ok12 <- !nzchar(e12) && grepl("Trees with logs", cards, fixed = TRUE) &&
-      identical(nerr12, 0L) && !cmp_tab12 && after_enabled
+      identical(nerr12, 0L) && !cmp_tab12 && identical(tabs12, RESULT_TABS) && after_enabled
     progress_ok <- isTRUE(busy_disabled) && grepl("[A-Za-z]", busy_status)
     rec(browser_checks[8], if (!ok12) FAIL else if (progress_ok) PASS else REVIEW,
-        sprintf("summary rendered: %s | comparison tab shown: %s | error notifications: %s | during the run: Run disabled %s, status '%s' | after: Run enabled %s%s",
-                grepl("Trees with logs", cards, fixed = TRUE), cmp_tab12, nerr12,
+        sprintf("summary rendered: %s | result tabs '%s', comparison tab shown: %s | error notifications: %s | during the run: Run disabled %s, status '%s' | after: Run enabled %s%s",
+                grepl("Trees with logs", cards, fixed = TRUE), tabs12, cmp_tab12, nerr12,
                 isTRUE(busy_disabled), trimws(busy_status), after_enabled, err_txt(e12)))
     shoot(app, "02_simulator_summary")
     # 13. summary fields
@@ -931,31 +954,20 @@ if (!browser_ok) {
         sprintf("label: '%s' | preview rows: %s | sorting/paging controls: %s | logs in run: %s | CSV rows %s, scenarios %s | headers: %s%s",
                 trimws(note14), n_rows14, ctrl14, n_logs, if (is.null(csv14)) NA else nrow(csv14),
                 if (is.null(csv14)) "" else paste(unique(csv14$Scenario), collapse = "/"), hdr14, err_txt(e14)))
-    # 15. Per m3 tab and tree detail on demand
-    e15 <- try_drv({ app$set_inputs(result_tabs = "per_m3"); app$wait_for_idle() })
-    n_pm3   <- n_tbl_rows(app, "tbl_per_m3")
-    n_asort <- n_tbl_rows(app, "tbl_per_m3_assortment")
-    trees_card_js <- paste0(
-      "Array.from(document.querySelectorAll('details.apter-card'))",
-      ".find(function(e){ return e.querySelector('summary').textContent.trim() === 'Trees'; })")
-    trees_closed <- isTRUE(js(app, paste0("!", trees_card_js, ".open")))
-    open_trees <- function(app) {
-      app$run_js(paste0("var d = ", trees_card_js, ";",
-                        "if (d) { d.open = true; d.dispatchEvent(new Event('toggle')); }"))
-      app$wait_for_idle()
-    }
-    open_trees(app)
+    # 15. Trees and Products tabs after a single run (results restructure,
+    # 2026-10-23): figures, the paged trees table (all trees), a row click
+    # draws the cutting pattern (A only), the CSVs; Products: the merged
+    # table with all five columns, the type table and the contribution
+    # figure; none of the removed outputs.
+    e15 <- try_drv({ app$set_inputs(result_tabs = "trees"); app$wait_for_idle() })
     c27$trees1 <- figs(app, c("fig_dbh_class", "fig_height"))
     # Value by DBH class: the species totals ("All") add up to the run's trees.
     dbh15 <- tryCatch(utils::read.csv(app$get_download("dl_dbh_class"), check.names = FALSE,
                                       stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
                       error = function(e) NULL)
-    n_dbh15 <- n_tbl_rows(app, "tbl_dbh_class")
     n_trees_rows <- n_tbl_rows(app, "tbl_trees")
-    note15 <- txt(app, "#trees_preview_note")
-    hdr15 <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(e){ return e.textContent.trim(); }).join('|')")
-    ctrl15 <- js(app, paste0("document.querySelectorAll('#tbl_trees .rt-pagination, #tbl_trees [aria-sort], ",
-                             "#tbl_trees_sort, #tbl_trees_next').length"))
+    pager15 <- txt(app, "#tbl_trees_info")
+    hdr15 <- headers_of(app, "tbl_trees")
     n_trees_run <- suppressWarnings(as.integer(gsub("[^0-9]", "", js(app, paste0(
       "(function(){ var f = Array.from(document.querySelectorAll('#summary_cards .ro-field'))",
       ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Trees'; });",
@@ -966,26 +978,41 @@ if (!browser_ok) {
       utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
     }
     csv15 <- read_trees_csv(app)
-    app$run_js("var r = document.querySelector('#tbl_trees .rt-tbody .rt-tr .rt-td:nth-child(3)'); if (r) r.click();")
+    app$run_js("var r = document.querySelector('#tbl_trees .rt-tbody .rt-tr-group:nth-child(2) .rt-td'); if (r) r.click();")
     app$wait_for_idle()
-    n_detail <- js(app, "document.querySelectorAll('#tree_logs .section-hdr').length")
+    stem15 <- figs(app, "stem_compare")
+    note15 <- txt(app, "#stem_note")
+    removed15 <- js(app, paste0("document.querySelectorAll('#tbl_per_m3, #tbl_per_m3_assortment, #tbl_dbh_class, ",
+                                "#tree_logs, #trees_preview_note, #bar_volume_share, #bar_per_m3_contribution, ",
+                                "#tbl_cmp_delta, #cmp_patterns, #tbl_cmp_trees, #cmp_tree, #bar_value_by_product').length"))
     page_text <- js(app, "document.body.textContent")
     per_ha_hits <- regmatches(page_text, gregexpr("(?i)per ha\\b|ha-expanded", page_text, perl = TRUE))[[1]]
-    shoot(app, "03_per_m3")
-    ok15 <- !nzchar(e15) && isTRUE(n_pm3 >= 2L) && isTRUE(n_asort >= 1L) && trees_closed &&
-      identical(n_trees_rows, min(20L, n_trees_run)) && grepl("Scenario A", note15, fixed = TRUE) &&
-      identical(ctrl15, 0L) && !grepl("Status", hdr15, fixed = TRUE) && grepl("Logs", hdr15, fixed = TRUE) &&
+    shoot(app, "03_trees")
+    e15b <- try_drv({ app$set_inputs(result_tabs = "products"); app$wait_for_idle() })
+    hdr15p <- headers_of(app, "tbl_products")
+    n_type15 <- n_tbl_rows(app, "tbl_per_m3_type")
+    fig15p <- figs(app, "bar_nok_contribution")
+    cmp15p <- txt(app, "#cmp_value_ui")
+    shoot(app, "03b_products")
+    ok15 <- !nzchar(paste0(e15, e15b)) && fig_ok(c27$trees1) &&
+      identical(n_trees_rows, min(15L, n_trees_run)) &&
+      grepl(sprintf("of %s", format(n_trees_run, big.mark = ",")), pager15, fixed = TRUE) &&
+      !grepl("Status", hdr15, fixed = TRUE) && grepl("Logs", hdr15, fixed = TRUE) &&
+      grepl("Value (NOK)", hdr15, fixed = TRUE) && !grepl("Value A", hdr15, fixed = TRUE) &&
       !is.null(csv15) && identical(nrow(csv15), n_trees_run) && identical(unique(csv15$Scenario), "A") &&
-      !"Status" %in% names(csv15) && isTRUE(n_detail >= 1L) && length(per_ha_hits) == 0L &&
-      isTRUE(n_dbh15 >= 2L) && !is.null(dbh15) &&
-      identical(as.integer(sum(dbh15$Trees[dbh15$`DBH class (cm)` == "All"])), n_trees_run)
+      !"Status" %in% names(csv15) && fig_ok(stem15) && !grepl("Scenario A and B", note15, fixed = TRUE) &&
+      identical(removed15, 0L) && length(per_ha_hits) == 0L && !is.null(dbh15) &&
+      identical(as.integer(sum(dbh15$Trees[dbh15$`DBH class (cm)` == "All"])), n_trees_run) &&
+      identical(hdr15p, "Assortment|Logs|Price volume (m³)|Value (NOK)|NOK per m³ (contribution)|Volume share (%)") &&
+      isTRUE(n_type15 >= 2L) && fig_ok(fig15p) && !nzchar(trimws(cmp15p))
     rec(browser_checks[11], if (ok15) PASS else FAIL,
-        sprintf("per-m3 rows: %s | assortment rows: %s | Trees card starts closed: %s | label: '%s' | preview rows: %s of %s | controls: %s | headers: %s | CSV rows %s, scenarios %s | log detail shown: %s | per-ha text hits: %d | DBH table rows %s, trees in its totals %s%s",
-                n_pm3, n_asort, trees_closed, trimws(note15), n_trees_rows, n_trees_run, ctrl15, hdr15,
+        sprintf("Trees: figures %s | table rows %s (pager '%s', run %s trees) | headers: %s | CSV rows %s, scenarios %s | row click: stem figure %s, note '%s' | removed outputs present: %s | per-ha text hits: %d | DBH CSV trees %s | Products: headers '%s', type rows %s, contribution figure %s, value change shown '%s'%s",
+                c27$trees1, n_trees_rows, trimws(pager15), n_trees_run, hdr15,
                 if (is.null(csv15)) NA else nrow(csv15),
                 if (is.null(csv15)) "" else paste(unique(csv15$Scenario), collapse = "/"),
-                isTRUE(n_detail >= 1L), length(per_ha_hits), n_dbh15,
-                if (is.null(dbh15)) NA else sum(dbh15$Trees[dbh15$`DBH class (cm)` == "All"]), err_txt(e15)))
+                stem15, trimws(note15), removed15, length(per_ha_hits),
+                if (is.null(dbh15)) NA else sum(dbh15$Trees[dbh15$`DBH class (cm)` == "All"]),
+                hdr15p, n_type15, fig15p, trimws(cmp15p), err_txt(e15, e15b)))
     stale_before <- txt(app, "#stale_notice")
     # 16. upload B (spruce sawlog x1.2), automatic comparison
     wide_csv <- tempfile(fileext = ".csv")
@@ -1006,9 +1033,12 @@ if (!browser_ok) {
     shoot(app, "04_prices_B_own")
     e16b <- try_drv({ app$set_inputs(main_nav = "simulator"); run(app) })
     cmp_tab16 <- tab_shown(app, "comparison")
-    e16c <- try_drv({ app$set_inputs(result_tabs = "comparison"); app$wait_for_idle() })
-    n_delta  <- n_tbl_rows(app, "tbl_cmp_delta")
+    tabs16 <- result_tabs_txt(app)
+    e16c <- ""
     e16d <- try_drv({ app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle() })
+    changed16 <- js(app, paste0("(function(){ var f = Array.from(document.querySelectorAll('#summary_cards .ro-field'))",
+                                ".find(function(e){ return e.querySelector('.ro-label').textContent.trim() === 'Trees with a changed cutting pattern'; });",
+                                " return f ? f.querySelector('.ro-value').textContent.trim() : ''; })()"))
     sum16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .section-hdr, #summary_cards .ro-label'))",
                             ".map(function(e){ return e.textContent.trim(); }).join('|')"))
     shoot(app, "04b_summary_A_and_B")
@@ -1016,7 +1046,8 @@ if (!browser_ok) {
                              ".map(function(r){ return getComputedStyle(r).gridTemplateColumns.split(' ').length; }).join(',')"))
     csv16 <- read_logs_csv(app)
     tcsv16 <- read_trees_csv(app)
-    exp16 <- paste(c("Run time", "Plots", "Trees", "Trees with logs (A / B)", "Scenario A", "Total value (NOK)",
+    exp16 <- paste(c("Run time", "Plots", "Trees", "Trees with logs (A / B)",
+                     "Trees with a changed cutting pattern", "Scenario A", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)",
                      "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
                      "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
@@ -1029,20 +1060,56 @@ if (!browser_ok) {
       c27$logs2 <- if (tally2$ok && identical(tally2$scen, "A/B") && grepl("B − A", c27$tally_diff_hdr, fixed = TRUE))
         "tbl_tally:ok" else "tbl_tally:0"
       shoot(app, "05a_log_tally_B_minus_A")
-      app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c27$trees2 <- figs(app, c("fig_dbh_class", "fig_height"))
     })
-    e16e <- try_drv({ app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle() })
-    pat_txt  <- txt(app, "#cmp_patterns")
-    stem_img <- js(app, "document.querySelectorAll('#stem_compare img').length")
+    # Trees after the comparison: Value A, Value B and Change; sorted by
+    # change (largest first); a row click draws A and B. Products: value and
+    # contribution A, B, change, volume share A, B; the value-change figure;
+    # the products CSV with every column; the changed-trees CSV.
+    c16 <- list()
+    e16e <- try_drv({
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
+      c16$hdr <- headers_of(app, "tbl_trees")
+      app$set_inputs(tbl_trees_sort = "Change (NOK)|desc", wait_ = FALSE); app$wait_for_idle()
+      h <- strsplit(or_default(c16$hdr, ""), "|", fixed = TRUE)[[1]]
+      ci <- match("Change (NOK)", h[nzchar(h)])
+      rws <- strsplit(strsplit(or_default(rows_txt(app, "tbl_trees"), ""), "|", fixed = TRUE)[[1]], ";", fixed = TRUE)
+      c16$change <- suppressWarnings(as.numeric(gsub(",", "", vapply(rws, function(r) r[ci + 1L], ""))))  # + the selection cell
+      app$run_js("var r = document.querySelector('#tbl_trees .rt-tbody .rt-tr-group .rt-td:nth-child(3)'); if (r) r.click();")
+      app$wait_for_idle()
+      c16$stem <- figs(app, "stem_compare")
+      c16$note <- txt(app, "#stem_note")
+      c16$changed_csv <- tryCatch(nrow(utils::read.csv(app$get_download("dl_changed_trees"), check.names = FALSE)),
+                                  error = function(e) NA)
+      shoot(app, "05_trees_comparison")
+      app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
+      c16$prod_hdr <- headers_of(app, "tbl_products")
+      c16$delta_fig <- figs(app, "bar_cmp_delta")
+      c16$contrib_fig <- figs(app, "bar_nok_contribution")
+      c16$csv <- tryCatch(names(utils::read.csv(app$get_download("dl_products"), check.names = FALSE)),
+                          error = function(e) character(0))
+      shoot(app, "05b_products_comparison")
+    })
+    stem_img <- if (fig_ok(c16$stem)) 1L else 0L
+    pat_txt <- changed16
     nerr16   <- n_err_notif(app)
-    shoot(app, "05_price_matrix_comparison")
+    exp_prod16 <- paste(c("Assortment", "Value A (NOK)", "Value B (NOK)", "Value change (NOK)",
+                          "NOK per m³ A (contribution)", "NOK per m³ B (contribution)",
+                          "NOK per m³ change (contribution)", "Volume share A (%)", "Volume share B (%)"), collapse = "|")
+    ch16 <- c16$change[!is.na(c16$change)]
+    ok16b <- grepl("Value A (NOK)|Value B (NOK)|Change (NOK)", c16$hdr, fixed = TRUE) &&
+      length(ch16) >= 2L && !is.unsorted(rev(ch16)) && grepl("Scenario A and B", c16$note, fixed = TRUE) &&
+      isTRUE(c16$changed_csv >= 1L) && identical(c16$prod_hdr, exp_prod16) && fig_ok(c16$delta_fig) &&
+      fig_ok(c16$contrib_fig) &&
+      all(c("Logs A", "Logs B", "Logs change", "Price volume A (m³)", "Price volume change (m³)",
+            "Volume share change (%)") %in% c16$csv)
     # Handsontable renders the visible rows only: the DOM shows some
     # highlighted cells; B's download has all 351 cells changed.
     ok16 <- !nzchar(paste0(e16, e16a, e16b, e16c)) && isTRUE(n_hl > 0L) && isTRUE(n_hl_a > 0L) &&
       isTRUE(n_diff16 == 351) &&
-      cmp_tab16 && isTRUE(n_delta >= 1L) &&
-      grepl("trees changed their cutting pattern", pat_txt, fixed = TRUE) &&
+      !cmp_tab16 && identical(tabs16, RESULT_TABS) && ok16b &&
+      grepl("^[0-9,]+ of [0-9,]+$", pat_txt) &&
       isTRUE(stem_img >= 1L) && identical(nerr16, 0L) && identical(sum16, exp16) &&
       !nzchar(paste0(e16d, e16e)) && identical(grid16, "2,2") &&
       !is.null(csv16) && identical(sort(unique(csv16$Scenario)), c("A", "B")) &&
@@ -1050,12 +1117,14 @@ if (!browser_ok) {
       !is.null(tcsv16) && identical(sort(unique(tcsv16$Scenario)), c("A", "B")) &&
       identical(sum(tcsv16$Scenario == "A"), sum(tcsv16$Scenario == "B"))
     rec(browser_checks[12], if (ok16) PASS else FAIL,
-        sprintf("summary: '%s' | grid columns per scenario: %s | logs CSV: %s | trees CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s | delta rows %s | patterns: '%s' | stem diagram: %s | error notifications: %s%s",
+        sprintf("summary: '%s' | grid columns per scenario: %s | logs CSV: %s | trees CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s, tabs '%s' | changed pattern: '%s' | stem diagram: %s | trees: headers %s, sorted by change %s (%d rows), note '%s', changed-trees CSV %s rows | products: headers '%s', value change figure %s, CSV columns %d | error notifications: %s%s",
                 sum16, grid16,
                 if (is.null(csv16)) "none" else paste(sprintf("%s %d", names(table(csv16$Scenario)), table(csv16$Scenario)), collapse = ", "),
                 if (is.null(tcsv16)) "none" else paste(sprintf("%s %d", names(table(tcsv16$Scenario)), table(tcsv16$Scenario)), collapse = ", "),
-                n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, n_delta,
-                trimws(pat_txt), isTRUE(stem_img >= 1L), nerr16, err_txt(e16, e16a, e16b, e16c)))
+                n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, tabs16,
+                trimws(pat_txt), isTRUE(stem_img >= 1L), substr(or_default(c16$hdr, ""), 1, 120),
+                length(ch16) >= 2L && !is.unsorted(rev(ch16)), length(ch16), trimws(c16$note), c16$changed_csv,
+                c16$prod_hdr, c16$delta_fig, length(c16$csv), nerr16, err_txt(e16, e16a, e16b, e16c, e16e)))
     # 17. Spruce pulpwood removed from B only: B's run lacks it, and the
     # comparison (different assortments) is by type and shared assortments
     flat17 <- ""; st17 <- ""; c17 <- list()
@@ -1072,25 +1141,21 @@ if (!browser_ok) {
                         struck = js(app, "document.querySelectorAll('.asm-none').length"))
       st17 <- paste("B products:", paste(unique(scen_of(app, "b")$pm$ProductKey), collapse = ","))
       app$set_inputs(main_nav = "simulator"); run(app)
-      # Different assortments (2026-10-22): B − A per assortment only for
-      # shared ones, and by type. The comparison tab first.
-      app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
-      c17$hdrs <- js(app, "Array.from(document.querySelectorAll('#cmp_per_m3_hdr, #cmp_value_hdr')).map(function(e){ return e.textContent.trim(); }).join('|')")
-      c17$shared_fig <- js(app, "document.querySelectorAll('#bar_cmp_delta_shared img').length")
-      c17$rows <- js(app, paste0("Array.from(document.querySelectorAll('#tbl_cmp_products .rt-tbody .rt-tr'))",
-                                 ".map(function(r){ return Array.from(r.querySelectorAll('.rt-td')).map(function(c){ return c.textContent.trim(); }).join(';'); }).join('|')"))
-      c17$per_m3 <- txt(app, "#tbl_cmp_per_m3")
-      app$run_js("document.getElementById('cmp_value_hdr').scrollIntoView()"); app$wait_for_idle()
-      shoot(app, "15_different_assortments_value_by_type")
-      app$run_js("document.getElementById('cmp_per_m3_hdr').scrollIntoView()"); app$wait_for_idle()
-      shoot(app, "16_different_assortments_per_m3_by_type")
-      # Products tab: "–" for the assortment B does not have.
+      # Different assortments (2026-10-22; tabs 2026-10-23): Products shows
+      # every assortment with "–" where a scenario lacks it, the type table,
+      # and the value change of the shared assortments only.
       app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
-      c17$prod <- js(app, paste0("Array.from(document.querySelectorAll('#tbl_products .rt-tbody .rt-tr'))",
-                                 ".map(function(r){ return Array.from(r.querySelectorAll('.rt-td')).map(function(c){ return c.textContent.trim(); }).join(';'); }).join('|')"))
-      c17$prod_figs <- js(app, "document.querySelectorAll('#bar_value_by_product img').length")
-      c17$vol_fig <- js(app, "document.querySelectorAll('#bar_volume_by_product').length")
-      shoot(app, "17_different_assortments_products")
+      c17$prod <- rows_txt(app, "tbl_products")
+      c17$types <- txt(app, "#tbl_per_m3_type")
+      c17$shared_fig <- figs(app, "bar_cmp_delta")
+      c17$prod_figs <- js(app, "document.querySelectorAll('#bar_nok_contribution img').length")
+      c17$vol_fig <- js(app, "document.querySelectorAll('#bar_volume_by_product, #bar_value_by_product').length")
+      c17$cmp_tab <- tab_shown(app, "comparison")
+      shoot(app, "15_different_assortments_products")
+      app$run_js("document.getElementById('cmp_value_ui').scrollIntoView()"); app$wait_for_idle()
+      shoot(app, "16_different_assortments_value_change")
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
+      shoot(app, "17_different_assortments_trees")
       # Log tally: spruce pulpwood (A only) offers A only; spruce sawlog B − A.
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tally_key = "spruce_pulpwood", wait_ = FALSE); app$wait_for_idle()
@@ -1101,19 +1166,18 @@ if (!browser_ok) {
       app$set_inputs(tally_key = "spruce_sawlog", wait_ = FALSE); app$wait_for_idle()
       c17$radio_saw <- radio()
       c17$note <- txt(app, "#tally_note")
-      app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
     })
-    rows17 <- strsplit(as.character(c17$rows), "|", fixed = TRUE)[[1]]
-    prod_pulp <- grep("^Spruce pulpwood", strsplit(as.character(c17$prod), "|", fixed = TRUE)[[1]], value = TRUE)
-    # Products columns: Assortment; Logs A; Logs B; ...
+    rows17 <- strsplit(or_default(c17$prod, ""), "|", fixed = TRUE)[[1]]
+    prod_pulp <- grep("^Spruce pulpwood", rows17, value = TRUE)
+    # Products columns: Assortment; Value A; Value B; Value change; ...
     pp <- if (length(prod_pulp)) strsplit(prod_pulp[1], ";")[[1]] else character(0)
-    ok17 <- !nzchar(e17) &&
-      identical(c17$hdrs, "NOK per m³ and volume share by assortment type|Value by assortment type") &&
-      isTRUE(c17$shared_fig >= 1L) &&
-      any(startsWith(rows17, "Sawlog (type)")) && any(startsWith(rows17, "Pulpwood (type)")) &&
-      !any(startsWith(rows17, "Spruce pulpwood")) && any(startsWith(rows17, "Spruce sawlog")) &&
-      !grepl("Spruce pulpwood", c17$per_m3, fixed = TRUE) &&
-      length(pp) >= 3L && isTRUE(as.numeric(gsub(",", "", pp[2])) > 0) && identical(pp[3], "–") &&
+    ok17 <- !nzchar(e17) && !isTRUE(c17$cmp_tab) && fig_ok(c17$shared_fig) &&
+      !any(grepl("(type)", rows17, fixed = TRUE)) && any(startsWith(rows17, "Spruce sawlog")) &&
+      grepl("Sawlog", c17$types, fixed = TRUE) && grepl("Pulpwood", c17$types, fixed = TRUE) &&
+      !grepl("Spruce pulpwood", c17$types, fixed = TRUE) &&
+      length(pp) >= 4L && isTRUE(as.numeric(gsub(",", "", pp[2])) > 0) && identical(pp[3], "–") &&
+      identical(pp[4], "–") &&
       identical(c17$prod_figs, 1L) && identical(c17$vol_fig, 0L) &&
       identical(c17$radio_pulp, "A") && grepl("(A only)", c17$opt_pulp, fixed = TRUE) &&
       identical(c17$radio_saw, "A,B,diff") &&
@@ -1121,9 +1185,9 @@ if (!browser_ok) {
       isTRUE(missing17$panel_b) && !isTRUE(missing17$row_b) && identical(missing17$struck, 0L) &&
       !grepl("spruce_pulpwood", st17, fixed = TRUE) && identical(n_err_notif(app), 0L)
     rec(browser_checks[13], if (ok17) PASS else FAIL,
-        sprintf("'%s' (%s) | selected in A: B panel hidden %s, row in B %s, struck rows %s | comparison headers '%s', shared figure %s | value rows: %s | Products spruce pulpwood: %s; value figure %s, volume figure %s | tally spruce pulpwood %s ('%s'), spruce sawlog %s, note '%s' | error notifications: %s%s",
+        sprintf("'%s' (%s) | selected in A: B panel hidden %s, row in B %s, struck rows %s | comparison tab %s, shared value-change figure %s | products rows: %s | Products spruce pulpwood: %s; contribution figure %s, value/volume figures %s | tally spruce pulpwood %s ('%s'), spruce sawlog %s, note '%s' | error notifications: %s%s",
                 trimws(flat17), trimws(st17), missing17$panel_b, missing17$row_b, missing17$struck,
-                c17$hdrs, c17$shared_fig, paste(substr(rows17, 1, 40), collapse = " / "),
+                isTRUE(c17$cmp_tab), c17$shared_fig, paste(substr(rows17, 1, 40), collapse = " / "),
                 paste(pp, collapse = ";"), c17$prod_figs, c17$vol_fig, c17$radio_pulp, c17$opt_pulp, c17$radio_saw, trimws(c17$note),
                 n_err_notif(app), err_txt(e17)))
     # 18. stale notice after a price edit (reset A)
@@ -1233,8 +1297,7 @@ if (!browser_ok) {
     c26$tl <- txt(app, "#tree_counts")
     e21b <- try_drv({
       run(app)
-      app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
-      open_trees(app)
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
     })
     banner21 <- txt(app, "#height_banner")
     trees21  <- txt(app, "#tbl_trees")
@@ -1284,6 +1347,7 @@ if (!browser_ok) {
       app$upload_file(scen_b_upload = f); app$wait_for_idle()
     }
     n24 <- list(); msg24 <- ""
+    prod24 <- ""; cmp24 <- FALSE
     e24 <- try_drv({
       app$set_inputs(main_nav = "prices"); a_to_b(app)
       n24$start <- marks(app)
@@ -1319,11 +1383,12 @@ if (!browser_ok) {
       run(app)
       app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
       shoot(app, "09_products_A_and_B")
-      app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
-      shoot(app, "10_scenario_comparison")
+      prod24 <- txt(app, "#tbl_products")
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
+      shoot(app, "10_trees_comparison")
+      app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
+      cmp24 <- compared_now(app)
     })
-    prod24 <- txt(app, "#tbl_products")
-    cmp24 <- tab_shown(app, "comparison")
     e24b <- try_drv({
       app$set_inputs(main_nav = "prices")
       pick(app, "a", "spruce_sawlog"); app$click("asm_copy_one_a"); app$wait_for_idle()
@@ -1341,7 +1406,7 @@ if (!browser_ok) {
       grepl("Value A", prod24, fixed = TRUE) && grepl("Spruce sawlog is equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
-        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | B-only row highlighted (expected 0): %s (A rows %s) | struck rows %s | comparison tab %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
+        sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | B-only row highlighted (expected 0): %s (A rows %s) | struck rows %s | compared %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
                 n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$a_rows, n24$struck,
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
@@ -1451,14 +1516,13 @@ if (!browser_ok) {
     e33 <- try_drv({
       app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
       run(app)
-      app$set_inputs(result_tabs = "comparison", wait_ = FALSE); app$wait_for_idle()
-      c33$hdr <- txt(app, "#cmp_value_hdr")
-      c33$shared_fig <- js(app, "document.querySelectorAll('#bar_cmp_delta_shared img').length")
-      c33$type_fig <- js(app, "document.querySelectorAll('#bar_cmp_delta img').length")
-      c33$rows <- js(app, paste0("Array.from(document.querySelectorAll('#tbl_cmp_products .rt-tbody .rt-tr'))",
+      app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
+      c33$hdr <- txt(app, "#cmp_value_ui")
+      c33$shared_fig <- js(app, "document.querySelectorAll('#bar_cmp_delta img').length")
+      c33$type_fig <- n_tbl_rows(app, "tbl_per_m3_type")
+      c33$rows <- js(app, paste0("Array.from(document.querySelectorAll('#tbl_products .rt-tbody .rt-tr'))",
                                  ".map(function(r){ return r.querySelector('.rt-td').textContent.trim(); }).join('|')"))
-      app$run_js("document.getElementById('cmp_value_hdr').scrollIntoView()"); app$wait_for_idle()
-      shoot(app, "20_hpr_B_value_by_type")
+      shoot(app, "20_hpr_B_products")
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tally_key = "spruce_140_sca_sagt_mmer", wait_ = FALSE); app$wait_for_idle()
       c33$radio <- js(app, "Array.from(document.querySelectorAll('#tally_scenario input')).map(function(i){ return i.value; }).join(',')")
@@ -1466,14 +1530,18 @@ if (!browser_ok) {
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
     })
     rows33 <- strsplit(or_default(c33$rows, ""), "|", fixed = TRUE)[[1]]
-    ok33 <- !nzchar(e33) && identical(trimws(c33$hdr), "Value by assortment type") &&
-      identical(c33$shared_fig, 0L) && isTRUE(c33$type_fig >= 1L) &&
-      length(rows33) >= 2L && all(endsWith(rows33, " (type)")) &&
+    # A and B share only the Waste rows: no value-change figure, the note
+    # says so; every assortment of A and B is listed, none as "(type)".
+    ok33 <- !nzchar(e33) && grepl("No assortments in both scenarios.", c33$hdr, fixed = TRUE) &&
+      identical(c33$shared_fig, 0L) && isTRUE(c33$type_fig >= 2L) &&
+      length(rows33) >= 4L && !any(grepl("(type)", rows33, fixed = TRUE)) &&
+      any(grepl("140 SCA", rows33, fixed = TRUE)) && any(startsWith(rows33, "Spruce sawlog")) &&
       identical(c33$radio, "B") && identical(n_err_notif(app), 0L)
     rec(browser_checks[29], if (ok33) PASS else FAIL,
-        sprintf("header '%s' | type figure %s, shared figure %s | value rows: %s | tally REDACTED25: %s | error notifications %s%s",
-                trimws(c33$hdr), c33$type_fig, c33$shared_fig, paste(rows33, collapse = ", "),
+        sprintf("value change: '%s' | value-change figure %s | type table rows %s | products rows: %s | tally REDACTED25: %s | error notifications %s%s",
+                trimws(c33$hdr), c33$shared_fig, c33$type_fig, paste(rows33, collapse = ", "),
                 c33$radio, n_err_notif(app), err_txt(e33)))
+
     # 31. .hpr stems (hpr Phase B), after the import into B (check 29): the
     # source stays NFI until chosen; then the imported file is used with the
     # confirmed species map (groups with stems: FURU, GRAN, LAUV), the
@@ -1497,12 +1565,11 @@ if (!browser_ok) {
       run(app)
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
       c31$summary <- txt(app, "#summary_cards")
-      c31$cmp_tab <- isTRUE(js(app, "Array.from(document.querySelectorAll('#result_tabs .nav-link')).some(function(a){ return a.getAttribute('data-value') === 'comparison' && a.offsetParent !== null; })"))
+      c31$cmp_tab <- compared_now(app)   # a comparison: the Summary counts changed patterns
       shoot(app, "14_hpr_stems_results")
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
       c31$logs_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_selected_logs .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
-      app$set_inputs(result_tabs = "per_m3", wait_ = FALSE); app$wait_for_idle()
-      open_trees(app)
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c31$trees_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
       c31$nerr <- n_err_notif(app)
     })
@@ -1519,7 +1586,7 @@ if (!browser_ok) {
       !"Plot" %in% hdr_cols(c31$trees_hdr) && "Measured length (m)" %in% hdr_cols(c31$trees_hdr) &&
       identical(c31$nerr, 0L)
     rec(browser_checks[27], if (ok31) PASS else FAIL,
-        sprintf("source before: %s | file: '%s' | species %s | '%s' | %s warnings | counts '%s' | summary: %s | comparison tab %s | logs columns: %s | trees columns: %s | error notifications %s%s",
+        sprintf("source before: %s | file: '%s' | species %s | '%s' | %s warnings | counts '%s' | summary: %s | compared %s | logs columns: %s | trees columns: %s | error notifications %s%s",
                 c31$src_before, substr(trimws(c31$file), 1, 80), c31$species,
                 substr(gsub("\\s+", " ", c31$valid), 1, 60), c31$n_warn, trimws(c31$counts),
                 substr(gsub("\\s+", " ", c31$summary), 1, 120), c31$cmp_tab,
@@ -1544,8 +1611,8 @@ if (!browser_ok) {
                 basename(or_default(c30$path, "(none)")), c30$during,
                 if (isTRUE(c30$after_file)) "still there" else "deleted",
                 if (isTRUE(c30$after_dir)) "still there" else "deleted", err_txt(e30)))
-    rec(browser_checks[18], if (length(shots) == 29L) PASS else REVIEW,
-        sprintf("%d of 29 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[18], if (length(shots) == 31L) PASS else REVIEW,
+        sprintf("%d of 31 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
   } else {
     for (ck in browser_checks[c(2:18, 20:29)]) rec(ck, FAIL, "skipped: app did not start")
