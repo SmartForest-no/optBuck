@@ -191,6 +191,31 @@
 #      "(type)" rows) and the type table; the tally offers only B for 140
 #      SCA Sagtømmer (screenshots 20-21)
 #
+# Language (Phase 1, 2026-10-27): checks 05-33 drive the page in English
+# (APTER_LANG=en); checks 34-39 a second session that starts in Norsk, the
+# app's default (screenshots in outputs/app_smoke/review_language/):
+# 34.  Norsk by default: html lang nb, Norsk active on the switch, the tabs,
+#      Run button, window title and the server-rendered assortment table in
+#      Norsk; the switch changes static and server text to English and back
+#      without a reload (a page marker survives)
+# 35.  Both tabs and the sidebar in Norsk (species, county, site class, live
+#      tree counts); the price grid, the altitude slider and the DBH-class
+#      axis in Norwegian number format (a price typed as "430,5" is stored
+#      as 430.5); no English text of the table on the page
+# 36.  Dialogs and messages in Norsk: Add assortment, Copy from A, Remove,
+#      Import from .hpr with the fixture (species and products tables), a
+#      broken tree list (errors from the backend, translated); no English
+# 37.  A comparison in Norsk: the four result tabs, Summary labels and
+#      decimal commas, Products and Trees headers, the tally caption, the
+#      figures render; no English on any result tab
+# 38.  Downloads in Norsk: file names, CSVs with BOM, ";" and decimal comma
+#      and Norwegian headers; the tally xlsx's "liste" sheet; the scenario
+#      xlsx keeps its machine format
+# 39.  Switching keeps everything: the results, their numbers and B's edit
+#      survive a switch to English and back; the scenario file saved in
+#      Norsk loads in English; the choice survives a reload; runtime of the
+#      Norsk session (REVIEW above 240 s)
+#
 # Verdict :
 #   PASS                   -- all checks pass
 #   ACCEPTED WITH REVIEW   -- only the runtime check (23), check 22 or check 12's
@@ -494,7 +519,13 @@ browser_checks <- c(
   "Check 30: The kept .hpr upload is deleted when the session ends",
   "Check 31: .hpr stems: not selected automatically; the imported file and species map are reused; a comparison runs on the stems, without plots",
   "Check 32: Copy from A / Copy from B: confirmation, Cancel keeps the scenario, Copy makes it equal to the other",
-  "Check 33: Comparison with B imported from .hpr (no shared commercial assortments): no value-change figure, all assortments listed, tally without B − A")
+  "Check 33: Comparison with B imported from .hpr (no shared commercial assortments): no value-change figure, all assortments listed, tally without B − A",
+  "Check 34: Norsk by default; the switch changes static and server text to English and back without a reload",
+  "Check 35: Both tabs and the sidebar in Norsk; no English text of the table on the page",
+  "Check 36: Dialogs and messages in Norsk (assortment form, copy, remove, .hpr import, broken tree list)",
+  "Check 37: A comparison in Norsk: result tabs, labels, decimal commas, headers, figures; no English",
+  "Check 38: Downloads in Norsk: file names, CSV format and headers, tally xlsx, scenario xlsx format",
+  "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -514,6 +545,12 @@ if (!browser_ok) {
     if (length(e)) paste(" | driver error:", paste(e, collapse = "; ")) else ""
   }
   try_drv <- function(expr) tryCatch({ expr; "" }, error = function(e) conditionMessage(e))
+  # A paged table's sort choice by its label ("Change (NOK) ↓"); the values
+  # are column positions, so a choice survives a language switch.
+  sort_value <- function(app, id, label) js(app, sprintf(paste0(
+    "(function(){ var o = $('#%s_sort')[0].selectize.options;",
+    " for (var k in o) if (o[k].label === %s) return o[k].value; return ''; })()"),
+    id, jsonlite::toJSON(label, auto_unbox = TRUE)))
   shot_dir <- file.path(out_dir, "screenshots")
   ensure_dir(shot_dir)
   unlink(list.files(shot_dir, pattern = "\\.png$", full.names = TRUE))
@@ -553,6 +590,9 @@ if (!browser_ok) {
   Sys.setenv(NOT_CRAN = "true")
   # NFI runs sample 5 plots instead of all (setup.R), to keep the audit short.
   Sys.setenv(APTER_N_PLOTS = "5")
+  # Checks 05-33 drive the English page (test-only APTER_LANG, setup.R; the
+  # app starts in Norsk otherwise); checks 34-39 a second session in Norsk.
+  Sys.setenv(APTER_LANG = "en")
   # chromote waits 10 s for Chrome by default; cold starts on the remote
   # desktop can exceed that.
   options(chromote.timeout = 60)
@@ -1080,7 +1120,8 @@ if (!browser_ok) {
     e16e <- try_drv({
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c16$hdr <- headers_of(app, "tbl_trees")
-      app$set_inputs(tbl_trees_sort = "Change (NOK)|desc", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tbl_trees_sort = sort_value(app, "tbl_trees", "Change (NOK) ↓"), wait_ = FALSE)
+      app$wait_for_idle()
       h <- strsplit(or_default(c16$hdr, ""), "|", fixed = TRUE)[[1]]
       ci <- match("Change (NOK)", h[nzchar(h)])
       rws <- strsplit(strsplit(or_default(rows_txt(app, "tbl_trees"), ""), "|", fixed = TRUE)[[1]], ";", fixed = TRUE)
@@ -1623,11 +1664,278 @@ if (!browser_ok) {
     rec(browser_checks[18], if (length(shots) == 31L) PASS else REVIEW,
         sprintf("%d of 31 screenshots in %s", length(shots), shot_dir))
     try(app$stop(), silent = TRUE)
+    t_el_en <- as.numeric((proc.time() - t_browser)["elapsed"])
+
+    # ==========================================================================
+    # Checks 34-39: a second session in Norsk (Phase 1, 2026-10-27)
+    # ==========================================================================
+    section("34-39. Norsk")
+    Sys.unsetenv("APTER_LANG")                       # the app's default language
+    if (!exists("i18n_table", mode = "function")) {
+      source(file.path(root_dir, "R", "helpers_utils.R")); source(file.path(root_dir, "R", "helpers_i18n.R"))
+    }
+    tr_tbl <- i18n_table(file.path(root_dir, "inputs", "i18n", "translations.csv"))
+    # English texts of the table that must not show in Norsk: those whose
+    # Norsk differs, with two or more words or six or more letters, without
+    # placeholders (template texts are checked by their fixed parts below).
+    en_rows <- tr_tbl[tr_tbl$en != tr_tbl$no & !grepl("%", tr_tbl$en, fixed = TRUE) &
+                        (grepl(" ", trimws(tr_tbl$en)) | nchar(tr_tbl$en) >= 6L) &
+                        !tr_tbl$en %in% c("Simulator", "Scenario"), , drop = FALSE]
+    fixed_parts <- unique(unlist(lapply(tr_tbl$en[tr_tbl$en != tr_tbl$no & grepl(.I18N_PH, tr_tbl$en, perl = TRUE)],
+      function(s) { p <- trimws(strsplit(s, .I18N_PH, perl = TRUE)[[1L]]); p[nchar(p) >= 12L & grepl(" [a-z]", p)] })))
+    english_left <- function(text) {
+      if (is.na(text) || !nzchar(text)) return(character(0))
+      esc <- function(x) gsub("([][{}()*+?.\\\\^$|])", "\\\\\\1", x, perl = TRUE)
+      hit <- vapply(en_rows$en, function(e) grepl(paste0("(^|[^A-Za-z])", esc(e), "($|[^A-Za-z])"), text, perl = TRUE), logical(1))
+      c(unique(en_rows$en[hit]), fixed_parts[vapply(fixed_parts, function(p) grepl(p, text, fixed = TRUE), logical(1))])
+    }
+    shorten_txt <- function(x) if (!length(x)) "none" else
+      paste(c(utils::head(x, 5L), if (length(x) > 5L) sprintf("... (%d)", length(x))), collapse = " | ")
+    vis_text <- function(app, sel = "body") js(app, sprintf(
+      "(function(){ var e = document.querySelector('%s'); return e ? e.innerText : ''; })()", sel))
+    lang_dir <- file.path(out_dir, "review_language"); ensure_dir(lang_dir)
+    unlink(list.files(lang_dir, pattern = "\\.png$", full.names = TRUE))
+    lshot <- function(app, name) try(app$get_screenshot(file.path(lang_dir, paste0(name, ".png"))), silent = TRUE)
+    t_no <- proc.time()
+    appn <- tryCatch(
+      shinytest2::AppDriver$new(app_dir, name = "audit17_no", load_timeout = 60 * 1000,
+                                timeout = 120 * 1000, width = 1400, height = 1000),
+      error = function(e) conditionMessage(e))
+    if (!inherits(appn, "AppDriver")) {
+      for (ck in browser_checks[30:35]) rec(ck, FAIL, paste("Norsk session did not start:", appn))
+    } else {
+      app <- appn
+      app$wait_for_js("document.fonts.status === 'loaded' && !!document.querySelector('#tbl_asm_a .rt-th')",
+                      timeout = 30 * 1000)
+      nav_txt <- function(app) js(app, "Array.from(document.querySelectorAll('#main_nav .nav-link')).map(function(a){ return a.textContent.trim(); }).join('|')")
+      lang_state <- function(app) js(app, "document.documentElement.lang + '|' + (document.querySelector('.lang-btn.is-active') || {dataset:{}}).dataset.lang")
+      switch_to <- function(app, l) {
+        app$run_js(sprintf("document.querySelector('.lang-btn[data-lang=\"%s\"]').click();", l))
+        app$wait_for_idle()
+      }
+      hdr_a <- function(app) headers_of(app, "tbl_asm_a")
+
+      # 34. Norsk by default; switch to English and back without a reload.
+      c34 <- list()
+      e34 <- try_drv({
+        c34$state <- lang_state(app); c34$nav <- nav_txt(app)
+        c34$run <- trimws(txt(app, "#run_btn")); c34$title <- js(app, "document.title")
+        c34$hdr <- hdr_a(app); c34$row1 <- rows_txt(app, "tbl_asm_a")
+        app$run_js("window.__apter17 = 1;")
+        lshot(app, "01_prices_no")
+        switch_to(app, "en")
+        c34$state_en <- lang_state(app); c34$nav_en <- nav_txt(app); c34$run_en <- trimws(txt(app, "#run_btn"))
+        c34$hdr_en <- hdr_a(app); c34$title_en <- js(app, "document.title")
+        lshot(app, "02_prices_en")
+        switch_to(app, "no")
+        c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
+        c34$marker <- js(app, "window.__apter17 === 1")
+      })
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "Sortiment og priser|Simulator") &&
+        identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
+        grepl("^Sortiment\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
+        grepl("Sagtømmer;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "Assortments and prices|Simulator") &&
+        identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
+        grepl("Bucking simulator", or_default(c34$title_en, "")) &&
+        identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
+      rec(browser_checks[30], if (ok34) PASS else FAIL,
+          sprintf("start: %s, tabs '%s', Run '%s', title '%s', table '%s', first row '%s' | English: %s, tabs '%s', Run '%s', table '%s' | back: %s, same table %s, no reload %s%s",
+                  c34$state, c34$nav, c34$run, c34$title, substr(or_default(c34$hdr, ""), 1, 60),
+                  substr(or_default(c34$row1, ""), 1, 40), c34$state_en, c34$nav_en, c34$run_en,
+                  substr(or_default(c34$hdr_en, ""), 1, 60), c34$state_back,
+                  identical(c34$hdr_back, c34$hdr), c34$marker, err_txt(e34)))
+
+      # 35. Both tabs and the sidebar in Norsk; no English on the page.
+      c35 <- list()
+      e35 <- try_drv({
+        c35$left_prices <- english_left(vis_text(app))
+        # The price grid with a decimal comma; a price typed as "430,5" is stored as 430.5.
+        c35$cell <- js(app, "document.querySelector('#pm_a .ht_master tbody td').textContent")
+        app$run_js(paste0("var h = HTMLWidgets.find('#pm_a').hot; h.selectCell(0,0); var ed = h.getActiveEditor();",
+                          " ed.beginEditing(); ed.TEXTAREA.value = '430,5'; ed.finishEditing();"))
+        app$wait_for_idle()
+        pa <- dl_pm(app, "dl_a_long")
+        c35$typed <- pa$PriceNOKperM3[pa$ProductKey == "spruce_sawlog" & pa$PriceDiameterClass_cm %in% 12 &
+                                       pa$LengthClass_dm %in% 31]
+        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        app$wait_for_js("!!document.querySelector('#tree_counts .tree-counts-n')", timeout = 60 * 1000)
+        c35$sidebar <- vis_text(app, ".bslib-sidebar-layout > .sidebar")
+        c35$counts <- trimws(txt(app, "#tree_counts"))
+        c35$species <- js(app, "$('#species_group')[0].selectize.getItem($('#species_group')[0].selectize.getValue()).text()")
+        c35$county <- js(app, "$('#fylnr_sel')[0].selectize.getItem('__all__').text()")
+        c35$left_sim <- english_left(vis_text(app))
+        c35$slider <- js(app, "document.querySelector('.irs-to').textContent")
+        lshot(app, "03_simulator_no")
+      })
+      ok35 <- !nzchar(e35) && !length(c35$left_prices) && !length(c35$left_sim) &&
+        identical(c35$cell, "422,00") && isTRUE(all.equal(c35$typed, 430.5)) &&
+        identical(c35$slider, "1 100 m") &&
+        identical(c35$species, "Gran") && identical(c35$county, "Alle fylker") &&
+        all(vapply(c("Datakilde", "Landsskogtakseringen", "Hogstklasse", "HKL 4 – eldre produksjonsskog",
+                     "Bonitet (H40)", "Fylke", "Høyde over havet (moh.)"),
+                   function(w) grepl(w, or_default(c35$sidebar, ""), fixed = TRUE), logical(1))) &&
+        grepl("prøveflater .* graner", or_default(c35$counts, "")) && grepl("Beregnet kjøretid", or_default(c35$counts, ""))
+      rec(browser_checks[31], if (ok35) PASS else FAIL,
+          sprintf("grid cell '%s', '430,5' typed -> %s, slider '%s' | English left: prices tab %s, simulator %s | species '%s', county '%s' | counts '%s'%s",
+                  c35$cell, paste(c35$typed, collapse = ","), c35$slider,
+                  shorten_txt(c35$left_prices), shorten_txt(c35$left_sim), c35$species, c35$county,
+                  substr(gsub("\\s+", " ", or_default(c35$counts, "")), 1, 90), err_txt(e35)))
+
+      # 36. Dialogs and messages in Norsk.
+      c36 <- list()
+      modal_txt <- function(app) vis_text(app, ".modal-content")
+      close_modal <- function(app) {
+        app$run_js("var b = document.querySelector('.modal-footer button[data-dismiss], .modal-footer button[data-bs-dismiss]'); if (b) b.click();")
+        app$wait_for_js("!document.querySelector('.modal.show')", timeout = 10 * 1000)
+      }
+      e36 <- try_drv({
+        app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+        app$click("asm_add_a"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
+        c36$add <- modal_txt(app); lshot(app, "04_add_no"); close_modal(app)
+        app$click("scen_copy_b"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
+        c36$copy <- modal_txt(app); close_modal(app)
+        pick(app, "b", "spruce_pulpwood"); app$wait_for_idle()
+        app$click("asm_remove_b"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
+        c36$remove <- modal_txt(app); close_modal(app)
+        app$click("hpr_import_a"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
+        app$upload_file(hpr_file = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+        app$wait_for_js("!!document.querySelector('.hpr-summary')", timeout = 60 * 1000)
+        c36$hpr <- modal_txt(app); lshot(app, "05_hpr_import_no"); close_modal(app)
+        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(tree_source = "list", wait_ = FALSE); app$wait_for_idle()
+        bad_tl <- tempfile(fileext = ".csv")
+        utils::write.csv(data.frame(tree = 1:3, art = "spruce"), bad_tl, row.names = FALSE)
+        app$upload_file(tl_upload = bad_tl); app$wait_for_idle()
+        c36$tl <- vis_text(app, "#tl_validation"); lshot(app, "06_tree_list_errors_no")
+        app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
+      })
+      c36$left <- unique(unlist(lapply(c36[c("add", "copy", "remove", "hpr", "tl")], english_left)))
+      ok36 <- !nzchar(e36) && !length(c36$left) &&
+        grepl("Legg til sortiment i scenario A", or_default(c36$add, ""), fixed = TRUE) &&
+        grepl("Minste toppdiameter (cm)", or_default(c36$add, ""), fixed = TRUE) &&
+        grepl("Kopier scenario A til scenario B", or_default(c36$copy, ""), fixed = TRUE) &&
+        grepl("Fjern Gran massevirke", or_default(c36$remove, ""), fixed = TRUE) &&
+        grepl("treslagsgrupper ·", or_default(c36$hpr, ""), fixed = TRUE) &&
+        grepl("Forbudte celler", or_default(c36$hpr, ""), fixed = TRUE) &&
+        grepl("kan ikke brukes:", or_default(c36$tl, ""), fixed = TRUE) &&
+        grepl("Mangler påkrevde kolonner", or_default(c36$tl, ""), fixed = TRUE)
+      rec(browser_checks[32], if (ok36) PASS else FAIL,
+          sprintf("add '%s' | copy '%s' | remove '%s' | .hpr '%s' | tree list '%s' | English left: %s%s",
+                  substr(gsub("\\s+", " ", or_default(c36$add, "")), 1, 60),
+                  substr(gsub("\\s+", " ", or_default(c36$copy, "")), 1, 40),
+                  substr(gsub("\\s+", " ", or_default(c36$remove, "")), 1, 40),
+                  substr(gsub("\\s+", " ", or_default(c36$hpr, "")), 1, 80),
+                  substr(gsub("\\s+", " ", or_default(c36$tl, "")), 1, 100), shorten_txt(c36$left), err_txt(e36)))
+
+      # 37. A comparison in Norsk (B: spruce pulpwood at 420 NOK/m3).
+      c37 <- list()
+      e37 <- try_drv({
+        app$run_js("Shiny.setInputValue('flat_edit', {side: 'B', key: 'spruce_pulpwood', value: '420'}, {priority: 'event'});")
+        app$wait_for_idle()
+        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        run(app)
+        c37$tabs <- result_tabs_txt(app)
+        c37$summary <- vis_text(app, "#summary_cards"); lshot(app, "07_summary_no")
+        c37$left <- english_left(vis_text(app))
+        app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
+        c37$products <- headers_of(app, "tbl_products"); c37$type_rows <- rows_txt(app, "tbl_per_m3_type")
+        c37$left <- c(c37$left, english_left(vis_text(app))); lshot(app, "08_products_no")
+        app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
+        c37$trees <- headers_of(app, "tbl_trees"); c37$pager <- trimws(txt(app, "#tbl_trees_info"))
+        c37$left <- c(c37$left, english_left(vis_text(app))); lshot(app, "09_trees_no")
+        app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
+        c37$tally <- trimws(txt(app, "#tally_note")); c37$logs <- headers_of(app, "tbl_selected_logs")
+        c37$left <- c(c37$left, english_left(vis_text(app))); lshot(app, "10_logs_no")
+        c37$imgs <- js(app, paste0("['bar_nok_contribution','fig_distributions','fig_dbh_class','stem_compare']",
+                                   ".filter(function(i){ var e = document.querySelector('#' + i + ' img'); return e && e.naturalWidth > 0; }).length"))
+        c37$nerr <- n_err_notif(app)
+      })
+      nok_val <- regmatches(or_default(c37$summary, ""), regexpr("Kr per m³\\s*\\n?\\s*[0-9  ]+,[0-9]", or_default(c37$summary, "")))
+      ok37 <- !nzchar(e37) && identical(c37$tabs, "Sammendrag|Sortimenter|Trær|Stokker") &&
+        all(vapply(c("Endrede apteringsmønstre", "Totalverdi (kr)", "Salgbart volum (m³fub)", "Trær med stokker (A / B)"),
+                   function(w) grepl(w, or_default(c37$summary, ""), fixed = TRUE), logical(1))) &&
+        length(nok_val) == 1L &&
+        grepl("^Sortiment\\|Verdi A \\(kr\\)\\|Verdi B \\(kr\\)\\|Verdiendring \\(kr\\)", or_default(c37$products, "")) &&
+        grepl("Totalt;", or_default(c37$type_rows, ""), fixed = TRUE) &&
+        grepl("Prøveflate|Tre|Treslag|BHD (cm)|Høyde (m)|Høydekilde|Stokker A", or_default(c37$trees, ""), fixed = TRUE) &&
+        grepl(" av ", or_default(c37$pager, ""), fixed = TRUE) &&
+        identical(c37$tally, "Prisdiameterklasse (cm) mot lengdeklasse (dm)") &&
+        grepl("Sortiment", or_default(c37$logs, ""), fixed = TRUE) &&
+        identical(as.integer(c37$imgs), 4L) && identical(as.integer(c37$nerr), 0L) && !length(unique(c37$left))
+      rec(browser_checks[33], if (ok37) PASS else FAIL,
+          sprintf("tabs '%s' | NOK/m³ '%s' | products '%s' | trees '%s' | pager '%s' | tally '%s' | figures %s of 4 | errors %s | English left: %s%s",
+                  c37$tabs, gsub("\\s+", " ", paste(nok_val, collapse = "")), substr(or_default(c37$products, ""), 1, 70),
+                  substr(or_default(c37$trees, ""), 1, 70), c37$pager, c37$tally, c37$imgs, c37$nerr,
+                  shorten_txt(unique(c37$left)), err_txt(e37)))
+
+      # 38. Downloads in Norsk.
+      c38 <- list()
+      e38 <- try_drv({
+        f_p <- app$get_download("dl_products"); c38$f_p <- basename(f_p)
+        raw_p <- readBin(f_p, "raw", file.size(f_p))
+        c38$bom <- identical(raw_p[1:3], as.raw(c(0xEF, 0xBB, 0xBF)))
+        lines_p <- strsplit(rawToChar(raw_p[-(1:3)]), "\r?\n")[[1L]]; Encoding(lines_p) <- "UTF-8"
+        c38$head_p <- lines_p[1L]; c38$dec <- any(grepl(";-?[0-9]+,[0-9]", lines_p[-1L]))
+        f_t <- app$get_download("dl_trees"); c38$f_t <- basename(f_t)
+        c38$head_t <- names(utils::read.csv2(f_t, fileEncoding = "UTF-8-BOM", check.names = FALSE, nrows = 1))
+        f_x <- app$get_download("dl_tally_xlsx"); c38$f_x <- basename(f_x); c38$sheets <- readxl::excel_sheets(f_x)
+        f_s <- app$get_download("dl_scen_a"); c38$f_s <- basename(f_s); c38$scen_sheets <- readxl::excel_sheets(f_s)
+        c38$scen_ok <- isTRUE(scenario_import(f_s)$ok)
+        c38$f_scen <- f_s
+      })
+      ok38 <- !nzchar(e38) && identical(c38$f_p, "optBuck_sortimenter.csv") && isTRUE(c38$bom) &&
+        grepl('^"Sortiment";"Stokker A";', or_default(c38$head_p, "")) && isTRUE(c38$dec) &&
+        identical(c38$f_t, "optBuck_tredata.csv") && identical(c38$head_t[1:3], c("Scenario", "Prøveflate", "Tre")) &&
+        identical(c38$f_x, "optBuck_stokkfordeling.xlsx") && "liste" %in% c38$sheets &&
+        identical(c38$f_s, "optBuck_scenario_A.xlsx") && "assortments" %in% c38$scen_sheets && isTRUE(c38$scen_ok)
+      rec(browser_checks[34], if (ok38) PASS else FAIL,
+          sprintf("products %s (BOM %s, header '%s', decimal comma %s) | trees %s '%s' | tally %s sheets '%s' | scenario %s sheets '%s', imports %s%s",
+                  c38$f_p, c38$bom, substr(or_default(c38$head_p, ""), 1, 60), c38$dec, c38$f_t,
+                  paste(utils::head(c38$head_t, 4), collapse = "|"), c38$f_x, paste(c38$sheets, collapse = "|"),
+                  c38$f_s, paste(c38$scen_sheets, collapse = "|"), c38$scen_ok, err_txt(e38)))
+
+      # 39. A switch keeps everything; a Norsk scenario file loads in English;
+      # the choice survives a reload.
+      c39 <- list()
+      digits <- function(x) gsub("[^0-9]", "", x)
+      e39 <- try_drv({
+        app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
+        c39$no <- vis_text(app, "#summary_cards")
+        switch_to(app, "en")
+        c39$en <- vis_text(app, "#summary_cards"); lshot(app, "11_summary_en_after_switch")
+        c39$tabs_en <- result_tabs_txt(app)
+        app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+        pick(app, "b", "spruce_pulpwood"); app$wait_for_idle()
+        c39$flat_b <- js(app, "document.querySelector('#flat_price_b') ? document.querySelector('#flat_price_b').value : ''")
+        app$upload_file(scen_b_upload = c38$f_scen); app$wait_for_idle()
+        c39$msg <- trimws(txt(app, "#msg_b"))
+        c39$stored <- js(app, "window.localStorage.getItem('apter.lang')")
+        app$run_js("location.reload();")
+        Sys.sleep(2)
+        app$wait_for_js("!!document.querySelector('.lang-btn.is-active') && !!document.querySelector('#tbl_asm_a .rt-th')",
+                        timeout = 60 * 1000)
+        c39$after_reload <- lang_state(app); c39$nav_reload <- nav_txt(app)
+      })
+      ok39 <- !nzchar(e39) && grepl("Endrede apteringsmønstre", or_default(c39$no, ""), fixed = TRUE) &&
+        grepl("Changed cutting patterns", or_default(c39$en, ""), fixed = TRUE) &&
+        identical(digits(c39$no), digits(c39$en)) && identical(c39$tabs_en, "Summary|Products|Trees|Logs") &&
+        identical(c39$flat_b, "420") &&
+        grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
+        identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
+        identical(c39$nav_reload, "Assortments and prices|Simulator")
+      t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
+      rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
+          sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",
+                  identical(digits(c39$no), digits(c39$en)), substr(gsub("\\s+", " ", or_default(c39$en, "")), 1, 80),
+                  c39$tabs_en, c39$flat_b, c39$msg, c39$stored, c39$after_reload, c39$nav_reload, t_el_no, err_txt(e39)))
+      try(app$stop(), silent = TRUE)
+    }
   } else {
-    for (ck in browser_checks[c(2:18, 20:29)]) rec(ck, FAIL, "skipped: app did not start")
+    for (ck in browser_checks[c(2:18, 20:35)]) rec(ck, FAIL, "skipped: app did not start")
   }
-  # 23. runtime
-  t_el <- as.numeric((proc.time() - t_browser)["elapsed"])
+  # 23. runtime (the English session; the Norsk session has its own, check 39)
+  t_el <- if (exists("t_el_en")) t_el_en else as.numeric((proc.time() - t_browser)["elapsed"])
   rec(browser_checks[19], if (t_el < 300) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 300 s)", t_el))
 }

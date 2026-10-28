@@ -1,0 +1,69 @@
+English | Norsk
+Unsupported file type '.txt' (use .csv or .xlsx). | Filtypen '.txt' støttes ikke (bruk .csv eller .xlsx).
+Non-numeric dbh in 1 row(s) (rows 3), e.g. 'x'. | Ikke-numerisk dbh i 1 rad(er) (rader 3), f.eks. 'x'.
+Missing tree_id in 1 row(s) (rows 4). | Mangler tree_id i 1 rad(er) (rader 4).
+Unknown species in 1 row(s): birch (use spruce or pine). | Ukjent treslag i 1 rad(er): birch (bruk spruce eller pine).
+Missing dbh in 1 row(s) (rows 6). | Mangler dbh i 1 rad(er) (rader 6).
+dbh must be > 0: 1 row(s) (rows 7). | dbh må være > 0: 1 rad(er) (rader 7).
+height must be > 0: 1 row(s) (rows 6). | height må være > 0: 1 rad(er) (rader 6).
+Duplicated tree_id: 1. | Duplisert tree_id: 1.
+Ignored column(s): extra | Ignorerte kolonner: extra
+The median dbh is 275; dbh must be in cm (this looks like mm). | Median-dbh er 275; dbh må være i cm (dette ser ut som mm).
+The median height is 225; height must be in m (this looks like dm). | Median-høyden er 225; height må være i m (dette ser ut som dm).
+Spruce: measured heights are on average 508 % above the FinnHoyde curve (ratio 6.08, n = 6); check the heights or measure more trees. | Gran: målte høyder er i gjennomsnitt 508 % over FinnHoyde-kurven (forhold 6,08, n = 6); kontroller høydene eller mål flere trær.
+Pine: measured heights are on average 427 % above the FinnHoyde curve (ratio 5.27, n = 6); check the heights or measure more trees. | Furu: målte høyder er i gjennomsnitt 427 % over FinnHoyde-kurven (forhold 5,27, n = 6); kontroller høydene eller mål flere trær.
+12 tree(s) beyond 80 cm dbh or 40 m height: the taper and height models extrapolate there. | 12 tre(r) over 80 cm dbh eller 40 m høyde: avsmalnings- og høydemodellene ekstrapolerer der.
+Heights for 7 spruce trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. | Høydene for 7 gran-trær kommer fra gjennomsnittlige høydekurver fra Landsskogtakseringen (FinnHoyde, ukalibrert). De er uavhengige av voksested og kan være skjeve for dine trær.
+2 tree(s) outside taperNOR's range are excluded: 2 with dbh below 5.0 cm. | 2 tre(r) utenfor gyldighetsområdet til taperNOR er utelatt: 2 med dbh under 5,0 cm.
+dbh below 5.0 cm | dbh under 5,0 cm
+FinnHoyde (uncalibrated) | FinnHoyde (ukalibrert)
+measured | målt
+FinnHoyde (calibrated, n = 1) | FinnHoyde (kalibrert, n = 1)
+Spruce: measured heights are on average 47 % above the FinnHoyde curve (ratio 1.47, n = 3); check the heights or measure more trees. | Gran: målte høyder er i gjennomsnitt 47 % over FinnHoyde-kurven (forhold 1,47, n = 3); kontroller høydene eller mål flere trær.
+FinnHoyde (calibrated, n = 3) | FinnHoyde (kalibrert, n = 3)
+Only for grades set by the operator (special orders) | Bare for kvaliteter som føreren setter (spesialbestillinger)
+Species group not used | Treslagsgruppen er ikke brukt
+REDACTED23: 35 forbidden cell(s) left empty (never chosen). | REDACTED23: 35 forbudte celler er latt tomme (velges aldri).
+REDACTED23: Length classes rounded up to whole dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550. | REDACTED23: Lengdeklasser rundet opp til hele dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550.
+REDACTED23: Diameter class limits not in whole cm (207 mm): prices change at whole cm. | REDACTED23: Diameterklassegrenser ikke i hele cm (207 mm): prisene skifter ved hele cm.
+REDACTED23: Volume diameter 'Measured diameter in mm': Apter rounds the top diameter down to whole cm for this method. | REDACTED23: Volumdiameter 'Measured diameter in mm': optBuck runder top-diameteren ned til hele cm for denne metoden.
+154 Kubb: Length classes rounded up to whole dm: 305→310. | 154 Kubb: Lengdeklasser rundet opp til hele dm: 305→310.
+REDACTED25: Diameter class limits not in whole cm (142 mm): prices change at whole cm. | REDACTED25: Diameterklassegrenser ikke i hele cm (142 mm): prisene skifter ved hele cm.
+Map at least one species group to Spruce or Pine. | Knytt minst én treslagsgruppe til gran eller furu.
+broken.hpr is not a readable XML file. | broken.hpr er ikke en lesbar XML-fil.
+foo.hpr is not a readable XML file. | foo.hpr er ikke en lesbar XML-fil.
+Diameter unit is 'cm'; Apter reads mm only (no conversion). | Diameterenheten er 'cm'; optBuck leser bare mm (ingen omregning).
+pri.hpr is a StanForD 'pri' message, not hpr. | pri.hpr er en StanForD 'pri'-melding, ikke hpr.
+nohpr.zip contains no .hpr file. | nohpr.zip inneholder ingen .hpr-fil.
+Read 13 stems from fixture.hpr. | Leste 13 stammer fra fixture.hpr.
+Recorded logs and stem grades are not read; the stems are bucked from their profiles. | Registrerte stokker og stammekvaliteter leses ikke; stammene apteres etter profilene sine.
+1 stem dropped: profile recorded 'Under bark', not over bark (not supported). | 1 stamme utelatt: profilen er registrert 'Under bark', ikke på bark (støttes ikke).
+1 stem dropped: StemKey already used by an earlier stem. | 1 stamme utelatt: StemKey er allerede brukt av en tidligere stamme.
+1 stem dropped: profile does not start at the felling cut (position 0). | 1 stamme utelatt: profilen starter ikke ved fellingskuttet (posisjon 0).
+1 stem dropped: a diameter above 1,500 mm (likely a unit error). | 1 stamme utelatt: en diameter over 1 500 mm (trolig feil enhet).
+1 stem dropped: multi-tree stem (no single-stem profile). | 1 stamme utelatt: flertrestamme (ingen enkeltstammeprofil).
+1 stem dropped: no stem profile (StemDiameters). | 1 stamme utelatt: ingen stammeprofil (StemDiameters).
+1 stem dropped: species group LAUV (447) is set to Not used. | 1 stamme utelatt: treslagsgruppen LAUV (447) er satt til Ikke brukt.
+1 stem dropped: profile ends below 1.3 m above ground (no DBH). | 1 stamme utelatt: profilen slutter under 1,3 m over bakken (ingen BHD).
+Height above ground = position + 20 cm (130 cm - DBHHeight 110 cm) for GRAN. | Høyde over bakken = posisjon + 20 cm (130 cm - DBHHeight 110 cm) for GRAN.
+Height above ground = position + 10 cm (130 cm - DBHHeight 120 cm) for FURU. | Høyde over bakken = posisjon + 10 cm (130 cm - DBHHeight 120 cm) for FURU.
+No stems are left to buck: no stem has a usable profile in a species group set to spruce or pine. | Ingen stammer igjen å aptere: ingen stamme har en brukbar profil i en treslagsgruppe satt til gran eller furu.
+7 stems dropped: species group GRAN (446) is set to Not used. | 7 stammer utelatt: treslagsgruppen GRAN (446) er satt til Ikke brukt.
+1 stem dropped: species group FURU (445) is set to Not used. | 1 stamme utelatt: treslagsgruppen FURU (445) er satt til Ikke brukt.
+nostems.hpr contains no stems. | nostems.hpr inneholder ingen stammer.
+Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell. | Ukjent oppsett: forventet lange kolonner (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) eller et bredt rutenett med et matrisenavn (spruce_sawlog / pine_sawlog) i cellen øverst til venstre.
+Negative price in 1 row(s). | Negativ pris i 1 rad(er).
+Diameter classes must be consecutive whole cm (no gaps): spruce_sawlog | Diameterklassene må være sammenhengende hele cm (uten hull): spruce_sawlog
+Not in this scenario: pine_poles (add the assortment first). | Finnes ikke i dette scenarioet: pine_poles (legg til sortimentet først).
+The file has no prices for nope_key. | Filen har ingen priser for nope_key.
+Cannot read the xlsx file. | Kan ikke lese xlsx-filen.
+The xlsx needs a sheet 'assortments' and the price sheets. | xlsx-filen må ha et ark 'assortments' og prisarkene.
+RDS file does not contain a data frame. | RDS-filen inneholder ikke en tabell.
+Unsupported file type '.txt' (use .csv, .xlsx or .rds). | Filtypen '.txt' støttes ikke (bruk .csv, .xlsx eller .rds).
+No lengths (a flat price needs min length <= max length; a grid needs length columns): spruce_poles | Ingen lengder (en fast pris trenger minste lengde <= største lengde; et rutenett trenger lengdekolonner): spruce_poles
+There are no assortments. | Det finnes ingen sortiment.
+The largest diameter class is 50 cm: the max top diameter is 50 cm. | Den største diameterklassen er 50 cm: største toppdiameter er 50 cm.
+Length 34 dm is already in the matrix. | Lengden 34 dm finnes allerede i matrisen.
+A length is a positive whole number of dm. | En lengde er et positivt helt antall dm.
+Length 99 dm is not in the matrix. | Lengden 99 dm finnes ikke i matrisen.
+Assortment spruce_sawlog is not in the scenario copied from. | Sortimentet spruce_sawlog finnes ikke i scenarioet det kopieres fra.

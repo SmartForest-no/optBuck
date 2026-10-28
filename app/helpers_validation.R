@@ -60,18 +60,27 @@ build_run_params <- function(input_list, hkl_map = HKL_MAP,
 #' (the backend's own selection) and `n_plots` its plots; for a tree list the
 #' rows prepare_tree_list_job() bucks (in_range) and their distinct plot_id.
 #'
+#' Each species' part is a text of the translation table, by species, unit,
+#' number (one or more) and whether it ends the line: English names the
+#' unit once, at the end ("11,890 spruce · 537 pine trees"); Norsk in every
+#' part ("11 890 graner · 537 furuer").
+#'
+#' @param lang "en" (the text as before) or "no".
 #' @return list(n_plots, n_trees, by_species (named counts), text).
-tree_counts <- function(species, n_plots = NA_integer_, unit = c("tree", "stem")) {
+tree_counts <- function(species, n_plots = NA_integer_, unit = c("tree", "stem"), lang = "en") {
   unit <- match.arg(unit)
   by <- vapply(c("spruce", "pine"), function(s) sum(species == s), integer(1))
   by <- by[by > 0L]
-  fmt <- function(n) format(n, big.mark = ",")
-  parts <- c(if (!is.na(n_plots)) sprintf("%s plot%s", fmt(n_plots), if (n_plots == 1L) "" else "s"),
-             sprintf("%s %s", fmt(by), names(by)))
-  if (length(by)) parts[length(parts)] <- paste(parts[length(parts)],
-                                                 if (sum(by) == 1L) unit else paste0(unit, "s"))
+  fmt <- function(n) fmt_num(n, 0L, lang)
+  # English puts the unit after the last species, plural unless the total is
+  # one tree; Norsk inflects every species by its own count.
+  last <- seq_along(by) == length(by)
+  ids <- sprintf("tc_%s_%s%s%s", names(by), unit, ifelse(by == 1L, "", "s"),
+                 ifelse(!last, "", ifelse(by == 1L & sum(by) > 1L, "_last_of_many", "_last")))
+  parts <- c(if (!is.na(n_plots)) tr(if (n_plots == 1L) "tc_plot" else "tc_plots", fmt(n_plots), lang = lang),
+             vapply(seq_along(by), function(i) tr(ids[i], fmt(by[[i]]), lang = lang), ""))
   list(n_plots = n_plots, n_trees = sum(by), by_species = by,
-       text = if (sum(by) == 0L) sprintf("No %ss", unit) else paste(parts, collapse = " · "))
+       text = if (sum(by) == 0L) tr(paste0("tc_none_", unit), lang = lang) else paste(parts, collapse = " · "))
 }
 
 

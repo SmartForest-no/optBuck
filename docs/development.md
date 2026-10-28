@@ -28,6 +28,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Import from .hpr (hpr Phase A) | Audit 25 PASS (16/16, incl. an imported Mid product): reading the synthetic fixture (only the part before the first stem; .gz, .zip, whole-file fallback), product definitions, species guess, best-grade filter, mapping onto the assortment table, lengths rounded up, forbidden cells empty, a fully forbidden inner class as empty rows, price volume on the class lower limit, file errors and partial-problem warnings, a tree-list run with the imported scenario, scenario file round trip and comparison |
 | .hpr stems (hpr Phase B) | Audit 26 PASS (12/12): reading the fixture's 13 stems (chunk size and extractor independent), unusual XML, DBH at 1.3 m above ground from the profile (not the file), the measured-only 10 cm grid, stump 0, nothing above the last measured point, barkNOR, species mapping and dropped stems, .gz/.zip, files without profiles or stems, no coordinates or names in any output, an A/B run, workers; audit 17 check 31 |
 | Result tables (log tally, DBH classes) | Audit 27 PASS (10/10): tally totals equal the run's per assortment and in total (waste not tallied), the price-grid layout with unpriced cells, logs above the cap in the top class, flat-priced per length, B − A (common axes, one-sided, matrix vs flat), DBH class limits and totals, xlsx/CSV downloads, B − A in the xlsx only for shared assortments, type groups (Sawlog, Pulpwood, Other) for scenarios with different assortments, the Products table (`assortment_summary()`: sums, contributions add up to NOK/m³, "–" for a missing assortment); audit 17 checks 14–17, 27 and 33 (four result tabs since 2026-10-23) |
+| Norwegian language option (roadmap Phase 1) | Audit 28 PASS (7/7): the translation table (ids, placeholders, conflicts), every id in the code, no English string literals left in the app, every message template round-trips, 68 real backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss, downloads per language, tree counts; audit 17 checks 34–39 drive a Norsk session |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -60,13 +61,16 @@ app/                        Shiny app, files sourced explicitly by app.R
   app_server.R              `server`: Simulator (tree sources, runs, results)
   www/
     apter.css               Component styles (option 3 "Combination" look)
-    apter.js                Shows the progress bar as soon as Run is clicked
+    apter.js                Shows the progress bar as soon as Run is clicked; the language
+                            switch (static texts by data-i18n id, remembered per browser)
     apter-icon.svg          App icon and favicon (original artwork)
     fonts/                  Inter and Source Serif 4 (.woff2, SIL OFL 1.1; licences alongside);
                             Inter .ttf (400/600) for the ggplot2 figures (registered with systemfonts)
 
 R/                          Core engine helpers
   helpers_paths.R           Project root and path utilities (get_root_dir())
+  helpers_i18n.R            Norsk / English: tr(), tr_msg(), tr_value(), number formats and
+                            result CSVs per language (inputs/i18n/translations.csv)
   helpers_products.R        Product definitions, assumption checks, the assortment table
                             (defs_from_products(), products_from_defs()), validate_products()
   helpers_volume_methods.R  Price-volume methods (Top cylinder, Top frustum, solid volume, Norwegian mid, Mid)
@@ -108,6 +112,7 @@ audits/
   audit_25_hpr_import.R                      Import from .hpr (parser, mapping, price lengths, errors, warnings, run)
   audit_26_hpr_stems.R                       .hpr stems (reader, profiles, stump 0, drops, privacy, A/B run)
   audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads, type groups)
+  audit_28_translations.R                    Translation table, ids in the code, no English left, backend messages, downloads per language
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -139,6 +144,7 @@ inputs/
   LengthClasses_spruce_pine_default.csv   Allowed log lengths per product
   price_matrices/           PriceMatrix_long and per-product matrices (default 2021)
   price_matrix_sources/     Source spreadsheets for the price matrices
+  i18n/translations.csv     The one translation table (Norsk / English) of the app
   test_fixtures/            hpr_example_synthetic.hpr: audits 25 and 26's .hpr file (definitions, prices, invented stems)
 
 data_processed_github/      Sanitized NFI sample used by the app (committed)
@@ -258,11 +264,56 @@ Oracle or ForestSens assets.
 - Audit 17 saves screenshots of both tabs, the results and the comparison
   to `outputs/app_smoke/screenshots/` for review.
 
+## Languages (Norsk / English; roadmap Phase 1, 2026-10-27)
+
+The app starts in Norsk (bokmål); the navbar switch changes to English
+without a reload, and the browser remembers the choice (localStorage
+`apter.lang`; `?lang=en` in the URL forces a language). Every text is in
+one table, `inputs/i18n/translations.csv` (`id, kind, en, no, note`):
+
+- **ui**: app text, looked up by id. Static UI uses `t_(id, ...)`
+  (`app/helpers_ui.R`): a span carrying the id, swapped by `www/apter.js`
+  from the JSON of both languages in the page head. The server uses
+  `tr(id, ..., lang = lang())`, so its outputs re-render on a switch.
+- **msg**: backend message templates, matched by their English text (the
+  `sprintf` format as in the code). The backend stays English, so scripts,
+  audits and baselines see exactly the text they saw before; the app
+  translates when it shows a message (`tr_msg()`): exact match, then
+  templates (most specific first), with captured arguments translated in
+  turn (reasons, lists, "name: message" pairs) and numbers in the
+  language's format. Unmatched text stays English and is recorded
+  (`i18n_misses()`; audit 28 check 5 requires none).
+- **value**: data values shown to users ("spruce", "Sawlog", "Top
+  cylinder", "Total", stage names), translated exactly by `tr_value()`.
+
+To add a text: add a row (both languages, same placeholders in the same
+order; `%1$s` is allowed in `no`), use its id in the code, and run audit 28.
+To add a backend message that users see: write it in English as usual and
+add a `msg` row with the same format string. Audit 28 check 3 fails on a
+prose-like string literal in `app/*.R` that is not in the table.
+
+Downloads: result tables follow the language (file names, column names,
+values; Norsk CSVs with `;`, a decimal comma and a UTF-8 BOM,
+`write_download_csv()`; the tally xlsx through `log_tally_xlsx(lang =)`).
+Exchange files keep their machine format in both languages: the scenario
+xlsx, price files and the tree-list template (only their file names are
+translated), so a file saved in one language loads in the other. Numbers
+on screen: Norsk shows a decimal comma and a space as thousands separator
+(`fmt_num()`; reactable cells drawn from the numeric value, so sorting
+stays numeric; the price grid with numbro's nb-NO culture, which also reads
+a typed "430,5"; the altitude slider via ion.rangeSlider).
+
+Not translated: names (optBuck, taperNOR, fieldPlot, FinnHoyde, StanForD),
+units, user data (assortment and product names, county names), and
+unexpected R errors passed through. Base assortment names (Sawlog,
+Pulpwood, Waste) are shown translated; saving the edit form with the shown
+name unchanged keeps the stored name, so the key stays.
+
 ## Running the audits
 
 Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
-REVIEW, or FAIL. Re-run all audits (14–27) at the end of every development phase.
+REVIEW, or FAIL. Re-run all audits (14–28) at the end of every development phase.
 
 **Prerequisites**
 
@@ -295,6 +346,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 26 — hpr stems | `Rscript audits/audit_26_hpr_stems.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 27 — result tables | `Rscript audits/audit_27_result_tables.R` | writexl, readxl, taperNOR |
+| 28 — translations | `Rscript audits/audit_28_translations.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check

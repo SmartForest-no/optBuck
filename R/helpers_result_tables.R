@@ -193,7 +193,10 @@ log_tally_long <- function(tallies) {
 #'   assortment keys: an assortment only one scenario has gets only that
 #'   scenario's grids, without B - A (2026-10-22). NULL: every assortment
 #'   gets every scenario's grids.
-log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys = NULL) {
+#' @param lang    "en" (as before) or "no": headers, table titles, values and
+#'   the "long" sheet's name through the translation table (helpers_i18n.R);
+#'   `label` gives the sheet titles in that language.
+log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys = NULL, lang = "en") {
   keys <- do.call(log_tally_keys, unname(tallies))
   sheets <- lapply(keys, function(key) {
     has <- if (is.null(scenario_keys)) rep(TRUE, length(tallies))
@@ -223,6 +226,10 @@ log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys =
   nm <- substr(gsub("[\\[\\]:*?/\\\\]", " ", vapply(keys, label, ""), perl = TRUE), 1L, 31L)
   names(sheets) <- make.unique(nm, sep = " ")
   sheets$long <- log_tally_long(tallies)
+  if (!identical(lang, "en")) {
+    sheets <- lapply(sheets, i18n_df, lang = lang)
+    names(sheets)[length(sheets)] <- tr("sheet_long", lang = lang)
+  }
   writexl::write_xlsx(sheets, path)
   invisible(path)
 }

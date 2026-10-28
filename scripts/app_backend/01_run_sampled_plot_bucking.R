@@ -70,7 +70,7 @@ suppressPackageStartupMessages({
   d
 })
 
-for (.h in c("helpers_utils", "helpers_paths", "helpers_volume_methods", "helpers_products",
+for (.h in c("helpers_utils", "helpers_paths", "helpers_i18n", "helpers_volume_methods", "helpers_products",
              "helpers_valuation",
              "helpers_taper", "helpers_bark", "helpers_commercial_volume",
              "helpers_candidate_generation", "helpers_dp_optimizer", "helpers_bucking_core",

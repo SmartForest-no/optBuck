@@ -15,8 +15,15 @@
 #           and prices, after a confirmation). A run compares A and B when
 #           scenarios_differ().
 #           Internal names: "default" and "scenario" in the backend mean A and B.
+#
+# Text    : in the viewer's language, lang() (R/helpers_i18n.R). The
+#           scenarios' messages are kept as i18n_text() / English backend
+#           text and rendered when shown, so a switch re-renders them. Data
+#           stay as they are: the assortment table is translated only for
+#           display (base names, species, volume methods).
 
-scenario_server <- function(input, output, session) {
+scenario_server <- function(input, output, session, lang = reactive("en")) {
+  L <- function(id, ...) tr(id, ..., lang = lang())
   keys_of <- assortment_table_keys
   sc <- list(A = list(defs = reactiveVal(APP_DEFS), pm = reactiveVal(APP_PM_DEFAULT)),
              B = list(defs = reactiveVal(APP_DEFS), pm = reactiveVal(APP_PM_DEFAULT)))
@@ -24,10 +31,13 @@ scenario_server <- function(input, output, session) {
   low    <- function(side) tolower(side)
   defs   <- function(side) sc[[side]]$defs()
   prices <- function(side) sc[[side]]$pm()
+  T_     <- i18n_text
 
   pm_tick <- reactiveVal(0L)                      # re-render the grids
   redraw  <- function() pm_tick(isolate(pm_tick()) + 1L)
   msgs    <- list(A = reactiveVal(NULL), B = reactiveVal(NULL))
+  # text: i18n_text() or English backend text (a vector: one line each);
+  # warnings: English backend text.
   say     <- function(side, type, text, warnings = NULL)
     msgs[[side]](list(type = type, text = text, warnings = warnings))
 
@@ -37,21 +47,45 @@ scenario_server <- function(input, output, session) {
 
   # Check a scenario and store it; FALSE (with the message) if it fails.
   commit <- function(side, d, pm, err = function(e) say(side, "error", e)) {
-    if (nrow(d) == 0L) { err(sprintf("Scenario %s needs at least one assortment.", side)); return(FALSE) }
+    if (nrow(d) == 0L) { err(T_("err_scen_needs_one", side)); return(FALSE) }
     v <- check_price_set(d, pm)
-    if (!v$ok) { err(paste(sprintf("Scenario %s:", side), v$errors)); return(FALSE) }
+    if (!v$ok) { err(lapply(v$errors, function(e) T_("msg_scenario_prefix", side, e))); return(FALSE) }
     sc[[side]]$defs(d); sc[[side]]$pm(v$pm)
     TRUE
   }
 
-  # "Spruce sawlog" etc. for keys of either scenario.
-  key_label <- function(keys) {
+  # "Spruce sawlog" etc. for keys of either scenario, in the viewer's
+  # language (species and base names translated; other names as given).
+  key_label <- function(keys, l = isolate(lang())) {
     a <- isolate(defs("A")); b <- isolate(defs("B"))
     d <- rbind(a, b[!keys_of(b) %in% keys_of(a), , drop = FALSE])
     k <- keys_of(d); i <- match(keys, k)
     # Only the name's first letter lowercased: "Spruce sawlog", "Spruce REDACTED25".
-    nm <- paste0(tolower(substring(d$Name[i], 1, 1)), substring(d$Name[i], 2))
-    ifelse(is.na(i), keys, sprintf("%s %s", tools::toTitleCase(d$Species[i]), nm))
+    nm <- tr_value(d$Name[i], l)
+    nm <- paste0(tolower(substring(nm, 1, 1)), substring(nm, 2))
+    ifelse(is.na(i), keys, sprintf("%s %s", tr_value(tools::toTitleCase(d$Species[i]), l), nm))
+  }
+  # Labels in a message, taken in both languages when the message is made
+  # (the assortment may be gone when it is shown): "Spruce sawlog and Pine
+  # sawlog"; price files also name "Flat prices".
+  fixed_text <- function(f)
+    structure(lapply(stats::setNames(APTER_LANGS, APTER_LANGS), f), class = "apter_fixed")
+  key_text <- function(keys)
+    fixed_text(function(l) paste(key_label(keys, l), collapse = tr("word_and", lang = l)))
+  price_file_text <- function(ids)
+    fixed_text(function(l) paste(ifelse(ids == PM_FLAT_ID, tr("flat_prices", lang = l), key_label(ids, l)),
+                                 collapse = ", "))
+  render_msg <- function(x) {
+    l <- lang()
+    one <- function(e) {
+      if (inherits(e, "apter_fixed")) return(e[[l]])
+      if (inherits(e, "apter_text"))
+        return(do.call(tr, c(list(e$id), lapply(e$args, function(a) if (is.numeric(a)) a else one(a)),
+                             list(lang = l))))
+      if (is.list(e)) return(paste(vapply(e, one, ""), collapse = "\n"))
+      paste(tr_msg(e, l), collapse = "\n")
+    }
+    one(x)
   }
   swap_prices <- function(pm, keys, new = NULL)
     pm_minimal(rbind(pm_minimal(pm)[!pm_minimal(pm)$ProductKey %in% keys, , drop = FALSE], new))
@@ -82,6 +116,8 @@ scenario_server <- function(input, output, session) {
 
   # ---- assortment tables ----------------------------------------------------
   # Each value formatted on its own ("4", "14.2"; not "4.0" next to 14.2).
+  # The table is built in English (the column names are its fields) and
+  # translated for display (show_asm()).
   dash <- function(x) ifelse(is.finite(x), vapply(x, function(v) format(v, trim = TRUE), ""), "–")
   rng  <- function(lo, hi) ifelse(is.na(lo), "–",
                                   ifelse(is.finite(hi), sprintf("%s–%s", dash(lo), dash(hi)),
@@ -89,13 +125,25 @@ scenario_server <- function(input, output, session) {
   asm_display <- function(d, pm) {
     p <- products_from_defs(d, pm)$pd
     data.frame(
-      Assortment = d$Name, Species = tools::toTitleCase(d$Species),
-      `Top Ø (cm)` = rng(d$MinTopDiameter_cm, d$MaxTopDiameter_cm),
-      `Max butt Ø (cm)` = dash(d$MaxButtDiameter_cm),
-      `Length (cm)` = rng(p$MinLength, p$MaxLength),
-      `Volume method` = unname(VOLUME_METHOD_SHORT[d$VolumeDiameterCategory]),
-      Pricing = ifelse(d$PriceType == "matrix", "Matrix", "Flat"),
-      check.names = FALSE, stringsAsFactors = FALSE)
+      name = d$Name, species = tools::toTitleCase(d$Species),
+      top = rng(d$MinTopDiameter_cm, d$MaxTopDiameter_cm),
+      butt = dash(d$MaxButtDiameter_cm),
+      length = rng(p$MinLength, p$MaxLength),
+      method = unname(VOLUME_METHOD_SHORT[d$VolumeDiameterCategory]),
+      pricing = ifelse(d$PriceType == "matrix", "Matrix", "Flat"),
+      stringsAsFactors = FALSE)
+  }
+  # Field -> column title (text id).
+  ASM_COL_IDS <- c(name = "col_assortment", species = "col_species", top = "col_top_d_cm",
+                   butt = "col_max_butt_d_cm", length = "col_length_cm",
+                   method = "col_volume_method", pricing = "col_pricing")
+  # Display values: names, species, volume methods and pricing in `l`; the
+  # decimal comma in Norsk.
+  show_values <- function(disp, l) {
+    for (n in c("name", "species", "method", "pricing")) disp[[n]] <- tr_value(disp[[n]], l)
+    if (l == "no") for (n in c("top", "butt", "length"))
+      disp[[n]] <- gsub(".", ",", disp[[n]], fixed = TRUE)
+    disp
   }
   HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm")
 
@@ -113,6 +161,7 @@ scenario_server <- function(input, output, session) {
   # fields only in the form mark the name). Rows the other scenario lacks
   # are not highlighted. Columns cannot be sorted.
   render_asm <- function(side) renderReactable({
+    l <- lang()
     d <- defs(side); o <- defs(other(side))
     disp <- asm_display(d, prices(side)); disp_o <- asm_display(o, prices(other(side)))
     k <- keys_of(d); ko <- keys_of(o)
@@ -122,13 +171,15 @@ scenario_server <- function(input, output, session) {
       j <- match(k[i], ko)
       if (is.na(j)) next
       cell[i, ] <- unlist(disp[i, ]) != unlist(disp_o[j, ])
-      if (any(rd$diff[i, HIDDEN_ASM_COLS])) cell[i, "Assortment"] <- TRUE
+      if (any(rd$diff[i, HIDDEN_ASM_COLS])) cell[i, "name"] <- TRUE
     }
     cls <- rep("", nrow(d))   # rows the other scenario lacks are not shaded
     all_rows <- d
     ord <- asm_order(all_rows)
     disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
     rownames(disp) <- NULL
+    disp <- show_values(disp, l)
+    names(disp) <- colnames(cell) <- tr(unname(ASM_COL_IDS[names(disp)]), lang = l)
     cols <- setNames(lapply(names(disp), function(n) reactable::colDef(
       class = function(value, index) if (isTRUE(cell[index, n])) "asm-diff")), names(disp))
     # Hidden key column: a row click selects that assortment on both sides.
@@ -138,7 +189,8 @@ scenario_server <- function(input, output, session) {
     apter_reactable(disp, page_size = 20L, columns = cols, sortable = FALSE,
                     row_class = function(index) cls[index],
                     on_click = reactable::JS(
-                      "function(rowInfo) { Shiny.setInputValue('asm_click', rowInfo.original['.key'], {priority: 'event'}); }"))
+                      "function(rowInfo) { Shiny.setInputValue('asm_click', rowInfo.original['.key'], {priority: 'event'}); }"),
+                    lang = l)
   })
   output$tbl_asm_a <- render_asm("A")
   output$tbl_asm_b <- render_asm("B")
@@ -151,27 +203,28 @@ scenario_server <- function(input, output, session) {
     output[[paste0("asm_state_", s)]] <- reactive(sel_state(side))
     outputOptions(output, paste0("asm_state_", s), suspendWhenHidden = FALSE)
     output[[paste0("asm_head_", s)]] <- renderUI({
-      k <- selected(); req(k)
-      title <- div(class = "asm-detail-title", key_label(k))
+      k <- selected(); req(k); l <- lang()
+      title <- div(class = "asm-detail-title", key_label(k, l))
       if (sel_state(side) == "none") return(title)
       d <- defs(side); i <- match(k, keys_of(d))
       disp <- asm_display(d, prices(side))[i, ]
       o <- defs(other(side)); j <- match(k, keys_of(o))
       disp_o <- if (!is.na(j)) asm_display(o, prices(other(side)))[j, ]
       hidden_diff <- !is.na(j) && any(assortment_diff(d[i, , drop = FALSE], o)$diff[1L, HIDDEN_ASM_COLS])
-      field <- function(n, fmt = "%s") {
+      shown <- show_values(disp, l)
+      field <- function(n, id = NULL) {
         differs <- !is.null(disp_o) && !identical(disp[[n]], disp_o[[n]])
-        span(class = paste("asm-rule", if (differs) "asm-diff"), sprintf(fmt, disp[[n]]))
+        span(class = paste("asm-rule", if (differs) "asm-diff"),
+             if (is.null(id)) shown[[n]] else tr(id, shown[[n]], lang = l))
       }
       tagList(
         div(class = "asm-detail-head", title,
-            actionButton(paste0("asm_edit_", s), "Edit", class = "btn-secondary btn-sm")),
+            actionButton(paste0("asm_edit_", s), L("btn_edit"), class = "btn-secondary btn-sm")),
         div(class = "asm-rules",
-          field("Species"), field("Top Ø (cm)", "top Ø %s cm"),
-          field("Max butt Ø (cm)", "max butt Ø %s cm"), field("Length (cm)", "length %s cm"),
-          field("Volume method"), field("Pricing", "%s price"),
-          if (hidden_diff) span(class = "asm-rule asm-diff",
-                                sprintf("other rules differ from Scenario %s", other(side)))))
+          field("species"), field("top", "rule_top"),
+          field("butt", "rule_max_butt"), field("length", "rule_length"),
+          field("method"), field("pricing", "rule_price"),
+          if (hidden_diff) span(class = "asm-rule asm-diff", L("rule_other_differ", other(side)))))
     })
   })
 
@@ -181,37 +234,39 @@ scenario_server <- function(input, output, session) {
   asm_form_err <- reactiveVal(NULL)
   output$asm_form_msg <- renderUI({
     e <- asm_form_err(); if (is.null(e)) return(NULL)
-    div(class = "pm-msg-error", paste(e, collapse = "\n"))
+    div(class = "pm-msg-error", render_msg(e))
   })
 
   asm_modal <- function(side, d = NULL) {
+    l <- isolate(lang()); M <- function(id, ...) tr(id, ..., lang = l)
     new <- is.null(d)
     v <- function(n, default) {
       x <- if (new) NULL else d[[n]]
       if (is.null(x) || length(x) == 0L || is.na(x)) default else x
     }
     fin <- function(n) { x <- v(n, NA); if (is.finite(x)) x else NA }
-    sp <- c("Spruce" = "spruce", "Pine" = "pine")
+    sp <- species_group_choices(l)[1:2]                  # spruce, pine
     modalDialog(
-      title = if (new) sprintf("Add assortment to Scenario %s", side)
-              else sprintf("Edit %s – %s (Scenario %s)", d$Name, d$Species, side),
+      title = if (new) M("asm_add_title", side)
+              else M("asm_edit_title", tr_value(d$Name, l), tr_value(d$Species, l), side),
       size = "l", easyClose = FALSE, fade = FALSE,
       layout_columns(col_widths = c(4, 4, 4),
-        textInput("asm_name", "Assortment", v("Name", "")),
-        selectInput("asm_species", "Species",
-                    if (new) c("Spruce and pine" = "both", sp) else sp,
+        # The name in the viewer's language; saving it unchanged keeps the
+        # stored name (form_rows()), so a base row keeps its key.
+        textInput("asm_name", M("col_assortment"), tr_value(v("Name", ""), l)),
+        selectInput("asm_species", M("col_species"),
+                    if (new) species_group_choices(l)[c(3, 1, 2)] else sp,
                     v("Species", if (new) "both" else "spruce")),
-        radioButtons("asm_price_type", "Pricing",
-                     c("Price matrix" = "matrix", "Flat price" = "flat"), v("PriceType", "matrix")),
-        numericInput("asm_min_top", "Min top diameter (cm)", v("MinTopDiameter_cm", 0), min = 0),
-        numericInput("asm_max_top", "Max top diameter (cm; empty = no limit)",
-                     fin("MaxTopDiameter_cm"), min = 0),
-        numericInput("asm_dtp", "Top diameter read (cm below the cut)",
-                     v("DiameterTopPosition_cm", 0), min = 0, step = 10),
-        numericInput("asm_min_butt", "Min butt diameter (cm)", v("MinButtDiameter_cm", 0), min = 0),
-        numericInput("asm_max_butt", "Max butt diameter (cm; empty = no limit)",
-                     fin("MaxButtDiameter_cm"), min = 0),
-        selectInput("asm_method", "Volume method", VOLUME_METHODS,
+        radioButtons("asm_price_type", M("col_pricing"),
+                     stats::setNames(c("matrix", "flat"), M(c("pricing_matrix", "pricing_flat"))),
+                     v("PriceType", "matrix")),
+        numericInput("asm_min_top", M("lbl_min_top"), v("MinTopDiameter_cm", 0), min = 0),
+        numericInput("asm_max_top", M("lbl_max_top"), fin("MaxTopDiameter_cm"), min = 0),
+        numericInput("asm_dtp", M("lbl_dtp"), v("DiameterTopPosition_cm", 0), min = 0, step = 10),
+        numericInput("asm_min_butt", M("lbl_min_butt"), v("MinButtDiameter_cm", 0), min = 0),
+        numericInput("asm_max_butt", M("lbl_max_butt"), fin("MaxButtDiameter_cm"), min = 0),
+        selectInput("asm_method", M("col_volume_method"),
+                    stats::setNames(VOLUME_METHODS, tr_value(VOLUME_METHODS, l)),
                     v("VolumeDiameterCategory", "Top cylinder"))
       ),
       # Lengths: a flat price uses min..max in 10 cm steps; a matrix's
@@ -219,21 +274,20 @@ scenario_server <- function(input, output, session) {
       conditionalPanel(
         if (new || !identical(d$PriceType, "matrix")) "true" else "input.asm_price_type == 'flat'",
         layout_columns(col_widths = c(4, 4, 4),
-          numericInput("asm_min_len", "Min length (cm)", v("MinLength_cm", 310), min = 10, step = 10),
-          numericInput("asm_max_len", "Max length (cm)", v("MaxLength_cm", 550), min = 10, step = 10),
+          numericInput("asm_min_len", M("lbl_min_len"), v("MinLength_cm", 310), min = 10, step = 10),
+          numericInput("asm_max_len", M("lbl_max_len"), v("MaxLength_cm", 550), min = 10, step = 10),
           conditionalPanel("input.asm_price_type == 'matrix'",
-            div(class = "note-muted", "A new price matrix starts with a length column every 30 cm.")))),
+            div(class = "note-muted", M("asm_new_matrix_note"))))),
       conditionalPanel(
         if (new) "true" else sprintf("input.asm_price_type != '%s'", d$PriceType),
         layout_columns(col_widths = c(4, 4, 4),
-          numericInput("asm_price", "Starting price (NOK/m³)", 500, min = 0),
+          numericInput("asm_price", M("lbl_start_price"), 500, min = 0),
           conditionalPanel("input.asm_price_type == 'matrix'",
-            numericInput("asm_max_class", "Largest diameter class (cm; without a max top diameter)",
-                         NA, min = 1)))),
-      if (new) checkboxInput("asm_both", "Add to both scenarios", TRUE),
+            numericInput("asm_max_class", M("lbl_max_class"), NA, min = 1)))),
+      if (new) checkboxInput("asm_both", M("lbl_add_both"), TRUE),
       uiOutput("asm_form_msg"),
-      footer = tagList(modalButton("Cancel"),
-                       actionButton("asm_save", "Save", class = "btn-primary")))
+      footer = tagList(modalButton(M("btn_cancel")),
+                       actionButton("asm_save", M("btn_save"), class = "btn-primary")))
   }
 
   for (side in c("A", "B")) local({
@@ -243,7 +297,7 @@ scenario_server <- function(input, output, session) {
     })
     observeEvent(input[[paste0("asm_edit_", s)]], {
       d <- defs(side); k <- selected(); i <- match(k, keys_of(d))
-      if (is.na(i)) return(say(side, "error", sprintf("%s is not in Scenario %s.", key_label(k), side)))
+      if (is.na(i)) return(say(side, "error", T_("err_not_in_scenario", key_text(k), side)))
       asm_editing(list(side = side, key = k)); asm_form_err(NULL)
       showModal(asm_modal(side, d[i, , drop = FALSE]))
     })
@@ -255,6 +309,8 @@ scenario_server <- function(input, output, session) {
     num <- function(x) if (is.null(x) || length(x) == 0L || is.na(x)) NA_real_ else as.numeric(x)
     or  <- function(x, y) if (is.na(x)) y else x
     name <- trimws(or_default(input$asm_name, ""))
+    # The name as shown (translated base name) unchanged: keep the stored one.
+    if (!is.null(old_row) && identical(name, tr_value(old_row$Name, isolate(lang())))) name <- old_row$Name
     species <- if (identical(input$asm_species, "both")) PRODUCT_SPECIES else input$asm_species
     ptype <- input$asm_price_type
     rows <- .type_assortment_table(data.frame(
@@ -274,10 +330,10 @@ scenario_server <- function(input, output, session) {
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm
       rows$PriceLengths_cm <- old_row$PriceLengths_cm   # hidden (hpr imports); kept on edits
     }
-    errs <- character(0); start <- NULL
+    errs <- list(); start <- NULL
     if (!same_pricing) {
       price <- num(input$asm_price)
-      if (is.na(price) || price < 0) errs <- c(errs, "Give a starting price of 0 NOK/m³ or more.")
+      if (is.na(price) || price < 0) errs <- c(errs, list(T_("err_start_price")))
       lo <- rows$MinLength_cm[1]; hi_len <- rows$MaxLength_cm[1]
       lens <- if (ptype == "matrix" && !anyNA(c(lo, hi_len)) && hi_len >= lo)
         unique(c(seq(lo, hi_len, by = 30), hi_len)) else numeric(0)
@@ -285,7 +341,7 @@ scenario_server <- function(input, output, session) {
       if (length(errs) == 0L)
         start <- tryCatch(do.call(rbind, lapply(keys_of(rows), function(k)
           pm_start_prices(k, ptype, price, max(1, floor(rows$MinTopDiameter_cm[1])), hi, lens))),
-          error = function(e) { errs <<- c(errs, conditionMessage(e)); NULL })
+          error = function(e) { errs <<- c(errs, list(conditionMessage(e))); NULL })
     }
     list(rows = rows, ptype = ptype, same_pricing = same_pricing, start = start, errors = errs)
   }
@@ -300,7 +356,7 @@ scenario_server <- function(input, output, session) {
     taken <- intersect(new_keys, setdiff(k, old))
     if (both) taken <- union(taken, intersect(new_keys, keys_of(defs(other(side)))))
     if (length(taken) > 0L)
-      f$errors <- c(sprintf("%s already exists.", paste(key_label(taken), collapse = " and ")), f$errors)
+      f$errors <- c(list(T_("err_exists", key_text(taken))), f$errors)
     if (length(f$errors) > 0L) { asm_form_err(f$errors); return() }
 
     if (is.null(old)) {
@@ -312,7 +368,7 @@ scenario_server <- function(input, output, session) {
     }
     err <- function(e) asm_form_err(e)
     v <- check_price_set(d2, pm2)
-    if (!v$ok) return(err(paste(sprintf("Scenario %s:", side), v$errors)))
+    if (!v$ok) return(err(lapply(v$errors, function(e) T_("msg_scenario_prefix", side, e))))
     if (both) {
       o <- other(side)
       d3 <- rbind(defs(o), f$rows); pm3 <- swap_prices(prices(o), new_keys, f$start)
@@ -321,9 +377,8 @@ scenario_server <- function(input, output, session) {
     commit(side, d2, v$pm, err)
     selected(new_keys[1L])
     redraw(); removeModal()
-    say(side, "ok", sprintf("%s %s%s.", if (is.null(old)) "Added" else "Saved",
-                            paste(key_label(new_keys), collapse = " and "),
-                            if (both) " to both scenarios" else ""))
+    say(side, "ok", T_(if (is.null(old)) (if (both) "msg_added_both" else "msg_added") else "msg_saved",
+                       key_text(new_keys)))
   })
 
 
@@ -335,27 +390,26 @@ scenario_server <- function(input, output, session) {
     observeEvent(input[[paste0("asm_remove_", s)]], {
       k <- selected()
       if (!isTRUE(k %in% keys_of(defs(side))))
-        return(say(side, "error", sprintf("%s is not in Scenario %s.", key_label(k), side)))
+        return(say(side, "error", T_("err_not_in_scenario", key_text(k), side)))
       in_other <- k %in% keys_of(defs(other(side)))
       asm_removing(list(side = side, key = k))
       showModal(modalDialog(
-        title = sprintf("Remove %s", key_label(k)), easyClose = TRUE, fade = FALSE,
-        if (in_other) sprintf("Remove it from Scenario %s only, or from both scenarios?", side)
-        else sprintf("It is only in Scenario %s.", side),
-        footer = tagList(modalButton("Cancel"),
-          actionButton("asm_rm_one", if (in_other) sprintf("From %s only", side) else "Remove",
+        title = L("rm_title", key_label(k)), easyClose = TRUE, fade = FALSE,
+        if (in_other) L("rm_which", side) else L("rm_only_in", side),
+        footer = tagList(modalButton(L("btn_cancel")),
+          actionButton("asm_rm_one", if (in_other) L("btn_rm_one", side) else L("btn_remove"),
                        class = "btn-secondary"),
-          if (in_other) actionButton("asm_rm_both", "From both", class = "btn-primary"))))
+          if (in_other) actionButton("asm_rm_both", L("btn_rm_both"), class = "btn-primary"))))
     })
 
     # One assortment (definition and prices) equal to the other scenario's.
     observeEvent(input[[paste0("asm_copy_one_", s)]], {
       o <- other(side); k <- selected()
       if (!isTRUE(k %in% keys_of(defs(o))))
-        return(say(side, "error", sprintf("%s is not in Scenario %s.", key_label(k), o)))
+        return(say(side, "error", T_("err_not_in_scenario", key_text(k), o)))
       r <- copy_assortment(defs(o), prices(o), defs(side), prices(side), k)
       if (commit(side, r$defs, r$pm)) {
-        redraw(); say(side, "ok", sprintf("%s is equal to Scenario %s.", key_label(k), o))
+        redraw(); say(side, "ok", T_("msg_equal_to", key_text(k), o))
       }
     })
 
@@ -364,10 +418,10 @@ scenario_server <- function(input, output, session) {
     observeEvent(input[[paste0("scen_copy_", s)]], {
       o <- other(side); scen_copying(side)
       showModal(modalDialog(
-        title = sprintf("Copy Scenario %s to Scenario %s", o, side), easyClose = TRUE, fade = FALSE,
-        sprintf("All assortments and prices in Scenario %s are replaced by those of Scenario %s.", side, o),
-        footer = tagList(modalButton("Cancel"),
-                         actionButton("scen_copy_ok", "Copy", class = "btn-primary"))))
+        title = L("copy_title", o, side), easyClose = TRUE, fade = FALSE,
+        L("copy_body", side, o),
+        footer = tagList(modalButton(L("btn_cancel")),
+                         actionButton("scen_copy_ok", L("btn_copy"), class = "btn-primary"))))
     })
 
     # Base assortments back to their defaults (definitions and prices);
@@ -377,25 +431,25 @@ scenario_server <- function(input, output, session) {
       d <- defs(side); custom <- d[!keys_of(d) %in% base, , drop = FALSE]
       pm <- swap_prices(prices(side), base, APP_PM_DEFAULT[APP_PM_DEFAULT$ProductKey %in% base, , drop = FALSE])
       if (commit(side, rbind(APP_DEFS, custom), pm)) {
-        redraw(); say(side, "ok", "Base assortments reset to the defaults; custom assortments kept.")
+        redraw(); say(side, "ok", T_("msg_reset_defaults"))
       }
     })
   })
 
   do_remove <- function(both) {
-    r <- asm_removing(); req(r); side <- r$side; k <- r$key; lbl <- key_label(k)
+    r <- asm_removing(); req(r); side <- r$side; k <- r$key
     sides <- c(side, if (both) other(side))
     new <- lapply(setNames(sides, sides), function(x) {
       d <- defs(x); keep <- keys_of(d) != k
       list(defs = d[keep, , drop = FALSE], pm = swap_prices(prices(x), k))
     })
     for (x in sides) if (nrow(new[[x]]$defs) == 0L) {
-      removeModal(); return(say(side, "error", sprintf("Scenario %s needs at least one assortment.", x)))
+      removeModal(); return(say(side, "error", T_("err_scen_needs_one", x)))
     }
+    lbl <- key_text(k)   # before the key leaves the scenarios
     for (x in sides) { rownames(new[[x]]$defs) <- NULL; sc[[x]]$defs(new[[x]]$defs); sc[[x]]$pm(new[[x]]$pm) }
     redraw(); removeModal()
-    say(side, "ok", sprintf("Removed %s from %s.", lbl,
-                            if (both) "both scenarios" else paste("Scenario", side)))
+    say(side, "ok", if (both) T_("msg_removed_both", lbl) else T_("msg_removed_from", lbl, side))
   }
   observeEvent(input$asm_rm_one,  do_remove(FALSE))
   observeEvent(input$asm_rm_both, do_remove(TRUE))
@@ -404,16 +458,18 @@ scenario_server <- function(input, output, session) {
     side <- scen_copying(); req(side); o <- other(side)
     removeModal(); scen_copying(NULL)
     if (commit(side, defs(o), prices(o))) {
-      redraw(); say(side, "ok", sprintf("Scenario %s is now a copy of Scenario %s.", side, o))
+      redraw(); say(side, "ok", T_("msg_scen_copied", side, o))
     }
   })
 
 
   # ---- scenario files (assortments + prices, one xlsx per scenario) ----------
+  # The files keep their machine format in both languages (sheet and column
+  # names); only the file names follow the language.
   for (side in c("A", "B")) local({
     side <- side; s <- low(side)
     output[[paste0("dl_scen_", s)]] <- downloadHandler(
-      filename = function() sprintf("optBuck_scenario_%s.xlsx", side),
+      filename = function() L("file_scenario", side),
       content  = function(file) scenario_export(defs(side), prices(side), file))
     # A scenario xlsx (with an "assortments" sheet) replaces the scenario;
     # any other xlsx or CSV is a price file for all its assortments.
@@ -424,16 +480,15 @@ scenario_server <- function(input, output, session) {
       if (!"assortments" %in% sheets) {
         res <- upload_price_set(f$datapath, f$name, defs(side), prices(side))
         if (!isTRUE(res$ok))
-          return(say(side, "error", paste(c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
+          return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
         sc[[side]]$pm(res$pm); redraw()
-        return(say(side, "ok", sprintf("Loaded prices from %s: %s.", f$name,
-                                       paste(price_file_label(res$ids), collapse = ", ")), res$warnings))
+        return(say(side, "ok", T_("msg_loaded_prices", f$name, price_file_text(res$ids)), res$warnings))
       }
       res <- scenario_import(f$datapath)
       if (!isTRUE(res$ok))
-        return(say(side, "error", paste(c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
+        return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
       sc[[side]]$defs(res$defs); sc[[side]]$pm(res$pm); redraw()
-      say(side, "ok", sprintf("Loaded %s: %d assortment(s) with prices.", f$name, nrow(res$defs)), res$warnings)
+      say(side, "ok", T_("msg_loaded_scenario", f$name, nrow(res$defs)), res$warnings)
     })
   })
 
@@ -444,19 +499,21 @@ scenario_server <- function(input, output, session) {
   # prices replace this scenario's. The other scenario is not changed.
   hpr <- reactiveVal(NULL)    # list(side, data = read_hpr() result, file)
   hpr_err <- reactiveVal(NULL)
-  SP_CHOICES <- HPR_SPECIES_CHOICES
 
-  hpr_modal <- function(side) modalDialog(
-    title = sprintf("Import from .hpr into Scenario %s", side),
-    size = "xl", easyClose = FALSE, fade = FALSE,
-    # No intro text and no label (2026-10-23); the upload limit stays
-    # (HPR_MAX_UPLOAD_MB, setup.R).
-    fileInput("hpr_file", NULL, accept = c(".hpr", ".zip", ".gz"), width = "100%"),
-    uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
-    uiOutput("hpr_msg"),
-    footer = tagList(modalButton("Cancel"),
-                     actionButton("hpr_apply", sprintf("Replace Scenario %s", side),
-                                  class = "btn-primary", disabled = TRUE)))
+  hpr_modal <- function(side) {
+    l <- isolate(lang())
+    modalDialog(
+      title = tr("hpr_title", side, lang = l),
+      size = "xl", easyClose = FALSE, fade = FALSE,
+      # No intro text and no label (2026-10-23); the upload limit stays
+      # (HPR_MAX_UPLOAD_MB, setup.R).
+      file_input_lang("hpr_file", NULL, accept = c(".hpr", ".zip", ".gz"), lang = l),
+      uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
+      uiOutput("hpr_msg"),
+      footer = tagList(modalButton(tr("btn_cancel", lang = l)),
+                       actionButton("hpr_apply", tr("btn_replace_scenario", side, lang = l),
+                                    class = "btn-primary", disabled = TRUE)))
+  }
 
   for (side in c("A", "B")) local({
     side <- side
@@ -486,7 +543,7 @@ scenario_server <- function(input, output, session) {
       (isTRUE(file.copy(f$datapath, kept, overwrite = TRUE)) && isTRUE(file.remove(f$datapath)))
     if (!moved) kept <- f$datapath
     hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
-    data <- withProgress(message = sprintf("Reading %s...", f$name), value = 0.5,
+    data <- withProgress(message = L("prog_reading", f$name), value = 0.5,
                          read_hpr(kept, f$name))
     hpr(utils::modifyList(hpr(), list(data = data, file = f$name)))
     hpr_err(NULL)
@@ -498,13 +555,13 @@ scenario_server <- function(input, output, session) {
   observe(updateActionButton(session, "hpr_apply", disabled = !isTRUE(hpr_data()$ok)))
 
   output$hpr_check <- renderUI({
-    d <- hpr_data(); req(d)
+    d <- hpr_data(); req(d); l <- lang()
     tagList(
-      if (length(d$errors)) div(class = "pm-msg-error", paste(c("The file cannot be imported:", d$errors),
+      if (length(d$errors)) div(class = "pm-msg-error", paste(c(L("hpr_cannot_import"), tr_msg(d$errors, l)),
                                                               collapse = "\n")),
-      if (isTRUE(d$ok)) div(class = "hpr-summary", sprintf("%d species groups · %d products with prices",
-                                                           nrow(d$species), length(d$products))),
-      if (length(d$warnings)) div(class = "hpr-warn", paste("Warning:", d$warnings, collapse = "\n")))
+      if (isTRUE(d$ok)) div(class = "hpr-summary", L("hpr_summary", nrow(d$species), length(d$products))),
+      if (length(d$warnings)) div(class = "hpr-warn",
+                                  paste(paste(L("lbl_warning"), tr_msg(d$warnings, l)), collapse = "\n")))
   })
 
   # Species group key -> "spruce" / "pine" / "none": the dialog's choice,
@@ -520,38 +577,52 @@ scenario_server <- function(input, output, session) {
     d <- hpr_data(); req(isTRUE(d$ok))
     guess <- guess_hpr_species(d$species$name, d$species$user_id)
     tagList(
-      div(class = "section-hdr", "Species groups"),
+      div(class = "section-hdr", L("hdr_species_groups")),
       tags$table(class = "hpr-table",
-        tags$thead(tags$tr(tags$th("Key"), tags$th("Species group"), tags$th("User ID"),
-                           tags$th("Products"), tags$th("Apter species"))),
+        tags$thead(tags$tr(tags$th(L("col_key")), tags$th(L("col_species_group")), tags$th(L("col_user_id")),
+                           tags$th(L("col_products")), tags$th(L("col_apter_species")))),
         tags$tbody(lapply(seq_len(nrow(d$species)), function(i) tags$tr(
           tags$td(d$species$key[i]), tags$td(d$species$name[i]),
           tags$td(or_default(d$species$user_id[i], "")), tags$td(d$species$n_products[i]),
-          tags$td(selectInput(paste0("hpr_sp_", d$species$key[i]), NULL, SP_CHOICES,
+          tags$td(selectInput(paste0("hpr_sp_", d$species$key[i]), NULL, hpr_species_choices(lang()),
                               isolate(or_default(input[[paste0("hpr_sp_", d$species$key[i])]], guess[i])),
                               width = "130px")))))))
   })
 
+  # "130–360 mm (14 classes)" in the viewer's language.
+  hpr_range_text <- function(x, l) {
+    if (l == "en") return(x)
+    m <- regmatches(x, regexec("^(.*) \\(([0-9]+) class(es)?\\)$", x))
+    vapply(seq_along(x), function(i) {
+      p <- m[[i]]; if (length(p) == 0L) return(x[i])
+      paste(p[2L], tr(if (nzchar(p[4L])) "hpr_classes" else "hpr_class_1", p[3L], lang = l))
+    }, "")
+  }
   output$hpr_products <- renderUI({
-    d <- hpr_data(); req(isTRUE(d$ok))
+    d <- hpr_data(); req(isTRUE(d$ok)); l <- lang()
     tab <- hpr_product_table(d, hpr_map())
+    species_txt <- function(x) if (x == "none") L("sp_not_used")
+      else paste(tr_value(tools::toTitleCase(strsplit(x, ", ", fixed = TRUE)[[1L]]), l), collapse = ", ")
     tagList(
-      div(class = "section-hdr", "Products"),
+      div(class = "section-hdr", L("col_products")),
       tags$table(class = "hpr-table",
-        tags$thead(tags$tr(tags$th("Import"), tags$th("Product"), tags$th("Species group"),
-                           tags$th("Species"), tags$th("Top Ø classes"), tags$th("Length classes (cm)"),
-                           tags$th("Forbidden cells"), tags$th(""))),
+        tags$thead(tags$tr(tags$th(L("col_import")), tags$th(L("col_product")), tags$th(L("col_species_group")),
+                           tags$th(L("col_species")), tags$th(L("col_top_classes")), tags$th(L("col_length_classes_cm")),
+                           tags$th(L("col_forbidden_cells")), tags$th(""))),
         tags$tbody(lapply(seq_len(nrow(tab)), function(i) tags$tr(
           class = if (!tab$default[i]) "hpr-off",
           tags$td(class = "hpr-tick", if (tab$species[i] == "none") "–"
-                  else checkboxInput(paste0("hpr_pr_", tab$key[i]), NULL, tab$default[i], width = "auto")),
+                  else checkboxInput(paste0("hpr_pr_", tab$key[i]), NULL,
+                                     isolate(or_default(input[[paste0("hpr_pr_", tab$key[i])]], tab$default[i])),
+                                     width = "auto")),
           tags$td(tab$name[i]), tags$td(tab$group[i]),
-          tags$td(if (tab$species[i] == "none") "Not used" else tools::toTitleCase(tab$species[i])),
-          tags$td(class = "hpr-nowrap", tab$diameters[i]), tags$td(class = "hpr-nowrap", tab$lengths[i]),
-          tags$td(tab$forbidden[i]), tags$td(class = "note-muted", tab$reason[i]))))))
+          tags$td(species_txt(tab$species[i])),
+          tags$td(class = "hpr-nowrap", hpr_range_text(tab$diameters[i], l)),
+          tags$td(class = "hpr-nowrap", hpr_range_text(tab$lengths[i], l)),
+          tags$td(tab$forbidden[i]), tags$td(class = "note-muted", tr_msg(tab$reason[i], l)))))))
   })
   output$hpr_msg <- renderUI({
-    e <- hpr_err(); if (!is.null(e)) div(class = "pm-msg-error", paste(e, collapse = "\n"))
+    e <- hpr_err(); if (!is.null(e)) div(class = "pm-msg-error", render_msg(e))
   })
 
   observeEvent(input$hpr_apply, {
@@ -560,9 +631,9 @@ scenario_server <- function(input, output, session) {
     tab <- hpr_product_table(d, map)
     keep <- tab$key[tab$species != "none" &
                     vapply(tab$key, function(k) isTRUE(input[[paste0("hpr_pr_", k)]]), logical(1))]
-    if (length(keep) == 0L) return(hpr_err("Tick at least one product to import."))
+    if (length(keep) == 0L) return(hpr_err(T_("hpr_tick_one")))
     res <- hpr_to_scenario(d, map, keep, base_defs = APP_DEFS)
-    if (!isTRUE(res$ok)) return(hpr_err(c(sprintf("%s was not imported:", h$file), res$errors)))
+    if (!isTRUE(res$ok)) return(hpr_err(c(list(T_("hpr_not_imported", h$file)), as.list(res$errors))))
     if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
     selected(keys_of(res$defs)[asm_order(res$defs)][1L])
     # Keep the imported file and the confirmed map for the ".hpr stems" source.
@@ -577,16 +648,15 @@ scenario_server <- function(input, output, session) {
     }
     redraw(); removeModal()
     n <- sum(res$defs$Type != "waste")
-    say(side, "ok", sprintf("Imported %d assortment%s from %s into Scenario %s.",
-                            n, if (n == 1L) "" else "s", h$file, side), res$warnings)
+    say(side, "ok", T_(if (n == 1L) "msg_imported_1" else "msg_imported", n, h$file, side), res$warnings)
   })
 
   msg_ui <- function(m) {
     if (is.null(m)) return(NULL)
     tagList(
-      div(class = if (identical(m$type, "error")) "pm-msg-error" else "pm-msg-ok", m$text),
+      div(class = if (identical(m$type, "error")) "pm-msg-error" else "pm-msg-ok", render_msg(m$text)),
       if (length(m$warnings) > 0L)
-        div(class = "pm-msg-warn", paste("Warning:", m$warnings, collapse = "\n")))
+        div(class = "pm-msg-warn", paste(paste(L("lbl_warning"), tr_msg(m$warnings, lang())), collapse = "\n")))
   }
   output$msg_a <- renderUI(msg_ui(msgs$A()))
   output$msg_b <- renderUI(msg_ui(msgs$B()))
@@ -597,28 +667,39 @@ scenario_server <- function(input, output, session) {
   # shows its editable grid with the row/column buttons, a flat-priced one a
   # single price field. Cells (or the price) that differ from the other
   # scenario, or have no counterpart there, are highlighted.
-  price_file_label <- function(ids) ifelse(ids == PM_FLAT_ID, "Flat prices", key_label(ids))
   flat_price <- function(side, k) {
     p <- pm_minimal(prices(side))
     v <- p$PriceNOKperM3[p$ProductKey == k & is.na(p$LengthClass_dm)]
     if (length(v)) as.numeric(v[1L]) else NA_real_
   }
 
+  # rhandsontable's context menu: undo and redo in the viewer's language
+  # (rows and columns are edited with the buttons; the alignment submenu,
+  # which cannot be translated and has no use for prices, is left out).
   pm_widget <- function(grid, id, def) {
+    l <- isolate(lang())
     # Full height, no scrolling inside the grid: every row is on the page
     # (a 480 px box hid rows added at the end, 2026-10-22).
     w <- rhandsontable(grid, rowHeaders = rownames(grid), colHeaders = colnames(grid),
                        rowHeaderWidth = 50, height = 34 + 24 * nrow(grid),
                        stretchH = "all", matrix_id = id, def = def)
     w <- hot_cols(w, renderer = PM_DIFF_RENDERER, columnSorting = FALSE)
-    w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE)
+    # Norsk: prices with a decimal comma (numbro's nb-NO culture, shipped
+    # with rhandsontable); English as before.
+    if (l == "no") w <- hot_col(w, col = seq_len(ncol(grid)), format = "0.00", language = "nb-NO")
+    w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE, allowReadOnly = FALSE,
+                          allowComments = FALSE, allowCustomBorders = FALSE,
+                          customOpts = list(
+                            undo = list(name = tr("hot_undo", lang = l)),
+                            redo = list(name = tr("hot_redo", lang = l))))
+    w$x$contextMenu$items <- w$x$contextMenu$items[!grepl("^(alignment|hsep)", names(w$x$contextMenu$items))]
     hot_validate_numeric(w, cols = seq_len(ncol(grid)), min = 0)
   }
 
   # Both scenarios editable; a cell that differs from the other scenario
   # (or has no counterpart there) is highlighted.
   render_grid <- function(side) renderRHandsontable({
-    pm_tick(); id <- selected()
+    pm_tick(); id <- selected(); lang()
     req(id, sel_state(side) == "matrix")
     pm <- isolate(prices(side)); o <- other(side)
     po <- isolate(prices(o)); do <- isolate(defs(o))
@@ -648,7 +729,7 @@ scenario_server <- function(input, output, session) {
     if (!identical(dim(g), dim(ref))) return()
     rownames(g) <- rownames(ref); colnames(g) <- colnames(ref)
     if (any(as.matrix(g) < 0, na.rm = TRUE)) {
-      say(side, "error", "Negative prices are not allowed; the edit was undone.")
+      say(side, "error", T_("err_negative_price"))
       redraw(); return()
     }
     sc[[side]]$pm(pm_from_grid(g, id, isolate(prices(side))))
@@ -667,7 +748,7 @@ scenario_server <- function(input, output, session) {
     d <- defs(side); i <- match(k, keys_of(d))
     if (is.na(i) || d$PriceType[i] != "flat" || length(v) != 1L || is.na(v)) return()
     if (v < 0) {
-      say(side, "error", "Negative prices are not allowed; the edit was undone.")
+      say(side, "error", T_("err_negative_price"))
       redraw(); return()
     }
     if (isTRUE(all.equal(v, flat_price(side, k)))) return()
@@ -681,15 +762,15 @@ scenario_server <- function(input, output, session) {
     b <- function(n, l) actionButton(paste0(s, n), l, class = "btn-secondary btn-sm")
     div(class = "pm-axes",
       div(class = "pm-axes-row",
-          span(class = "pm-axes-lbl", "Diameter classes"),
-          b("_cls_add_lo", "+ smaller"), b("_cls_rm_lo", "− smallest"),
-          b("_cls_add_hi", "+ larger"), b("_cls_rm_hi", "− largest")),
+          span(class = "pm-axes-lbl", L("lbl_diameter_classes")),
+          b("_cls_add_lo", L("btn_cls_add_lo")), b("_cls_rm_lo", L("btn_cls_rm_lo")),
+          b("_cls_add_hi", L("btn_cls_add_hi")), b("_cls_rm_hi", L("btn_cls_rm_hi"))),
       div(class = "pm-axes-row",
-          span(class = "pm-axes-lbl", "Lengths (dm)"),
+          span(class = "pm-axes-lbl", L("lbl_lengths_dm")),
           numericInput(paste0(s, "_len_new"), NULL, NA, min = 1, step = 1, width = "90px"),
-          b("_len_add", "Add"),
+          b("_len_add", L("btn_add")),
           selectInput(paste0(s, "_len_pick"), NULL, lens, width = "90px"),
-          b("_len_rm", "Remove")))
+          b("_len_rm", L("btn_remove"))))
   }
 
   # Reset prices: a base assortment priced as by default gets its default
@@ -708,8 +789,9 @@ scenario_server <- function(input, output, session) {
       cls <- suppressWarnings(max(as.integer(rownames(pm_to_grid(prices(side), id)))))
       d <- defs(side); top <- d$MaxTopDiameter_cm[match(id, keys_of(d))]
       req(is.finite(cls))
-      txt <- if (!is.finite(top)) sprintf("≥ %d cm: priced as %d", cls, cls)
-             else if (floor(top) > cls) sprintf("≥ %d cm: priced as %d up to max top %s cm", cls, cls, format(top))
+      top_txt <- if (lang() == "no") sub(".", ",", format(top), fixed = TRUE) else format(top)
+      txt <- if (!is.finite(top)) L("pm_cap", cls, cls)
+             else if (floor(top) > cls) L("pm_cap_top", cls, cls, top_txt)
       if (!is.null(txt)) div(class = "pm-cap", txt)
     })
     output[[paste0(p, "_axes")]] <- renderUI({
@@ -735,12 +817,12 @@ scenario_server <- function(input, output, session) {
                  edit(function(pm, id) pm_remove_length(pm, id, input[[paste0(p, "_len_pick")]])))
 
     # The flat price field, rendered per assortment (data-key: the key its
-    # edits are written to). Re-rendered on selection and resets, not on
-    # its own edits, so typing keeps the focus.
+    # edits are written to). Re-rendered on selection, resets and a language
+    # switch, not on its own edits, so typing keeps the focus.
     output[[paste0("flat_", s)]] <- renderUI({
       pm_tick(); k <- selected(); req(k, sel_state(side) == "flat")
       div(class = "asm-flat-input", `data-side` = side, `data-key` = k,
-          numericInput(paste0("flat_price_", s), "Price (NOK/m³ under bark)",
+          numericInput(paste0("flat_price_", s), L("lbl_flat_price"),
                        isolate(flat_price(side, k)), min = 0, width = "200px"))
     })
     # The other scenario's flat price, highlighted when it differs.
@@ -753,8 +835,8 @@ scenario_server <- function(input, output, session) {
       session$sendCustomMessage("apter_toggle_class",
                                 list(id = paste0("flat_wrap_", s), cls = "is-diff", on = differs))
       span(class = paste("asm-flat-other", if (differs) "asm-diff"),
-           if (is.na(theirs)) sprintf("No flat price in Scenario %s", o)
-           else sprintf("Scenario %s: %s NOK/m³", o, format(theirs, big.mark = ",")))
+           if (is.na(theirs)) L("flat_none_other", o)
+           else L("flat_other", o, fmt_num(theirs, if (theirs %% 1 == 0) 0L else 2L, lang())))
     })
 
     # Reset prices of the selected assortment (base assortments priced as by
@@ -764,10 +846,10 @@ scenario_server <- function(input, output, session) {
     observeEvent(input[[paste0(p, "_reset")]], {
       k <- selected()
       if (!isTRUE(k %in% base_reset_keys(defs(side))))
-        return(say(side, "error", sprintf("%s has no default prices.", key_label(k))))
+        return(say(side, "error", T_("err_no_default_prices", key_text(k))))
       if (commit(side, defs(side), swap_prices(prices(side), k,
                                                APP_PM_DEFAULT[APP_PM_DEFAULT$ProductKey == k, , drop = FALSE]))) {
-        redraw(); say(side, "ok", sprintf("Prices of %s reset.", key_label(k)))
+        redraw(); say(side, "ok", T_("msg_prices_reset", key_text(k)))
       }
     })
 
@@ -777,21 +859,20 @@ scenario_server <- function(input, output, session) {
       f <- input[[paste0(p, "_upload")]]; req(f); k <- selected()
       res <- upload_assortment_prices(f$datapath, f$name, defs(side), prices(side), k)
       if (!isTRUE(res$ok))
-        return(say(side, "error", paste(c(sprintf("%s was not loaded:", f$name), res$errors), collapse = "\n")))
+        return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
       sc[[side]]$pm(res$pm); redraw()
-      say(side, "ok", paste0(sprintf("Loaded prices of %s from %s.", key_label(k), f$name),
-                             if (length(res$ignored))
-                               sprintf(" Ignored (other assortments): %s.",
-                                       paste(price_file_label(res$ignored), collapse = ", "))),
+      say(side, "ok", if (length(res$ignored))
+                        T_("msg_loaded_asm_prices_ignored", key_text(k), f$name, price_file_text(res$ignored))
+                      else T_("msg_loaded_asm_prices", key_text(k), f$name),
           res$warnings)
     })
     # Download the selected assortment's prices.
     sel_prices <- function() { pm <- pm_minimal(prices(side)); pm[pm$ProductKey == selected(), , drop = FALSE] }
     output[[paste0("dl_", s, "_wide")]] <- downloadHandler(
-      filename = function() sprintf("optBuck_prices_%s_%s.xlsx", side, selected()),
+      filename = function() L("file_prices_xlsx", side, selected()),
       content = function(file) pm_template_wide(sel_prices(), file))
     output[[paste0("dl_", s, "_long")]] <- downloadHandler(
-      filename = function() sprintf("optBuck_prices_%s_%s.csv", side, selected()),
+      filename = function() L("file_prices_csv", side, selected()),
       content = function(file) pm_export(sel_prices(), file))
   })
 

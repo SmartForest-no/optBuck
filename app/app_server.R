@@ -10,13 +10,35 @@
 #           scenario_server() (server_scenarios.R, Phase 4d); this file holds
 #           the Simulator: tree sources, runs and results.
 #           Internal names: "default" and "scenario" in the backend mean A and B.
+#
+# Text    : every text comes from the translation table in the viewer's
+#           language, lang() (R/helpers_i18n.R): tr() by id, tr_msg() for the
+#           backend's English messages, tr_value() for data values. Outputs
+#           depend on lang(), so a switch re-renders them; nothing else
+#           changes.
 
 # ---- server -----------------------------------------------------------------
 server <- function(input, output, session) {
 
+  # ---- language (Phase 1, 2026-10-27) ----------------------------------------
+  # The browser sends input$lang (the navbar switch, remembered per browser;
+  # www/apter.js). Until it arrives: the page's start language.
+  lang <- reactive(i18n_lang(or_default(input$lang, APP_LANG)))
+  L <- function(id, ...) tr(id, ..., lang = lang())
+  fmt_int <- function(x) fmt_num(x, 0L, lang())
+  # Plain selects carry their labels as choice names: re-labelled on a switch.
+  observeEvent(lang(), {
+    updateSelectInput(session, "species_group", choices = species_group_choices(lang()),
+                      selected = isolate(input$species_group))
+    updateSelectInput(session, "fylnr_sel", choices = fylnr_choices(lang()),
+                      selected = isolate(input$fylnr_sel))
+  }, ignoreInit = TRUE)
+
+
   # ---- Sidebar: NFI selection ----------------------------------------------
 
   # Bonitet choices: values available for the selected HKL group and county.
+  abon_lang <- NULL                 # the language of the last render
   output$abonitet_ui <- renderUI({
     hkl_raw    <- unlist(HKL_MAP[input$hkl_group])
     fyl        <- selected_fylnr(input$fylnr_sel)
@@ -24,13 +46,14 @@ server <- function(input, output, session) {
     abon_avail <- as.character(sort(unique(as.integer(sub$abonitet))))
     if (length(abon_avail) == 0L)
       abon_avail <- as.character(sort(unique(as.integer(plots_prod$abonitet))))
-    lbl <- BONITET_LABELS[abon_avail]
-    lbl[is.na(lbl)] <- abon_avail[is.na(lbl)]
-    choices_named <- setNames(abon_avail, lbl)
     pref <- intersect(c("14", "11", "17"), abon_avail)
     sel  <- if (length(pref) > 0L) pref else abon_avail[1L]
-    checkboxGroupInput("abonitet", "Site class (bonitet)",
-                       choiceNames  = unname(choices_named),
+    # A language switch keeps the ticked classes (another stratum resets them).
+    l <- lang(); cur <- intersect(isolate(input$abonitet), abon_avail)
+    if (!identical(abon_lang, l) && !is.null(abon_lang) && length(cur)) sel <- cur
+    abon_lang <<- l
+    checkboxGroupInput("abonitet", L("lbl_site_class"),
+                       choiceNames  = unname(bonitet_labels(abon_avail, lang())),
                        choiceValues = abon_avail,
                        selected     = sel)
   })
@@ -40,11 +63,16 @@ server <- function(input, output, session) {
     hkl_raw <- unlist(HKL_MAP[input$hkl_group])
     abon    <- as.integer(input$abonitet)
     if (length(hkl_raw) == 0L || length(abon) == 0L)
-      return(div(class = "note-error", "Select at least one maturity class and one site class."))
+      return(div(class = "note-error", L("err_select_class")))
     if (count_eligible_plots(plots_prod, hkl_raw, abon, selected_fylnr(input$fylnr_sel),
                              selected_hoh(input$hoh_range)) == 0L)
-      div(class = "note-error", "No plots match this selection.")
+      div(class = "note-error", L("err_no_plots"))
   })
+
+  # Backend messages (English) in the viewer's language, one per line.
+  lines_of <- function(x) paste(tr_msg(x, lang()), collapse = "\n")
+  warn_div <- function(w) if (length(w) > 0L)
+    div(class = "pm-msg-warn", paste(paste0(L("lbl_warning"), " ", tr_msg(w, lang())), collapse = "\n"))
 
   # ---- Uploaded tree list (Phase 5; R/helpers_tree_list.R) -----------------
   tl_prepared <- reactiveVal(NULL)   # prepare_tree_list() result + $file
@@ -54,7 +82,7 @@ server <- function(input, output, session) {
     rd <- read_tree_list(f$datapath, f$name)
     p <- if (length(rd$errors) > 0L)
       list(ok = FALSE, errors = rd$errors, warnings = character(0))
-    else withProgress(message = "Checking the tree list and imputing heights...", value = 0.5,
+    else withProgress(message = L("prog_tree_list"), value = 0.5,
                       prepare_tree_list(rd$data))
     p$file <- f$name
     tl_prepared(p)
@@ -68,28 +96,29 @@ server <- function(input, output, session) {
     tagList(
       div(class = if (isTRUE(p$ok)) "pm-msg-ok" else "pm-msg-error",
           if (isTRUE(p$ok))
-            sprintf("%s: %d trees, %d within taperNOR's range.", p$file, nrow(p$trees),
-                    sum(p$trees$in_range))
-          else paste(c(sprintf("%s cannot be used:", p$file), p$errors), collapse = "\n")),
-      if (length(p$warnings) > 0L)
-        div(class = "pm-msg-warn", paste("Warning:", p$warnings, collapse = "\n")),
+            L("tl_ok", p$file, fmt_int(nrow(p$trees)), fmt_int(sum(p$trees$in_range)))
+          else paste(c(L("err_file_unusable", p$file), tr_msg(p$errors, lang())), collapse = "\n")),
+      warn_div(p$warnings),
       if (!is.null(ex) && nrow(ex) > 0L)
         tags$details(class = "tl-excluded",
-          tags$summary(sprintf("%d tree(s) not bucked", nrow(ex))),
+          tags$summary(L("tl_not_bucked", fmt_int(nrow(ex)))),
           tags$ul(lapply(seq_len(nrow(ex)), function(i)
-            tags$li(sprintf("%s: %s", ex$treid[i], ex$excluded_reason[i]))))),
+            tags$li(sprintf("%s: %s", ex$treid[i], tr_msg(ex$excluded_reason[i], lang())))))),
       if (!is.null(h) && nrow(h) > 0L)
         div(class = "tl-heights",
-            div(class = "section-hdr", "Heights"),
-            tags$ul(lapply(seq_len(nrow(h)), function(i) tags$li(sprintf(
-              "%s: %d trees, %d measured; %s%s", h$species[i], h$n_trees[i], h$n_measured[i],
-              if (h$method[i] == "fieldPlot") sprintf("fieldPlot (%s)", h$model[i]) else h$method[i],
-              if (!is.na(h$ratio[i])) sprintf(", ratio %.2f", h$ratio[i]) else "")))))
+            div(class = "section-hdr", L("hdr_heights")),
+            tags$ul(lapply(seq_len(nrow(h)), function(i) {
+              args <- list(tr_value(h$species[i], lang()), fmt_int(h$n_trees[i]), fmt_int(h$n_measured[i]),
+                           if (h$method[i] == "fieldPlot") sprintf("fieldPlot (%s)", h$model[i])
+                           else tr_msg(h$method[i], lang()))
+              tags$li(if (is.na(h$ratio[i])) do.call(L, c("tl_heights_line", args))
+                      else do.call(L, c("tl_heights_line_ratio", args, fmt_num(h$ratio[i], 2L, lang()))))
+            })))
     )
   })
 
   output$dl_tree_template <- downloadHandler(
-    filename = function() "apter_tree_list_template.csv",
+    filename = function() L("file_tree_template"),
     content  = function(file) tree_list_template(file))
 
 
@@ -117,9 +146,11 @@ server <- function(input, output, session) {
   hs_stems   <- reactiveVal(NULL)   # read_hpr_stems() result, plus $path and $read_id
   hs_reading <- reactiveVal(NULL)   # the file being read
   hs_reads   <- 0L
+  # The error stays English (like the backend's messages): it is translated
+  # when shown.
   hs_task <- ExtendedTask$new(function(path, name)
     promises::catch(read_hpr_stems_async(path, name), function(e)
-      list(ok = FALSE, errors = sprintf("%s cannot be read: %s", name, conditionMessage(e)),
+      list(ok = FALSE, errors = sprintf("The stems of %s cannot be read: %s", name, conditionMessage(e)),
            warnings = character(0), file = name)))
   observe({
     req(identical(input$tree_source, "hpr"))
@@ -141,11 +172,10 @@ server <- function(input, output, session) {
     imp <- sc$hpr_imported(); own <- hs_own()
     tagList(
       if (!is.null(imp) && is.null(own))
-        div(class = "hs-file", sprintf("Using %s (imported into Scenario %s).", imp$name, imp$side)),
-      fileInput("hs_upload",
-                if (is.null(imp)) sprintf("Harvester production file (.hpr, or .hpr in .zip / .gz; up to %d MB)",
-                                          HPR_MAX_UPLOAD_MB)
-                else "Use another file", accept = c(".hpr", ".zip", ".gz"), width = "100%"))
+        div(class = "hs-file", L("hs_using", imp$name, imp$side)),
+      file_input_lang("hs_upload",
+                      if (is.null(imp)) L("lbl_hpr_file", HPR_MAX_UPLOAD_MB) else L("lbl_hpr_other"),
+                      accept = c(".hpr", ".zip", ".gz"), lang = lang()))
   })
 
   # Species group key -> "spruce" / "pine" / "none": the panel's choice, else
@@ -171,13 +201,15 @@ server <- function(input, output, session) {
     def <- hs_default(st)
     sp <- st$species[st$species$n_stems > 0L, , drop = FALSE]
     tagList(
-      div(class = "section-hdr", "Species groups"),
+      div(class = "section-hdr", L("hdr_species_groups")),
       tags$table(class = "hpr-table hs-species",
-        tags$thead(tags$tr(tags$th("Species group"), tags$th("Stems"), tags$th("Apter species"))),
+        tags$thead(tags$tr(tags$th(L("col_species_group")), tags$th(L("col_stems")),
+                           tags$th(L("col_apter_species")))),
         tags$tbody(lapply(seq_len(nrow(sp)), function(i) tags$tr(
           tags$td(sprintf("%s (%s)", sp$name[i], sp$key[i])),
-          tags$td(format(sp$n_profiles[i], big.mark = ",")),
-          tags$td(selectInput(hs_sp_id(st, sp$key[i]), NULL, HPR_SPECIES_CHOICES, def[[sp$key[i]]],
+          tags$td(fmt_int(sp$n_profiles[i])),
+          tags$td(selectInput(hs_sp_id(st, sp$key[i]), NULL, hpr_species_choices(lang()),
+                              isolate(or_default(input[[hs_sp_id(st, sp$key[i])]], def[[sp$key[i]]])),
                               width = "115px")))))))
   })
 
@@ -189,17 +221,14 @@ server <- function(input, output, session) {
   })
   output$hs_validation <- renderUI({
     f <- hs_reading()
-    if (!is.null(f)) return(div(class = "note-muted", sprintf("Reading the stems of %s...", f$name)))
+    if (!is.null(f)) return(div(class = "note-muted", L("hs_reading", f$name)))
     ck <- hs_check(); req(ck)
-    fmt <- function(n) format(n, big.mark = ",")
-    head <- if (!is.null(ck$n_read))
-      sprintf("%s: %s stems read, %s used.", ck$file, fmt(ck$n_read), fmt(ck$n_used))
+    head <- if (!is.null(ck$n_read)) L("hs_summary", ck$file, fmt_int(ck$n_read), fmt_int(ck$n_used))
     tagList(
       if (isTRUE(ck$ok)) div(class = "pm-msg-ok", head)
-      else div(class = "pm-msg-error", paste(c(if (!is.null(head)) head else sprintf("%s cannot be used:", ck$file),
-                                               ck$errors), collapse = "\n")),
-      if (length(ck$warnings) > 0L)
-        div(class = "pm-msg-warn", paste("Warning:", ck$warnings, collapse = "\n")))
+      else div(class = "pm-msg-error", paste(c(if (!is.null(head)) head else L("err_file_unusable", ck$file),
+                                               tr_msg(ck$errors, lang())), collapse = "\n")),
+      warn_div(ck$warnings))
   })
 
 
@@ -210,30 +239,30 @@ server <- function(input, output, session) {
   sel_counts <- reactive({
     if (identical(input$tree_source, "list")) {
       p <- tl_prepared(); req(p, isTRUE(p$ok))
-      tr <- p$trees[p$trees$in_range, , drop = FALSE]
-      pl <- unique(tr$plot_id[!is.na(tr$plot_id)])
-      return(tree_counts(tr$species_group, if (length(pl)) length(pl) else NA_integer_))
+      trees <- p$trees[p$trees$in_range, , drop = FALSE]
+      pl <- unique(trees$plot_id[!is.na(trees$plot_id)])
+      return(tree_counts(trees$species_group, if (length(pl)) length(pl) else NA_integer_, lang = lang()))
     }
     if (identical(input$tree_source, "hpr")) {
       ck <- hs_check(); req(isTRUE(ck$ok))
-      return(tree_counts(ck$species_used, NA_integer_, unit = "stem"))
+      return(tree_counts(ck$species_used, NA_integer_, unit = "stem", lang = lang()))
     }
     req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
     sel <- select_nfi_trees(trees_meta, build_run_params(input))
-    tree_counts(sel$trees$species_group, length(sel$plots))
+    tree_counts(sel$trees$species_group, length(sel$plots), lang = lang())
   })
   output$tree_counts <- renderUI({
     n <- sel_counts()
     secs <- estimate_run_seconds(n$n_trees, APP_WORKERS, compare = sc$differ())
     div(class = "tree-counts",
       div(class = "tree-counts-n", n$text),
-      if (n$n_trees > 0L) div(class = "tree-counts-time", sprintf("Estimated run time: about %s",
-        if (secs < 90) sprintf("%.0f s", secs) else sprintf("%.0f min", secs / 60))))
+      if (n$n_trees > 0L) div(class = "tree-counts-time", L("tc_time",
+        if (secs < 90) L("unit_s", fmt_int(secs)) else L("unit_min", fmt_int(secs / 60)))))
   })
 
 
   # ---- Assortments and prices (server_scenarios.R) ---------------------------
-  sc <- scenario_server(input, output, session)
+  sc <- scenario_server(input, output, session, lang)
 
 
   # ---- Runs as background tasks (helpers_jobs.R) ---------------------------
@@ -256,7 +285,8 @@ server <- function(input, output, session) {
       res
     })
     p <- promises::catch(p, function(e) {
-      showNotification(paste0("Backend error: ", conditionMessage(e)), type = "error",
+      l <- isolate(lang())
+      showNotification(tr("err_backend", tr_msg(conditionMessage(e), l), lang = l), type = "error",
                        duration = NULL, session = session)
       NULL
     })
@@ -278,21 +308,21 @@ server <- function(input, output, session) {
     src <- if (input$tree_source %in% c("list", "hpr")) input$tree_source else "nfi"
     tl  <- if (src == "list") tl_prepared() else NULL
     if (src == "list" && !isTRUE(tl$ok))
-      return(reject("Upload a tree list that passes the checks first."))
+      return(reject(L("err_run_tree_list")))
     hs <- if (src == "hpr") tryCatch(hs_check(), error = function(e) NULL)
     if (src == "hpr" && !isTRUE(hs$ok))
-      return(reject("Choose an .hpr file whose stems pass the checks first."))
+      return(reject(L("err_run_hpr")))
     if (src == "nfi" && (length(input$hkl_group) == 0L || length(input$abonitet) == 0L))
-      return(reject("Select at least one maturity class and one site class."))
+      return(reject(L("err_select_class")))
 
     d <- sc$defs_a(); a <- pm_minimal(sc$pm_a())
     va <- check_price_set(d, a)
-    if (!va$ok) return(reject(paste(c("Scenario A cannot be used:", va$errors), collapse = "\n")))
+    if (!va$ok) return(reject(paste(c(L("err_scen_unusable", "A"), tr_msg(va$errors, lang())), collapse = "\n")))
     compare <- sc$differ(); b <- NULL
     if (compare) {
       b <- list(defs = sc$defs_b(), pm = pm_minimal(sc$pm_b()))
       vb <- check_price_set(b$defs, b$pm)
-      if (!vb$ok) return(reject(paste(c("Scenario B cannot be used:", vb$errors), collapse = "\n")))
+      if (!vb$ok) return(reject(paste(c(L("err_scen_unusable", "B"), tr_msg(vb$errors, lang())), collapse = "\n")))
     }
     run_rejected(FALSE)
 
@@ -338,7 +368,7 @@ server <- function(input, output, session) {
   only_tag <- function(keys) {
     if (!compared()) return(rep("", length(keys)))
     k <- result()$keys
-    ifelse(!keys %in% k$B, " (A only)", ifelse(!keys %in% k$A, " (B only)", ""))
+    ifelse(!keys %in% k$B, L("tag_only", "A"), ifelse(!keys %in% k$A, L("tag_only", "B"), ""))
   }
 
   # B's run (the backend's $scenario), with its prices.
@@ -348,7 +378,8 @@ server <- function(input, output, session) {
     s
   })
   # One bar over the whole run: loading (unknown length: animated), then
-  # the stages' shares of the bar.
+  # the stages' shares of the bar. Stages are named by their English text
+  # (helpers_jobs.R) and shown through the table's values.
   STAGES <- list(nfi  = list("Bucking trees" = c(0.10, 0.95), "Summarising results" = c(0.95, 1)),
                  list = list("Taper profiles" = c(0, 0.40), "Bucking trees" = c(0.40, 0.95),
                              "Summarising results" = c(0.95, 1)),
@@ -360,9 +391,9 @@ server <- function(input, output, session) {
     rng <- STAGES[[run_src()]][[p$what]]
     known <- !is.null(rng) && !is.na(p$total) && p$total > 0L
     frac <- if (known) rng[1] + (rng[2] - rng[1]) * p$done / p$total else NA
+    what <- tr_value(p$what, lang())
     div(class = "status-running",
-        if (known) sprintf("%s: %s / %s", p$what, format(p$done, big.mark = ","),
-                           format(p$total, big.mark = ",")) else paste0(p$what, "..."),
+        if (known) sprintf("%s: %s / %s", what, fmt_int(p$done), fmt_int(p$total)) else paste0(what, "..."),
         div(class = "run-progress",
             if (known) div(class = "run-progress-bar", style = sprintf("width: %.0f%%", 100 * frac))
             else div(class = "run-progress-bar is-indeterminate")))
@@ -371,7 +402,7 @@ server <- function(input, output, session) {
   output$stale_notice <- renderUI({
     req(has_result())
     if (!identical(sc$pm_state(), result()$state))
-      div(class = "stale-notice", "Assortments or prices changed since this run.")
+      div(class = "stale-notice", L("stale_notice"))
   })
 
   # Heights from reference curves (tree lists): shown above all results.
@@ -380,8 +411,8 @@ server <- function(input, output, session) {
     w <- result()$height_warnings
     w <- w[grepl("FinnHoyde", w, fixed = TRUE)]
     if (length(w) == 0L) return(NULL)
-    div(class = "height-notice", tags$strong("Heights: "),
-        tagList(lapply(w, function(x) div(x))))
+    div(class = "height-notice", tags$strong(L("lbl_heights")), " ",
+        tagList(lapply(tr_msg(w, lang()), function(x) div(x))))
   })
 
 
@@ -390,91 +421,98 @@ server <- function(input, output, session) {
   # From the assortment's own name where a scenario has it ("Spruce 140 SCA
   # Sagtømmer"; only the name's first letter lowercased, so "Spruce
   # sawlog"), else from the key (2026-10-22: keys drop ø, å and capitals).
+  # In Norsk the species and the base names (Sawlog, Pulpwood, Waste) are
+  # translated ("Gran sagtømmer"); other names are the user's own.
   asm_label  <- function(k) {
+    l <- lang()
     k <- as.character(k)
     sp <- sub("_.*$", "", k); rest <- gsub("_", " ", sub("^[^_]+_", "", k))
-    out <- ifelse(grepl("_", k), paste(tools::toTitleCase(sp), rest), k)
+    out <- ifelse(grepl("_", k), paste(tr_value(tools::toTitleCase(sp), l), rest), k)
     d <- isolate(rbind(sc$defs_a(), sc$defs_b())); dk <- assortment_table_keys(d)
     i <- match(k, dk)
-    nm <- d$Name[i]; nm <- paste0(tolower(substring(nm, 1, 1)), substring(nm, 2))
-    ifelse(is.na(i), out, paste(tools::toTitleCase(d$Species[i]), nm))
+    nm <- tr_value(d$Name[i], l); nm <- paste0(tolower(substring(nm, 1, 1)), substring(nm, 2))
+    ifelse(is.na(i), out, paste(tr_value(tools::toTitleCase(d$Species[i]), l), nm))
   }
-  scope_label <- function(s) ifelse(s == "Total", "Total", tools::toTitleCase(as.character(s)))
+  scope_label <- function(s) tr_value(ifelse(s == "Total", "Total", tools::toTitleCase(as.character(s))), lang())
 
+  # Log table columns -> text ids.
   LOG_LABELS <- c(
-    plot_id_github = "Plot", treid = "Tree", species_group = "Species",
-    ProductKey = "Assortment", StartPos = "StartPos", StopPos = "StopPos",
-    LogLength = "Length (cm)", LengthClass_dm = "Length class (dm)",
-    TopDiameter_ob = "Top Ø over bark (mm)", TopDiameter_ub = "Top Ø under bark (mm)",
-    PriceDiameterClass_cm_uncapped = "Diameter class (cm)",
-    PriceDiameterClass_cm_used = "Price class used (cm)",
-    PriceNOKperM3 = "Price (NOK/m³)", price_volume_m3 = "Price volume (m³)",
-    commercial_volume_m3 = "Commercial volume u.b. (m³)", value_nok = "Value (NOK)")
+    plot_id_github = "col_plot", treid = "col_tree", species_group = "col_species",
+    ProductKey = "col_assortment", StartPos = "col_startpos", StopPos = "col_stoppos",
+    LogLength = "col_length_cm", LengthClass_dm = "col_length_class_dm",
+    TopDiameter_ob = "col_top_ob_mm", TopDiameter_ub = "col_top_ub_mm",
+    PriceDiameterClass_cm_uncapped = "col_diameter_class_cm",
+    PriceDiameterClass_cm_used = "col_price_class_used_cm",
+    PriceNOKperM3 = "col_price_nok_m3", price_volume_m3 = "col_price_volume_m3",
+    commercial_volume_m3 = "col_commercial_volume_m3", value_nok = "col_value_nok")
   # .hpr stems (hpr Phase B): no plots, so no Plot column or Plots figure;
   # stems instead of trees, measured length instead of tree height.
   is_hpr <- reactive(has_result() && identical(result()$tree_source, "hpr"))
-  drop_plot <- function(df) if (isTRUE(is_hpr())) df[, setdiff(names(df), "Plot"), drop = FALSE] else df
-  unit_lbl  <- function(trees = "Trees") if (isTRUE(is_hpr())) sub("Tree", "Stem", trees) else trees
-  height_lbl <- function() if (isTRUE(is_hpr())) "Measured length (m)" else "Height (m)"
+  drop_plot <- function(df) if (isTRUE(is_hpr())) df[, setdiff(names(df), L("col_plot")), drop = FALSE] else df
+  unit_id   <- function(id) if (isTRUE(is_hpr())) paste0(id, "_stems") else id
+  height_lbl <- function() L(if (isTRUE(is_hpr())) "col_measured_length_m" else "col_height_m")
+  species_lbl <- function(x) tr_value(tools::toTitleCase(x), lang())
 
   readable_logs <- function(sl) {
     if (isTRUE(is_hpr())) sl$plot_id_github <- NULL
     cols <- intersect(names(LOG_LABELS), names(sl))
     out <- sl[, cols, drop = FALSE]
     if ("ProductKey" %in% cols) out$ProductKey <- asm_label(out$ProductKey)
-    if ("species_group" %in% cols) out$species_group <- tools::toTitleCase(out$species_group)
+    if ("species_group" %in% cols) out$species_group <- species_lbl(out$species_group)
     for (n in intersect(c("price_volume_m3", "commercial_volume_m3"), cols)) out[[n]] <- round(out[[n]], 4)
     for (n in intersect(c("value_nok", "PriceNOKperM3"), cols)) out[[n]] <- round(out[[n]], 2)
-    names(out) <- unname(LOG_LABELS[cols])
+    names(out) <- L(unname(LOG_LABELS[cols]))
     out
   }
+  # A result CSV in the viewer's language and number format.
+  write_result_csv <- function(df, file, na = "NA") write_download_csv(df, file, lang(), na = na)
 
 
   # ---- Summary ----------------------------------------------------------------
-  fmt_int <- function(x) format(round(x), big.mark = ",", scientific = FALSE, trim = TRUE)
   output$summary_cards <- renderUI({
-    if (input$run_btn == 0L) return(div(class = "note-muted", "No run yet."))
-    req(has_result()); r <- result()
+    if (input$run_btn == 0L) return(div(class = "note-muted", L("no_run_yet")))
+    req(has_result()); r <- result(); l <- lang()
     tot <- function(r) r$per_m3_summary[r$per_m3_summary$scope == "Total", ]
-    vol   <- function(r) format(round(tot(r)$commercial_volume_m3, 2), nsmall = 2, big.mark = ",")
+    vol   <- function(r) fmt_num(tot(r)$commercial_volume_m3, 2L, l)
     value <- function(r) fmt_int(sum(r$selected_logs_all$value_nok, na.rm = TRUE))
-    nok   <- function(r) { x <- tot(r)$nok_per_m3; if (is.na(x)) "–" else format(round(x, 1), nsmall = 1) }
-    pvol  <- function(r) format(round(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 2),
-                                nsmall = 2, big.mark = ",")
-    plots <- if (!isTRUE(is_hpr())) ro_field("Plots", fmt_int(r$n_plots_sampled))
+    nok   <- function(r) fmt_num(tot(r)$nok_per_m3, 1L, l, big = FALSE)
+    pvol  <- function(r) fmt_num(sum(r$selected_logs_all$price_volume_m3, na.rm = TRUE), 2L, l)
+    run_time <- ro_field(L("lbl_run_time"), L("unit_s_1",
+      fmt_num(or_default(r$elapsed_total_seconds, r$elapsed_seconds), 1L, l, big = FALSE)))
+    plots <- if (!isTRUE(is_hpr())) ro_field(L("lbl_plots"), fmt_int(r$n_plots_sampled))
     if (!compared())
       return(ro_field_row(
-        ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
+        run_time,
         plots,
-        ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total)),
-        ro_field(unit_lbl("Trees with logs"), fmt_int(r$n_trees_with_logs)),
-        ro_field("Logs", fmt_int(nrow(r$selected_logs_all))),
-        ro_field("Commercial volume (m³ u.b.)", vol(r)),
-        ro_field("Total value (NOK)", value(r)),
-        ro_field("NOK per m³", nok(r)),
-        ro_field("Price volume (m³)", pvol(r))))
+        ro_field(L(unit_id("lbl_trees")), fmt_int(r$n_trees_total)),
+        ro_field(L(unit_id("lbl_trees_with_logs")), fmt_int(r$n_trees_with_logs)),
+        ro_field(L("lbl_logs"), fmt_int(nrow(r$selected_logs_all))),
+        ro_field(L("lbl_commercial_volume"), vol(r)),
+        ro_field(L("lbl_total_value"), value(r)),
+        ro_field(L("lbl_nok_per_m3"), nok(r)),
+        ro_field(L("lbl_price_volume"), pvol(r))))
     # A comparison: the run once, then Scenario A (left) and B (right), each
     # a 2 x 2 grid: value and commercial volume, then NOK/m3 and price volume.
     scen <- function(title, x) div(class = "summary-scen",
       div(class = "section-hdr", title),
       div(class = "ro-row ro-grid-2",
-        ro_field("Total value (NOK)", value(x)),
-        ro_field("Commercial volume (m³ u.b.)", vol(x)),
-        ro_field("NOK per m³", nok(x)),
-        ro_field("Price volume (m³)", pvol(x))))
+        ro_field(L("lbl_total_value"), value(x)),
+        ro_field(L("lbl_commercial_volume"), vol(x)),
+        ro_field(L("lbl_nok_per_m3"), nok(x)),
+        ro_field(L("lbl_price_volume"), pvol(x))))
     tagList(
       ro_field_row(
-        ro_field("Run time", sprintf("%.1f s", or_default(r$elapsed_total_seconds, r$elapsed_seconds))),
+        run_time,
         plots,
-        ro_field(unit_lbl("Trees"), fmt_int(r$n_trees_total)),
-        ro_field(paste(unit_lbl("Trees with logs"), "(A / B)"),
+        ro_field(L(unit_id("lbl_trees")), fmt_int(r$n_trees_total)),
+        ro_field(L(unit_id("lbl_trees_with_logs_ab")),
                  sprintf("%s / %s", fmt_int(r$n_trees_with_logs), fmt_int(result_b()$n_trees_with_logs))),
         # Trees whose cutting pattern changed (compare_cutting_patterns());
         # a short one-line label, the total is the Trees card (2026-10-23).
-        ro_field(if (isTRUE(is_hpr())) "Changed stems" else "Changed cutting patterns",
+        ro_field(L(if (isTRUE(is_hpr())) "lbl_changed_stems" else "lbl_changed_patterns"),
                  fmt_int(sum(cmp_trees()$changed)))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-                     scen("Scenario A", r), scen("Scenario B", result_b())))
+                     scen(L("scenario_a"), r), scen(L("scenario_b"), result_b())))
   })
 
 
@@ -497,68 +535,73 @@ server <- function(input, output, session) {
   })
   products_df <- function(full = FALSE) {
     x <- asm_tab(); lbl <- asm_label(x$key)
-    if (!compared())
-      return(data.frame(Assortment = lbl, Logs = x$logs_a, `Price volume (m³)` = round(x$price_vol_a, 3),
-                        `Value (NOK)` = round(x$value_a, 0),
-                        `NOK per m³ (contribution)` = round(x$contrib_a, 1),
-                        `Volume share (%)` = round(100 * x$share_a, 1),
-                        check.names = FALSE, stringsAsFactors = FALSE))
-    ab <- function(nm, a, b, digits, change = TRUE) {
+    if (!compared()) {
+      out <- data.frame(lbl, x$logs_a, round(x$price_vol_a, 3), round(x$value_a, 0),
+                        round(x$contrib_a, 1), round(100 * x$share_a, 1), stringsAsFactors = FALSE)
+      names(out) <- L(c("col_assortment", "col_logs", "col_price_volume_m3", "col_value_nok",
+                        "col_nok_m3_contribution", "col_volume_share_pct"))
+      return(out)
+    }
+    # id: a column template with %s = "A" or "B"; id_change: the change
+    # column's own title ("Value change (NOK)", "Verdiendring (kr)").
+    ab <- function(id, id_change, a, b, digits, change = TRUE) {
       out <- list(round(a, digits), round(b, digits))
-      names(out) <- sprintf(nm, c("A", "B"))
-      if (change) out[[sprintf(nm, "change")]] <- round(b - a, digits)
+      names(out) <- L(id, c("A", "B"))
+      if (change) out[[L(id_change)]] <- round(b - a, digits)
       out
     }
-    cols <- c(list(Assortment = lbl),
-              if (full) ab("Logs %s", x$logs_a, x$logs_b, 0),
-              if (full) ab("Price volume %s (m³)", x$price_vol_a, x$price_vol_b, 3),
-              ab("Value %s (NOK)", x$value_a, x$value_b, 0),
-              ab("NOK per m³ %s (contribution)", x$contrib_a, x$contrib_b, 1),
-              ab("Volume share %s (%%)", 100 * x$share_a, 100 * x$share_b, 1, change = full))
+    cols <- c(stats::setNames(list(lbl), L("col_assortment")),
+              if (full) ab("col_logs_x", "col_logs_change", x$logs_a, x$logs_b, 0),
+              if (full) ab("col_price_volume_x_m3", "col_price_volume_change_m3", x$price_vol_a, x$price_vol_b, 3),
+              ab("col_value_x_nok", "col_value_change_nok", x$value_a, x$value_b, 0),
+              ab("col_nok_m3_x_contribution", "col_nok_m3_change_contribution", x$contrib_a, x$contrib_b, 1),
+              ab("col_volume_share_x_pct", "col_volume_share_change_pct", 100 * x$share_a, 100 * x$share_b, 1,
+                 change = full))
     as.data.frame(cols, check.names = FALSE, stringsAsFactors = FALSE)
   }
   output$tbl_products <- renderReactable({
     df <- products_df(); num <- names(df)[-1L]
     apter_reactable(df, columns = setNames(lapply(num, function(n) reactable::colDef(na = "–")), num),
-                    page_size = 25L)
+                    page_size = 25L, lang = lang())
   })
   output$dl_products <- downloadHandler(
-    filename = function() "optBuck_products.csv",
-    content  = function(file) utils::write.csv(products_df(full = TRUE), file, row.names = FALSE,
-                                               fileEncoding = "UTF-8", na = ""))
+    filename = function() L("file_products"),
+    content  = function(file) write_result_csv(products_df(full = TRUE), file, na = ""))
 
   # NOK/m3 and volume share by assortment type (Sawlog, Pulpwood, Other) per
   # scope; always by type (per assortment is the table above).
   output$tbl_per_m3_type <- renderReactable(apter_reactable(local({
     req(has_result())
     x <- compare_per_m3(result(), if (compared()) result_b() else result(), by = "type")
-    out <- data.frame(Scope = scope_label(x$scope), Assortment = x$assortment,
-                      check.names = FALSE, stringsAsFactors = FALSE)
-    if (!compared())
-      return(cbind(out, `NOK per m³` = round(x$nok_per_m3_default, 1),
-                   `Volume share (%)` = round(100 * x$volume_share_default, 1)))
-    cbind(out,
-          `NOK per m³ A` = round(x$nok_per_m3_default, 1),
-          `NOK per m³ B` = round(x$nok_per_m3_scenario, 1),
-          `Change (NOK per m³)` = round(x$delta_nok_per_m3, 1),
-          `Volume share A (%)` = round(100 * x$volume_share_default, 1),
-          `Volume share B (%)` = round(100 * x$volume_share_scenario, 1),
-          `Change (percentage points)` = round(100 * x$delta_volume_share, 1))
-  }), page_size = 20L))
+    out <- data.frame(scope_label(x$scope), tr_value(x$assortment, lang()), stringsAsFactors = FALSE)
+    names(out) <- L(c("col_scope", "col_assortment"))
+    num <- if (!compared())
+      stats::setNames(list(round(x$nok_per_m3_default, 1), round(100 * x$volume_share_default, 1)),
+                      L(c("col_nok_per_m3", "col_volume_share_pct")))
+    else stats::setNames(list(round(x$nok_per_m3_default, 1), round(x$nok_per_m3_scenario, 1),
+                              round(x$delta_nok_per_m3, 1),
+                              round(100 * x$volume_share_default, 1), round(100 * x$volume_share_scenario, 1),
+                              round(100 * x$delta_volume_share, 1)),
+                         c(L("col_nok_per_m3_x", "A"), L("col_nok_per_m3_x", "B"), L("col_change_nok_m3"),
+                           L("col_volume_share_x_pct", "A"), L("col_volume_share_x_pct", "B"),
+                           L("col_change_pp")))
+    cbind(out, as.data.frame(num, check.names = FALSE))
+  }), page_size = 20L, lang = lang()))
 
   # NOK/m3 by assortment (contribution): horizontal bars, A and B after a
   # comparison (waste left out).
   contrib_fig <- reactive({
     x <- asm_tab(); x[!x$key %in% waste_keys(), , drop = FALSE]
   })
-  fmt_nok1 <- function(v) format(round(v, 1), nsmall = 1, trim = TRUE)
+  fmt_nok1 <- function(v) fmt_num(v, 1L, lang(), big = FALSE)
   output$bar_nok_contribution <- renderPlot(res = 96, height = function() hbar_height(nrow(contrib_fig()), ab = compared()), {
     x <- contrib_fig(); req(nrow(x) > 0L)
-    ttl <- "NOK per m³ by assortment (contribution)"
+    ttl <- L("fig_nok_by_assortment"); xl <- L("unit_nok_m3")
     if (compared())
-      return(apter_hbar_ab(x$contrib_a, x$contrib_b, asm_label(x$key), title = ttl, xlab = "NOK / m³", fmt = fmt_nok1))
-    apter_hbar(x$contrib_a, asm_label(x$key), title = ttl, xlab = "NOK / m³", fmt = fmt_nok1,
-               col = APTER_CHART$series1)
+      return(apter_hbar_ab(x$contrib_a, x$contrib_b, asm_label(x$key), title = ttl, xlab = xl,
+                           fmt = fmt_nok1, lang = lang()))
+    apter_hbar(x$contrib_a, asm_label(x$key), title = ttl, xlab = xl, fmt = fmt_nok1,
+               col = APTER_CHART$series1, lang = lang())
   })
 
   # Value change (B − A) of the assortments both scenarios have (waste left
@@ -574,18 +617,19 @@ server <- function(input, output, session) {
   output$cmp_value_ui <- renderUI({
     if (!compared()) return(NULL)
     x <- delta_shared()
-    note <- if (x$n == 0L) "No assortments in both scenarios."
-            else if (x$n_same > 0L) sprintf("%s%d %s unchanged", if (length(x$value) == 0L) "All " else "",
-                                            x$n_same, if (x$n_same == 1L) "assortment" else "assortments")
+    note <- if (x$n == 0L) L("cmp_none_shared")
+            else if (x$n_same > 0L)
+              L(paste0(if (length(x$value) == 0L) "cmp_all_unchanged" else "cmp_n_unchanged",
+                       if (x$n_same == 1L) "_1" else ""), x$n_same)
     tagList(
-      div(class = "section-hdr", "Value change (B − A)"),
+      div(class = "section-hdr", L("hdr_value_change")),
       if (length(x$value)) plotOutput("bar_cmp_delta", height = "auto"),
       if (!is.null(note)) div(class = "fig-note", id = "cmp_delta_note", note))
   })
   output$bar_cmp_delta <- renderPlot(res = 96, height = function() hbar_height(length(delta_shared()$value)), {
     x <- delta_shared(); req(length(x$value) > 0L)
-    apter_hbar(x$value, x$label, title = "Value change (B − A), assortments in both scenarios",
-               xlab = "NOK", fmt = delta_fmt)
+    apter_hbar(x$value, x$label, title = L("fig_value_change"), xlab = L("unit_nok"), fmt = delta_fmt,
+               lang = lang())
   })
 
 
@@ -595,17 +639,16 @@ server <- function(input, output, session) {
   # cutting pattern of the tree clicked in it.
   readable_trees <- function(r) {
     ts <- r$tree_summary
-    out <- data.frame(Plot = ts$plot_id_github, Tree = ts$treid,
-               Species = tools::toTitleCase(ts$species_group),
-               `DBH (cm)` = if (isTRUE(is_hpr())) round(ts$dbh_cm, 1) else ts$dbh_cm,   # hpr: read from the profile
-               Height = round(ts$height_m, 1), `Height source` = ts$height_source,
-               Logs = ts$n_logs_selected,
-               `Value (NOK)` = round(ts$total_value_nok, 2),
-               `Commercial volume u.b. (m³)` = round(ts$commercial_volume_m3, 4),
-               `NOK per m³` = round(ts$nok_per_m3, 1),
-               check.names = FALSE, stringsAsFactors = FALSE)
-    names(out)[names(out) == "Height"] <- height_lbl()
-    if (isTRUE(is_hpr())) out$`Height source` <- NULL   # Tree = the StemKey
+    out <- data.frame(ts$plot_id_github, ts$treid, species_lbl(ts$species_group),
+                      if (isTRUE(is_hpr())) round(ts$dbh_cm, 1) else ts$dbh_cm,   # hpr: read from the profile
+                      round(ts$height_m, 1), tr_msg(ts$height_source, lang()),
+                      ts$n_logs_selected, round(ts$total_value_nok, 2),
+                      round(ts$commercial_volume_m3, 4), round(ts$nok_per_m3, 1),
+                      stringsAsFactors = FALSE)
+    names(out) <- c(L(c("col_plot", "col_tree", "col_species", "col_dbh_cm")), height_lbl(),
+                    L(c("col_height_source", "col_logs", "col_value_nok", "col_commercial_volume_m3",
+                        "col_nok_per_m3")))
+    if (isTRUE(is_hpr())) out[[L("col_height_source")]] <- NULL   # Tree = the StemKey
     drop_plot(out)
   }
   tree_key <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
@@ -616,43 +659,43 @@ server <- function(input, output, session) {
     if (!compared()) return(t)
     a <- result()$tree_summary; b <- result_b()$tree_summary
     vb <- round(b$total_value_nok[match(tree_key(a), tree_key(b))], 2)
-    names(t)[names(t) == "Logs"] <- "Logs A"
-    names(t)[names(t) == "Commercial volume u.b. (m³)"] <- "Commercial volume u.b. A (m³)"
-    names(t)[names(t) == "NOK per m³"] <- "NOK per m³ A"
-    i <- match("Value (NOK)", names(t)); va <- t[[i]]
-    cbind(t[, seq_len(i - 1L), drop = FALSE], `Value A (NOK)` = va, `Value B (NOK)` = vb,
-          `Change (NOK)` = round(vb - va, 2), t[, -seq_len(i), drop = FALSE])
+    names(t)[names(t) == L("col_logs")] <- L("col_logs_x", "A")
+    names(t)[names(t) == L("col_commercial_volume_m3")] <- L("col_commercial_volume_x_m3", "A")
+    names(t)[names(t) == L("col_nok_per_m3")] <- L("col_nok_per_m3_x", "A")
+    i <- match(L("col_value_nok"), names(t)); va <- t[[i]]
+    v <- stats::setNames(data.frame(va, vb, round(vb - va, 2)),
+                         c(L("col_value_x_nok", "A"), L("col_value_x_nok", "B"), L("col_change_nok")))
+    cbind(t[, seq_len(i - 1L), drop = FALSE], v, t[, -seq_len(i), drop = FALSE])
   })
   tree_sel <- paged_table_server(input, output, session, "tbl_trees", trees_df, page_size = 15L,
-                                 selection = TRUE, filename = "optBuck_trees_table.csv")
+                                 selection = TRUE, filename = function(l) tr("file_trees_table", lang = l),
+                                 lang = lang)
   output$dl_trees <- downloadHandler(
-    filename = function() "optBuck_trees.csv",
+    filename = function() L("file_trees"),
     content  = function(file) {
-      t <- cbind(Scenario = "A", readable_trees(result()), stringsAsFactors = FALSE)
-      if (compared())
-        t <- rbind(t, cbind(Scenario = "B", readable_trees(result_b()), stringsAsFactors = FALSE))
-      utils::write.csv(t, file, row.names = FALSE, fileEncoding = "UTF-8")
+      sc_col <- function(x, s) cbind(stats::setNames(data.frame(s), L("col_scenario")), x)
+      t <- sc_col(readable_trees(result()), "A")
+      if (compared()) t <- rbind(t, sc_col(readable_trees(result_b()), "B"))
+      write_result_csv(t, file)
     })
 
   # Cutting pattern of the clicked tree (the table's first row until one is
   # clicked): A and B after a comparison, A alone otherwise.
   output$stem_note <- renderUI({
     req(has_result())
-    div(class = "note-muted", sprintf("Click a %s in the table to see its cutting pattern%s.",
-                                      if (isTRUE(is_hpr())) "stem" else "tree",
-                                      if (compared()) " in Scenario A and B" else ""))
+    div(class = "note-muted", L(paste0(if (isTRUE(is_hpr())) "stem_note_stem" else "stem_note_tree",
+                                       if (compared()) "_ab" else "")))
   })
   output$stem_compare <- renderPlot(res = 96, {
     req(has_result()); ts <- result()$tree_summary; req(nrow(ts) > 0L)
-    i <- or_default(tree_sel(), 1L); tr <- ts[i, , drop = FALSE]; k <- tree_key(tr)
+    i <- or_default(tree_sel(), 1L); row <- ts[i, , drop = FALSE]; k <- tree_key(row)
     l1 <- result()$selected_logs_all; l1 <- l1[tree_key(l1) == k, , drop = FALSE]
     l2 <- if (compared()) { l <- result_b()$selected_logs_all; l[tree_key(l) == k, , drop = FALSE] }
-    apter_stem_compare(l1, l2, tr$height_m,
-                       if (isTRUE(is_hpr()))
-                         sprintf("Stem %s (%s, dbh %.1f cm, measured length %.1f m)",
-                                 tr$treid, tr$species_group, tr$dbh_cm, tr$height_m)
-                       else sprintf("Tree %s (%s, dbh %.1f cm, height %.1f m)",
-                                    tr$treid, tr$species_group, tr$dbh_cm, tr$height_m))
+    apter_stem_compare(l1, l2, row$height_m,
+                       L(if (isTRUE(is_hpr())) "stem_title_stem" else "stem_title_tree",
+                         row$treid, tr_value(row$species_group, lang()),
+                         fmt_num(row$dbh_cm, 1L, lang(), big = FALSE), fmt_num(row$height_m, 1L, lang(), big = FALSE)),
+                       lang = lang())
   })
 
   # Per-tree pattern comparison (R/helpers_comparison.R): the Summary's
@@ -665,23 +708,23 @@ server <- function(input, output, session) {
     x <- cmp_trees(); x <- x[x$changed, , drop = FALSE]
     x <- x[order(-abs(x$value_scenario - x$value_default)), , drop = FALSE]
     fin <- function(v) ifelse(is.finite(v), v, NA_real_)   # a log not priced in the other scenario
-    drop_plot(data.frame(
-      Plot = x$plot_id_github, Tree = x$treid, Species = tools::toTitleCase(x$species_group),
-      `Logs A` = x$n_logs_default, `Logs B` = x$n_logs_scenario,
-      `Value A (NOK)` = round(x$value_default, 2),
-      `Value B (NOK)` = round(x$value_scenario, 2),
-      `Gain at B prices (NOK)` = round(fin(x$gain_at_scenario), 2),
-      `Gain at A prices (NOK)` = round(fin(x$gain_at_default), 2),
-      `Largest volume change (m³)` = round(x$max_volume_diff_m3, 4),
-      check.names = FALSE, stringsAsFactors = FALSE))
+    out <- data.frame(x$plot_id_github, x$treid, species_lbl(x$species_group),
+                      x$n_logs_default, x$n_logs_scenario,
+                      round(x$value_default, 2), round(x$value_scenario, 2),
+                      round(fin(x$gain_at_scenario), 2), round(fin(x$gain_at_default), 2),
+                      round(x$max_volume_diff_m3, 4), stringsAsFactors = FALSE)
+    names(out) <- c(L(c("col_plot", "col_tree", "col_species")), L("col_logs_x", c("A", "B")),
+                    L("col_value_x_nok", c("A", "B")), L("col_gain_at_x", c("B", "A")),
+                    L("col_largest_volume_change"))
+    drop_plot(out)
   })
   output$dl_changed_trees_ui <- renderUI({
     if (!compared()) return(NULL)
-    downloadButton("dl_changed_trees", "Download changed trees (CSV)", class = "btn-secondary btn-sm")
+    downloadButton("dl_changed_trees", L("btn_dl_changed_trees"), class = "btn-secondary btn-sm")
   })
   output$dl_changed_trees <- downloadHandler(
-    filename = function() "optBuck_changed_trees.csv",
-    content  = function(file) utils::write.csv(cmp_changed_df(), file, row.names = FALSE))
+    filename = function() L("file_changed_trees"),
+    content  = function(file) write_result_csv(cmp_changed_df(), file))
 
   # Value by DBH class (R/helpers_result_tables.R; 5 cm classes): the figure
   # (trees per class, NOK/m3 per class in A and B) and the CSV.
@@ -689,35 +732,36 @@ server <- function(input, output, session) {
   dbh_b <- reactive({ req(compared()); dbh_class_summary(result_b()$tree_summary) })
   dbh_table <- reactive({
     a <- dbh_a()
-    out <- data.frame(Species = tools::toTitleCase(a$species_group),
-                      `DBH class (cm)` = a$dbh_class, Trees = a$trees,
-                      check.names = FALSE, stringsAsFactors = FALSE)
+    out <- data.frame(species_lbl(a$species_group), i18n_decimals(tr_value(a$dbh_class, lang()), lang()), a$trees,
+                      stringsAsFactors = FALSE)
+    names(out) <- L(c("col_species", "col_dbh_class_cm", "col_trees"))
     if (!compared())
-      return(cbind(out, `Commercial volume u.b. (m³)` = round(a$commercial_volume_m3, 3),
-                   `Value (NOK)` = round(a$value_nok, 0), `NOK per m³` = round(a$nok_per_m3, 1)))
+      return(cbind(out, stats::setNames(data.frame(round(a$commercial_volume_m3, 3), round(a$value_nok, 0),
+                                                   round(a$nok_per_m3, 1)),
+                                        L(c("col_commercial_volume_m3", "col_value_nok", "col_nok_per_m3")))))
     b <- dbh_b()[match(paste(a$species_group, a$dbh_class),
                        paste(dbh_b()$species_group, dbh_b()$dbh_class)), ]
     # Trees and commercial volume once (A's); B's NOK/m3 uses B's own volume.
-    cbind(out,
-          `Commercial volume A (m³ u.b.)` = round(a$commercial_volume_m3, 3),
-          `Value A (NOK)` = round(a$value_nok, 0), `Value B (NOK)` = round(b$value_nok, 0),
-          `Value B − A (NOK)` = round(b$value_nok - a$value_nok, 0),
-          `NOK per m³ A` = round(a$nok_per_m3, 1), `NOK per m³ B` = round(b$nok_per_m3, 1),
-          `NOK per m³ B − A` = round(b$nok_per_m3 - a$nok_per_m3, 1))
+    cbind(out, stats::setNames(data.frame(
+      round(a$commercial_volume_m3, 3), round(a$value_nok, 0), round(b$value_nok, 0),
+      round(b$value_nok - a$value_nok, 0),
+      round(a$nok_per_m3, 1), round(b$nok_per_m3, 1), round(b$nok_per_m3 - a$nok_per_m3, 1)),
+      c(L("col_commercial_volume_x_m3", "A"), L("col_value_x_nok", c("A", "B")), L("col_value_x_nok", "B − A"),
+        L("col_nok_per_m3_x", c("A", "B", "B − A")))))
   })
   output$dl_dbh_class <- downloadHandler(
-    filename = function() "optBuck_value_by_dbh_class.csv",
-    content  = function(file) utils::write.csv(dbh_table(), file, row.names = FALSE, fileEncoding = "UTF-8"))
+    filename = function() L("file_dbh_class"),
+    content  = function(file) write_result_csv(dbh_table(), file))
   output$fig_dbh_class <- renderPlot(res = 96, height = function() 320, {
     req(has_result())
-    apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b())
+    apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b(), lang = lang())
   })
 
   # DBH and height distributions per species, side by side (the same trees
   # in A and B, so shown once).
   output$fig_distributions <- renderPlot(res = 96, {
     req(has_result()); ts <- result()$tree_summary
-    apter_distribution_figure(ts$dbh_cm, ts$height_m, ts$species_group, height_lbl())
+    apter_distribution_figure(ts$dbh_cm, ts$height_m, ts$species_group, height_lbl(), lang = lang())
   })
 
 
@@ -727,23 +771,23 @@ server <- function(input, output, session) {
   LOG_PREVIEW_N <- 20L
   output$logs_preview_note <- renderUI({
     req(has_result()); n <- nrow(result()$selected_logs_all)
-    div(class = "note-muted", sprintf("Scenario A: the first %d of %s logs. Download all logs for the full table%s.",
-                                      min(LOG_PREVIEW_N, n), fmt_int(n),
-                                      if (compared()) " (both scenarios)" else ""))
+    div(class = "note-muted", L(if (compared()) "logs_preview_ab" else "logs_preview",
+                                min(LOG_PREVIEW_N, n), fmt_int(n)))
   })
   output$tbl_selected_logs <- renderReactable({
     req(has_result()); sl <- result()$selected_logs_all
-    if (nrow(sl) == 0L) return(apter_reactable(data.frame(Message = "No selected logs.")))
-    apter_reactable(readable_logs(utils::head(sl, LOG_PREVIEW_N)), sortable = FALSE, pagination = FALSE)
+    if (nrow(sl) == 0L)
+      return(apter_reactable(stats::setNames(data.frame(L("no_logs")), L("col_message")), lang = lang()))
+    apter_reactable(readable_logs(utils::head(sl, LOG_PREVIEW_N)), sortable = FALSE, pagination = FALSE,
+                    lang = lang())
   })
   output$dl_logs <- downloadHandler(
-    filename = function() "optBuck_selected_logs.csv",
+    filename = function() L("file_logs"),
     content  = function(file) {
-      l <- cbind(Scenario = "A", readable_logs(result()$selected_logs_all), stringsAsFactors = FALSE)
-      if (compared())
-        l <- rbind(l, cbind(Scenario = "B", readable_logs(result_b()$selected_logs_all),
-                            stringsAsFactors = FALSE))
-      utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
+      sc_col <- function(x, s) cbind(stats::setNames(data.frame(s), L("col_scenario")), x)
+      l <- sc_col(readable_logs(result()$selected_logs_all), "A")
+      if (compared()) l <- rbind(l, sc_col(readable_logs(result_b()$selected_logs_all), "B"))
+      write_result_csv(l, file)
     })
 
   # Log tally per price matrix (stocknota; R/helpers_result_tables.R): the
@@ -773,7 +817,7 @@ server <- function(input, output, session) {
   output$tally_scenario_ui <- renderUI({
     if (!compared()) return(NULL)
     v <- tally_views(); cur <- isolate(input$tally_scenario)
-    radioButtons("tally_scenario", "Scenario", setNames(v, c(A = "A", B = "B", diff = "B − A")[v]),
+    radioButtons("tally_scenario", L("col_scenario"), setNames(v, c(A = "A", B = "B", diff = "B − A")[v]),
                  selected = if (!is.null(cur) && cur %in% v) cur else v[1L], inline = TRUE)
   })
   tally_view <- reactive({
@@ -789,37 +833,38 @@ server <- function(input, output, session) {
   })
   output$tally_note <- renderUI({
     g <- tally_grid()
-    div(class = "note-muted", if (identical(g[[1L]][1L], "All diameters")) "Length class (dm)"
-                              else "Price-diameter class (cm) vs length class (dm)")
+    div(class = "note-muted", L(if (identical(g[[1L]][1L], "All diameters")) "tally_caption_flat"
+                                else "tally_caption"))
   })
   output$tbl_tally <- renderReactable({
     g <- tally_grid(); ms <- or_default(input$tally_measure, "logs"); diff <- tally_view() == "diff"
-    num <- names(g)[-1L]
+    l <- lang(); num <- names(g)[-1L]
     fmt <- function(x) {
-      s <- if (ms == "logs") format(round(x), big.mark = ",", trim = TRUE)
-           else formatC(x, format = "f", digits = 3, big.mark = ",")
+      s <- if (ms == "logs") fmt_num(x, 0L, l) else fmt_num(x, 3L, l)
       s <- if (diff) ifelse(x > 0, paste0("+", s), s) else s
       s[!is.na(x) & abs(x) < 1e-12] <- ""
       s[is.na(x)] <- "–"
       s
     }
     show <- g; show[num] <- lapply(g[num], fmt)
-    names(show)[1L] <- if (identical(g[[1L]][1L], "All diameters")) " " else "Ø (cm)"
-    cols <- setNames(lapply(num, function(n) reactable::colDef(align = "right")), num)
+    show[[1L]] <- tr_value(show[[1L]], l)                       # "All diameters", "Total"
+    names(show) <- tr_value(names(show), l)                     # the "Total" column
+    names(show)[1L] <- if (identical(g[[1L]][1L], "All diameters")) " " else L("col_diameter_symbol_cm")
+    cols <- setNames(lapply(names(show)[-1L], function(n) reactable::colDef(align = "right")), names(show)[-1L])
     last <- nrow(show)
     apter_reactable(show, columns = cols, sortable = FALSE, pagination = FALSE,
-                    row_class = function(i) if (i == last) "tally-total")
+                    row_class = function(i) if (i == last) "tally-total", lang = l)
   })
   output$dl_tally_xlsx <- downloadHandler(
-    filename = function() "optBuck_log_tally.xlsx",
+    filename = function() L("file_tally_xlsx"),
     content  = function(file) log_tally_xlsx(file, tallies(), tally_pms(), label = asm_label,
-                                             scenario_keys = if (compared()) result()$keys))
+                                             scenario_keys = if (compared()) result()$keys, lang = lang()))
   output$dl_tally_csv <- downloadHandler(
-    filename = function() "optBuck_log_tally.csv",
+    filename = function() L("file_tally_csv"),
     content  = function(file) {
       l <- log_tally_long(tallies())
       if (nrow(l)) l$Assortment <- asm_label(l$Assortment)
-      utils::write.csv(l, file, row.names = FALSE, fileEncoding = "UTF-8")
+      write_result_csv(i18n_df(l, lang()), file)
     })
 
 

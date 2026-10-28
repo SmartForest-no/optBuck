@@ -57,7 +57,17 @@ body { background: var(--apter-page); color: var(--apter-ink); }
   border-bottom-color: var(--apter-ink) !important; }   /* over bslib's primary-coloured underline */
 /* SmartForest logo directly on the navbar, as tall as the optBuck icon. */
 .navbar-logo { height: 26px; max-height: 26px; width: auto; max-width: 160px; display: block; }
-.navbar .navbar-logo-item { display: flex; align-items: center; padding: 0 4px; margin-left: auto; }
+.navbar .navbar-logo-item { display: flex; align-items: center; padding: 0 4px; margin-left: 14px; }
+/* Language switch (Phase 1, 2026-10-27): two small segments left of the logo;
+   the active language in black, like the active tab. */
+.lang-switch { display: inline-flex; align-items: center; margin-left: auto;
+  border: 1px solid var(--apter-rule); border-radius: 6px; overflow: hidden; }
+.lang-btn { border: 0; background: var(--apter-surface); color: var(--apter-tab);
+  font-size: 0.8rem; padding: 3px 9px; line-height: 1.4; cursor: pointer; }
+.lang-btn + .lang-btn { border-left: 1px solid var(--apter-rule); }
+.lang-btn:hover { color: var(--apter-ink); }
+.lang-btn.is-active { background: var(--apter-ink); color: var(--apter-surface); font-weight: 500; }
+.lang-btn:focus-visible { outline: 2px solid var(--apter-primary); outline-offset: -2px; }
 
 /* ---- page containers ------------------------------------------------------- */
 .apter-page { padding: 20px 16px; }
