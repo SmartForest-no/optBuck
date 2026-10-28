@@ -125,6 +125,7 @@ scripts/
   performance_tree_lists.R                Seeded synthetic tree lists (100, 1000, 5000 trees)
   performance_cases.R                     Run cases shared by the baseline, check, benchmark and audit 22
   performance_check.R                     Quick check of every case against the main baseline
+  run_audits.R                            Runs a set of audits in parallel processes (PASS/FAIL per audit, exit status)
   performance_profile.R                   Per-tree stage profile (step 1 of the phase)
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
@@ -328,6 +329,22 @@ REVIEW, or FAIL. Re-run all audits (14–28) at the end of every development pha
   the new log differs only in the `Run: <timestamp>` line. Logs that contain
   timings (audit 21 check 4, audit 17's runtimes) still change and are
   committed as before.
+
+**`scripts/run_audits.R`** runs a set of audits (and `scripts/performance_check.R`)
+as separate Rscript processes and prints one PASS / REVIEW / FAIL line per item,
+then the total time; exit status 1 if anything FAILs.
+
+    Rscript scripts/run_audits.R                 # everything: every audit from 14 up and perf
+    Rscript scripts/run_audits.R 16 20 perf      # a few (numbers, ranges 14-20, names)
+    Rscript scripts/run_audits.R --jobs 4        # processes at a time (default 3)
+    Rscript scripts/run_audits.R --17-last       # audit 17 alone at the end
+
+Audit 17 (browser, about 4 min) starts first and takes one of the slots; the
+others follow longest first. Each process gets `APTER_WORKERS` = `max(2, (cores - 1)
+%/% jobs)` workers (`apter_workers()` reads it when the option `apter.workers` is
+not set), so the processes do not oversubscribe the cores. Logs: `outputs/audit_runs/`
+(gitignored). During a phase run only the affected audits; run the full suite once
+before asking for a merge.
 
 **Prerequisites**
 

@@ -75,3 +75,6 @@ scripts/local_only/
 
 # ── Design reference screenshots (contain personal details) — never commit ──
 docs/design_reference/
+
+# ── Logs of scripts/run_audits.R ───────────────────────────────────────────────
+outputs/audit_runs/
