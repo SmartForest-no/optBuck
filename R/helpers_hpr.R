@@ -311,9 +311,6 @@ read_hpr <- function(path, filename = basename(path)) {
 
 # ---- products and the grade filter ----------------------------------------------------
 
-#' Reason shown for products unticked by the grade rule.
-HPR_GRADE_REASON <- "Only for grades set by the operator (special orders)"
-
 #' Reference grades per species group (decided 2026-10-22): the grade(s)
 #' permitted by the most products of the group, each product counted once
 #' (ties keep all tied grades); if no product of the group lists permitted
@@ -356,9 +353,11 @@ hpr_grade_ok <- function(p, ref) {
 
 #' One row per product for the import dialog: its species (after the
 #' species map), forbidden cells, and whether it is imported by default
-#' (not if its species is not used, it permits none of its species group's
-#' reference grades (hpr_reference_grades()), or it has no priced cells),
-#' with the reason.
+#' (not if its species is not used or it has no priced cells), with the
+#' reason. Grades no longer untick products (2026-10-28): a product that
+#' permits none of its group's reference grades (hpr_reference_grades()) is
+#' kept, and the run leaves it out for stems without grade data
+#' (`ReferenceGrades`, .candidate_species_plan()).
 #'
 #' @param species_map Named character: species group key -> "spruce",
 #'   "pine" or "none".
@@ -371,7 +370,6 @@ hpr_product_table <- function(hpr, species_map) {
     priced <- sum(!is.na(p$cells$price) & p$cells$criteria != HPR_FORBIDDEN)
     reason <- if (length(sp) == 0L) "Species group not used"
               else if (priced == 0L) "No priced cells"
-              else if (isFALSE(grade)) HPR_GRADE_REASON
               else ""
     data.frame(key = p$key, name = p$name,
                group = paste(hpr$species$name[match(p$species_keys, hpr$species$key)], collapse = ", "),
@@ -489,6 +487,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
                         paste(hpr$species$name[match(g, hpr$species$key)], collapse = " and "), sp, sp))
   }
   base <- if (is.null(base_defs)) defs_from_products(load_products()) else base_defs   # Waste rows
+  ref <- hpr_reference_grades(hpr)      # per group: stored with each product (ReferenceGrades)
   rows <- list(); pms <- list(); used_keys <- character(0)
   for (k in keep) {
     p <- hpr$products[[k]]
@@ -552,6 +551,12 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
         # Phase 6: the product's permitted stem grades (NA = the file lists none: all grades)
         PermittedGrades = if (length(p$grades)) norm_permitted_grades(paste(p$grades, collapse = ";"))
                           else NA_character_,
+        # The reference grade(s) of the product's own species group(s) of this species: the grade
+        # of every cell of a stem without grade data (decided 2026-10-28).
+        ReferenceGrades = {
+          r <- unlist(ref[intersect(p$species_keys[species_map[p$species_keys] == sp], names(ref))])
+          if (length(r)) norm_permitted_grades(paste(r, collapse = ";")) else NA_character_
+        },
         stringsAsFactors = FALSE)
       pms[[length(pms) + 1L]] <- grid$pm
       used_keys <- c(used_keys, ak)

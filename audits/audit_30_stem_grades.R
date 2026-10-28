@@ -187,9 +187,19 @@ rec("Check 4b: the options are independent: cut only does not apply permitted gr
 # ---- 5. no permitted set = all grades --------------------------------------------
 section("5. Products without permitted grades")
 spruce_mass <- "spruce_197_massevirke"
+# Candidates of stem 101 (grade 7 below 300 cm) for a set of options.
+cand_of <- function(prep, id, opts) {
+  pv <- profiles_to_profile_vectors(prep$profiles)[[id]]
+  geo <- .candidate_columns(pv, .candidate_plan(prod$pd, prod$lc, grade_opts = opts)[[pv$species_group]],
+                            0L, 10L, usable_only = TRUE)
+  data.frame(key = vapply(geo$products, `[[`, "", "pk")[geo$cols$prod], start = geo$cols$StartPos,
+             stop = geo$cols$StopPos, stringsAsFactors = FALSE)
+}
+c101 <- cand_of(pr, "101", USE)
 ok5a <- is.na(sc$defs$PermittedGrades[keys == spruce_mass]) && !length(permitted[[spruce_mass]]) &&
-  any(lU$treid == "101" & lU$StartPos < 300 & lU$ProductKey == spruce_mass)
-rec("Check 5a: '197 Massevirke' has no PermittedGradesDefinition: empty set, and it is chosen inside stem 101's grade-7 butt with the option on",
+  any(c101$key == spruce_mass & c101$start < 300) && any(c101$key == spruce_mass & c101$start >= 300) &&
+  !any(c101$key == "spruce_140_sca_sagt_mmer" & c101$start < 300)
+rec("Check 5a: '197 Massevirke' has no PermittedGradesDefinition: empty set, and it has candidates inside stem 101's grade-7 butt with the option on (the sawlog has none there)",
     ok(ok5a), sprintf("PermittedGrades NA: %s", is.na(sc$defs$PermittedGrades[keys == spruce_mass])))
 d_none <- sc$defs; d_none$PermittedGrades <- NA_character_
 rec("Check 5b: a table without permitted grades gives ProductData without a PermittedGrades column (as before Phase 6)",
@@ -231,10 +241,11 @@ rec("Check 8b: the scenario xlsx round trip keeps PermittedGrades; a file withou
 mk <- function(pd, o, lc = prod$lc) list(pd = pd, lc = lc, lookup = NULL, opts = o)
 pd2 <- prod$pd; pd2$PermittedGrades[pd2$ProductKey == "spruce_154_kubb"] <- "1"
 ngr <- function(...) length(.prepare_runs(list(...))$groups)
-rec("Check 8c: runs with different options are different definitions (2 groups), equal options one group; different grade sets split the runs only when Use stem grades is on",
+rec("Check 8c: runs with different options are different definitions (2 groups), equal options one group; different grade sets split the runs whatever the options (they change the candidates for every stem)",
     ok(ngr(mk(prod$pd, OFF), mk(prod$pd, OFF)) == 1L && ngr(mk(prod$pd, OFF), mk(prod$pd, CUT)) == 2L &&
        ngr(mk(prod$pd, USE), mk(prod$pd, BOTH)) == 2L && ngr(mk(prod$pd, USE), mk(pd2, USE)) == 2L &&
-       ngr(mk(prod$pd, OFF), mk(pd2, OFF)) == 1L && ngr(mk(prod$pd, CUT), mk(pd2, CUT)) == 1L),
+       ngr(mk(prod$pd, OFF), mk(pd2, OFF)) == 2L && ngr(mk(prod$pd, CUT), mk(pd2, CUT)) == 2L &&
+       ngr(mk(prod$pd, OFF), mk(prod$pd, OFF)) == 1L),
     sprintf("%d %d %d %d %d %d", ngr(mk(prod$pd, OFF), mk(prod$pd, OFF)), ngr(mk(prod$pd, OFF), mk(prod$pd, CUT)),
             ngr(mk(prod$pd, USE), mk(prod$pd, BOTH)), ngr(mk(prod$pd, USE), mk(pd2, USE)),
             ngr(mk(prod$pd, OFF), mk(pd2, OFF)), ngr(mk(prod$pd, CUT), mk(pd2, CUT))))
@@ -242,6 +253,28 @@ rec("Check 8d: scenarios_differ() is TRUE when only the options differ, FALSE wh
     ok(scenarios_differ(sc$defs, sc$pm, sc$defs, sc$pm, USE, OFF) &&
        !scenarios_differ(sc$defs, sc$pm, sc$defs, sc$pm, USE, USE) &&
        !scenarios_differ(sc$defs, sc$pm, sc$defs, sc$pm)))
+
+# ---- 10. the reference grade (2026-10-28) ---------------------------------------------------
+section("10. Reference grade for stems without grade data")
+ref <- hpr_reference_grades(hp)
+ref_of <- function(sp) sc$defs$ReferenceGrades[sc$defs$Species == sp & sc$defs$Name != "Waste"]
+exp_spruce <- norm_permitted_grades(paste(ref[["446"]], collapse = ";"))
+exp_pine <- norm_permitted_grades(paste(ref[["445"]], collapse = ";"))
+rec("Check 10a: the import stores each product's reference grade(s) (ReferenceGrades) from hpr_reference_grades(); Waste has none; nothing is unticked for grades",
+    ok(all(ref_of("spruce") == exp_spruce) && all(ref_of("pine") == exp_pine) &&
+       all(is.na(sc$defs$ReferenceGrades[sc$defs$Name == "Waste"])) && all(hpr_product_table(hp, MAP)$default[
+         hpr_product_table(hp, MAP)$species != "none"])),
+    sprintf("reference grades: spruce %s, pine %s", exp_spruce, exp_pine))
+c_off <- cand_of(pr, "101", OFF); c_use <- cand_of(pr, "101", USE); c_nog <- cand_of(pr0, "101", USE)
+energy <- "spruce_100_energi"; ref_s <- ref[["446"]]
+ok10b <- !any(permitted[[energy]] %in% ref_s) && !any(c_off$key == energy) && !any(c_nog$key == energy) &&
+  any(c_use$key == energy) && all(c_use$stop[c_use$key == energy] <= 300)
+rec("Check 10b: 100 Energi (grade 7 only) does not permit the reference grade: no candidates with the options off, or on a stem without grade data (tree list) even with Use stem grades; with the option on it is allowed only inside the grade-7 butt of a stem with grades",
+    ok(ok10b), sprintf("candidates of 100 Energi on stem 101: off %d, grades %d (all below 300 cm: %s), no grade data %d",
+                       sum(c_off$key == energy), sum(c_use$key == energy),
+                       all(c_use$stop[c_use$key == energy] <= 300), sum(c_nog$key == energy)))
+rec("Check 10c: a product that permits the reference grade keeps its candidates with the options off and on a stem without grade data (REDACTED25)",
+    ok(any(c_off$key == "spruce_140_sca_sagt_mmer") && any(c_nog$key == "spruce_140_sca_sagt_mmer")))
 
 # ---- 9. several files ----------------------------------------------------------------------
 section("9. Several files")

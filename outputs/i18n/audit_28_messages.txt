@@ -21,7 +21,6 @@ measured | målt
 FinnHoyde (calibrated, n = 1) | FinnHoyde (kalibrert, n = 1)
 Spruce: measured heights are on average 47 % above the FinnHoyde curve (ratio 1.47, n = 3); check the heights or measure more trees. | Gran: målte høyder er i gjennomsnitt 47 % over FinnHoyde-kurven (forhold 1,47, n = 3); kontroller høydene eller mål flere trær.
 FinnHoyde (calibrated, n = 3) | FinnHoyde (kalibrert, n = 3)
-Only for grades set by the operator (special orders) | Bare for kvaliteter som føreren setter (spesialbestillinger)
 Species group not used | Treslagsgruppen er ikke brukt
 REDACTED23: 35 forbidden cell(s) left empty (never chosen). | REDACTED23: 35 forbudte celler er latt tomme (velges aldri).
 REDACTED23: Length classes rounded up to whole dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550. | REDACTED23: Lengdeklasser rundet opp til hele dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550.

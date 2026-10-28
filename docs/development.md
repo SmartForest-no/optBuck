@@ -718,7 +718,8 @@ These keep the old name on purpose:
   it as `pv$grade`. The two per-scenario options (`GRADE_OPTS_OFF`,
   `normalize_grade_opts()` in `R/helpers_candidate_generation.R`) become
   candidate filters in `.candidate_columns()`; the hidden assortment column
-  `PermittedGrades` comes from the .hpr import. Rules and decisions: CLAUDE.md,
+  `PermittedGrades` and `ReferenceGrades` come from the .hpr import (a product that does not
+  permit its group's reference grade is left out for stems without grade data). Rules and decisions: CLAUDE.md,
   "hpr stem grades"; tests: audit 30 (fixture
   `inputs/test_fixtures/hpr_grades_synthetic.hpr`, rebuilt by
   `scripts/make_hpr_grades_fixture.R`) and audit 17 check 41.

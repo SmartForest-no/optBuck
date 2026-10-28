@@ -141,14 +141,14 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
   same_def <- function(a, b) {
     # Different stem-grade options give different candidates, whatever the products.
     if (!identical(a$opts, b$opts)) return(FALSE)
-    perm <- function(x, k) if ("PermittedGrades" %in% names(x$pd))
-      norm_permitted_grades(x$pd$PermittedGrades[match(k, x$pd$ProductKey)]) else NA_character_
+    # Permitted and reference grades change a product's candidates (also for stems
+    # without grades), whichever way the column is missing on one side.
+    perm <- function(x, k, col) if (col %in% names(x$pd))
+      norm_permitted_grades(x$pd[[col]][match(k, x$pd$ProductKey)]) else NA_character_
     for (k in intersect(a$keys, b$keys)) {
-      cols <- intersect(names(a$pd), names(b$pd))
-      # Permitted grades matter only with "Use stem grades" on.
-      cols <- if (a$opts$use_grades) { if (!identical(perm(a, k), perm(b, k))) return(FALSE)
-                                       setdiff(cols, "PermittedGrades") }
-              else setdiff(cols, "PermittedGrades")
+      for (col in c("PermittedGrades", "ReferenceGrades"))
+        if (!identical(perm(a, k, col), perm(b, k, col))) return(FALSE)
+      cols <- setdiff(intersect(names(a$pd), names(b$pd)), c("PermittedGrades", "ReferenceGrades"))
       ra <- a$pd[a$pd$ProductKey == k, cols, drop = FALSE]
       rb <- b$pd[b$pd$ProductKey == k, cols, drop = FALSE]
       la <- a$lc[a$lc$ProductKey == k, , drop = FALSE]

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: stem grades and cut at grade changes (Phase 6)
-  Run: 2026-10-28 13:41:59.699927
+  Run: 2026-10-28 14:59:15.065652
 ============================================================= 
 
 --- 1. Grades read and put on the grid ---
@@ -21,7 +21,7 @@
   [PASS  ] Check 4b: the options are independent: cut only does not apply permitted grades, use only does not force cuts; a stem without a change (103, 105) is the same in all four runs | cut-only violations 2
 
 --- 5. Products without permitted grades ---
-  [PASS  ] Check 5a: '197 Massevirke' has no PermittedGradesDefinition: empty set, and it is chosen inside stem 101's grade-7 butt with the option on | PermittedGrades NA: TRUE
+  [PASS  ] Check 5a: '197 Massevirke' has no PermittedGradesDefinition: empty set, and it has candidates inside stem 101's grade-7 butt with the option on (the sawlog has none there) | PermittedGrades NA: TRUE
   [PASS  ] Check 5b: a table without permitted grades gives ProductData without a PermittedGrades column (as before Phase 6)
   [PASS  ] Check 5c: default products (no permitted grades) with Use stem grades on give the result of a run without grades
 
@@ -33,10 +33,15 @@
   [PASS  ] Check 7: results with the options on are identical on 1 and 2 workers (A and B)
 
 --- 8. PermittedGrades through the app's tables; run grouping ---
-  [PASS  ] Check 8a: PermittedGrades goes defs -> ProductData -> defs unchanged (e.g. '1;2') | 1;2 | 1;2;3;4;5;6 | NA | 1;2 | 1;2 | NA | NA
-  [PASS  ] Check 8b: the scenario xlsx round trip keeps PermittedGrades; a file without the column reads as all grades | 1;2 | 1;2;3;4;5;6 | NA | 1;2 | 1;2 | NA | NA
-  [PASS  ] Check 8c: runs with different options are different definitions (2 groups), equal options one group; different grade sets split the runs only when Use stem grades is on | 1 2 2 2 1 1
+  [PASS  ] Check 8a: PermittedGrades goes defs -> ProductData -> defs unchanged (e.g. '1;2') | 1;2 | 1;2;3;4;5;6 | NA | 7 | 1;2 | 1;2 | NA | NA
+  [PASS  ] Check 8b: the scenario xlsx round trip keeps PermittedGrades; a file without the column reads as all grades | 1;2 | 1;2;3;4;5;6 | NA | 7 | 1;2 | 1;2 | NA | NA
+  [PASS  ] Check 8c: runs with different options are different definitions (2 groups), equal options one group; different grade sets split the runs whatever the options (they change the candidates for every stem) | 1 2 2 2 2 2
   [PASS  ] Check 8d: scenarios_differ() is TRUE when only the options differ, FALSE when they are equal
+
+--- 10. Reference grade for stems without grade data ---
+  [PASS  ] Check 10a: the import stores each product's reference grade(s) (ReferenceGrades) from hpr_reference_grades(); Waste has none; nothing is unticked for grades | reference grades: spruce 1;2, pine 1;2
+  [PASS  ] Check 10b: 100 Energi (grade 7 only) does not permit the reference grade: no candidates with the options off, or on a stem without grade data (tree list) even with Use stem grades; with the option on it is allowed only inside the grade-7 butt of a stem with grades | candidates of 100 Energi on stem 101: off 0, grades 1 (all below 300 cm: TRUE), no grade data 0
+  [PASS  ] Check 10c: a product that permits the reference grade keeps its candidates with the options off and on a stem without grade data (REDACTED25)
 
 --- 9. Several files ---
   [PASS  ] Check 9: two files: 10 stems with each file's own grades (stems 102 and 202 give the same runs; 104 and 204 snap alike); grade starts of file 2 are not attached to file 1's stems | stems 10, grades 16
@@ -44,7 +49,7 @@
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 22
+1   PASS 25
 
   Verdict: PASS 
 ============================================================= 

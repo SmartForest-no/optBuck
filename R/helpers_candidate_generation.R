@@ -155,8 +155,15 @@ normalize_grade_opts <- function(o)
          method = prow$VolumeDiameterCategory,
          adjustment = prow$VolumeDiameterAdjustment,
          priority = as.numeric(or_default(prow$Priority, 99)),
-         grades = if (grade_opts$use_grades && "PermittedGrades" %in% names(prow)) {
-           g <- permitted_grades_set(prow$PermittedGrades); if (length(g)) g })
+         # Permitted grades (hpr imports; NULL = all) and whether the product is usable for a
+         # stem without grade data: no grades, no reference grade, or the two sets meet.
+         grades = if ("PermittedGrades" %in% names(prow)) {
+           g <- permitted_grades_set(prow$PermittedGrades); if (length(g)) g },
+         ref_ok = {
+           g <- if ("PermittedGrades" %in% names(prow)) permitted_grades_set(prow$PermittedGrades) else numeric(0)
+           r <- if ("ReferenceGrades" %in% names(prow)) permitted_grades_set(prow$ReferenceGrades) else numeric(0)
+           length(g) == 0L || length(r) == 0L || any(g %in% r)
+         })
   })
   list(species_group = species_group, pks = pks, products = products,
        use_grades = grade_opts$use_grades, cut_at_changes = grade_opts$cut_at_changes,
@@ -263,6 +270,7 @@ price_len_of <- function(p, log_len)
     n_cells <- length(gg)
     chg_cum <- c(0L, cumsum(c(FALSE, !is.na(gg[-1L]) & !is.na(gg[-n_cells]) & gg[-1L] != gg[-n_cells])))
   }
+  use_cells <- isTRUE(plan$use_grades) && !is.null(gg)   # the recorded grades decide the products
 
   # Valid log lengths for this tree (all products), pre-filtered by tree height.
   max_len_cm  <- h_cm - stump_height_cm
@@ -273,6 +281,9 @@ price_len_of <- function(p, log_len)
                            by = step_int)
     for (j in seq_along(plan$products)) {
       p <- plan$products[[j]]
+      # Stems without grade data (or "Use stem grades" off) have the reference grade in every
+      # cell: a product that does not permit it is not usable.
+      if (!use_cells && !isTRUE(p$ref_ok)) next
       ok_len_vec <- as.integer(p$lengths[p$lengths <= max_len_cm])
       if (length(ok_len_vec) == 0L) next
       # Start positions where at least one log can end within the tree.
@@ -311,7 +322,7 @@ price_len_of <- function(p, log_len)
       if (!is.null(gg)) {
         lo <- pmin(as.integer(round(start_pos / step_int)) + 1L, n_cells)
         hi <- pmin(as.integer(round(stop_pos / step_int)), n_cells)
-        if (!is.null(p$grades)) {
+        if (use_cells && !is.null(p$grades)) {
           bad_cum <- c(0L, cumsum(!is.na(gg) & !gg %in% p$grades))
           eligible <- eligible & (bad_cum[hi + 1L] - bad_cum[lo]) == 0L
         }

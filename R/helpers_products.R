@@ -439,13 +439,18 @@ pre_phase4c_limits <- function(pd) {
 # .hpr product permits, ";"-separated ("1;2;3"). Empty (NA) = all grades (not
 # from an .hpr file, or the file gives the product no permitted grades). Used
 # only for .hpr stems with "Use stem grades" on.
+# ReferenceGrades (2026-10-28, hidden too): the reference grade(s) of the
+# product's species group in the .hpr file, in the same format. A stem without
+# grade data (NFI, tree list) or with "Use stem grades" off has that grade in
+# every cell, so such a stem can use the product only if its PermittedGrades
+# meet it. Empty (NA) = no such filter.
 
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
-  "PermittedGrades")
+  "PermittedGrades", "ReferenceGrades")
 
 #' A permitted-grades string in its canonical form: sorted unique whole
 #' numbers joined by ";"; NA for empty, missing or unreadable.
@@ -502,7 +507,8 @@ assortment_table_keys <- function(defs) {
 # Column types of an assortment table.
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
-                                          "PriceType", "PriceLengths_cm", "PermittedGrades"))
+                                          "PriceType", "PriceLengths_cm", "PermittedGrades",
+                                          "ReferenceGrades"))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
   # Tables without the hidden price lengths (all but hpr imports): none.
@@ -512,6 +518,8 @@ assortment_table_keys <- function(defs) {
   # Tables without the hidden permitted grades (all but hpr imports): all grades.
   if (!"PermittedGrades" %in% names(d)) d$PermittedGrades <- rep(NA_character_, nrow(d))
   d$PermittedGrades <- norm_permitted_grades(d$PermittedGrades)
+  if (!"ReferenceGrades" %in% names(d)) d$ReferenceGrades <- rep(NA_character_, nrow(d))
+  d$ReferenceGrades <- norm_permitted_grades(d$ReferenceGrades)
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
@@ -536,6 +544,7 @@ defs_from_products <- function(pd) {
     VolumeDiameterCategory = pd$VolumeDiameterCategory,
     PriceType = pd$PriceType,
     PermittedGrades = if ("PermittedGrades" %in% names(pd)) pd$PermittedGrades else NA_character_,
+    ReferenceGrades = if ("ReferenceGrades" %in% names(pd)) pd$ReferenceGrades else NA_character_,
     stringsAsFactors = FALSE))
 }
 
@@ -608,6 +617,8 @@ products_from_defs <- function(defs, pm) {
   # has them, so other tables give the same ProductData as before.
   pg <- if ("PermittedGrades" %in% names(defs)) defs$PermittedGrades else rep(NA, nrow(defs))
   if (any(!is.na(pg))) pd$PermittedGrades <- as.character(pg)
+  rg <- if ("ReferenceGrades" %in% names(defs)) defs$ReferenceGrades else rep(NA, nrow(defs))
+  if (any(!is.na(rg))) pd$ReferenceGrades <- as.character(rg)
   list(pd = pd, lc = lc)
 }
 

@@ -17,9 +17,9 @@
 #      grades, cells, forbidden cells) for all 8 products
 #  3.  Species guess: FURU pine, GRAN spruce, LAUV and BIOVIRKE not used;
 #      also "Gran tynning", "Tall", user ID only, and a mixed "Furu/Gran" name
-#  4.  Grade filter: only 100 Energi (grade 7 only) is unticked by default,
-#      with "Only for grades set by the operator (special orders)"; a product
-#      without permitted grades is kept. Invented groups: reference grades =
+#  4.  Grades no longer untick products (2026-10-28): 100 Energi (grade 7 only)
+#      is ticked by default; a product without permitted grades is kept.
+#      Invented groups: reference grades =
 #      the most commonly permitted (ties kept), else StartGrade, else none;
 #      a sawlog-group product with only grade 8 is unticked (no exemption)
 #  5.  Mapping: 5 assortments + Waste per species; min top from
@@ -244,13 +244,14 @@ exp_ok <- c(saw_mode = "TRUE", saw_mode2 = "TRUE", pulp_wide = "TRUE", special =
             energy = "FALSE", no_grades = NA, tie_a = "TRUE", tie_b = "TRUE", start_only = NA)
 ok_ref <- identical(ref4[["1"]], 2) && identical(ref4[["2"]], c(1, 2, 3, 4)) &&
   identical(ref4[["3"]], 3) && identical(ref4[["4"]], numeric(0))
-ok4 <- identical(off, "8016") && identical(tab$reason[tab$key == "8016"], HPR_GRADE_REASON) &&
-  identical(HPR_GRADE_REASON, "Only for grades set by the operator (special orders)") &&
+ok4 <- length(off) == 0L && isTRUE(tab$default[tab$key == "8016"]) && !nzchar(tab$reason[tab$key == "8016"]) &&
+  identical(tab$grade_ok[tab$key == "8016"], FALSE) &&
   isTRUE(tab4$default[tab4$key == "8016"]) && is.na(tab4$grade_ok[tab4$key == "8016"]) &&
   ok_ref && identical(ok_of, exp_ok)
-rec("Check 04: Products without a reference grade (most commonly permitted) unticked by default",
-    ok(ok4), sprintf("fixture: unticked (mapped species) %s ('%s'); without permitted grades kept %s | invented groups: reference grades %s | permits one: %s",
-                     paste(off, collapse = ","), tab$reason[tab$key == "8016"],
+rec("Check 04: Grades no longer untick products (2026-10-28); reference grades (most commonly permitted, ties kept, else StartGrade, else none) and which products permit them",
+    ok(ok4), sprintf("fixture: unticked (mapped species) %s; 100 Energi (grade 7 only) ticked %s, no reason; without permitted grades kept %s | invented groups: reference grades %s | permits one: %s",
+                     paste(off, collapse = ","),
+                     isTRUE(tab$default[tab$key == "8016"]),
                      isTRUE(tab4$default[tab4$key == "8016"]),
                      paste(names(ref4), vapply(ref4, function(x) paste(x, collapse = "/"), ""), sep = ":", collapse = ", "),
                      paste(names(ok_of), ok_of, sep = "=", collapse = ", ")))
@@ -259,7 +260,7 @@ rec("Check 04: Products without a reference grade (most commonly permitted) unti
 # ==============================================================================
 section("05. Mapping onto the assortment table")
 d5 <- r$defs; row <- function(k) d5[keys == k, , drop = FALSE]
-exp_keys <- c(K_PINE_SAW, "pine_200_massevirke", "spruce_197_massevirke", "spruce_154_kubb", K_SCA,
+exp_keys <- c(K_PINE_SAW, "pine_200_massevirke", "spruce_197_massevirke", "spruce_100_energi", "spruce_154_kubb", K_SCA,
               "pine_waste", "spruce_waste")
 ps <- row(K_PINE_SAW); sca <- row(K_SCA)
 ok5 <- isTRUE(r$ok) && setequal(keys, exp_keys) && length(K_SCA) == 1L &&
@@ -441,7 +442,9 @@ if (ran) {
   pv_ok <- nrow(ps11) > 0L && isTRUE(all.equal(ps11$price_volume_m3,
     price_volume_m3("Top", ps11$TopDiameter_ub, price_lengths(row(K_PINE_SAW)$PriceLengths_cm, ps11$LogLength),
                     adjustment = VOLUME_ROUND_DOWN_CM)))
-  used <- setdiff(keys[r$defs$Name != "Waste"], unique(lg$ProductKey))
+  # 100 Energi (grade 7 only) does not permit the reference grade: a stem without grade data
+  # (a tree list) never gets it (2026-10-28).
+  used <- setdiff(keys[r$defs$Name != "Waste"], c(unique(lg$ProductKey), "spruce_100_energi"))
   tabs <- res[vapply(res, is.data.frame, logical(1))]
   coord_cols <- unique(unlist(lapply(tabs, function(t) grep("lat|lon|coord|altitude", names(t), value = TRUE,
                                                              ignore.case = TRUE))))

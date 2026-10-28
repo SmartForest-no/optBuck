@@ -154,7 +154,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       disp[[n]] <- gsub(".", ",", disp[[n]], fixed = TRUE)
     disp
   }
-  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades")
+  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades")
 
   # Fixed row order, the same in both tables so rows line up: by species
   # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
@@ -340,6 +340,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       rows$PriceLengths_cm <- old_row$PriceLengths_cm   # hidden (hpr imports); kept on edits
     }
     rows$PermittedGrades <- if (!is.null(old_row)) old_row$PermittedGrades else NA_character_   # hidden; kept on edits
+    rows$ReferenceGrades <- if (!is.null(old_row)) old_row$ReferenceGrades else NA_character_
     errs <- list(); start <- NULL
     if (!same_pricing) {
       price <- num(input$asm_price)

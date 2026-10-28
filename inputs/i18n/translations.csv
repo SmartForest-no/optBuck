@@ -393,7 +393,6 @@
 "v_tally_a_vol","value","A: Volume (m³ u.b.)","A: Volum (m³fub)",""
 "v_tally_b_vol","value","B: Volume (m³ u.b.)","B: Volum (m³fub)",""
 "v_tally_d_vol","value","B - A: Volume (m³ u.b.)","B - A: Volum (m³fub)",""
-"v_hpr_grade","value","Only for grades set by the operator (special orders)","Bare for kvaliteter som føreren setter (spesialbestillinger)",""
 "v_hpr_group_not_used","value","Species group not used","Treslagsgruppen er ikke brukt",""
 "v_hpr_no_priced","value","No priced cells","Ingen prissatte celler",""
 "v_hpr_no_priced_lc","value","no priced cells","ingen prissatte celler",""

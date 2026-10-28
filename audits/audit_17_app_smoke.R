@@ -1566,10 +1566,10 @@ if (!browser_ok) {
     ok29 <- !nzchar(e29) && grepl("Scenario A", c29$title_a, fixed = TRUE) &&
       grepl("not a readable XML", c29$err, fixed = TRUE) && c29$bad_disabled &&
       grepl("Scenario B", c29$title_b, fixed = TRUE) && identical(c29$species, "pine,spruce,none,none") &&
-      identical(c29$ticked, "111011") && c29$ok_enabled && identical(c29$open, 0L) &&
-      grepl("Imported 5 assortments from hpr_example_synthetic.hpr into Scenario B.", c29$msg, fixed = TRUE) &&
+      identical(c29$ticked, "111111") && c29$ok_enabled && identical(c29$open, 0L) &&
+      grepl("Imported 6 assortments from hpr_example_synthetic.hpr into Scenario B.", c29$msg, fixed = TRUE) &&
       !grepl("Warning", c29$msg, fixed = TRUE) && !grepl("Not taken over", c29$dialog, fixed = TRUE) &&
-      grepl("Only for grades set by the operator (special orders)", c29$dialog, fixed = TRUE) &&
+      !grepl("Only for grades set by the operator", c29$dialog, fixed = TRUE) &&
       grepl("REDACTED23", c29$b_rows, fixed = TRUE) && !grepl("Sawlog Spruce", c29$b_rows, fixed = TRUE) &&
       identical(c29$a_after, c29$a_before) && identical(c29$marks, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[25], if (ok29) PASS else FAIL,

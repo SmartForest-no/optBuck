@@ -198,13 +198,11 @@ will be imported:
   example GRAN → Spruce, FURU → Pine, LAUV → Not used); products of groups
   set to Not used are not imported.
 - **Products.** Every product is listed with its diameter and length classes.
-  In a harvester, some products are only given to logs for which the
-  operator sets a particular grade: energy wood for rotten logs, or special
-  orders such as poles. The app finds each species group's usual grade (the
-  grade most of its products allow; a tie keeps all tied grades). Products
-  that do not allow it start unticked, marked *Only for grades set by the
-  operator (special orders)*. Otherwise the simulated stems, which have no
-  defects, would take them everywhere. Any product can be ticked or
+  Products of species groups set to Not used are not imported. Each
+  species group has a usual grade (the grade most of its products allow;
+  a tie keeps all tied grades). Stems without grade data take only the
+  products that allow it, so energy wood for rotten logs and special
+  orders such as poles are not used for them. Any product can be ticked or
   unticked.
 
 Each imported product becomes a matrix-priced assortment, and a Waste

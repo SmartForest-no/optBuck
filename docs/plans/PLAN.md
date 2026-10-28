@@ -233,7 +233,8 @@ For .hpr stems only, optional, per scenario. Decisions (Lennart, 2026-10-28):
 - **UI.** Two checkboxes per scenario, "Use stem grades" and "Cut at grade changes", shown only when the tree source is .hpr, off by default, copied by Copy A↔B, independent of each other. Norwegian texts in `translations.csv`.
 - **Missing data.** A stem without StemGrade gets the species group's StartGrade from position 0. A product without PermittedGradesDefinition, or not imported from .hpr, permits all grades.
 - **Product grades.** New hidden assortment column `PermittedGrades` (semicolon-separated, empty = all grades), kept through `defs_from_products()`/`products_from_defs()` and the scenario xlsx. `same_def()` treats differing grade sets or checkbox states as different definitions. No UI editing of grades.
-- **Unchanged.** Reference-grade ticking in the import dialog. `CuttingWindowDefinition`, `LimitationCategory` and `DistributionCategory` are left out. With both checkboxes off all outputs and `performance_check.R` equal main.
+- **Reference grade (changed 2026-10-28).** The import no longer unticks products by the reference-grade rule. Each product row stores its group's reference grade(s) (`ReferenceGrades`); stems without grade data, or with "Use stem grades" off, have that grade in every cell, so a product that does not permit it is left out of their candidates. REDACTED28, all products ticked: off 1,493,116 NOK, "Use stem grades" 1,285,598 NOK.
+- **Unchanged.** `CuttingWindowDefinition`, `LimitationCategory` and `DistributionCategory` are left out. With both checkboxes off all outputs and `performance_check.R` equal main.
 - **Known limitation.** With several .hpr files, grade numbers are assumed comparable across files.
 - **Tests.** Audit 30 on a small synthetic fixture (`inputs/test_fixtures/hpr_grades_synthetic.hpr`) plus one audit 17 smoke step.
 

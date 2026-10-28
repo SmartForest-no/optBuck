@@ -1,8 +1,8 @@
 check,result,detail
-"Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates",PASS,"565 rows (msg 149, ui 349, value 67) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none"
+"Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates",PASS,"564 rows (msg 149, ui 349, value 66) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none"
 Check 02: every id the code uses exists; no ui id unused,PASS,"257 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE"
-Check 03: no untranslated English string literals in app/*.R,PASS,"1505 string literals, 26 prose-like, 25 translated at display | left: none"
+Check 03: no untranslated English string literals in app/*.R,PASS,"1506 string literals, 26 prose-like, 25 translated at display | left: none"
 Check 04: every message template round-trips; English unchanged; unknown values pass through,PASS,106 templates | failed: none | misses: none | English unchanged TRUE | pass-through TRUE
-"Check 05: backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss",PASS,"71 distinct messages (tree list 42, .hpr import 23, .hpr stems 28, prices 16) | misses: none | unchanged: none"
+"Check 05: backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss",PASS,"70 distinct messages (tree list 42, .hpr import 22, .hpr stems 28, prices 16) | misses: none | unchanged: none"
 "Check 06: downloads: English CSV as write.csv; Norsk CSV with ';', decimal comma and BOM reads back; tally xlsx in both languages",PASS,"English CSV identical TRUE | Norsk CSV TRUE | xlsx sheets en 'spruce_sawlog', 'spruce_pulpwood', 'long' / no 'spruce_sawlog', 'spruce_pulpwood', 'liste', headers and numbers TRUE"
 Check 07: tree_counts() in English as before Phase 1 and inflected in Norsk; fmt_num(),PASS,"6 tree-count cases, wrong: none | fmt_num TRUE"
