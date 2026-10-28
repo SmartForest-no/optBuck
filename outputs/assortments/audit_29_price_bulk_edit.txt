@@ -1,0 +1,29 @@
+============================================================= 
+  Audit: bulk editing of price matrices
+  Run: 2026-10-28 10:54:04.181414
+============================================================= 
+
+--- 01. Range + amount ---
+  [PASS  ] Check 01: Range + amount: cells in the range changed, others and empty cells unchanged | 5 cells changed by +12.50, 10 empty cells kept
+
+--- 02. Range % ---
+  [PASS  ] Check 02: Range %: old * (1 + p/100) rounded to 2 decimals, others unchanged | 5 cells changed by -7.5 %
+
+--- 03. Row price + length correction ---
+  [PASS  ] Check 03: Row price + length correction in every priced cell; empty cells stay empty | 39 x 9 grid, 341 priced cells filled
+
+--- 04. Forbidden cells stay empty; valid result ---
+  [PASS  ] Check 04: Forbidden cells empty after the round trip, scenario valid, prices never negative | empty cells kept and scenario valid: amount=TRUE, percent=TRUE, fill=TRUE | minimum after -1e6: 0
+
+--- 05. App: range edit and fill dialog ---
+  [PASS  ] Check 05: App: range +10 NOK in A (B unchanged); fill dialog | changed idx 2,3,4,41,42,43 by 10; A range +10 correct (6 cells): TRUE | B unchanged: TRUE | fill cell 777 + 5 = 782 and empty cells kept: TRUE | field value and mode kept after Apply and a row button: TRUE
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result n
+1   PASS 5
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/assortments/audit_29_price_bulk_edit.csv

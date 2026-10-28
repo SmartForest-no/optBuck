@@ -29,6 +29,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | .hpr stems (hpr Phase B) | Audit 26 PASS (checks 1-13; 13, 2026-10-28: several files, unique keys, doubled counts, same per-stem results as one file, failing files, no file names): reading the fixture's 13 stems (chunk size and extractor independent), unusual XML, DBH at 1.3 m above ground from the profile (not the file), the measured-only 10 cm grid, stump 0, nothing above the last measured point, barkNOR, species mapping and dropped stems, .gz/.zip, files without profiles or stems, no coordinates or names in any output, an A/B run, workers; audit 17 check 31 |
 | Result tables (log tally, DBH classes) | Audit 27 PASS (10/10): tally totals equal the run's per assortment and in total (waste not tallied), the price-grid layout with unpriced cells, logs above the cap in the top class, flat-priced per length, B − A (common axes, one-sided, matrix vs flat), DBH class limits and totals, xlsx/CSV downloads, B − A in the xlsx only for shared assortments, type groups (Sawlog, Pulpwood, Other) for scenarios with different assortments, the Products table (`assortment_summary()`: sums, contributions add up to NOK/m³, "–" for a missing assortment); audit 17 checks 14–17, 27 and 33 (four result tabs since 2026-10-23) |
 | Norwegian language option (roadmap Phase 1) | Audit 28 PASS (7/7): the translation table (ids, placeholders, conflicts), every id in the code, no English string literals left in the app, every message template round-trips, 68 real backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss, downloads per language, tree counts; audit 17 checks 34–39 drive a Norsk session |
+| Bulk editing of price matrices (roadmap Phase 4) | Audit 29 PASS (5/5): range + amount, range %, row price + length correction (2 decimals, never below 0), forbidden cells stay empty in all three and the scenario stays valid; the app (shinytest2): a range +10 NOK/m³ in A changes those cells only and not B, the fill dialog; screenshots in outputs/app_smoke/review/audit29/ (gitignored, cleared by each run) |
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
@@ -113,6 +114,7 @@ audits/
   audit_26_hpr_stems.R                       .hpr stems (reader, profiles, stump 0, drops, privacy, A/B run)
   audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads, type groups)
   audit_28_translations.R                    Translation table, ids in the code, no English left, backend messages, downloads per language
+  audit_29_price_bulk_edit.R                 Bulk editing of price matrices (range +/- NOK or %, row price + length fill, empty cells, app)
   prototype_reference/      Frozen audits 05–12
 
 scripts/
