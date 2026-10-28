@@ -234,8 +234,6 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
 
 ## Later and open items
 
-- **Delete after the Phase 4 merge** (unused as of 2026-10-28; left alone because `phase4-price-bulk-edit` is editing those files): `pm_matrix_label()` and `empty_assortment_defs()` in `R/helpers_price_matrix.R`, `sel_row()` in `app/server_scenarios.R`. Check again that nothing calls them before deleting.
-
 - **App overhead on large runs** (open, noted 2026-10-15): the default-stratum comparison (12,427 trees) takes about 57 s from clicking Run to results, of which the backend's own work is about 37 s. Investigate the remaining ~20 s, likely the job's taper profiles serialised between the main process and the workers (prepare runs on a worker, then the chunks are sent out again), plus the worker loading the backend on the first run. The Summary's run time shows the full time from the click.
 
 - **Sensitivity tool** (undecided): show how cutting patterns and NOK/m³ respond to ±x % changes in a price cell or assortment. A price-matrix optimiser would need an explicit objective (e.g. target volume shares), to be defined by Lennart first.

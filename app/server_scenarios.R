@@ -111,7 +111,6 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     k <- selected(); d <- defs(side); i <- match(k, keys_of(d))
     if (is.null(k) || is.na(i)) "none" else d$PriceType[i]
   }
-  sel_row <- function(side) { d <- defs(side); d[match(selected(), keys_of(d)), , drop = FALSE] }
 
 
   # ---- assortment tables ----------------------------------------------------

@@ -70,13 +70,6 @@ pm_matrix_ids <- function(pm) {
   c(saw[order(sp, saw, na.last = TRUE)], PM_FLAT_ID)
 }
 
-#' Human label for a matrix id ("spruce_sawlog" -> "Spruce sawlog").
-pm_matrix_label <- function(id) {
-  if (identical(id, PM_FLAT_ID)) return("Flat prices")
-  s <- gsub("_", " ", id)
-  paste0(toupper(substring(s, 1, 1)), substring(s, 2))
-}
-
 
 #' One matrix as a grid in the source layout.
 #'
@@ -814,13 +807,6 @@ pm_template_wide <- function(default, path) {
 
 
 # ---- custom assortments (Phase 4b) --------------------------------------------------
-
-#' An empty assortment-definition table.
-empty_assortment_defs <- function() {
-  d <- as.data.frame(setNames(replicate(length(ASSORTMENT_COLS), character(0), simplify = FALSE),
-                              ASSORTMENT_COLS), stringsAsFactors = FALSE)
-  .type_assortment_defs(d)
-}
 
 # Column types of a definition table (numbers numeric, flags logical, rest
 # character; AllowedLengths_cm stays a "310;340" string).

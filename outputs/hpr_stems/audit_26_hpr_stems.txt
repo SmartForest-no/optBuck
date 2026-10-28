@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr stems (hpr Phase B)
-  Run: 2026-10-28 12:09:55.419289
+  Run: 2026-10-28 13:11:57.576947
 ============================================================= 
 
 --- 01. Reading the fixture's stems ---
@@ -60,4 +60,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase3/outputs/hpr_stems/audit_26_hpr_stems.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/hpr_stems/audit_26_hpr_stems.csv
