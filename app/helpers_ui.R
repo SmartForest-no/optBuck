@@ -74,8 +74,8 @@ apter_file_input <- function(id, label, accept = NULL, width = "100%") {
 }
 
 #' A file input rendered by the server (modals, renderUI), in `lang`.
-file_input_lang <- function(id, label, accept, lang, width = "100%")
-  fileInput(id, label, accept = accept, width = width,
+file_input_lang <- function(id, label, accept, lang, width = "100%", multiple = FALSE)
+  fileInput(id, label, accept = accept, width = width, multiple = multiple,
             buttonLabel = tr("file_browse", lang = lang), placeholder = tr("file_none", lang = lang))
 
 
@@ -560,4 +560,31 @@ apter_dbh_class_figure <- function(a, b = NULL, lang = "en") {
     ggplot2::labs(x = tr("col_dbh_class_cm", lang = lang), y = tr("unit_nok_m3", lang = lang),
                   colour = NULL, linetype = NULL, title = tr("fig_nok_by_dbh_class", lang = lang)) +
     theme_apter()
+}
+
+#' Log length distribution (Logs tab): logs per length class (dm), stacked by
+#' type group (Sawlog, Pulpwood, Other; waste left out). After a comparison
+#' two panels, A above B, on shared axes.
+#'
+#' @param a,b log_length_distribution() of Scenario A and (optionally) B.
+apter_log_length_figure <- function(a, b = NULL, lang = "en") {
+  scn <- tr(c("scenario_a", "scenario_b"), lang = lang)
+  d <- rbind(if (nrow(a)) cbind(a, Scenario = scn[1L]),
+             if (!is.null(b) && nrow(b)) cbind(b, Scenario = scn[2L]))
+  if (is.null(d) || nrow(d) == 0L) return(NULL)
+  d$Scenario <- factor(d$Scenario, scn)
+  ch <- APTER_CHART
+  cols <- c(Sawlog = ch$assortment[["sawlog"]], Pulpwood = ch$assortment[["pulpwood"]], Other = ch$other)
+  p <- ggplot2::ggplot(d, ggplot2::aes(x = length_class_dm, y = logs, fill = type)) +
+    ggplot2::geom_col(width = 0.8) +
+    ggplot2::scale_fill_manual(values = cols, breaks = names(cols)[names(cols) %in% d$type],
+                               labels = function(x) tr_value(x, lang)) +
+    ggplot2::scale_x_continuous(breaks = function(l) seq(ceiling(l[1L]), floor(l[2L]), by = 1),
+                                labels = .hbar_fmt_axis(lang)) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.05)), labels = .hbar_fmt_axis(lang)) +
+    ggplot2::labs(x = tr("col_length_class_dm", lang = lang), y = tr("tally_logs", lang = lang),
+                  title = tr("fig_log_lengths", lang = lang)) +
+    theme_apter()
+  if (!is.null(b)) p <- p + ggplot2::facet_wrap(ggplot2::vars(Scenario), ncol = 1L)
+  p
 }

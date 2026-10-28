@@ -772,6 +772,11 @@ prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "defau
   trees <- m$trees
   plots <- sort(unique(as.character(trees$plot_id[!is.na(trees$plot_id)])))
   n_zero_log <- sum(core$tree_summary$n_logs_selected == 0L)
+  if (hpr && "file" %in% names(trees)) {          # several .hpr files: each stem's file position
+    fi <- function(x) trees$file[match(as.character(x$treid), as.character(trees$treid))]
+    core$tree_summary$file <- fi(core$tree_summary)
+    core$selected_logs_all$file <- fi(core$selected_logs_all)
+  }
   for (x in list(core$tree_summary, core$selected_logs_all, core$per_m3_summary,
                  core$per_m3_by_assortment, core$zero_log_trees, m$profile_failures,
                  m$excluded))

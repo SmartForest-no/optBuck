@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: result tables (log tally, DBH classes)
-  Run: 2026-10-27 16:41:15.02012
+  Run: 2026-10-28 10:32:53.465374
 ============================================================= 
 
 --- 01. Tally totals ---
@@ -32,11 +32,14 @@
 
 --- 10. Products table (assortment_summary) ---
   [PASS  ] Check 10: assortment_summary(): sums equal product_summary, contributions add up to NOK/m3, NA when a scenario lacks the assortment | one run: 4 assortments, sums and shapes TRUE, contributions 383.19 = NOK/m3 383.19 | A/B: spruce_pulpwood only in A -> B NA TRUE | rows only for assortments with logs TRUE
+
+--- 11. Log length distribution ---
+  [PASS  ] Check 11: Log length distribution: logs per length class equal the tally's Total row summed over the non-waste assortments (A and B); waste excluded | A: per-length equal TRUE, total 322 = non-waste logs TRUE | B: equal TRUE, total 320, TRUE | an added waste log changes nothing TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 10
+1   PASS 11
 
   Verdict: PASS 
 ============================================================= 

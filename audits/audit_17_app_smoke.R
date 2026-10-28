@@ -215,6 +215,12 @@
 #      survive a switch to English and back; the scenario file saved in
 #      Norsk loads in English; the choice survives a reload; runtime of the
 #      Norsk session (REVIEW above 240 s)
+# 40.  Several .hpr files (Phase 2, 2026-10-28; English session, after 31): the
+#      fixture and a copy with StemKeys + 1000 uploaded at once give "2 files:
+#      26 stems read, 10 used.", one species row per group name, a comparison
+#      on 10 stems, a File column in the Trees table, no file name on the
+#      page; the trees and logs CSVs have a File column with 1 and 2 and no
+#      file name (screenshot in outputs/app_smoke/review_phase2/)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -525,7 +531,8 @@ browser_checks <- c(
   "Check 36: Dialogs and messages in Norsk (assortment form, copy, remove, .hpr import, broken tree list)",
   "Check 37: A comparison in Norsk: result tabs, labels, decimal commas, headers, figures; no English",
   "Check 38: Downloads in Norsk: file names, CSV format and headers, tally xlsx, scenario xlsx format",
-  "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime")
+  "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime",
+  "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -980,6 +987,7 @@ if (!browser_ok) {
     }
     tally1 <- tally_state(app, read_logs_csv(app))
     c27 <- list(logs1 = if (tally1$ok) "tbl_tally:ok" else "tbl_tally:0")
+    c27$len1 <- figs(app, "fig_log_lengths")   # Phase 2: the log length distribution (Logs tab)
     shoot(app, "02b_log_tally")
     ctrl14 <- js(app, paste0("document.querySelectorAll('#tbl_selected_logs .rt-pagination, ",
                              "#tbl_selected_logs [aria-sort], #tbl_selected_logs_sort, #tbl_selected_logs_next').length"))
@@ -1110,6 +1118,11 @@ if (!browser_ok) {
       c27$logs2 <- if (tally2$ok && identical(tally2$scen, "A/B") && grepl("B − A", c27$tally_diff_hdr, fixed = TRUE))
         "tbl_tally:ok" else "tbl_tally:0"
       shoot(app, "05a_log_tally_B_minus_A")
+      app$set_inputs(tally_scenario = "A", wait_ = FALSE); app$wait_for_idle()
+      c27$len2 <- figs(app, "fig_log_lengths")   # A above B
+      c27$len2_h <- js(app, "document.querySelector('#fig_log_lengths').offsetHeight")
+      p2 <- file.path(out_dir, "review_phase2"); ensure_dir(p2)
+      try(app$get_screenshot(file.path(p2, "02_logs_tab_comparison.png")), silent = TRUE)
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c27$trees2 <- figs(app, c("fig_distributions", "fig_dbh_class"))
     })
@@ -1461,13 +1474,14 @@ if (!browser_ok) {
                 cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
     # 27. figures (images with a width) for the single run and the comparison
-    ok27 <- !nzchar(e27) && all(vapply(c27[c("logs1", "trees1", "logs2", "trees2")],
+    ok27 <- !nzchar(e27) && all(vapply(c27[c("logs1", "trees1", "logs2", "trees2", "len1", "len2")],
                                        function(f) isTRUE(fig_ok(f)), logical(1)))
     rec(browser_checks[23], if (ok27) PASS else FAIL,
-        sprintf("single run: tally %s (%s rows, volume %.3f vs logs %.3f m³), figures %s | comparison: tally %s (scenarios %s, B − A signed %s), figures %s (id:image width px)%s",
+        paste0(sprintf("single run: tally %s (%s rows, volume %.3f vs logs %.3f m³), figures %s | comparison: tally %s (scenarios %s, B − A signed %s), figures %s (id:image width px)%s",
                 c27$logs1, tally1$rows, tally1$vol_tally, tally1$vol_logs, c27$trees1,
                 c27$logs2, if (exists("tally2")) tally2$scen else "", isTRUE(c27$tally_signed),
-                c27$trees2, err_txt(e27)))
+                c27$trees2, err_txt(e27)), sprintf(" | log length figure: single run %s, comparison %s, %s px high",
+                c27$len1, c27$len2, c27$len2_h)))
     # 32. Copy from A / Copy from B (2026-10-22): a flat price edited in B
     # (444) makes B differ; "Copy from A" asks first, Cancel keeps B, Copy
     # makes B equal to A (nothing highlighted).
@@ -1642,6 +1656,71 @@ if (!browser_ok) {
                 substr(gsub("\\s+", " ", c31$summary), 1, 120), c31$cmp_tab,
                 substr(or_default(c31$logs_hdr, ""), 1, 80), substr(or_default(c31$trees_hdr, ""), 1, 100),
                 c31$nerr, err_txt(e31)))
+    # 40. Several .hpr files (Phase 2, 2026-10-28), after 31: the fixture and
+    # a copy with every StemKey + 1000 uploaded at once. One total line, the
+    # species table merged by name (3 rows), the comparison runs on 10 stems,
+    # the Trees table has a File column, and no file name is in the results.
+    fx_src <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+    c40 <- list()
+    e40 <- try_drv({
+      fl <- readLines(fx_src, warn = FALSE, encoding = "UTF-8")
+      first <- grep("<Stem>", fl, fixed = TRUE)[1L]
+      f40 <- file.path(tempfile("hpr40"), "second_upload.hpr"); dir.create(dirname(f40))
+      fl2 <- fl
+      for (j in which(seq_along(fl2) >= first & grepl("<StemKey>[0-9]+</StemKey>", fl2))) {
+        m <- unique(regmatches(fl2[j], gregexpr("<StemKey>[0-9]+</StemKey>", fl2[j]))[[1L]])
+        for (s in m) fl2[j] <- gsub(s, sprintf("<StemKey>%d</StemKey>", 1000L + as.integer(gsub("[^0-9]", "", s))),
+                                    fl2[j], fixed = TRUE)
+      }
+      writeLines(fl2, f40, useBytes = TRUE)
+      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tree_source = "hpr", wait_ = FALSE); app$wait_for_idle()
+      app$upload_file(hs_upload = c(fx_src, f40))
+      app$wait_for_js("document.querySelector('#hs_validation') && /2 files/.test(document.querySelector('#hs_validation').innerText)",
+                      timeout = 60 * 1000)
+      app$wait_for_idle()
+      c40$valid <- txt(app, "#hs_validation")
+      c40$n_rows <- js(app, "document.querySelectorAll('#hs_species_ui tbody tr').length")
+      c40$species <- js(app, paste0("Array.from(document.querySelectorAll('#hs_species_ui select'))",
+                                    ".map(function(s){ return s.value; }).join(',')"))
+      c40$stems <- js(app, paste0("Array.from(document.querySelectorAll('#hs_species_ui tbody tr'))",
+                                  ".map(function(r){ return r.children[1].innerText.trim(); }).join(',')"))
+      c40$counts <- txt(app, "#tree_counts")
+      p40 <- file.path(out_dir, "review_phase2"); ensure_dir(p40)
+      app$run_js("window.scrollTo(0, 0);")
+      try(app$get_screenshot(file.path(p40, "01_hpr_two_files_panel.png")), silent = TRUE)
+      run(app)
+      app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
+      c40$cmp <- compared_now(app)
+      c40$summary <- txt(app, "#summary_cards")
+      app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
+      c40$trees_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
+      c40$page <- paste(txt(app, "#hs_validation"), txt(app, "#summary_cards"), txt(app, "#tbl_trees"))
+      c40$nerr <- n_err_notif(app)
+      # The tree and log CSVs: a File column with 1 and 2, no file name anywhere.
+      dl_csv <- function(id) {
+        f <- app$get_download(id)
+        list(df = utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
+             txt = paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n"))
+      }
+      d_trees <- dl_csv("dl_trees"); d_logs <- dl_csv("dl_logs")
+      c40$file_vals <- paste(sort(unique(d_trees$df[["File"]])), collapse = ",")
+      c40$file_vals_logs <- paste(sort(unique(d_logs$df[["File"]])), collapse = ",")
+      c40$names_in_csv <- grepl("second_upload|hpr_example_synthetic", paste(d_trees$txt, d_logs$txt))
+    })
+    ok40 <- !nzchar(e40) && grepl("2 files: 26 stems read, 10 used.", c40$valid, fixed = TRUE) &&
+      identical(as.integer(c40$n_rows), 3L) && identical(c40$species, "pine,spruce,none") &&
+      all(as.integer(strsplit(c40$stems, ",")[[1L]]) %% 2L == 0L) && c40$cmp &&
+      grepl("8 spruce · 2 pine stems", c40$counts, fixed = TRUE) &&
+      grepl("\\|File\\|", c40$trees_hdr) && !grepl("second_upload|hpr_example_synthetic", c40$page) &&
+      identical(c40$nerr, 0L) && identical(c40$file_vals, "1,2") && identical(c40$file_vals_logs, "1,2") &&
+      identical(c40$names_in_csv, FALSE)
+    rec(browser_checks[36], if (ok40) PASS else FAIL,
+        sprintf("summary '%s' | species rows %s: %s (stems %s) | counts '%s' | compared %s | trees columns: %s | file names on the page: %s | File column in the trees / logs CSV: %s / %s, file names in the CSVs: %s | error notifications %s%s",
+                substr(gsub("\\s+", " ", or_default(c40$valid, "")), 1, 70), c40$n_rows, c40$species, c40$stems,
+                trimws(c40$counts), c40$cmp, substr(or_default(c40$trees_hdr, ""), 1, 90),
+                grepl("second_upload|hpr_example_synthetic", or_default(c40$page, "")),
+                c40$file_vals, c40$file_vals_logs, c40$names_in_csv, c40$nerr, err_txt(e40)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.

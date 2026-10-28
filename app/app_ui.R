@@ -195,6 +195,7 @@ simulator_page <- nav_panel(
         div(class = "tally-downloads",
           downloadButton("dl_tally_xlsx", t_("btn_dl_tally_xlsx"), class = "btn-secondary btn-sm"),
           downloadButton("dl_tally_csv", t_("btn_dl_tally_csv"), class = "btn-secondary btn-sm")),
+        plotOutput("fig_log_lengths", height = "auto"),
         div(class = "section-hdr", t_("hdr_logs")),
         uiOutput("logs_preview_note"),
         reactableOutput("tbl_selected_logs"),
