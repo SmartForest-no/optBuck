@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: scenarios A and B (assortments and prices)
-  Run: 2026-10-28 10:51:40.630673
+  Run: 2026-10-27 16:40:33.814766
 ============================================================= 
 
 --- 01. Derived fields ---
@@ -44,4 +44,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/assortments/audit_24_scenarios.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/assortments/audit_24_scenarios.csv

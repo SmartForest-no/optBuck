@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bark model and commercial volume under bark
-  Run: 2026-10-28 10:51:13.654833
+  Run: 2026-10-27 16:37:59.260477
 ============================================================= 
 
 --- 01. Bark model matches taperNOR(with_bark = FALSE), spruce ---
@@ -20,41 +20,28 @@
   [PASS  ] Check 05b: Linear cone = sum of top-diameter cylinders | got 0.4283325964 m3, hand 0.4283325964 m3
   [PASS  ] Check 05c: Waste log and unbucked top contribute nothing | per log 0.402067 / 0.194783 / 0.000000 m3 | total 0.5968507679, hand (non-waste only) 0.5968507679
   [PASS  ] Check 05d: Log from 10 cm excludes the stump section | got 0.0706858347 m3 for 1 m, expected 0.0706858347 m3
-  [FAIL  ] Backend run (spruce) | Partitioned taper profile cache not found:
-  S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/app_cache/taper_profiles_by_plot_block_github
-Run this script first:
-  Rscript scripts/app_backend/00_precompute_taper_profiles_github.R
-  [FAIL  ] Backend run (pine) | Partitioned taper profile cache not found:
-  S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/app_cache/taper_profiles_by_plot_block_github
-Run this script first:
-  Rscript scripts/app_backend/00_precompute_taper_profiles_github.R
 
 --- 06. Waste and top excluded (backend runs) ---
+  [PASS  ] Check 06: Commercial volume = non-waste logs only (recomputed per tree) | 201 trees (spruce + pine runs) | max |backend - hand| = 4.44e-16 m3 | waste logs with volume: 0 | trees above stem-to-last-log volume: 0
 
 --- 07. Denominator unaffected by prices ---
+  [PASS  ] Check 07: All prices x1.5 -> same commercial volume per tree, NOK/m3 x1.5 | 137 trees | max |tree volume diff| 0.0e+00 m3, max |value x1.5 diff| 2.3e-13 NOK | trees with a different pattern: 0 | total 33.174323 vs 33.174323 m3 | NOK/m3 389.807 -> 584.710 (ratio - 1.5 = 2.2e-16) | fixed pattern identical: TRUE
 
 --- 08. Price class from under-bark top diameter ---
+  [PASS  ] Check 08: Sawlog price class = floor(TopDiameter_ub / 10); TopDiameter_ub <= TopDiameter_ob | 335 sawlogs (spruce + pine) | class mismatches: 0 (boundary cases skipped: 8) | ub > ob: 0 | tops with zero bark: 0 | mean top bark 13.3 mm
 
 --- 09. Total NOK/m3 ---
+  [PASS  ] Check 09: Total NOK/m3 = total value / total commercial volume | spruce 389.8, pine 371.0 NOK/m3 | max deviation 0.00e+00
 
 --- 10. Pulpwood price volume = commercial volume ---
+  [PASS  ] Check 10: Pulpwood price volume equals commercial volume (1e-9 m3) | 277 pulpwood logs (spruce + pine) | over tolerance: 0 | max |diff| 0.000e+00 m3 | mean diff (price - commercial) 0.000e+00 m3 | totals 8.69413 vs 8.69413 m3
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
-  result n
-1   FAIL 2
-2   PASS 8
+  result  n
+1   PASS 13
 
-  Verdict: FAIL 
+  Verdict: PASS 
 ============================================================= 
 
-  [FAIL] Backend run (spruce) | Partitioned taper profile cache not found:
-  S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/app_cache/taper_profiles_by_plot_block_github
-Run this script first:
-  Rscript scripts/app_backend/00_precompute_taper_profiles_github.R 
-  [FAIL] Backend run (pine) | Partitioned taper profile cache not found:
-  S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/app_cache/taper_profiles_by_plot_block_github
-Run this script first:
-  Rscript scripts/app_backend/00_precompute_taper_profiles_github.R 
-
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/commercial_volume/audit_18_bark_and_commercial_volume.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/commercial_volume/audit_18_bark_and_commercial_volume.csv

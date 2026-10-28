@@ -26,4 +26,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/assortments/audit_29_price_bulk_edit.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/assortments/audit_29_price_bulk_edit.csv

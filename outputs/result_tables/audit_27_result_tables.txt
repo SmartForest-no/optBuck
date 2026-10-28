@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: result tables (log tally, DBH classes)
-  Run: 2026-10-28 10:52:26.885583
+  Run: 2026-10-28 10:32:53.465374
 ============================================================= 
 
 --- 01. Tally totals ---
@@ -44,4 +44,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/result_tables/audit_27_result_tables.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/result_tables/audit_27_result_tables.csv

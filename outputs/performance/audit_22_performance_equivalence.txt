@@ -1,6 +1,38 @@
 ============================================================= 
   Audit: performance equivalence
-  Run: 2026-10-28 10:51:28.088349
+  Run: 2026-10-27 16:39:15.222787
 ============================================================= 
 
 --- 01. 1 worker vs N workers ---
+  [PASS  ] Check 01: 1 vs 15 workers: NFI stratum and 1000-tree list identical (unsorted) | all tables identical | workers recorded: 1 and 15 | trees: 194 and 1000
+
+--- 02. Chunk sizes ---
+  [PASS  ] Check 02: Chunk sizes 1, 7 and default give identical results (comparison with custom assortments) | all tables identical
+
+--- 03. Comparison = two separate runs ---
+  [PASS  ] Check 03: A comparison equals two separate runs (1000-tree list; custom assortments with UseIn default/scenario/both) | all tables identical | UseIn: both/default/scenario | A logs: pine_pulpwood,pine_sawlog,pine_thick_poles,spruce_poles,spruce_pulpwood,spruce_sawlog | B logs: pine_pulpwood,pine_sawlog,pine_thick_poles,spruce_large_sawlog,spruce_pulpwood,spruce_sawlog
+
+--- 04. Differently defined shared products: separate candidate passes ---
+  [PASS  ] Check 04: Shared products defined differently -> two candidate passes; results equal separate runs | groups: 2 (same definitions: 1) | all tables identical
+
+--- 05. Main baseline ---
+  [PASS  ] Check 05: All 8 cases equal the main baseline (commit 3fa0a9d, rows sorted) | nfi_spruce: identical; nfi_pine: identical; nfi_both: identical; tl100: identical; tl1000: identical; tl1000_scn: identical; tl100_custom_default: identical; tl100_custom_scenario: identical
+
+--- 06. workers = 1 runs in this process ---
+  [PASS  ] Check 06: workers = 1 sets no future plan and records 1 worker | plan after the run: sequential | workers recorded: 1 | all tables identical
+
+--- 07. App background job ---
+  [PASS  ] Check 07: The app's background job (run_job_async) equals the backend runner (tree-list comparison, NFI stratum) | all tables identical | progress updates: 11
+
+--- 08. Usable candidates = eligible rows of generate_candidate_logs_one_tree() ---
+  [PASS  ] Check 08: Backend candidates equal the eligible rows of generate_candidate_logs_one_tree() (default and custom products) | 0 of 200 tree/product-set cases differ
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result n
+1   PASS 8
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/performance/audit_22_performance_equivalence.csv

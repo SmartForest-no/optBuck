@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: R/14_validate_first_helpers.R
-  Run: 2026-10-28 10:49:44.356096
+  Run: 2026-10-27 16:32:37.316049
 ============================================================= 
 
 --- 1. Helper files ---
@@ -53,7 +53,7 @@
 
 --- 19-20. Accepted scripts integrity ---
   [PASS  ] All accepted scripts 00-12 exist | 13 present, 0 missing
-  [PASS  ] Accepted scripts 00-12 not modified after script 14 was created | none of 13 scripts modified after script 14 (boundary: 2026-10-28 10:38:04)
+  [PASS  ] Accepted scripts 00-12 not modified after script 14 was created | none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
@@ -63,4 +63,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase4/outputs/helper_validation/audit_14_validate_first_helpers.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/helper_validation/audit_14_validate_first_helpers.csv

@@ -24,7 +24,7 @@
 #      unchanged; the fill dialog applies a row price and a length
 #      correction to one cell; the "Change prices" field and mode keep their
 #      values after Apply and after a row/column button (screenshots:
-#      outputs/app_smoke/review_phase4/)
+#      outputs/app_smoke/review/audit29/ (gitignored, cleared by each run))
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -149,8 +149,8 @@ rec("Check 04: Forbidden cells empty after the round trip, scenario valid, price
 
 # ==============================================================================
 section("05. App: range edit and fill dialog")
-shot_dir <- file.path(root_dir, "outputs", "app_smoke", "review_phase4")
-ensure_dir(shot_dir)
+shot_dir <- file.path(root_dir, "outputs", "app_smoke", "review", "audit29")
+unlink(shot_dir, recursive = TRUE); ensure_dir(shot_dir)     # cleared by each run, as audit 17 does
 browser_ok <- requireNamespace("shinytest2", quietly = TRUE) && requireNamespace("chromote", quietly = TRUE)
 if (!browser_ok) {
   rec("Check 05: App: range +10 NOK in A (B unchanged); fill dialog", FAIL,
