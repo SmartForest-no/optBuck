@@ -61,6 +61,16 @@ HPR_MAX_DIAMETER_MM <- 1500
 #' Profile grid (cm), as for taperNOR profiles.
 HPR_PROFILE_STEP_CM <- 10L
 
+# Cleaning (Phase 3, Stambas defaults): checked from HPR_CLEAN_FROM_CM from the
+# felling cut up to the first measured diameter <= HPR_CLEAN_END_MM.
+HPR_CLEAN_FROM_CM         <- 200
+HPR_CLEAN_END_MM          <- 100
+HPR_CLEAN_BROKEN_TOP_MM   <- 200    # last measured diameter above this: broken top
+HPR_CLEAN_MIN_FALL_MM     <- 1      # a fall of at least this ...
+HPR_CLEAN_MIN_FALL_DM     <- 30     # ... over every window of this length
+HPR_CLEAN_MAX_FALL_1DM_MM <- 30     # at most this over 1 dm
+HPR_CLEAN_MAX_FALL_10DM_MM <- 60    # at most this over 10 dm
+
 
 # ---- heights -------------------------------------------------------------------------
 
@@ -225,6 +235,52 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
 
 # ---- profiles ------------------------------------------------------------------------
 
+#' Cleaning checks on the stems' own measured points (over bark, cm from the
+#' felling cut, mm). Range: from HPR_CLEAN_FROM_CM (interpolated if no point
+#' lies there) to the first measured point at or above it with a diameter <=
+#' HPR_CLEAN_END_MM, else the last point. Windows start at every measured
+#' point of the range, end by interpolation and lie inside the range; only
+#' decreases count (local increases are never a max-fall failure). Thresholds
+#' are strict (exactly 30 mm, 60 mm or 1 mm passes). Pure: no state.
+#'
+#' @param idx,pos,d Profile points (stem row, cm, mm), as read_hpr_stems().
+#' @param n         Number of stems.
+#' @param check      Stem rows to check (the others stay FALSE).
+#' @return data.frame(broken_top, too_flat, too_steep), n rows.
+hpr_clean_flags <- function(idx, pos, d, n, check = seq_len(n)) {
+  broken <- flat <- steep <- rep(FALSE, n)
+  if (length(pos) == 0L || length(check) == 0L)
+    return(data.frame(broken_top = broken, too_flat = flat, too_steep = steep))
+  rows <- split(seq_along(pos), factor(idx, levels = seq_len(n)))
+  eps <- 1e-9
+  fall <- function(p, x, w) {                       # falls over windows of w cm that fit in p
+    s <- which(p + w <= p[length(p)] + eps)
+    if (length(s) == 0L) return(numeric(0))
+    x[s] - stats::approx(p, x, xout = p[s] + w, ties = mean)$y
+  }
+  for (i in check) {
+    ii <- rows[[i]]
+    if (length(ii) == 0L) next
+    o <- order(pos[ii], na.last = NA); p <- pos[ii][o]; x <- d[ii][o]
+    if (length(p) == 0L) next
+    broken[i] <- x[length(x)] > HPR_CLEAN_BROKEN_TOP_MM
+    if (anyDuplicated(p)) { x <- as.numeric(tapply(x, p, mean)); p <- sort(unique(p)) }
+    if (length(p) < 2L || p[length(p)] < HPR_CLEAN_FROM_CM) next
+    if (p[1L] < HPR_CLEAN_FROM_CM) {                # start the range at the 2 m point
+      x0 <- stats::approx(p, x, xout = HPR_CLEAN_FROM_CM)$y
+      keep <- p > HPR_CLEAN_FROM_CM
+      p <- c(HPR_CLEAN_FROM_CM, p[keep]); x <- c(x0, x[keep])
+    }
+    end <- which(x <= HPR_CLEAN_END_MM)[1L]
+    if (!is.na(end)) { p <- p[seq_len(end)]; x <- x[seq_len(end)] }
+    if (length(p) < 2L) next
+    f1 <- fall(p, x, 10); f10 <- fall(p, x, 100)
+    steep[i] <- any(f1 > HPR_CLEAN_MAX_FALL_1DM_MM + eps) || any(f10 > HPR_CLEAN_MAX_FALL_10DM_MM + eps)
+    flat[i]  <- any(fall(p, x, HPR_CLEAN_MIN_FALL_DM * 10) < HPR_CLEAN_MIN_FALL_MM - eps)
+  }
+  data.frame(broken_top = broken, too_flat = flat, too_steep = steep)
+}
+
 #' Which read stems Apter bucks, with the species map (species group key ->
 #' "spruce" / "pine" / "none"); cheap (no profiles built), for the app's
 #' message as the map changes.
@@ -239,6 +295,11 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
 #' stems without a profile, Not-used species, profiles ending below 1.3 m)
 #' are counted in info only: the summary line (stems read, used) covers them
 #' (decided 2026-10-21).
+#'
+#' Cleaning (Phase 3, hpr_clean_flags()) then drops, among the stems left, broken
+#' tops, too flat and too steep profiles: one warning line per check, counted
+#' independently (a stem failing two checks is in both lines, dropped once under
+#' the first: broken top, too flat, too steep; `clean_counts` has the counts).
 #'
 #' @return list(ok, errors, warnings, info, file, n_read, n_used, use (row
 #'   indices of the stems bucked), species (per stem), offset, last (cm),
@@ -280,13 +341,25 @@ hpr_stem_checks <- function(st, species_map) {
                                            format(HPR_MAX_DIAMETER_MM, big.mark = ",")), TRUE)
   drop(last < dbh_at, "profile ends below 1.3 m above ground (no DBH)", FALSE)
 
+  # Cleaning (Phase 3): per-check counts are independent; a stem is dropped once, under its first failing check.
+  fl <- hpr_clean_flags(st$idx, st$pos, st$d, n, which(is.na(reason)))
+  clean_why <- c(broken_top = sprintf("broken top (last diameter above %s mm)", HPR_CLEAN_BROKEN_TOP_MM),
+                 too_flat = sprintf("profile falls less than %s mm per %s dm", HPR_CLEAN_MIN_FALL_MM, HPR_CLEAN_MIN_FALL_DM),
+                 too_steep = sprintf("profile falls more than %s mm over 1 dm or %s mm over 10 dm",
+                                     HPR_CLEAN_MAX_FALL_1DM_MM, HPR_CLEAN_MAX_FALL_10DM_MM))
+  for (k in names(clean_why)) reason[is.na(reason) & fl[[k]]] <- clean_why[[k]]
+  clean_counts <- vapply(fl, sum, 0L)
+
   use <- which(is.na(reason)); dropped <- which(!is.na(reason))
   fmt <- function(k) prettyNum(k, big.mark = ",")
   tab <- table(factor(reason[dropped], levels = seen))
   lines <- if (length(tab))
     sprintf("%s %s dropped: %s.", fmt(as.integer(tab)), ifelse(as.integer(tab) == 1L, "stem", "stems"), names(tab))
   real <- names(tab) %in% warned
-  warnings <- c(st$warnings, lines[real])
+  hit <- clean_counts > 0L
+  clean_lines <- sprintf("%s %s dropped: %s.", fmt(as.integer(clean_counts[hit])),
+                         ifelse(clean_counts[hit] == 1L, "stem", "stems"), clean_why[hit])
+  warnings <- c(st$warnings, lines[real], clean_lines)
   used_groups <- unique(gi[use]); used_groups <- used_groups[!is.na(used_groups)]
   info <- c(st$info, lines[!real],
             if (length(used_groups))
@@ -300,7 +373,8 @@ hpr_stem_checks <- function(st, species_map) {
   else character(0)
   list(ok = length(errors) == 0L, errors = errors, warnings = warnings, info = info,
        file = st$file, n_read = n, n_used = length(use), use = use, species = species,
-       offset = offset, last = last, group = group, reason = reason, species_used = species[use])
+       offset = offset, last = last, group = group, reason = reason, species_used = species[use],
+       clean_counts = clean_counts)
 }
 
 #' Turn read stems into the stems Apter bucks (hpr_stem_checks(), then the

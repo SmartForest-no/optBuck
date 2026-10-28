@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr stems (hpr Phase B)
-  Run: 2026-10-28 10:32:37.380343
+  Run: 2026-10-28 11:10:15.050722
 ============================================================= 
 
 --- 01. Reading the fixture's stems ---
@@ -45,13 +45,19 @@
   [PASS  ] Check 13c: A failing file is skipped with its position and reason, the others are used | file 2: 'no stem profiles' | used files 1, stems 5/13
   [PASS  ] Check 13d: All files failing is an error 'None of the files can be used.', with each file's position and reason and no file name | ok FALSE | errors 'None of the files can be used.' | files 1,2: no stem profiles,no stems
   [PASS  ] Check 13e: No uploaded file name in any result table (A and B), params, run label, message or CSV download; the file column is 1/2 | 26 tables, 1474 CSV lines, 23 messages searched | file names found: 0 | file column in trees and logs: TRUE
+
+--- 14. Cleaning (Phase 3): broken top, minimum fall, maximum fall ---
+  [PASS  ] Check 14a: hpr_clean_flags(): each synthetic stem (one passing and one failing per rule, boundaries exactly 1 mm / 30 mm / 60 mm pass) is flagged as expected | 12 stems | mismatches: none
+  [PASS  ] Check 14b: per-check counts 2 / 2 / 3 (a stem failing two checks counted in both), 6 of 12 stems used, one warning line per check in the existing style, each stem dropped once with its first reason | counts 2/2/3 | used 6/12 | warnings: 2 stems dropped: broken top (last diameter above 200 mm). | 2 stems dropped: profile falls less than 1 mm per 30 dm. | 3 stems dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm.
+  [PASS  ] Check 14c: the 13 fixture stems are not flagged (5 still used); stems of a Not-used species are not counted; two files give summed counts 4 / 4 / 6 | fixture flagged 0, used 5 | Not used: 0 flagged | two files: 4/4/6, used 12/24
+  [PASS  ] Check 14d: the three warning lines translate to Norsk without a miss | 2 stammer utelatt: knekt topp (siste diameter over 200 mm). | 2 stammer utelatt: profilen faller mindre enn 1 mm per 30 dm. | 3 stammer utelatt: profilen faller mer enn 30 mm over 1 dm eller 60 mm over 10 dm.
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 17
+1   PASS 21
 
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/hpr_stems/audit_26_hpr_stems.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase3/outputs/hpr_stems/audit_26_hpr_stems.csv
