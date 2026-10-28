@@ -549,6 +549,9 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
         VolumeDiameterCategory = method, PriceType = "matrix",
         PriceLengths_cm = if (class_len && any(grid$limits %% 10 != 0))
           paste(grid$limits, collapse = ",") else NA_character_,
+        # Phase 6: the product's permitted stem grades (NA = the file lists none: all grades)
+        PermittedGrades = if (length(p$grades)) norm_permitted_grades(paste(p$grades, collapse = ";"))
+                          else NA_character_,
         stringsAsFactors = FALSE)
       pms[[length(pms) + 1L]] <- grid$pm
       used_keys <- c(used_keys, ak)

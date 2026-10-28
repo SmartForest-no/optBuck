@@ -372,7 +372,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm")), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades")), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]
@@ -454,9 +454,10 @@ same_prices <- function(pm_a, pm_b, key)
   isTRUE(all.equal(.scenario_rows(pm_a, key), .scenario_rows(pm_b, key), check.attributes = FALSE))
 
 #' TRUE when Scenarios A and B differ: in their assortments (membership or
-#' any field) or in the prices of their assortments. Then a run compares
-#' them.
-scenarios_differ <- function(defs_a, pm_a, defs_b, pm_b) {
+#' any field), in the prices of their assortments, or in their stem-grade
+#' options (Phase 6; NULL = both off). Then a run compares them.
+scenarios_differ <- function(defs_a, pm_a, defs_b, pm_b, opts_a = NULL, opts_b = NULL) {
+  if (!identical(normalize_grade_opts(opts_a), normalize_grade_opts(opts_b))) return(TRUE)
   if (!same_assortments(defs_a, defs_b)) return(TRUE)
   keys <- assortment_table_keys(defs_a)
   !isTRUE(all.equal(.scenario_rows(pm_a, keys), .scenario_rows(pm_b, keys), check.attributes = FALSE))

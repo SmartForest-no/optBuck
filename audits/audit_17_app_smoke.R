@@ -221,6 +221,11 @@
 #      on 10 stems, a File column in the Trees table, no file name on the
 #      page; the trees and logs CSVs have a File column with 1 and 2 and no
 #      file name (screenshot in outputs/app_smoke/review/audit17/, prefix phase2_)
+# 41.  Stem grades (Phase 6, 2026-10-28): the two checkboxes per scenario ("Use
+#      stem grades", "Cut at grade changes") show only with the .hpr source and
+#      are off by default; with both ticked in A the invented grades fixture
+#      runs as a comparison (A's cutting patterns differ from B's), and Copy
+#      from A makes B's boxes equal to A's (screenshots, prefix phase6_)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -532,7 +537,8 @@ browser_checks <- c(
   "Check 37: A comparison in Norsk: result tabs, labels, decimal commas, headers, figures; no English",
   "Check 38: Downloads in Norsk: file names, CSV format and headers, tally xlsx, scenario xlsx format",
   "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime",
-  "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names")
+  "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names",
+  "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -1720,6 +1726,49 @@ if (!browser_ok) {
                 trimws(c40$counts), c40$cmp, substr(or_default(c40$trees_hdr, ""), 1, 90),
                 grepl("second_upload|hpr_example_synthetic", or_default(c40$page, "")),
                 c40$file_vals, c40$file_vals_logs, c40$names_in_csv, c40$nerr, err_txt(e40)))
+    # 41. Stem grades (Phase 6): the invented grades fixture as the .hpr source.
+    c41 <- list()
+    e41 <- try_drv({
+      fx41 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
+      vis <- function(id) isTRUE(js(app, sprintf(
+        "(function(){ var e = document.getElementById('%s'); return !!(e && e.offsetParent !== null); })()", id)))
+      app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      c41$vis_nfi <- vis("grade_use_a") || vis("grade_cut_a") || vis("grade_use_b") || vis("grade_cut_b")
+      app$set_inputs(tree_source = "hpr", wait_ = FALSE); app$wait_for_idle()
+      c41$vis_hpr <- vis("grade_use_a") && vis("grade_cut_a") && vis("grade_use_b") && vis("grade_cut_b")
+      c41$off <- !any(unlist(app$get_values(input = c("grade_use_a", "grade_cut_a", "grade_use_b", "grade_cut_b"))$input))
+      c41$labels <- js(app, paste0("['grade_use_a', 'grade_cut_a'].map(function(id){ ",
+                                   "return document.getElementById(id).closest('.checkbox, .form-check').innerText.trim(); }).join(' | ')"))
+      app$set_inputs(grade_use_a = TRUE, grade_cut_a = TRUE, wait_ = FALSE); app$wait_for_idle()
+      app$run_js("document.getElementById('grade_use_a').scrollIntoView({block: 'center'});")
+      try(app$get_screenshot(file.path(shot_dir, "phase6_01_grade_options.png")), silent = TRUE)
+      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$upload_file(hs_upload = fx41)
+      app$wait_for_js("document.querySelector('#hs_validation') && /5 stems read/.test(document.querySelector('#hs_validation').innerText)",
+                      timeout = 60 * 1000)
+      app$wait_for_idle()
+      run(app)
+      app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
+      c41$cmp <- compared_now(app)
+      c41$summary <- txt(app, "#summary_cards")
+      c41$changed <- suppressWarnings(as.integer(sub("(?s).*Changed stems\\s*([0-9]+).*", "\\1", c41$summary, perl = TRUE)))
+      try(app$get_screenshot(file.path(shot_dir, "phase6_02_grades_comparison.png")), silent = TRUE)
+      c41$nerr <- n_err_notif(app)
+      # Copy from A: B's boxes become A's.
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      app$click("scen_copy_b"); app$wait_for_idle()
+      app$click("scen_copy_ok"); app$wait_for_idle()
+      v <- app$get_values(input = c("grade_use_a", "grade_cut_a", "grade_use_b", "grade_cut_b"))$input
+      c41$copied <- isTRUE(v$grade_use_b) && isTRUE(v$grade_cut_b) && isTRUE(v$grade_use_a) && isTRUE(v$grade_cut_a)
+    })
+    ok41 <- !nzchar(e41) && identical(c41$vis_nfi, FALSE) && isTRUE(c41$vis_hpr) && isTRUE(c41$off) &&
+      isTRUE(c41$cmp) && !is.na(c41$changed) && c41$changed >= 1L && identical(c41$nerr, 0L) && isTRUE(c41$copied) &&
+      grepl("Use stem grades", c41$labels, fixed = TRUE) && grepl("Cut at grade changes", c41$labels, fixed = TRUE)
+    rec(browser_checks[37], if (ok41) PASS else FAIL,
+        sprintf("boxes visible with NFI: %s, with .hpr: %s | off by default: %s | labels '%s' | compared %s, changed stems %s | error notifications %s | B's boxes after Copy from A equal A's: %s%s",
+                c41$vis_nfi, c41$vis_hpr, c41$off, substr(gsub("\\s+", " ", or_default(c41$labels, "")), 1, 60),
+                c41$cmp, c41$changed, c41$nerr, c41$copied, err_txt(e41)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.

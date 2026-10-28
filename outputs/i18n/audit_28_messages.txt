@@ -36,7 +36,7 @@ Diameter unit is 'cm'; Apter reads mm only (no conversion). | Diameterenheten er
 pri.hpr is a StanForD 'pri' message, not hpr. | pri.hpr er en StanForD 'pri'-melding, ikke hpr.
 nohpr.zip contains no .hpr file. | nohpr.zip inneholder ingen .hpr-fil.
 Read 13 stems from fixture.hpr. | Leste 13 stammer fra fixture.hpr.
-Recorded logs and stem grades are not read; the stems are bucked from their profiles. | Registrerte stokker og stammekvaliteter leses ikke; stammene apteres etter profilene sine.
+Recorded logs are not read; the stems are bucked from their profiles. | Registrerte stokker leses ikke; stammene apteres etter profilene sine.
 1 stem dropped: profile recorded 'Under bark', not over bark (not supported). | 1 stamme utelatt: profilen er registrert 'Under bark', ikke på bark (støttes ikke).
 1 stem dropped: StemKey already used by an earlier stem. | 1 stamme utelatt: StemKey er allerede brukt av en tidligere stamme.
 1 stem dropped: profile does not start at the felling cut (position 0). | 1 stamme utelatt: profilen starter ikke ved fellingskuttet (posisjon 0).

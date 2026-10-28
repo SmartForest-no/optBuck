@@ -115,6 +115,7 @@ audits/
   audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads, type groups)
   audit_28_translations.R                    Translation table, ids in the code, no English left, backend messages, downloads per language
   audit_29_price_bulk_edit.R                 Bulk editing of price matrices (range +/- NOK or %, row price + length fill, empty cells, app)
+  audit_30_stem_grades.R                     .hpr stem grades and cut at grade changes (grade grid, StartGrade fallback, permitted grades, forced cuts, workers)
   prototype_reference/      Frozen audits 05–12
 
 scripts/
@@ -130,6 +131,7 @@ scripts/
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
   make_demo_files.R                       Writes demo/ (scenario and price files, example tree list)
+  make_hpr_grades_fixture.R               Builds inputs/test_fixtures/hpr_grades_synthetic.hpr (audit 30) from the synthetic fixture: invented stems with stem grades
   make_hpr_test_fixture.R                 Builds inputs/test_fixtures/hpr_example_synthetic.hpr from optBuck's example.hpr (whitelist, no personal data; 13 invented stems)
   hpr_stems_benchmark.R                   Time and memory of reading and an A/B run on real .hpr files (local only; output never committed)
   app_backend/
@@ -378,6 +380,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 26 — hpr stems | `Rscript audits/audit_26_hpr_stems.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 27 — result tables | `Rscript audits/audit_27_result_tables.R` | writexl, readxl, taperNOR |
 | 28 — translations | `Rscript audits/audit_28_translations.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 30 — stem grades | `Rscript audits/audit_30_stem_grades.R` | xml2, writexl, readxl, taperNOR, future; `inputs/test_fixtures/hpr_grades_synthetic.hpr` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -707,6 +710,18 @@ These keep the old name on purpose:
   counts are independent per check and summed over files
   (`clean_counts`). Rules and thresholds: CLAUDE.md, "hpr cleaning"; test:
   audit 26 check 14.
+- **Stem grades (Phase 6, 2026-10-28).** `read_hpr_stems()` also reads
+  `StemGrade/GradeValue@gradeStartPosition` (`gidx`, `gpos`, `gval`, also
+  through `combine_hpr_stems()`). `hpr_stem_profiles(grades = TRUE)` puts the
+  grade of each 10 cm cell on the profile (`hpr_grade_grid()`; StartGrade for
+  stems and cells without a grade), and `profiles_to_profile_vectors()` carries
+  it as `pv$grade`. The two per-scenario options (`GRADE_OPTS_OFF`,
+  `normalize_grade_opts()` in `R/helpers_candidate_generation.R`) become
+  candidate filters in `.candidate_columns()`; the hidden assortment column
+  `PermittedGrades` comes from the .hpr import. Rules and decisions: CLAUDE.md,
+  "hpr stem grades"; tests: audit 30 (fixture
+  `inputs/test_fixtures/hpr_grades_synthetic.hpr`, rebuilt by
+  `scripts/make_hpr_grades_fixture.R`) and audit 17 check 41.
 - **Backend.** `prepare_hpr_job()` / `run_hpr_bucking()` (stump forced to
   0), `prepare_hpr_stems_job()` for the app's worker; `.result_tree_list()`
   with `kind = "hpr"`.

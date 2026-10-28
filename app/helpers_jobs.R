@@ -131,7 +131,7 @@ run_job_async <- function(spec, progress = function(done, total, what) NULL) {
     progress(0L, NA_integer_, "Preparing stem profiles")
     .backend_promise("prepare_hpr_stems_job",
                      list(spec$stems, spec$species_map, spec$path, ROOT, spec$pd, spec$lc,
-                          spec$list_params, spec$scenario))
+                          spec$list_params, spec$scenario, spec$grade_opts))
   } else {
     progress(0L, NA_integer_, "Loading NFI data and taper profiles")
     .backend_promise("prepare_sampled_job",

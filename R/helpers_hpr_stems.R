@@ -137,11 +137,25 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
 }
 
 # One chunk's whitelist: stem table plus flat profile vectors (idx = row of
-# the stem in the chunk).
-.hs_chunk <- function(key, sp, kind, cat, cnt, pos, d)
+# the stem in the chunk) and the stem grades (Phase 6: gidx = stem row, gpos =
+# gradeStartPosition in cm, gval = GradeValue; flat, like idx/pos/d).
+.hs_chunk <- function(key, sp, kind, cat, cnt, pos, d, gcnt = integer(length(key)),
+                      gpos = numeric(0), gval = numeric(0))
   list(stems = data.frame(stem_key = key, species_key = sp, kind = kind, category = cat,
                           n_points = as.integer(cnt), stringsAsFactors = FALSE),
-       idx = rep.int(seq_along(key), cnt), pos = pos, d = d)
+       idx = rep.int(seq_along(key), cnt), pos = pos, d = d,
+       gidx = rep.int(seq_along(key), gcnt), gpos = gpos, gval = gval)
+
+# The stem grades of each record: StemGrade/GradeValue, start position (cm)
+# from the felling cut and grade number.
+.hs_grades_regex <- function(r) {
+  gv <- regmatches(r, gregexpr("<StemGrade(?:\\s[^>]*)?>\\s*<GradeValue(?:\\s[^>]*)?>[^<]*</GradeValue>",
+                               r, perl = TRUE, useBytes = TRUE))
+  cnt <- lengths(gv); gv <- unlist(gv, use.names = FALSE)
+  list(cnt = cnt,
+       pos = .hs_num1(gv, "gradeStartPosition\\s*=\\s*[\"']\\s*([^\"']*?)\\s*[\"']"),
+       val = .hs_num1(gv, ">\\s*([^<]*?)\\s*</GradeValue>"))
+}
 
 .hs_extract_regex <- function(r) {
   key  <- trimws(.hs_re1(r, "<StemKey>([^<]*)</StemKey>"))
@@ -155,9 +169,11 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
   dv <- regmatches(blk, gregexpr("<DiameterValue(?:\\s[^>]*)?>[^<]*</DiameterValue>", blk,
                                  perl = TRUE, useBytes = TRUE))
   cnt <- lengths(dv); dv <- unlist(dv, use.names = FALSE)
+  g <- .hs_grades_regex(r)
   .hs_chunk(key, sp, kind, cat, cnt,
             .hs_num1(dv, "diameterPosition\\s*=\\s*[\"']\\s*([^\"']*?)\\s*[\"']"),
-            .hs_num1(dv, ">\\s*([^<]*?)\\s*</DiameterValue>"))
+            .hs_num1(dv, ">\\s*([^<]*?)\\s*</DiameterValue>"),
+            g$cnt, g$pos, g$val)
 }
 
 .hs_extract_xml2 <- function(r) {
@@ -169,11 +185,15 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
   kind <- ifelse(xml2::xml_find_lgl(st, "boolean(./MultiTreeProcessedStem)"), "multi",
           ifelse(xml2::xml_find_lgl(st, "boolean(./SingleTreeProcessedStem)"), "single", "other"))
   dv <- xml2::xml_find_all(st, "./*/StemDiameters/DiameterValue")
+  gv <- xml2::xml_find_all(st, "./*/StemGrade/GradeValue")
   .hs_chunk(txt1("./StemKey"), txt1("./SpeciesGroupKey"), kind,
             xml2::xml_attr(xml2::xml_find_first(st, "./*/StemDiameters"), "diameterCategory"),
             xml2::xml_find_num(st, "count(./*/StemDiameters/DiameterValue)"),
             suppressWarnings(as.numeric(xml2::xml_attr(dv, "diameterPosition"))),
-            suppressWarnings(as.numeric(trimws(xml2::xml_text(dv)))))
+            suppressWarnings(as.numeric(trimws(xml2::xml_text(dv)))),
+            xml2::xml_find_num(st, "count(./*/StemGrade/GradeValue)"),
+            suppressWarnings(as.numeric(xml2::xml_attr(gv, "gradeStartPosition"))),
+            suppressWarnings(as.numeric(trimws(xml2::xml_text(gv)))))
 }
 
 # Regex, or xml2 for a chunk with entities or CDATA (none in the owner's files).
@@ -214,7 +234,10 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
     .hs_chunk(character(0), character(0), character(0), character(0), integer(0), numeric(0), numeric(0))$stems
   x <- list(idx = unlist(Map(function(p, o) p$idx + o, parts, off), use.names = FALSE),
             pos = unlist(lapply(parts, `[[`, "pos"), use.names = FALSE),
-            d   = unlist(lapply(parts, `[[`, "d"), use.names = FALSE))
+            d   = unlist(lapply(parts, `[[`, "d"), use.names = FALSE),
+            gidx = unlist(Map(function(p, o) p$gidx + o, parts, off), use.names = FALSE),
+            gpos = unlist(lapply(parts, `[[`, "gpos"), use.names = FALSE),
+            gval = unlist(lapply(parts, `[[`, "gval"), use.names = FALSE))
   errors <- character(0)
   if (nrow(stems) == 0L) errors <- sprintf("%s contains no stems.", filename)
   else if (all(stems$n_points == 0L))
@@ -225,10 +248,10 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
   sp$n_stems    <- vapply(sp$key, function(k) sum(stems$species_key == k, na.rm = TRUE), 0L)
   sp$n_profiles <- vapply(sp$key, function(k) sum(stems$species_key == k & stems$n_points > 0L, na.rm = TRUE), 0L)
   info <- c(sprintf("Read %s stems from %s.", format(nrow(stems), big.mark = ","), filename),
-            "Recorded logs and stem grades are not read; the stems are bucked from their profiles.")
+            "Recorded logs are not read; the stems are bucked from their profiles.")
   list(ok = length(errors) == 0L, errors = errors, warnings = c(defs$warnings, src$warnings),
        info = info, file = filename, species = sp, stems = stems,
-       idx = x$idx, pos = x$pos, d = x$d,
+       idx = x$idx, pos = x$pos, d = x$d, gidx = x$gidx, gpos = x$gpos, gval = x$gval,
        seconds = as.numeric(difftime(Sys.time(), t0, units = "secs")))
 }
 
@@ -382,6 +405,28 @@ hpr_stem_checks <- function(st, species_map) {
        clean_counts = clean_counts)
 }
 
+#' The stem grade at each 10 cm grid point (Phase 6). A grade runs from its
+#' gradeStartPosition (snapped to the nearest grid point, halves up) to the
+#' next change; the grade at grid point g is the grade of the cell [g, g+10).
+#' Before the first start, and for a stem without grades, the species group's
+#' StartGrade applies (NA when the group has none: the stem is then treated as
+#' grade-free). Where two starts snap to the same point the later one wins.
+#'
+#' @param g           Grid positions (cm, ascending).
+#' @param gpos,gval   The stem's own grade starts (cm) and numbers.
+#' @param start_grade Species group StartGrade (NA if none).
+#' @return Numeric vector, length(g).
+hpr_grade_grid <- function(g, gpos, gval, start_grade, step = HPR_PROFILE_STEP_CM) {
+  ok <- !is.na(gpos) & !is.na(gval)
+  out <- rep(as.numeric(start_grade), length(g))
+  if (!any(ok)) return(out)
+  gpos <- gpos[ok]; gval <- gval[ok]
+  o <- order(gpos, seq_along(gpos)); gpos <- gpos[o]; gval <- gval[o]
+  at <- findInterval(g, floor(gpos / step + 0.5) * step)
+  out[at > 0L] <- gval[at[at > 0L]]
+  out
+}
+
 #' Turn read stems into the stems Apter bucks (hpr_stem_checks(), then the
 #' profiles). Kept stems get a 10 cm profile from 0 to the last measured
 #' position rounded down to 10 cm (interpolated where positions are off the
@@ -394,12 +439,16 @@ hpr_stem_checks <- function(st, species_map) {
 #'   diameterPosition, DiameterValue, DBH, height_m; for
 #'   profiles_to_profile_vectors()) and excluded (treid, species_group_name,
 #'   excluded_reason).
-hpr_stem_profiles <- function(st, species_map) {
+hpr_stem_profiles <- function(st, species_map, grades = FALSE) {
   ck <- hpr_stem_checks(st, species_map)
   if (is.null(ck$use)) return(ck)
   s <- st$stems; use <- ck$use
   f <- factor(st$idx, levels = seq_len(nrow(s)))
   rows <- split(seq_along(st$pos), f)
+  if (grades) {                                   # Phase 6: the stem grades on the grid
+    grows <- split(seq_along(st$gpos), factor(st$gidx, levels = seq_len(nrow(s))))
+    sgrade <- st$species$start_grade[match(s$species_key, st$species$key)]
+  }
   step <- HPR_PROFILE_STEP_CM
   off_grid <- 0L
   prof <- lapply(use, function(i) {
@@ -411,7 +460,8 @@ hpr_stem_profiles <- function(st, species_map) {
       stats::approx(p, d, xout = g, ties = mean)$y
     }
     list(g = g, d = dg,
-         dbh = dbh_from_profile(hpr_height_above_ground(p, ck$offset[i]), d))   # at 1.3 m above ground
+         dbh = dbh_from_profile(hpr_height_above_ground(p, ck$offset[i]), d),   # at 1.3 m above ground
+         grade = if (grades) hpr_grade_grid(g, st$gpos[grows[[i]]], st$gval[grows[[i]]], sgrade[i]))
   })
   ng <- vapply(prof, function(q) length(q$g), 0L)
   key <- s$stem_key[use]
@@ -426,6 +476,8 @@ hpr_stem_profiles <- function(st, species_map) {
                              sesong = rep(NA, length(use)), species_group = ck$species[use],
                              dbh_cm = dbh_mm / 10, height_m = height_m,
                              height_source = rep("Measured profile", length(use)), stringsAsFactors = FALSE)
+  if (grades)
+    ck$profiles$grade <- unlist(lapply(prof, `[[`, "grade"), use.names = FALSE)
   if (!is.null(s$file)) ck$tree_data$file <- s$file[use]     # the file's position in the upload
   dropped <- which(!is.na(ck$reason))
   ck$excluded <- data.frame(treid = s$stem_key[dropped], species_group_name = ck$group[dropped],
@@ -492,12 +544,15 @@ combine_hpr_stems <- function(reads, filenames = vapply(reads, function(r) or_de
   }))
   sp$name_id <- tolower(trimws(sp$name))
   list(ok = TRUE, errors = character(0), warnings = warnings,
-       info = "Recorded logs and stem grades are not read; the stems are bucked from their profiles.",
+       info = "Recorded logs are not read; the stems are bucked from their profiles.",
        file = NA_character_, n_files = length(good), failed = failed,
        species = sp, stems = stems,
        idx = unlist(Map(function(i, o) reads[[i]]$idx + o, good, off), use.names = FALSE),
        pos = unlist(lapply(good, function(i) reads[[i]]$pos), use.names = FALSE),
-       d   = unlist(lapply(good, function(i) reads[[i]]$d), use.names = FALSE))
+       d   = unlist(lapply(good, function(i) reads[[i]]$d), use.names = FALSE),
+       gidx = unlist(Map(function(i, o) reads[[i]]$gidx + o, good, off), use.names = FALSE),
+       gpos = unlist(lapply(good, function(i) reads[[i]]$gpos), use.names = FALSE),
+       gval = unlist(lapply(good, function(i) reads[[i]]$gval), use.names = FALSE))
 }
 
 #' Read several .hpr files one after the other and combine them

@@ -224,6 +224,19 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
 10. **JOSS paper.**
 
 
+## Roadmap Phase 6: stem grades and cut at grade changes (done, 2026-10-28, branch `phase6-stem-quality`)
+
+For .hpr stems only, optional, per scenario. Decisions (Lennart, 2026-10-28):
+
+- **Grade semantics.** A stem grade (`StemGrade/GradeValue@gradeStartPosition`) applies from its start position to the next grade change. Starts are snapped to the 10 cm grid and the grades are stored as a step function on the profile grid, carried on the profile vector. A log may take a product only if the product permits every grade the log covers; overlaps under 10 cm at a log end are ignored.
+- **Cut at grade changes (tvangskapp).** A forced cut at every grade change (snapped to the grid), implemented as a candidate filter: no candidate log contains a grade change in its interior. `CuttingReason` is ignored. `.dp_select()` and `.optimize_dp_fast()` are not changed.
+- **UI.** Two checkboxes per scenario, "Use stem grades" and "Cut at grade changes", shown only when the tree source is .hpr, off by default, copied by Copy A↔B, independent of each other. Norwegian texts in `translations.csv`.
+- **Missing data.** A stem without StemGrade gets the species group's StartGrade from position 0. A product without PermittedGradesDefinition, or not imported from .hpr, permits all grades.
+- **Product grades.** New hidden assortment column `PermittedGrades` (semicolon-separated, empty = all grades), kept through `defs_from_products()`/`products_from_defs()` and the scenario xlsx. `same_def()` treats differing grade sets or checkbox states as different definitions. No UI editing of grades.
+- **Unchanged.** Reference-grade ticking in the import dialog. `CuttingWindowDefinition`, `LimitationCategory` and `DistributionCategory` are left out. With both checkboxes off all outputs and `performance_check.R` equal main.
+- **Known limitation.** With several .hpr files, grade numbers are assumed comparable across files.
+- **Tests.** Audit 30 on a small synthetic fixture (`inputs/test_fixtures/hpr_grades_synthetic.hpr`) plus one audit 17 smoke step.
+
 ## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 
 - Long format (CSV or xlsx): `tree_id`, `species` (spruce/pine), `height` (m along the stem), `diameter` (cm, over bark), optional `plot_id`. Downloadable template. (.hpr stems are hpr Phase B.)

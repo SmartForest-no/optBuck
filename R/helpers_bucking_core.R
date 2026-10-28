@@ -134,12 +134,21 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
 .prepare_runs <- function(runs) {
   runs <- lapply(runs, function(r) {
     r$keys     <- as.character(r$pd$ProductKey)
-    r$own_plan <- .candidate_plan(r$pd, r$lc)
+    r$opts     <- normalize_grade_opts(r$opts)             # stem-grade options (Phase 6)
+    r$own_plan <- .candidate_plan(r$pd, r$lc, grade_opts = r$opts)
     r
   })
   same_def <- function(a, b) {
+    # Different stem-grade options give different candidates, whatever the products.
+    if (!identical(a$opts, b$opts)) return(FALSE)
+    perm <- function(x, k) if ("PermittedGrades" %in% names(x$pd))
+      norm_permitted_grades(x$pd$PermittedGrades[match(k, x$pd$ProductKey)]) else NA_character_
     for (k in intersect(a$keys, b$keys)) {
       cols <- intersect(names(a$pd), names(b$pd))
+      # Permitted grades matter only with "Use stem grades" on.
+      cols <- if (a$opts$use_grades) { if (!identical(perm(a, k), perm(b, k))) return(FALSE)
+                                       setdiff(cols, "PermittedGrades") }
+              else setdiff(cols, "PermittedGrades")
       ra <- a$pd[a$pd$ProductKey == k, cols, drop = FALSE]
       rb <- b$pd[b$pd$ProductKey == k, cols, drop = FALSE]
       la <- a$lc[a$lc$ProductKey == k, , drop = FALSE]
@@ -173,7 +182,7 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
                                                  runs[[j]]$pd$ProductKey[new], , drop = FALSE])
       }
     }
-    gr$plan <- .candidate_plan(pd, lc)
+    gr$plan <- .candidate_plan(pd, lc, grade_opts = runs[[gr$runs[1L]]]$opts)
     gr
   })
   list(runs = runs, groups = groups)

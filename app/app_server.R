@@ -367,12 +367,14 @@ server <- function(input, output, session) {
     if (compare) {
       path_b <- write_price_file(b$pm); files <- c(files, path_b)
       pb <- products_from_defs(b$defs, b$pm)
-      scenario <- list(price_matrix_path = path_b, products = pb$pd, length_classes = pb$lc)
+      scenario <- list(price_matrix_path = path_b, products = pb$pd, length_classes = pb$lc,
+                       grade_opts = sc$grade_opts("B"))
     }
     spec <- list(src = src, params = if (src == "nfi") build_run_params(input) else list(),
                  tl = tl, list_params = list(file = if (src == "hpr") (if (is.na(hs$file)) NULL else hs$file) else tl$file),
                  path = path, pd = pd, lc = lc, scenario = scenario, files = files)
-    if (src == "hpr") { spec$stems <- hs_stems(); spec$species_map <- hs_map() }
+    if (src == "hpr") { spec$stems <- hs_stems(); spec$species_map <- hs_map()
+                        spec$grade_opts <- sc$grade_opts("A") }
     run_src(src)
     run_progress(list(done = 0L, total = NA_integer_,
                       what = switch(src, nfi = "Loading NFI data and taper profiles",

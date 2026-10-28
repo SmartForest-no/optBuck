@@ -64,7 +64,13 @@ scenario_column <- function(s) {
       dl(paste0("dl_scen_", s), t_("btn_download_scenario")),
       btn(paste0("hpr_import_", s), t_("btn_import_hpr"))),
     apter_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
-                     accept = c(".xlsx", ".csv"))
+                     accept = c(".xlsx", ".csv")),
+
+    # Stem grades (Phase 6): run options of this scenario, only for .hpr stems.
+    conditionalPanel("input.tree_source == 'hpr'",
+      div(class = "section-hdr", t_("hdr_stem_grades")),
+      checkboxInput(paste0("grade_use_", s), t_("lbl_use_grades"), FALSE),
+      checkboxInput(paste0("grade_cut_", s), t_("lbl_cut_at_changes"), FALSE))
   )
 }
 

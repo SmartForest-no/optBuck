@@ -435,12 +435,35 @@ pre_phase4c_limits <- function(pd) {
 # and that column's price volume uses the limit, not the cut length
 # (price_lengths()). Empty (NA) for every other assortment: price volume on
 # the cut length, as before.
+# PermittedGrades is hidden as well (Phase 6, 2026-10-28): the stem grades an
+# .hpr product permits, ";"-separated ("1;2;3"). Empty (NA) = all grades (not
+# from an .hpr file, or the file gives the product no permitted grades). Used
+# only for .hpr stems with "Use stem grades" on.
 
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
-  "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm")
+  "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
+  "PermittedGrades")
+
+#' A permitted-grades string in its canonical form: sorted unique whole
+#' numbers joined by ";"; NA for empty, missing or unreadable.
+norm_permitted_grades <- function(x) {
+  vapply(as.character(x), function(s) {
+    if (is.na(s) || !nzchar(trimws(s)) || s == "NA") return(NA_character_)
+    g <- suppressWarnings(as.numeric(strsplit(trimws(s), "[,; ]+")[[1L]]))
+    g <- sort(unique(g[!is.na(g)]))
+    if (length(g) == 0L) NA_character_ else paste(format(g, scientific = FALSE, trim = TRUE), collapse = ";")
+  }, "", USE.NAMES = FALSE)
+}
+
+#' The grade numbers of a PermittedGrades string (numeric(0) = all grades).
+permitted_grades_set <- function(x) {
+  if (is.null(x) || length(x) == 0L || is.na(x[1L]) || !nzchar(trimws(x[1L]))) return(numeric(0))
+  g <- suppressWarnings(as.numeric(strsplit(as.character(x[1L]), "[,; ]+")[[1L]]))
+  sort(unique(g[!is.na(g)]))
+}
 
 #' Price-volume lengths (cm) of the given log lengths (cm): the class lower
 #' limit in `limits` (a PriceLengths_cm string) whose whole-dm round-up is
@@ -479,13 +502,16 @@ assortment_table_keys <- function(defs) {
 # Column types of an assortment table.
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
-                                          "PriceType", "PriceLengths_cm"))
+                                          "PriceType", "PriceLengths_cm", "PermittedGrades"))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
   # Tables without the hidden price lengths (all but hpr imports): none.
   if (!"PriceLengths_cm" %in% names(d)) d$PriceLengths_cm <- rep(NA_character_, nrow(d))
   pl <- trimws(as.character(d$PriceLengths_cm))
   d$PriceLengths_cm <- ifelse(is.na(pl) | !nzchar(pl) | pl == "NA", NA_character_, pl)
+  # Tables without the hidden permitted grades (all but hpr imports): all grades.
+  if (!"PermittedGrades" %in% names(d)) d$PermittedGrades <- rep(NA_character_, nrow(d))
+  d$PermittedGrades <- norm_permitted_grades(d$PermittedGrades)
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
@@ -508,7 +534,9 @@ defs_from_products <- function(pd) {
     MinLength_cm = pd$MinLength, MaxLength_cm = pd$MaxLength,
     DiameterTopPosition_cm = pd$DiameterTopPosition,
     VolumeDiameterCategory = pd$VolumeDiameterCategory,
-    PriceType = pd$PriceType, stringsAsFactors = FALSE))
+    PriceType = pd$PriceType,
+    PermittedGrades = if ("PermittedGrades" %in% names(pd)) pd$PermittedGrades else NA_character_,
+    stringsAsFactors = FALSE))
 }
 
 #' Allowed lengths (cm) of each table row: the matrix columns in `pm` for
@@ -576,6 +604,10 @@ products_from_defs <- function(defs, pm) {
     lc$PriceLength_cm <- unlist(lapply(seq_along(lens), function(i)
       if (identical(defs$PriceType[i], "matrix")) price_lengths(pl[i], lens[[i]])
       else as.numeric(lens[[i]])), use.names = FALSE)
+  # Permitted grades (hpr imports only): the column is added only when some row
+  # has them, so other tables give the same ProductData as before.
+  pg <- if ("PermittedGrades" %in% names(defs)) defs$PermittedGrades else rep(NA, nrow(defs))
+  if (any(!is.na(pg))) pd$PermittedGrades <- as.character(pg)
   list(pd = pd, lc = lc)
 }
 

@@ -1,0 +1,52 @@
+============================================================= 
+  Audit: stem grades and cut at grade changes (Phase 6)
+  Run: 2026-10-28 13:41:59.699927
+============================================================= 
+
+--- 1. Grades read and put on the grid ---
+  [PASS  ] Check 1a: 8 grades on 4 of the 5 stems, with starts and values (stem 102: 2 from 0, 3 from 500, 2 from 800) | 8 grades, stems with grades 1,2,4,5
+  [PASS  ] Check 1b: grade runs on the 10 cm grid; a start at 295 cm (stem 104) snaps to 300 | 101 7x300 2x1510 | 102 2x500 3x300 2x1010 | 104 2x300 7x1510
+  [PASS  ] Check 1c: profiles carry no grade column unless grades are requested; the diameters are the same either way | grade column without request: FALSE
+  [PASS  ] Check 1d: hpr_grade_grid(): starts snap half up (5 -> 10, 25 -> 30), before the first start the StartGrade (NA here), later starts win ties | NA 4 4 9 9 9 9
+
+--- 2. Stems without StemGrade ---
+  [PASS  ] Check 2a: stem 103 has no StemGrade: grade = the species group's StartGrade (2) along the whole stem | grades 2
+  [PASS  ] Check 2b: with StartGrade 3 in the file stem 103 is grade 3 throughout; stems with grades are unchanged | 103: 3
+  [PASS  ] Check 2c: a group without StartGrade and a stem without grades: grade NA (grade-free: every product allowed) | 181 positions, all NA: TRUE
+
+--- 3. Use stem grades; 4. Cut at grade changes ---
+  [PASS  ] Check 3a: with Use stem grades no log takes a product that does not permit a grade it covers; without the option some do (not vacuous) | violations: off 5, use 0, use+cut 0
+  [PASS  ] Check 3b: stem 101 (grade 7 below 300 cm): no sawlog or Kubb below 300 cm with the option; stem 104 (grade 7 from 295 -> 300): none above 300 | A logs of 101 below 300: spruce_140_sca_sagt_mmer
+  [PASS  ] Check 4a: with Cut at grade changes no log contains a grade change in its interior; without it some do (not vacuous) | logs spanning a change: off 3, use only 1, cut only 0, both 0
+  [PASS  ] Check 4b: the options are independent: cut only does not apply permitted grades, use only does not force cuts; a stem without a change (103, 105) is the same in all four runs | cut-only violations 2
+
+--- 5. Products without permitted grades ---
+  [PASS  ] Check 5a: '197 Massevirke' has no PermittedGradesDefinition: empty set, and it is chosen inside stem 101's grade-7 butt with the option on | PermittedGrades NA: TRUE
+  [PASS  ] Check 5b: a table without permitted grades gives ProductData without a PermittedGrades column (as before Phase 6)
+  [PASS  ] Check 5c: default products (no permitted grades) with Use stem grades on give the result of a run without grades
+
+--- 6. Both options off ---
+  [PASS  ] Check 6a: options off with grades in the profiles = a run with profiles without grades (A and B)
+  [PASS  ] Check 6b: grade options without grades in the profiles stop with a message (no silent no-op)
+
+--- 7. Serial and parallel ---
+  [PASS  ] Check 7: results with the options on are identical on 1 and 2 workers (A and B)
+
+--- 8. PermittedGrades through the app's tables; run grouping ---
+  [PASS  ] Check 8a: PermittedGrades goes defs -> ProductData -> defs unchanged (e.g. '1;2') | 1;2 | 1;2;3;4;5;6 | NA | 1;2 | 1;2 | NA | NA
+  [PASS  ] Check 8b: the scenario xlsx round trip keeps PermittedGrades; a file without the column reads as all grades | 1;2 | 1;2;3;4;5;6 | NA | 1;2 | 1;2 | NA | NA
+  [PASS  ] Check 8c: runs with different options are different definitions (2 groups), equal options one group; different grade sets split the runs only when Use stem grades is on | 1 2 2 2 1 1
+  [PASS  ] Check 8d: scenarios_differ() is TRUE when only the options differ, FALSE when they are equal
+
+--- 9. Several files ---
+  [PASS  ] Check 9: two files: 10 stems with each file's own grades (stems 102 and 202 give the same runs; 104 and 204 snap alike); grade starts of file 2 are not attached to file 1's stems | stems 10, grades 16
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 22
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/stem_grades/audit_30_stem_grades.csv

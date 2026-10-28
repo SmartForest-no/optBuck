@@ -233,6 +233,8 @@ generate_taper_profiles_for_trees <- function(tree_data,
 #'   species_group     character scalar
 #'   plot_id           character scalar
 #'   treid             character scalar
+#'   grade             numeric vector, one per position (optional; .hpr stem
+#'                     grades, Phase 6: the grade of the cell [pos, pos + 10 cm))
 #'
 #' @param profiles        data.frame from generate_taper_profiles_for_trees().
 #' @param profile_step_cm Profile step in cm; default PROFILE_STEP_CM (10L).
@@ -262,6 +264,7 @@ profiles_to_profile_vectors <- function(profiles,
   h_col    <- profiles$height_m
   pos_col  <- profiles$diameterPosition
   dv_col   <- profiles$DiameterValue
+  grade_col <- profiles$grade                       # NULL unless the profiles carry grades
 
   for (tid in tree_ids) {
     ii <- rows_by_tree[[tid]]
@@ -278,6 +281,8 @@ profiles_to_profile_vectors <- function(profiles,
       diameterPosition = as.integer(pos_col[ii]),
       DiameterValue    = as.numeric(dv_col[ii])
     )
+    # Stem grade per grid point (.hpr stems with grades on, Phase 6).
+    if (!is.null(grade_col)) pvs[[tid]]$grade <- as.numeric(grade_col[ii])
   }
   pvs
 }

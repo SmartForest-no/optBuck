@@ -41,9 +41,19 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
   say     <- function(side, type, text, warnings = NULL)
     msgs[[side]](list(type = type, text = text, warnings = warnings))
 
-  differ   <- reactive(scenarios_differ(defs("A"), prices("A"), defs("B"), prices("B")))
+  # Stem-grade options of a scenario (Phase 6): the two checkboxes, in effect
+  # only for .hpr stems (otherwise both off, so they never change a run).
+  grade_opts <- function(side) {
+    if (!identical(input$tree_source, "hpr")) return(GRADE_OPTS_OFF)
+    s <- low(side)
+    list(use_grades = isTRUE(input[[paste0("grade_use_", s)]]),
+         cut_at_changes = isTRUE(input[[paste0("grade_cut_", s)]]))
+  }
+  differ   <- reactive(scenarios_differ(defs("A"), prices("A"), defs("B"), prices("B"),
+                                        grade_opts("A"), grade_opts("B")))
   # Everything that changes a run; a run stores it to detect stale results.
-  pm_state <- reactive(list(defs("A"), prices("A"), defs("B"), prices("B")))
+  pm_state <- reactive(list(defs("A"), prices("A"), defs("B"), prices("B"),
+                            grade_opts("A"), grade_opts("B")))
 
   # Check a scenario and store it; FALSE (with the message) if it fails.
   commit <- function(side, d, pm, err = function(e) say(side, "error", e)) {
@@ -144,7 +154,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       disp[[n]] <- gsub(".", ",", disp[[n]], fixed = TRUE)
     disp
   }
-  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm")
+  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades")
 
   # Fixed row order, the same in both tables so rows line up: by species
   # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
@@ -329,6 +339,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm
       rows$PriceLengths_cm <- old_row$PriceLengths_cm   # hidden (hpr imports); kept on edits
     }
+    rows$PermittedGrades <- if (!is.null(old_row)) old_row$PermittedGrades else NA_character_   # hidden; kept on edits
     errs <- list(); start <- NULL
     if (!same_pricing) {
       price <- num(input$asm_price)
@@ -457,6 +468,9 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     side <- scen_copying(); req(side); o <- other(side)
     removeModal(); scen_copying(NULL)
     if (commit(side, defs(o), prices(o))) {
+      # The stem-grade checkboxes come along (they are part of the scenario).
+      for (n in c("grade_use_", "grade_cut_"))
+        updateCheckboxInput(session, paste0(n, low(side)), value = isTRUE(input[[paste0(n, low(o))]]))
       redraw(); say(side, "ok", T_("msg_scen_copied", side, o))
     }
   })
@@ -929,7 +943,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
   })
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
-       differ = differ, pm_state = pm_state, key_label = key_label,
+       differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
        hpr_file = hpr_kept,          # the session's last upload (not yet imported)
        hpr_imported = hpr_imported)  # the file imported into a scenario, with its species map
 }

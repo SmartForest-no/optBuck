@@ -98,15 +98,30 @@ products_for_species <- function(species_group, ProductData = NULL) {
 # Product parameters per species (computed once per run, not per tree)
 # ------------------------------------------------------------------------------
 
+#' Stem-grade options of a run (Phase 6, .hpr stems only): `use_grades` = a log
+#' may take a product only if the product permits every grade the log covers;
+#' `cut_at_changes` = no log contains a grade change in its interior. Both off
+#' (the default) changes nothing.
+GRADE_OPTS_OFF <- list(use_grades = FALSE, cut_at_changes = FALSE)
+
+#' The options as the two flags, whatever the input (NULL = both off).
+normalize_grade_opts <- function(o)
+  list(use_grades = isTRUE(o$use_grades), cut_at_changes = isTRUE(o$cut_at_changes))
+
 #' Candidate-generation parameters for one species: its products (in
 #' ProductData order) with their limits, volume method and allowed lengths
 #' (LengthClasses order), and all length classes of the species' products.
 #' generate_candidate_logs_one_tree() builds this per call; the backend
 #' builds it once per run (.candidate_plan()).
 #'
-#' @return list(species_group, pks, products, all_lengths, needs_ub), or a
-#'   list with an `error` message when the species has no products.
-.candidate_species_plan <- function(species_group, ProductData, LengthClasses) {
+#' @param grade_opts normalize_grade_opts() input (Phase 6). With `use_grades`
+#'   each product carries `grades`, its permitted grade numbers (NULL = all).
+#' @return list(species_group, pks, products, all_lengths, needs_ub,
+#'   use_grades, cut_at_changes), or a list with an `error` message when the
+#'   species has no products.
+.candidate_species_plan <- function(species_group, ProductData, LengthClasses,
+                                    grade_opts = GRADE_OPTS_OFF) {
+  grade_opts <- normalize_grade_opts(grade_opts)
   pks <- products_for_species(species_group, ProductData)
   if (is.null(pks) || length(pks) == 0L)
     return(list(error = sprintf("no products configured for species_group '%s'.",
@@ -139,9 +154,12 @@ products_for_species <- function(species_group, ProductData = NULL) {
          top_offset = as.numeric(or_default(prow$DiameterTopPosition, 0)),
          method = prow$VolumeDiameterCategory,
          adjustment = prow$VolumeDiameterAdjustment,
-         priority = as.numeric(or_default(prow$Priority, 99)))
+         priority = as.numeric(or_default(prow$Priority, 99)),
+         grades = if (grade_opts$use_grades && "PermittedGrades" %in% names(prow)) {
+           g <- permitted_grades_set(prow$PermittedGrades); if (length(g)) g })
   })
   list(species_group = species_group, pks = pks, products = products,
+       use_grades = grade_opts$use_grades, cut_at_changes = grade_opts$cut_at_changes,
        all_lengths = lc_sp$LogLength,
        needs_ub = "DiameterUnderBark" %in% names(pd_sp) &&
          any(as.logical(pd_sp$DiameterUnderBark) %in% TRUE))
@@ -157,9 +175,11 @@ price_len_of <- function(p, log_len)
 #'
 #' @return Named list (one .candidate_species_plan() per species group).
 .candidate_plan <- function(ProductData, LengthClasses,
-                            species_groups = c("spruce", "pine")) {
+                            species_groups = c("spruce", "pine"),
+                            grade_opts = GRADE_OPTS_OFF) {
   setNames(lapply(species_groups, .candidate_species_plan,
-                  ProductData = ProductData, LengthClasses = LengthClasses),
+                  ProductData = ProductData, LengthClasses = LengthClasses,
+                  grade_opts = grade_opts),
            species_groups)
 }
 
@@ -232,6 +252,18 @@ price_len_of <- function(p, log_len)
                     vapply(plan$products, `[[`, "", "pk"))
   out <- list()
 
+  # Stem grades (Phase 6; .hpr stems with an option on): the grade of each
+  # 10 cm cell [g, g + step) of the grid, as running counts, so a candidate
+  # [start, stop) (snapped to the grid: overlaps under one step are ignored)
+  # covers cells lo..hi. bad_cum counts cells whose grade a product does not
+  # permit, chg_cum the cells that start a new grade.
+  gg <- NULL
+  if ((isTRUE(plan$use_grades) || isTRUE(plan$cut_at_changes)) && !is.null(pv$grade)) {
+    gg <- as.numeric(pv$grade)[pmax(findInterval(grid, diam_pos), 1L)]
+    n_cells <- length(gg)
+    chg_cum <- c(0L, cumsum(c(FALSE, !is.na(gg[-1L]) & !is.na(gg[-n_cells]) & gg[-1L] != gg[-n_cells])))
+  }
+
   # Valid log lengths for this tree (all products), pre-filtered by tree height.
   max_len_cm  <- h_cm - stump_height_cm
   log_lengths <- as.integer(plan$all_lengths[plan$all_lengths <= max_len_cm])   # cm
@@ -276,6 +308,16 @@ price_len_of <- function(p, log_len)
       eligible <- log_len >= p$min_len & log_len <= p$max_len &
                   top  >= p$min_top  & top  <= p$max_top &
                   butt >= p$min_butt & butt <= p$max_butt
+      if (!is.null(gg)) {
+        lo <- pmin(as.integer(round(start_pos / step_int)) + 1L, n_cells)
+        hi <- pmin(as.integer(round(stop_pos / step_int)), n_cells)
+        if (!is.null(p$grades)) {
+          bad_cum <- c(0L, cumsum(!is.na(gg) & !gg %in% p$grades))
+          eligible <- eligible & (bad_cum[hi + 1L] - bad_cum[lo]) == 0L
+        }
+        if (isTRUE(plan$cut_at_changes))
+          eligible <- eligible & (chg_cum[hi + 1L] - chg_cum[pmin(lo + 1L, n_cells + 1L)]) <= 0L
+      }
 
       if (usable_only) {
         ii <- which(eligible)

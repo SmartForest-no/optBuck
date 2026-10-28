@@ -722,9 +722,10 @@ run_hpr_bucking <- function(prepared,
                             length_classes = NULL,
                             params = list(),
                             scenario = NULL,
-                            workers = apter_workers()) {
+                            workers = apter_workers(),
+                            grade_opts = NULL) {
   job <- prepare_hpr_job(prepared, price_matrix_path, root, products,
-                         length_classes, params, scenario)
+                         length_classes, params, scenario, grade_opts)
   finish_job(job, buck_job(job, workers))
 }
 
@@ -733,12 +734,18 @@ run_hpr_bucking <- function(prepared,
 #' felling cut.
 prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
                             root = get_root_dir(), products = NULL,
-                            length_classes = NULL, params = list(), scenario = NULL) {
+                            length_classes = NULL, params = list(), scenario = NULL,
+                            grade_opts = NULL) {
   t_start <- Sys.time()
   if (!isTRUE(prepared$ok)) stop("The .hpr stems did not pass validation.")
   step_cm <- as.integer(or_default(params$start_pos_step_cm, 10L))
   params$stump_height_cm <- 0L
   pps <- .load_runs(price_matrix_path, root, products, length_classes, scenario)
+  # Stem-grade options (Phase 6): A's, and the scenario's own (B).
+  pps[[1L]]$grade_opts <- normalize_grade_opts(grade_opts)
+  if (length(pps) > 1L) pps[[2L]]$grade_opts <- normalize_grade_opts(scenario$grade_opts)
+  if (any(unlist(lapply(pps, function(pp) pp$grade_opts))) && is.null(prepared$profiles$grade))
+    stop("Stem-grade options need profiles from hpr_stem_profiles(grades = TRUE).")
   t0_conv <- proc.time()
   pvs <- profiles_to_profile_vectors(prepared$profiles)
   prepared$profiles <- NULL                      # the job keeps the profile vectors only
@@ -760,9 +767,12 @@ prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
 #' a worker: building the profiles takes a few seconds on large files).
 prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "default_2021",
                                   root = get_root_dir(), products = NULL,
-                                  length_classes = NULL, params = list(), scenario = NULL) {
-  prepare_hpr_job(hpr_stem_profiles(stems, species_map), price_matrix_path, root, products,
-                  length_classes, params, scenario)
+                                  length_classes = NULL, params = list(), scenario = NULL,
+                                  grade_opts = NULL) {
+  # The profiles carry the stem grades only when a scenario uses them.
+  grades <- any(unlist(c(normalize_grade_opts(grade_opts), normalize_grade_opts(scenario$grade_opts))))
+  prepare_hpr_job(hpr_stem_profiles(stems, species_map, grades = grades), price_matrix_path, root,
+                  products, length_classes, params, scenario, grade_opts)
 }
 
 # The tree-list result for one run's result tables (also .hpr stems: kind "hpr").
@@ -847,7 +857,7 @@ prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "defau
   pvs <- pvs[order(names(pvs), method = "radix")]
   list(kind = kind, t_start = t_start, pvs = pvs, tree_data = tree_data, pps = pps,
        prep = .prepare_runs(lapply(pps, function(pp)
-         list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup))),
+         list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup, opts = pp$grade_opts))),
        stump_cm = stump_cm, step_cm = step_cm, timings = timings, meta = meta,
        bark_model = getOption("apter.bark_model", DEFAULT_BARK_MODEL))
 }
