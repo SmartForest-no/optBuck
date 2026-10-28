@@ -154,7 +154,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       disp[[n]] <- gsub(".", ",", disp[[n]], fixed = TRUE)
     disp
   }
-  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades")
+  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey")
 
   # Fixed row order, the same in both tables so rows line up: by species
   # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
@@ -334,6 +334,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       DiameterTopPosition_cm = or(num(input$asm_dtp), 0),
       VolumeDiameterCategory = input$asm_method, PriceType = ptype,
       stringsAsFactors = FALSE))
+    rows$HprProductKey <- if (is.null(old_row)) NA_character_ else old_row$HprProductKey   # hidden; kept on edits
     same_pricing <- !is.null(old_row) && identical(old_row$PriceType, ptype)
     if (same_pricing && ptype == "matrix") {   # lengths stay the matrix columns
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm

@@ -1,0 +1,11 @@
+check,result,detail
+"Check 01: The export reads back; one stem per bucked stem (dropped ones left out), one Log per selected log in position order, ProductKeys defined",PASS,"5 stems of 13 read, 13 logs, lengths ok TRUE, export ok TRUE"
+Check 02: Each exported stem equals its source stem apart from StemCoordinates and Logs; StemGrade kept,PASS,"5/5 identical, StemGrade 4 of 4 kept"
+"Check 03: Machine key, contractor, operator and object name are copied; no coordinate element or invented coordinate value in the file",PASS,"coordinate scan: export FALSE, source TRUE"
+Check 04: A product with a HprProductKey keeps its key and metadata; repeated and key-less assortments get new unique keys above the file's; limits and prices come from the scenario,PASS,"keys 7949,7953,8015,8016,8017,8019,8020,8021,8022,8023 | new 8022,8023 | buyer 'Invented Buyer City' | MINTop 140"
+"Check 05: m3 (price) = the result's price volume, m3sob >= m3sub, Mid >= Top diameters, ob >= ub, cutting reason Automatic",PASS,price 0.27937 vs 0.27937 | sob 0.33097 sub 0.29548 | Mid ob 293 Top ob 256 Top ub 241
+Check 06: A coordinate element in a copied block makes the export fail and removes the file,PASS,Coordinates found in the export; the file was not written.
+"Check 07: Two source files: per-file stem counts equal the result's, keys stay as written, every SpeciesGroupKey is defined",PASS,"per file 5/5 vs 5/5 | 10 stems | stem groups 446,445 defined 445,446,447,448"
+Check 08: Bucking the exported file's stems under the same scenario gives the same logs per stem,PASS,13 vs 13 logs
+Check 09: The export's messages translate to Norsk without a miss,PASS,Kilde-.hpr-filen(e) er ikke lenger tilgjengelig. | Kildefilen er ikke UTF-8 og kan ikke eksporteres. | Kildefilen har ingen stammer. | Koordinater funnet i eksporten; filen ble ikke skrevet. | Kildefilen har ingen klassifiserte produkter.
+"Check 10: A gap between logs and a missing first log become logs of product 999999, so the lengths add up to the last log's stop; the unclassified ProductDefinition is added when the source lacks it; no gap logs in a gap-free export",PASS,"middle gap 490 cm in stem 1 (logs 490/490/310/490, products 8019/999999/8017/8015) | leading gap in stem 2 | unclassified defs 1 | gap logs 2 (clean export 0)"

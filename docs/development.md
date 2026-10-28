@@ -94,6 +94,7 @@ R/                          Core engine helpers
   helpers_tree_list.R       Tree lists: read, validate, impute heights, taperNOR range, template
   helpers_hpr.R             StanForD 2010 .hpr: species groups, products, price matrices -> a scenario (Import from .hpr)
   helpers_hpr_stems.R       .hpr stems (hpr Phase B): streamed stem reader, checks, measured profiles (stump 0)
+  helpers_hpr_export.R      .hpr export (Phase 5a): a scenario's result as a StanForD 2010 .hpr, copied from the source, no coordinates
   helpers_result_tables.R   Log tally per price matrix (stocknota) and value by DBH class
   helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
                             used by the backend and the app's live tree counts
@@ -114,6 +115,7 @@ audits/
   audit_26_hpr_stems.R                       .hpr stems (reader, profiles, stump 0, drops, privacy, A/B run)
   audit_27_result_tables.R                   Log tally and value by DBH class (totals, grid layout, cap, flat, B − A, downloads, type groups)
   audit_28_translations.R                    Translation table, ids in the code, no English left, backend messages, downloads per language
+  audit_31_hpr_export.R                      .hpr export (round trip, stems copied unchanged, no coordinates, product keys, two files, re-bucking)
   audit_29_price_bulk_edit.R                 Bulk editing of price matrices (range +/- NOK or %, row price + length fill, empty cells, app)
   audit_30_stem_grades.R                     .hpr stem grades and cut at grade changes (grade grid, StartGrade fallback, permitted grades, forced cuts, workers)
   prototype_reference/      Frozen audits 05–12
@@ -381,6 +383,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 27 — result tables | `Rscript audits/audit_27_result_tables.R` | writexl, readxl, taperNOR |
 | 28 — translations | `Rscript audits/audit_28_translations.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 30 — stem grades | `Rscript audits/audit_30_stem_grades.R` | xml2, writexl, readxl, taperNOR, future; `inputs/test_fixtures/hpr_grades_synthetic.hpr` |
+| 31 — hpr export | `Rscript audits/audit_31_hpr_export.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` (variants in tempfiles) |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check

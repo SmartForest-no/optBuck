@@ -205,7 +205,8 @@ simulator_page <- nav_panel(
         div(class = "section-hdr", t_("hdr_logs")),
         uiOutput("logs_preview_note"),
         reactableOutput("tbl_selected_logs"),
-        downloadButton("dl_logs", t_("btn_dl_logs"), class = "btn-secondary btn-sm")
+        downloadButton("dl_logs", t_("btn_dl_logs"), class = "btn-secondary btn-sm"),
+        uiOutput("dl_hpr_ui", inline = TRUE)
       )
     )
   )

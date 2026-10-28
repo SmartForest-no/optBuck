@@ -372,7 +372,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades")), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey")), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]

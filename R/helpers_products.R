@@ -444,13 +444,17 @@ pre_phase4c_limits <- function(pd) {
 # grade data (NFI, tree list) or with "Use stem grades" off has that grade in
 # every cell, so such a stem can use the product only if its PermittedGrades
 # meet it. Empty (NA) = no such filter.
+# HprProductKey is hidden as well (.hpr export, 2026-10-28): the ProductKey of
+# the .hpr product an imported assortment came from (NA otherwise). The export
+# gives that product's metadata (buyer, organisation, ...) back to the
+# assortment; it has no effect on runs. Kept on edits and in scenario files.
 
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
-  "PermittedGrades", "ReferenceGrades")
+  "PermittedGrades", "ReferenceGrades", "HprProductKey")
 
 #' A permitted-grades string in its canonical form: sorted unique whole
 #' numbers joined by ";"; NA for empty, missing or unreadable.
@@ -508,7 +512,7 @@ assortment_table_keys <- function(defs) {
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
                                           "PriceType", "PriceLengths_cm", "PermittedGrades",
-                                          "ReferenceGrades"))
+                                          "ReferenceGrades", "HprProductKey"))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
   # Tables without the hidden price lengths (all but hpr imports): none.
@@ -520,6 +524,10 @@ assortment_table_keys <- function(defs) {
   d$PermittedGrades <- norm_permitted_grades(d$PermittedGrades)
   if (!"ReferenceGrades" %in% names(d)) d$ReferenceGrades <- rep(NA_character_, nrow(d))
   d$ReferenceGrades <- norm_permitted_grades(d$ReferenceGrades)
+  # The same for the hidden .hpr ProductKey (hpr imports; used by the .hpr export).
+  if (!"HprProductKey" %in% names(d)) d$HprProductKey <- rep(NA_character_, nrow(d))
+  hk <- trimws(as.character(d$HprProductKey))
+  d$HprProductKey <- ifelse(is.na(hk) | !nzchar(hk) | hk == "NA", NA_character_, hk)
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))

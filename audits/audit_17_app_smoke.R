@@ -178,7 +178,9 @@
 #      still NFI; ".hpr stems" uses the imported file with its confirmed
 #      species map; 13 stems read, 5 used, 4 warnings for problems in the file
 #      (none for Not-used species, multi-tree or short stems); live
-#      counts in stems; a comparison runs; no Plots in the Summary and no
+#      counts in stems; a comparison runs; the Logs tab has one .hpr export
+#      button per scenario (Phase 5a), B's file has the 5 stems, logs and no
+#      coordinates (an NFI run has no such button: check 14); no Plots in the Summary and no
 #      Plot column in the logs and trees; "Measured length (m)"
 # 32.  Copy from A / Copy from B (2026-10-22), run before 29: the buttons
 #      are labelled "Copy from B" (A) and "Copy from A" (B); after a flat
@@ -1001,6 +1003,7 @@ if (!browser_ok) {
       grepl("Scenario A", note14, fixed = TRUE) && identical(ctrl14, 0L) &&
       all(c("Plot", "StartPos", "StopPos", "Assortment") %in% h14) &&
       !any(grepl("_", h14, fixed = TRUE)) && !any(c("ProductType", "ProductKey") %in% h14) &&
+      isTRUE(js(app, "document.getElementById('dl_hpr_a') === null")) &&   # NFI run: no .hpr export button
       !is.null(csv14) && identical(nrow(csv14), n_logs) && identical(unique(csv14$Scenario), "A") &&
       all(c("Scenario", "Plot", "StartPos", "StopPos") %in% names(csv14))
     rec(browser_checks[10], if (ok14) PASS else FAIL,
@@ -1640,6 +1643,16 @@ if (!browser_ok) {
       c31$logs_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_selected_logs .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c31$trees_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
+      # .hpr export (Phase 5a): one button per scenario after this comparison;
+      # B's file holds the 5 bucked stems with logs and no coordinates.
+      app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
+      c31$hpr_btn <- js(app, "Array.from(document.querySelectorAll('#dl_hpr_ui a')).map(function(a){ return a.innerText.trim(); }).join('|')")
+      f_hpr <- tryCatch(app$get_download("dl_hpr_b"), error = function(e) NULL)
+      c31$hpr_ok <- !is.null(f_hpr) && {
+        tx <- paste(readLines(f_hpr, warn = FALSE), collapse = "\n")
+        length(gregexpr("<StemKey>", tx, fixed = TRUE)[[1L]]) == 5L && grepl("<Log>", tx, fixed = TRUE) &&
+          !grepl("Latitude|Longitude|StemCoordinates", tx)
+      }
       c31$nerr <- n_err_notif(app)
     })
     hdr_cols <- function(h) strsplit(or_default(h, ""), "|", fixed = TRUE)[[1L]]
@@ -1649,6 +1662,7 @@ if (!browser_ok) {
       grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
       identical(as.integer(c31$n_warn), 4L) && !grepl("Not used", c31$valid, fixed = TRUE) &&
       !grepl("multi-tree", c31$valid, fixed = TRUE) && grepl("4 spruce · 1 pine stems", c31$counts, fixed = TRUE) &&
+      identical(c31$hpr_btn, "Download Scenario A (.hpr)|Download Scenario B (.hpr)") && isTRUE(c31$hpr_ok) &&
       grepl("Stems", c31$summary, fixed = TRUE) && !grepl("Plots", c31$summary, fixed = TRUE) &&
       grepl("Scenario B", c31$summary, fixed = TRUE) && c31$cmp_tab &&
       !"Plot" %in% hdr_cols(c31$logs_hdr) && "Tree" %in% hdr_cols(c31$logs_hdr) &&

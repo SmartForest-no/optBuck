@@ -557,6 +557,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
           r <- unlist(ref[intersect(p$species_keys[species_map[p$species_keys] == sp], names(ref))])
           if (length(r)) norm_permitted_grades(paste(r, collapse = ";")) else NA_character_
         },
+        HprProductKey = p$key,
         stringsAsFactors = FALSE)
       pms[[length(pms) + 1L]] <- grid$pm
       used_keys <- c(used_keys, ak)

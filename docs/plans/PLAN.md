@@ -35,6 +35,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | Result tables | Log tally per price matrix (stocknota) and value by DBH class; duplicate outputs removed |
 | Roadmap Phase 1 | Grade rule for .hpr products (reference grades); Copy from A/B; tally caption; comparisons for different assortments (shared assortments, by type) |
 | Results restructure | Four result tabs (Summary, Products, Trees, Logs); no comparison tab; merged per-assortment table; trees table with A/B and the cutting pattern on click |
+| Roadmap Phase 5a | Simulation results exported as .hpr, one file per scenario (stems copied from the source, no coordinates); hidden assortment column HprProductKey |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -210,7 +211,7 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
 5. **.pin and export.**
    - .pin import.
    - Scenarios A and B exported as .pin.
-   - Simulation results exported as .hpr, one file per scenario, never with coordinates or operator data.
+   - Simulation results exported as .hpr, one file per scenario (done 2026-10-28, Phase 5a; coordinates are never written, machine and operator data are copied from the source on purpose).
 6. **Stem quality and forced cuts (tvangskapp) for .hpr stems, as in Timan.** Optional, only for .hpr stems.
    - Stem grades limit which products a log can go to.
    - Recorded forced cuts are kept.
@@ -237,6 +238,18 @@ For .hpr stems only, optional, per scenario. Decisions (Lennart, 2026-10-28):
 - **Unchanged.** `CuttingWindowDefinition`, `LimitationCategory` and `DistributionCategory` are left out. With both checkboxes off all outputs and `performance_check.R` equal main.
 - **Known limitation.** With several .hpr files, grade numbers are assumed comparable across files.
 - **Tests.** Audit 30 on a small synthetic fixture (`inputs/test_fixtures/hpr_grades_synthetic.hpr`) plus one audit 17 smoke step.
+
+## Roadmap Phase 5a: .hpr export (done, 2026-10-28, branch `phase5a-hpr-export`)
+
+Export part of roadmap item 5 only (.pin import and export are not built). Decisions in CLAUDE.md ("hpr export"):
+
+1. **What is exported.** The result of an .hpr-stems run as a StanForD 2010 .hpr, one file per scenario, from the Logs tab ("Download as .hpr"; after a comparison "Download Scenario A/B (.hpr)"). Hidden for NFI and tree-list runs.
+2. **Source-preserving copy.** Header, Machine, ObjectDefinition and species groups come from the first source file; each bucked stem is copied unchanged (StemGrade, DBH, StemDiameters, ...) with only its Logs replaced by the simulated ones. Stems dropped or cleaned out are left out; StemKey, SpeciesGroupKey and ProductKey stay as written. Machine, operator and object data are copied on purpose (Lennart); coordinates are never written (removed, and the written file is scanned and deleted if any remain). Streamed in 2 MB chunks.
+3. **Products.** The scenario's assortments replace the classified ProductDefinitions with limits, classes, volume method and price matrix. A new hidden assortment column `HprProductKey` (next to `PermittedGrades` and `ReferenceGrades`) keeps the original key and metadata; other assortments get new keys above the file's.
+4. **Logs.** Positions as cumulative lengths; a gap before or between logs is a log of the unclassified product (999999, added if the source lacks it); Top and Mid diameters and the three volumes from the profile; cutting reason `Automatic`.
+5. **Several source files.** Header from the first file; later files' species groups are matched by name; stems per file are reported by position, never by file name. Uploaded .hpr files now stay until the session ends.
+6. **Tests.** Audit 31 (10 checks, variants of the synthetic fixture with invented coordinates and private data), audit 17 checks 14 and 31. Real file (148.7 MB, 10,200 bucked stems): export 55 s, 124 MB, process peak 371 MB; re-import gives the same stems and logs, `m3 (price)` within 2.4e-4 m3 of 2,281 m3 (rounding), StemGrade identical (local benchmark, not committed).
+7. **Known limitation.** "Top cylinder" is written as "Top" (StanForD has no cylinder rule).
 
 ## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 
