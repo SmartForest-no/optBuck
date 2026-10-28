@@ -370,5 +370,11 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   frozen, matched pair — the original validated prototype scripts (00–15)
   and their audits (05–12). `audit_14`'s checks 19–20 assert these scripts
   still exist and are unmodified; don't delete or edit them.
+- **Repository hygiene (2026-10-28):** review screenshots go to the gitignored
+  `outputs/app_smoke/review/` (audit 17: `review/audit17/`, cleared on each run;
+  ad-hoc ones directly in `review/`, emptied at the start of each phase); no
+  `review_<phase>/` folders. Audits do not rewrite their tracked `.txt`/`.csv`
+  when only the `Run:` timestamp changes (`write_audit_outputs()`). `.claude/`
+  and `scripts/local_only/` are gitignored.
 - See [docs/development.md](docs/development.md) for the full file layout and
   [docs/plans/PLAN.md](docs/plans/PLAN.md) for the development roadmap.

@@ -397,7 +397,6 @@ warn_of <- function(f, map = sp_map) {
   x <- read_hpr(f); s <- hpr_to_scenario(x, map, base_defs = base_defs)
   c(x$warnings, s$warnings)
 }
-info_of <- function(f, map = sp_map) hpr_to_scenario(read_hpr(f), map, base_defs = base_defs)$info
 w10 <- list(
   unknown_group = warn_of(variant(function(l) in_prod(l, "7953", "<SpeciesGroupKey>445</SpeciesGroupKey>",
                                                       "<SpeciesGroupKey>999</SpeciesGroupKey>"))),

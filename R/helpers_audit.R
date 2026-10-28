@@ -35,12 +35,37 @@ alog <- function(..., log_path) {
 }
 
 
-#' Initialise a fresh audit log file (truncates any existing content).
+# The audit files as they were before the run (raw bytes, by log path), so that
+# write_audit_outputs() can keep them when only the run timestamp changed.
+.AUDIT_PREV <- new.env(parent = emptyenv())
+.read_raw <- function(p) if (file.exists(p)) readBin(p, "raw", file.size(p)) else NULL
+
+#' Initialise a fresh audit log file (truncates any existing content). The
+#' previous content is remembered for the timestamp rule of
+#' write_audit_outputs().
 #'
 #' @param log_path Path to the audit text file.
 init_audit_log <- function(log_path) {
+  assign(log_path, list(txt = .read_raw(log_path)), envir = .AUDIT_PREV)
   cat("", file = log_path)
   invisible(log_path)
+}
+
+# Timestamp rule (2026-10-28): an audit's .txt/.csv are committed as evidence,
+# so a rerun that changes nothing but the "Run: <timestamp>" line must leave
+# the files as they were. If the new text equals the previous one apart from
+# that line, the previous bytes are written back (the csv too).
+.keep_if_only_timestamp <- function(log_path, audit_csv, prev_csv) {
+  prev <- get0(log_path, envir = .AUDIT_PREV, inherits = FALSE)$txt
+  if (is.null(prev) || !file.exists(log_path)) return(invisible(FALSE))
+  lines <- function(raw) {
+    l <- strsplit(rawToChar(raw), "\r?\n")[[1L]]
+    l[!grepl("^\\s*Run: ", l)]
+  }
+  if (!identical(lines(prev), lines(.read_raw(log_path)))) return(invisible(FALSE))
+  writeBin(prev, log_path)
+  if (!is.null(prev_csv)) writeBin(prev_csv, audit_csv)
+  invisible(TRUE)
 }
 
 
@@ -173,8 +198,10 @@ write_audit_outputs <- function(results, audit_csv, log_path) {
     }
   }
 
+  prev_csv <- .read_raw(audit_csv)
   readr::write_csv(results, audit_csv)
   cat(sprintf("\nAudit CSV: %s\n", audit_csv), file = log_path, append = TRUE)
+  .keep_if_only_timestamp(log_path, audit_csv, prev_csv)
   cat(sprintf("\n[%s] Audit complete.\n", verdict))
   invisible(verdict)
 }

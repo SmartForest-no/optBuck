@@ -317,35 +317,6 @@ apter_par <- function(mar = c(4, 5, 3, 1)) {
                 las = 1, bty = "n")
 }
 
-#' Bar chart with hairline grid, baseline at zero, no box, and value labels
-#' in secondary ink (outside the bar end).
-#'
-#' @param vals   Named numeric vector (names are the bar labels).
-#' @param col    One colour for every bar (single series).
-#' @param fmt    Function formatting the value labels.
-apter_barplot <- function(vals, col, main, ylab, fmt = format) {
-  ch  <- APTER_CHART
-  old <- apter_par(); on.exit(graphics::par(old))
-  names(vals) <- gsub("_", "\n", names(vals))   # "spruce\nsawlog"
-  rng <- range(c(0, vals), na.rm = TRUE)
-  if (diff(rng) == 0) rng <- c(-1, 1)
-  rng <- rng + c(-0.08, 0.15) * diff(rng) * (rng != 0)
-  bp  <- graphics::barplot(vals, col = NA, border = NA, axes = FALSE,
-                           ylim = rng, main = main, ylab = ylab, space = 0.9,
-                           las = 1, cex.names = 0.8, padj = 0.6)
-  graphics::abline(h = graphics::axTicks(2), col = ch$grid, lwd = 0.7)
-  graphics::barplot(vals, col = col, border = NA, axes = FALSE, add = TRUE,
-                    space = 0.9, names.arg = rep("", length(vals)))
-  graphics::axis(2, at = graphics::axTicks(2), col = NA, col.ticks = NA,
-                 labels = format(graphics::axTicks(2), big.mark = ",",
-                                 scientific = FALSE, trim = TRUE))
-  graphics::abline(h = 0, col = ch$baseline)
-  graphics::text(bp, vals, labels = fmt(vals), pos = ifelse(vals >= 0, 3, 1),
-                 col = ch$ink2, cex = 0.75, xpd = TRUE)
-  invisible(bp)
-}
-
-
 #' Horizontal bars, one row per assortment, sorted by value (largest on top),
 #' so every assortment name is shown however many there are (2026-10-22:
 #' .hpr files bring 17 or more). Value labels sit at the bar ends, where

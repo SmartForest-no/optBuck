@@ -69,16 +69,6 @@ path_output <- function(..., root_dir = get_root_dir()) {
 }
 
 
-#' Build a path under the project data_processed/ directory.
-#'
-#' @param ...      Path components passed to file.path().
-#' @param root_dir Project root (default: get_root_dir()).
-#' @return Character scalar path.
-path_data <- function(..., root_dir = get_root_dir()) {
-  file.path(root_dir, "data_processed", ...)
-}
-
-
 #' Ensure a directory exists, creating it (recursively) if needed.
 #'
 #' @param path Directory path to create.

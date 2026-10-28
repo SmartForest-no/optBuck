@@ -28,7 +28,7 @@
 # 17.  Mixed-species test: total value within 0.05 NOK of reference
 # 18.  31 dm sawlog length is priced (no unpriced 31 dm gap). Inverted
 #      2026-10-12: the gap was filled by interpolation on 2026-08-03
-#      (scripts/97_fill_31dm_sawlog_price_gap.R), matching audit 14 checks 11-12.
+#      (a one-off script, since removed), matching audit 14 checks 11-12.
 # 19.  No overlapping logs (Test A)
 # 20.  No overlapping logs (Test B)
 # 21.  PriceDiameterClass_cm_uncapped present in mixed selected logs

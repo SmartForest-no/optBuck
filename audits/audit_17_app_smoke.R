@@ -135,7 +135,7 @@
 #      trees and the height methods; Run -> the FinnHoyde height banner shows
 #      and the Trees table has a "Height source" column; no error notifications
 # 22.  Screenshots (31) of both tabs, the results and the comparisons saved to
-#      outputs/app_smoke/screenshots/ (for review)
+#      outputs/app_smoke/review/audit17/ (for review; gitignored, cleared by each run)
 # 23.  Total browser runtime under 300 s (REVIEW if above)
 # 24.  Scenario B's assortments (Phase 4d): a B rule change (spruce sawlog
 #      min top 14 cm) is highlighted on both sides; an assortment added to B
@@ -193,7 +193,7 @@
 #
 # Language (Phase 1, 2026-10-27): checks 05-33 drive the page in English
 # (APTER_LANG=en); checks 34-39 a second session that starts in Norsk, the
-# app's default (screenshots in outputs/app_smoke/review_language/):
+# app's default (screenshots in outputs/app_smoke/review/audit17/, prefix no_):
 # 34.  Norsk by default: html lang nb, Norsk active on the switch, the tabs,
 #      Run button, window title and the server-rendered assortment table in
 #      Norsk; the switch changes static and server text to English and back
@@ -220,7 +220,7 @@
 #      26 stems read, 10 used.", one species row per group name, a comparison
 #      on 10 stems, a File column in the Trees table, no file name on the
 #      page; the trees and logs CSVs have a File column with 1 and 2 and no
-#      file name (screenshot in outputs/app_smoke/review_phase2/)
+#      file name (screenshot in outputs/app_smoke/review/audit17/, prefix phase2_)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -558,9 +558,8 @@ if (!browser_ok) {
     "(function(){ var o = $('#%s_sort')[0].selectize.options;",
     " for (var k in o) if (o[k].label === %s) return o[k].value; return ''; })()"),
     id, jsonlite::toJSON(label, auto_unbox = TRUE)))
-  shot_dir <- file.path(out_dir, "screenshots")
-  ensure_dir(shot_dir)
-  unlink(list.files(shot_dir, pattern = "\\.png$", full.names = TRUE))
+  shot_dir <- file.path(out_dir, "review", "audit17")   # gitignored; only this subfolder is cleared
+  unlink(shot_dir, recursive = TRUE); ensure_dir(shot_dir)
   shots <- character(0)
   shoot <- function(app, name) {
     f <- file.path(shot_dir, paste0(name, ".png"))
@@ -1121,8 +1120,8 @@ if (!browser_ok) {
       app$set_inputs(tally_scenario = "A", wait_ = FALSE); app$wait_for_idle()
       c27$len2 <- figs(app, "fig_log_lengths")   # A above B
       c27$len2_h <- js(app, "document.querySelector('#fig_log_lengths').offsetHeight")
-      p2 <- file.path(out_dir, "review_phase2"); ensure_dir(p2)
-      try(app$get_screenshot(file.path(p2, "02_logs_tab_comparison.png")), silent = TRUE)
+      p2 <- shot_dir
+      try(app$get_screenshot(file.path(p2, "phase2_02_logs_tab_comparison.png")), silent = TRUE)
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c27$trees2 <- figs(app, c("fig_distributions", "fig_dbh_class"))
     })
@@ -1686,9 +1685,9 @@ if (!browser_ok) {
       c40$stems <- js(app, paste0("Array.from(document.querySelectorAll('#hs_species_ui tbody tr'))",
                                   ".map(function(r){ return r.children[1].innerText.trim(); }).join(',')"))
       c40$counts <- txt(app, "#tree_counts")
-      p40 <- file.path(out_dir, "review_phase2"); ensure_dir(p40)
+      p40 <- shot_dir
       app$run_js("window.scrollTo(0, 0);")
-      try(app$get_screenshot(file.path(p40, "01_hpr_two_files_panel.png")), silent = TRUE)
+      try(app$get_screenshot(file.path(p40, "phase2_01_hpr_two_files_panel.png")), silent = TRUE)
       run(app)
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
       c40$cmp <- compared_now(app)
@@ -1772,9 +1771,8 @@ if (!browser_ok) {
       paste(c(utils::head(x, 5L), if (length(x) > 5L) sprintf("... (%d)", length(x))), collapse = " | ")
     vis_text <- function(app, sel = "body") js(app, sprintf(
       "(function(){ var e = document.querySelector('%s'); return e ? e.innerText : ''; })()", sel))
-    lang_dir <- file.path(out_dir, "review_language"); ensure_dir(lang_dir)
-    unlink(list.files(lang_dir, pattern = "\\.png$", full.names = TRUE))
-    lshot <- function(app, name) try(app$get_screenshot(file.path(lang_dir, paste0(name, ".png"))), silent = TRUE)
+    lang_dir <- shot_dir
+    lshot <- function(app, name) try(app$get_screenshot(file.path(lang_dir, paste0("no_", name, ".png"))), silent = TRUE)
     t_no <- proc.time()
     appn <- tryCatch(
       shinytest2::AppDriver$new(app_dir, name = "audit17_no", load_timeout = 60 * 1000,

@@ -69,8 +69,6 @@ server <- function(input, output, session) {
       div(class = "note-error", L("err_no_plots"))
   })
 
-  # Backend messages (English) in the viewer's language, one per line.
-  lines_of <- function(x) paste(tr_msg(x, lang()), collapse = "\n")
   warn_div <- function(w) if (length(w) > 0L)
     div(class = "pm-msg-warn", paste(paste0(L("lbl_warning"), " ", tr_msg(w, lang())), collapse = "\n"))
 
