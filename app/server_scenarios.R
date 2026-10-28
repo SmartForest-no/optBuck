@@ -759,6 +759,8 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
 
   # Rows (diameter classes, ends only) and columns (lengths) of a matrix.
   axes_ui <- function(s, id, pm) {
+    # The bulk-edit field and mode keep their values when the controls are redrawn.
+    kept <- function(n, d) isolate(or_default(input[[paste0(s, n)]], d))
     lens <- sort(unique(pm$LengthClass_dm[pm$ProductKey == id & !is.na(pm$LengthClass_dm)]))
     b <- function(n, l) actionButton(paste0(s, n), l, class = "btn-secondary btn-sm")
     div(class = "pm-axes",
@@ -774,8 +776,8 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
           b("_len_rm", L("btn_remove"))),
       div(class = "pm-axes-row",
           span(class = "pm-axes-lbl", L("lbl_bulk_edit")),
-          numericInput(paste0(s, "_bulk_value"), NULL, NA, step = 1, width = "90px"),
-          radioButtons(paste0(s, "_bulk_mode"), NULL, inline = TRUE,
+          numericInput(paste0(s, "_bulk_value"), NULL, kept("_bulk_value", NA), step = 1, width = "90px"),
+          radioButtons(paste0(s, "_bulk_mode"), NULL, inline = TRUE, selected = kept("_bulk_mode", "amount"),
                        choices = setNames(c("amount", "percent"), c(L("bulk_nok"), L("bulk_pct")))),
           b("_bulk_apply", L("btn_apply")),
           b("_fill_open", L("btn_fill_rows"))))

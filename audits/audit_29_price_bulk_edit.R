@@ -22,7 +22,9 @@
 #  5.  App (shinytest2): in Scenario A select a range, +10 NOK/m3 changes
 #      exactly those cells in A (not outside the range) and leaves B
 #      unchanged; the fill dialog applies a row price and a length
-#      correction to one cell (screenshots: outputs/app_smoke/review_phase4/)
+#      correction to one cell; the "Change prices" field and mode keep their
+#      values after Apply and after a row/column button (screenshots:
+#      outputs/app_smoke/review_phase4/)
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -189,6 +191,15 @@ if (!browser_ok) {
       app$wait_for_idle(); Sys.sleep(1)
       shot("02_after_bulk_edit")
       a1 <- scen("a"); b1 <- scen("b")
+      # the field keeps its value after Apply and after a row button (mode too)
+      kept_apply <- identical(as.numeric(app$get_value(input = "pm_a_bulk_value")), 10)
+      app$set_inputs(pm_a_bulk_mode = "percent", wait_ = FALSE); app$wait_for_idle()
+      app$click("pm_a_cls_add_lo"); app$wait_for_idle(); Sys.sleep(1)
+      kept_row <- identical(as.numeric(app$get_value(input = "pm_a_bulk_value")), 10) &&
+        identical(app$get_value(input = "pm_a_bulk_mode"), "percent")
+      app$click("pm_a_cls_rm_lo"); app$wait_for_idle(); Sys.sleep(1)
+      kept_row <- kept_row && identical(as.numeric(app$get_value(input = "pm_a_bulk_value")), 10)
+      app$set_inputs(pm_a_bulk_mode = "amount", wait_ = FALSE); app$wait_for_idle()
       ga1 <- as.matrix(gridA(a1))
       inr <- matrix(FALSE, nrow(ga0), ncol(ga0)); inr[2:4, 1:2] <- TRUE
       chg_ok <- isTRUE(all.equal(ga1[inr], round(ga0[inr] + 10, 2))) &&
@@ -209,14 +220,14 @@ if (!browser_ok) {
         (is.na(ga2[1, 1]) || isTRUE(all.equal(unname(ga2[1, 1]), 777))) && same_na(ga2, ga0) &&
         identical(scen("b"), b0)
       shot("04_after_fill")
-      list(chg = chg_ok, b = b_ok, fill = fill_ok,
+      list(chg = chg_ok, b = b_ok, fill = fill_ok, kept = kept_apply && kept_row,
            n = sum(inr & !is.na(ga0)), diff = paste(which(!is.na(ga1 - ga0) & (ga1 - ga0) != 0), collapse = ","), d = paste(unique(round((ga1 - ga0)[!is.na(ga1 - ga0) & ga1 != ga0], 2)), collapse = ","))
     }, error = function(e) list(err = conditionMessage(e)))
     rec("Check 05: App: range +10 NOK in A (B unchanged); fill dialog",
-        ok(is.null(res$err) && isTRUE(res$chg) && isTRUE(res$b) && isTRUE(res$fill)),
+        ok(is.null(res$err) && isTRUE(res$chg) && isTRUE(res$b) && isTRUE(res$fill) && isTRUE(res$kept)),
         if (!is.null(res$err)) paste("error:", res$err)
-        else sprintf("changed idx %s by %s; A range +10 correct (%d cells): %s | B unchanged: %s | fill cell 777 + 5 = 782 and empty cells kept: %s",
-                     res$diff, res$d, res$n, res$chg, res$b, res$fill))
+        else sprintf("changed idx %s by %s; A range +10 correct (%d cells): %s | B unchanged: %s | fill cell 777 + 5 = 782 and empty cells kept: %s | field value and mode kept after Apply and a row button: %s",
+                     res$diff, res$d, res$n, res$chg, res$b, res$fill, res$kept))
   }
 }
 
