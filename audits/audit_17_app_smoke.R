@@ -219,7 +219,8 @@
 #      fixture and a copy with StemKeys + 1000 uploaded at once give "2 files:
 #      26 stems read, 10 used.", one species row per group name, a comparison
 #      on 10 stems, a File column in the Trees table, no file name on the
-#      page (screenshot in outputs/app_smoke/review_phase2/)
+#      page; the trees and logs CSVs have a File column with 1 and 2 and no
+#      file name (screenshot in outputs/app_smoke/review_phase2/)
 #
 # Verdict :
 #   PASS                   -- all checks pass
@@ -1696,18 +1697,30 @@ if (!browser_ok) {
       c40$trees_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
       c40$page <- paste(txt(app, "#hs_validation"), txt(app, "#summary_cards"), txt(app, "#tbl_trees"))
       c40$nerr <- n_err_notif(app)
+      # The tree and log CSVs: a File column with 1 and 2, no file name anywhere.
+      dl_csv <- function(id) {
+        f <- app$get_download(id)
+        list(df = utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
+             txt = paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n"))
+      }
+      d_trees <- dl_csv("dl_trees"); d_logs <- dl_csv("dl_logs")
+      c40$file_vals <- paste(sort(unique(d_trees$df[["File"]])), collapse = ",")
+      c40$file_vals_logs <- paste(sort(unique(d_logs$df[["File"]])), collapse = ",")
+      c40$names_in_csv <- grepl("second_upload|hpr_example_synthetic", paste(d_trees$txt, d_logs$txt))
     })
     ok40 <- !nzchar(e40) && grepl("2 files: 26 stems read, 10 used.", c40$valid, fixed = TRUE) &&
       identical(as.integer(c40$n_rows), 3L) && identical(c40$species, "pine,spruce,none") &&
       all(as.integer(strsplit(c40$stems, ",")[[1L]]) %% 2L == 0L) && c40$cmp &&
       grepl("8 spruce · 2 pine stems", c40$counts, fixed = TRUE) &&
       grepl("\\|File\\|", c40$trees_hdr) && !grepl("second_upload|hpr_example_synthetic", c40$page) &&
-      identical(c40$nerr, 0L)
+      identical(c40$nerr, 0L) && identical(c40$file_vals, "1,2") && identical(c40$file_vals_logs, "1,2") &&
+      identical(c40$names_in_csv, FALSE)
     rec(browser_checks[36], if (ok40) PASS else FAIL,
-        sprintf("summary '%s' | species rows %s: %s (stems %s) | counts '%s' | compared %s | trees columns: %s | file names on the page: %s | error notifications %s%s",
+        sprintf("summary '%s' | species rows %s: %s (stems %s) | counts '%s' | compared %s | trees columns: %s | file names on the page: %s | File column in the trees / logs CSV: %s / %s, file names in the CSVs: %s | error notifications %s%s",
                 substr(gsub("\\s+", " ", or_default(c40$valid, "")), 1, 70), c40$n_rows, c40$species, c40$stems,
                 trimws(c40$counts), c40$cmp, substr(or_default(c40$trees_hdr, ""), 1, 90),
-                grepl("second_upload|hpr_example_synthetic", or_default(c40$page, "")), c40$nerr, err_txt(e40)))
+                grepl("second_upload|hpr_example_synthetic", or_default(c40$page, "")),
+                c40$file_vals, c40$file_vals_logs, c40$names_in_csv, c40$nerr, err_txt(e40)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.

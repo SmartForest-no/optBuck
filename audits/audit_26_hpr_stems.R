@@ -46,6 +46,13 @@
 #      "hpr", tree IDs = StemKeys, no plots, the dropped stems listed;
 #      comparison of all 5 stems, NOK/m3 higher in B
 # 12.  Results do not depend on the number of workers (1 vs 2, chunks of 2)
+# 13.  Several files (Phase 2, 2026-10-28): (a) two copies of the fixture (keys
+#      + 1000): unique keys, doubled counts, species merged by name, the same
+#      per-stem results as one file, a file column; (b) the same file twice:
+#      repeated keys dropped with a warning; (c) a failing file is skipped
+#      with its position and reason; (d) all files failing is the error "None
+#      of the files can be used."; (e) no uploaded file name in any result
+#      table, params, run label, message or CSV download
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -436,16 +443,47 @@ st13c <- read_hpr_stem_files(c(FIXTURE, f_np), c(nm13[1L], "Landowner_Smith_c.hp
 ck13c <- hpr_stem_checks(st13c, setNames(guess_hpr_species(st13c$species$name, st13c$species$user_id), st13c$species$key))
 fail_ok <- isTRUE(st13c$ok) && identical(st13c$failed$file, 2L) && identical(st13c$failed$reason, "no stem profiles") &&
   st13c$n_files == 1L && ck13c$n_read == 13L && ck13c$n_used == 5L && !any(grepl("Smith", unlist(st13c$failed)))
-# All files fail: an error.
-st13d <- read_hpr_stem_files(c(f_np, f_nostem2 <- with_stems(character(0))), c("x.hpr", "y.hpr"))
+rec("Check 13c: A failing file is skipped with its position and reason, the others are used",
+    ok(fail_ok), sprintf("file %s: '%s' | used files %d, stems %d/%d",
+                         paste(st13c$failed$file, collapse = ","), paste(st13c$failed$reason, collapse = ","),
+                         st13c$n_files, ck13c$n_used, ck13c$n_read))
+
+# (d) All files fail: an error, each file named by position and reason only.
+f_nostem2 <- with_stems(character(0))
+nm13d <- c("Landowner_Smith_x.hpr", "Landowner_Smith_y.hpr")
+st13d <- read_hpr_stem_files(c(f_np, f_nostem2), nm13d)
+ck13d <- hpr_stem_checks(st13d, c())
 all_fail <- !isTRUE(st13d$ok) && identical(st13d$errors, "None of the files can be used.") &&
-  identical(st13d$failed$reason, c("no stem profiles", "no stems"))
-rec("Check 13c: A failing file is skipped with its position and reason, the others are used; all failing is an error",
-    ok(fail_ok && all_fail), sprintf("file %s: '%s' | used files %d, stems %d/%d | all failing: %s / %s",
-                                     paste(st13c$failed$file, collapse = ","), paste(st13c$failed$reason, collapse = ","),
-                                     st13c$n_files, ck13c$n_used, ck13c$n_read, paste(st13d$errors, collapse = " "),
-                                     paste(st13d$failed$reason, collapse = ",")))
-unlink(c(f2, f_np, f_nostem2))
+  identical(st13d$failed$file, 1:2) && identical(st13d$failed$reason, c("no stem profiles", "no stems")) &&
+  !isTRUE(ck13d$ok) && identical(ck13d$errors, "None of the files can be used.") &&
+  !any(grepl("Smith", c(unlist(st13d), unlist(ck13d))))
+rec("Check 13d: All files failing is an error 'None of the files can be used.', with each file's position and reason and no file name",
+    ok(all_fail), sprintf("ok %s | errors '%s' | files %s: %s", st13d$ok, paste(st13d$errors, collapse = " "),
+                          paste(st13d$failed$file, collapse = ","), paste(st13d$failed$reason, collapse = ",")))
+
+# (e) No uploaded file name in any result table, params, run label, message
+# or download. A and B run on the two named files; every data frame of the
+# results (both scenarios, the read and the profiles) is written as CSV, the
+# way the app's downloads are, and the text searched.
+pm_e <- pm0; saw_e <- grepl("sawlog", pm_e$ProductKey); pm_e$PriceNOKperM3[saw_e] <- pm_e$PriceNOKperM3[saw_e] * 1.3
+f_e <- tempfile(fileext = ".csv"); pm_export(pm_e, f_e)
+r13e <- run_hpr_bucking(p13, scenario = list(price_matrix_path = f_e), workers = 1L, params = list())
+frames <- function(x) Filter(is.data.frame, x)
+tabs_e <- c(frames(r13e), frames(r13e$scenario), frames(st13), frames(p13))
+dl_text <- unlist(lapply(tabs_e, function(t) {
+  f <- tempfile(fileext = ".csv"); write_download_csv(t, f, "en"); on.exit(unlink(f))
+  readLines(f, warn = FALSE, encoding = "UTF-8")
+}), use.names = FALSE)
+meta_e <- c(unlist(r13e$params), r13e$run_id, r13e$label, r13e$scenario$run_id, r13e$scenario$label,
+            unlist(r13e$diagnostics[vapply(r13e$diagnostics, is.character, TRUE)]), r13e$height_warnings,
+            unlist(st13[c("info", "warnings", "errors")]), ck13$info, ck13$warnings)
+leak_e <- grepl("Landowner|Smith|hpr_example|second_upload", c(dl_text, meta_e))
+names_e <- "file" %in% names(r13e$tree_summary) && "file" %in% names(r13e$selected_logs_all) &&
+  setequal(r13e$tree_summary$file, 1:2) && setequal(r13e$selected_logs_all$file, 1:2)
+rec("Check 13e: No uploaded file name in any result table (A and B), params, run label, message or CSV download; the file column is 1/2",
+    ok(!any(leak_e) && names_e), sprintf("%d tables, %d CSV lines, %d messages searched | file names found: %d | file column in trees and logs: %s",
+                                         length(tabs_e), length(dl_text), length(meta_e), sum(leak_e), names_e))
+unlink(c(f2, f_np, f_nostem2, f_e))
 
 
 # ==============================================================================

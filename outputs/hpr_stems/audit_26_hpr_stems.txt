@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr stems (hpr Phase B)
-  Run: 2026-10-28 09:48:41.182199
+  Run: 2026-10-28 10:32:37.380343
 ============================================================= 
 
 --- 01. Reading the fixture's stems ---
@@ -42,12 +42,14 @@
 --- 13. Several files (Phase 2) ---
   [PASS  ] Check 13a: Two copies of the fixture (keys + 1000): unique keys, doubled counts, species merged by name, the same per-stem results as one file, a file column, no file names | read 26, used 10, files 2 | unique keys TRUE | species groups 8 -> 4 names TRUE | stems of file 1 = single run TRUE, file 2 TRUE | logs 30 = 2 x 15 (TRUE) | file column TRUE | names absent TRUE
   [PASS  ] Check 13b: The same file twice: the second file's stems are dropped as already-used StemKeys, with a warning | read 26, used 5 | warnings: 2 stems dropped: profile recorded 'Under bark', not over bark (not supported). / 11 stems dropped: StemKey already used by an earlier stem. / 1 stem dropped: profile does not start at the felling cut (position 0). / 1 stem dropped: a diameter above 1,500 mm (likely a unit error).
-  [PASS  ] Check 13c: A failing file is skipped with its position and reason, the others are used; all failing is an error | file 2: 'no stem profiles' | used files 1, stems 5/13 | all failing: None of the files can be used. / no stem profiles,no stems
+  [PASS  ] Check 13c: A failing file is skipped with its position and reason, the others are used | file 2: 'no stem profiles' | used files 1, stems 5/13
+  [PASS  ] Check 13d: All files failing is an error 'None of the files can be used.', with each file's position and reason and no file name | ok FALSE | errors 'None of the files can be used.' | files 1,2: no stem profiles,no stems
+  [PASS  ] Check 13e: No uploaded file name in any result table (A and B), params, run label, message or CSV download; the file column is 1/2 | 26 tables, 1474 CSV lines, 23 messages searched | file names found: 0 | file column in trees and logs: TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 15
+1   PASS 17
 
   Verdict: PASS 
 ============================================================= 
