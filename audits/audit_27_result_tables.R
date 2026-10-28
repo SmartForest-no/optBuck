@@ -40,6 +40,9 @@
 #      logs, price volume and value equal product_summary; NOK/m3
 #      contributions add up to the Total NOK/m3 and volume shares to 1; an
 #      assortment a scenario does not have is NA, one without logs 0
+# 11.  Log length distribution (2026-10-28): log_length_distribution() per
+#      length class equals the tally Total row summed over the non-waste keys
+#      (A and B); waste is excluded
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -355,6 +358,41 @@ ok10 <- one_ok && ab_ok && nl_ok
 rec("Check 10: assortment_summary(): sums equal product_summary, contributions add up to NOK/m3, NA when a scenario lacks the assortment",
     ok(ok10), sprintf("one run: %d assortments, sums and shapes %s, contributions %.2f = NOK/m3 %.2f | A/B: %s only in A -> B NA %s | rows only for assortments with logs %s",
                       nrow(s1), one_ok, sum(s1$contrib_a), tot10$nok_per_m3, K2, ab_ok, nl_ok))
+
+
+# ==============================================================================
+section("11. Log length distribution")
+# The figure's data: logs per length class and type group. Per scenario the
+# counts must equal the tally's Total row (logs per length class) summed over
+# the non-waste assortments; waste is not counted.
+len_vs_tally <- function(res, tally, pm) {
+  d <- log_length_distribution(res$selected_logs_all)
+  keys <- unique(tally$ProductKey)
+  tot <- NULL
+  for (k in keys) {
+    g <- log_tally_grid(tally, pm, k, "logs"); tr_ <- g[g[[1L]] == "Total", , drop = FALSE]
+    cols <- setdiff(names(tr_), c(names(g)[1L], "Total"))
+    v <- setNames(as.numeric(unlist(tr_[1L, cols])), cols)
+    tot <- c(tot, v)
+  }
+  by_len <- tapply(tot, names(tot), sum)
+  fig <- tapply(d$logs, as.character(d$length_class_dm), sum)
+  by_len <- by_len[by_len > 0]
+  nw <- sum(res$product_summary$n_logs[res$product_summary$ProductType != "waste"])
+  list(same = identical(sort(names(by_len)), sort(names(fig))) &&
+         all(as.numeric(by_len[names(fig)]) == as.numeric(fig)),
+       total = sum(d$logs) == nw && sum(by_len) == nw,
+       types = all(as.character(d$type) %in% ASSORTMENT_TYPE_GROUPS),
+       n = sum(d$logs), waste = sum(res$selected_logs_all$ProductType == "waste"))
+}
+la <- len_vs_tally(r, ta, pm_a); lb <- len_vs_tally(rb, tb, pm_b)
+# Waste is excluded: a waste log added to the run changes nothing.
+sl_w <- r$selected_logs_all; sw <- sl_w[1L, ]; sw$ProductType <- "waste"
+waste_ok <- identical(log_length_distribution(rbind(sl_w, sw)), log_length_distribution(sl_w))
+ok11 <- la$same && la$total && la$types && lb$same && lb$total && lb$types && waste_ok
+rec("Check 11: Log length distribution: logs per length class equal the tally's Total row summed over the non-waste assortments (A and B); waste excluded",
+    ok(ok11), sprintf("A: per-length equal %s, total %d = non-waste logs %s | B: equal %s, total %d, %s | an added waste log changes nothing %s",
+                      la$same, la$n, la$total, lb$same, lb$n, lb$total, waste_ok))
 
 
 # ==============================================================================

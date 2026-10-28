@@ -248,7 +248,8 @@ hpr_stem_checks <- function(st, species_map) {
                                   info = character(0), file = st$file))
   s <- st$stems; n <- nrow(s); sp <- st$species
   gi <- match(s$species_key, sp$key)
-  group <- ifelse(is.na(gi), s$species_key, sprintf("%s (%s)", sp$name[gi], sp$key[gi]))
+  group <- ifelse(is.na(gi), s$species_key,
+                  if (is.null(sp$name_id)) sprintf("%s (%s)", sp$name[gi], sp$key[gi]) else sp$name[gi])   # several files: keys repeat
   species <- unname(species_map[s$species_key]); species[is.na(species)] <- "none"
   offset <- ifelse(is.na(gi), HPR_DEFAULT_STUMP_CM, sp$offset_cm[gi])
   f <- factor(st$idx, levels = seq_len(n))
@@ -346,11 +347,92 @@ hpr_stem_profiles <- function(st, species_map) {
                              sesong = rep(NA, length(use)), species_group = ck$species[use],
                              dbh_cm = dbh_mm / 10, height_m = height_m,
                              height_source = rep("Measured profile", length(use)), stringsAsFactors = FALSE)
+  if (!is.null(s$file)) ck$tree_data$file <- s$file[use]     # the file's position in the upload
   dropped <- which(!is.na(ck$reason))
   ck$excluded <- data.frame(treid = s$stem_key[dropped], species_group_name = ck$group[dropped],
                             excluded_reason = ck$reason[dropped], stringsAsFactors = FALSE)
+  if (!is.null(s$file)) ck$excluded$file <- s$file[dropped]
   if (off_grid > 0L)
     ck$info <- c(ck$info, sprintf("Positions off the 10 cm grid in %s stem profile(s): interpolated.",
                                   prettyNum(off_grid, big.mark = ",")))
   ck
+}
+
+
+# ---- several files -------------------------------------------------------------------
+# Phase 2 (2026-10-28): the stems of several .hpr files as one tree source.
+# Files are read one at a time (read_hpr_stems()), so memory stays as for a
+# single file. StemKeys are kept as written and must be unique across files
+# (a repeated one is dropped by hpr_stem_checks(), like a duplicate within a
+# file). File names never reach results: stems carry `file`, the file's
+# position in the upload, and messages name files by position.
+
+#' Why a file could not be used, without the file name (a short phrase the
+#' app shows as "File 2 not used: <reason>.").
+hpr_file_failure_reason <- function(errors, filename) {
+  e <- paste(errors, collapse = " ")
+  if (grepl("contains no stems", e, fixed = TRUE)) return("no stems")
+  if (grepl("none with a stem profile", e, fixed = TRUE)) return("no stem profiles")
+  if (grepl("is not a readable XML file|is not a StanForD 2010 .hpr file|is a StanForD '", e)) return("not a readable StanForD 2010 .hpr file")
+  if (grepl("The stems of .* cannot be read|cannot be read", e)) return("the stems cannot be read")
+  gsub(filename, "the file", errors[1L], fixed = TRUE)
+}
+
+#' Combine read_hpr_stems() results (one per file, in upload order) into one
+#' read_hpr_stems()-shaped list for hpr_stem_checks() and hpr_stem_profiles().
+#'
+#' Species group keys become "<n>:<key>" (n = the file's position), because
+#' keys such as 1, 2, 3 repeat across files; `name_id` (lower case, trimmed
+#' group name) is what the app maps species by. Each stem gets `file` = n.
+#'
+#' @param reads     List of read_hpr_stems() results.
+#' @param filenames Their names (only used to keep them out of messages).
+#' @return list(ok, errors, warnings, info, file = NA, n_files (used), failed
+#'   (data.frame: file, reason), species, stems (with `file`), idx, pos, d).
+combine_hpr_stems <- function(reads, filenames = vapply(reads, function(r) or_default(r$file, ""), "")) {
+  good <- which(vapply(reads, function(r) isTRUE(r$ok), TRUE))
+  bad  <- setdiff(seq_along(reads), good)
+  failed <- data.frame(file = as.integer(bad),
+                       reason = vapply(bad, function(i) hpr_file_failure_reason(reads[[i]]$errors, filenames[i]), ""),
+                       stringsAsFactors = FALSE)
+  unnamed <- function(x, i) gsub(filenames[i], sprintf("file %d", i), x, fixed = TRUE)
+  warnings <- unique(unlist(lapply(good, function(i) unnamed(reads[[i]]$warnings, i))))
+  if (length(good) == 0L)
+    return(list(ok = FALSE, errors = "None of the files can be used.", warnings = warnings,
+                info = character(0), file = NA_character_, n_files = 0L, failed = failed))
+  n_of <- vapply(good, function(i) nrow(reads[[i]]$stems), 0L)
+  off  <- cumsum(c(0L, n_of))[seq_along(good)]
+  stems <- do.call(rbind, lapply(seq_along(good), function(j) {
+    s <- reads[[good[j]]]$stems
+    s$species_key <- paste0(good[j], ":", s$species_key)
+    s$file <- rep(good[j], nrow(s)); s
+  }))
+  sp <- do.call(rbind, lapply(good, function(i) {
+    s <- reads[[i]]$species
+    s$key <- paste0(i, ":", s$key); s$file <- rep(i, nrow(s)); s
+  }))
+  sp$name_id <- tolower(trimws(sp$name))
+  list(ok = TRUE, errors = character(0), warnings = warnings,
+       info = "Recorded logs and stem grades are not read; the stems are bucked from their profiles.",
+       file = NA_character_, n_files = length(good), failed = failed,
+       species = sp, stems = stems,
+       idx = unlist(Map(function(i, o) reads[[i]]$idx + o, good, off), use.names = FALSE),
+       pos = unlist(lapply(good, function(i) reads[[i]]$pos), use.names = FALSE),
+       d   = unlist(lapply(good, function(i) reads[[i]]$d), use.names = FALSE))
+}
+
+#' Read several .hpr files one after the other and combine them
+#' (combine_hpr_stems()). The app runs this on a worker.
+#'
+#' @param paths     File paths, in upload order.
+#' @param filenames Names shown in the reader's own messages (extension
+#'   decides .zip / .gz); they are kept out of the combined messages.
+read_hpr_stem_files <- function(paths, filenames = basename(paths)) {
+  reads <- vector("list", length(paths))
+  for (i in seq_along(paths))
+    reads[[i]] <- tryCatch(read_hpr_stems(paths[i], filenames[i]),
+                           error = function(e) list(ok = FALSE, file = filenames[i],
+                             errors = sprintf("The stems of %s cannot be read: %s", filenames[i], conditionMessage(e)),
+                             warnings = character(0)))
+  combine_hpr_stems(reads, filenames)
 }

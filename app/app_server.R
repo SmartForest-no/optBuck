@@ -125,9 +125,11 @@ server <- function(input, output, session) {
   # ---- .hpr stems (hpr Phase B; R/helpers_hpr_stems.R) ---------------------
   # The file: one uploaded in this panel, else the file imported into a
   # scenario this session (with its confirmed species map; a new import
-  # takes over again). Its stems are read once, on a worker, when the source
-  # is selected; the species map only re-checks them.
-  hs_own <- reactiveVal(NULL)       # list(name, path) uploaded here
+  # takes over again). Several files can be uploaded at once (Phase 2,
+  # 2026-10-28): they are read one after the other in one task and combined;
+  # file names stay out of the results. The stems are read once, on a worker,
+  # when the source is selected; the species map only re-checks them.
+  hs_own <- reactiveVal(NULL)       # list(name, path) uploaded here (vectors, in upload order)
   hs_uploads <- character(0)        # Shiny's upload folders of this panel
   session$onSessionEnded(function() unlink(hs_uploads, recursive = TRUE))
   observeEvent(input$hs_upload, {
@@ -149,9 +151,12 @@ server <- function(input, output, session) {
   # The error stays English (like the backend's messages): it is translated
   # when shown.
   hs_task <- ExtendedTask$new(function(path, name)
-    promises::catch(read_hpr_stems_async(path, name), function(e)
-      list(ok = FALSE, errors = sprintf("The stems of %s cannot be read: %s", name, conditionMessage(e)),
-           warnings = character(0), file = name)))
+    promises::catch(
+      if (length(path) == 1L) read_hpr_stems_async(path, name) else read_hpr_stem_files_async(path, name),
+      function(e)
+        list(ok = FALSE, errors = sprintf("The stems of %s cannot be read: %s",
+                                          if (length(path) == 1L) name else "the files", conditionMessage(e)),
+             warnings = character(0), file = if (length(path) == 1L) name else NA_character_)))
   observe({
     req(identical(input$tree_source, "hpr"))
     f <- hs_file(); req(f)
@@ -175,41 +180,56 @@ server <- function(input, output, session) {
         div(class = "hs-file", L("hs_using", imp$name, imp$side)),
       file_input_lang("hs_upload",
                       if (is.null(imp)) L("lbl_hpr_file", HPR_MAX_UPLOAD_MB) else L("lbl_hpr_other"),
-                      accept = c(".hpr", ".zip", ".gz"), lang = lang()))
+                      accept = c(".hpr", ".zip", ".gz"), lang = lang(), multiple = TRUE))
   })
 
+  # Species groups, one row per group name (case-insensitive, trimmed) with
+  # the stems summed over files; the choice applies to every file's group of
+  # that name. Group keys repeat across files, so rows are mapped by name.
+  hs_groups <- function(st) {
+    sp <- st$species[st$species$n_stems > 0L, , drop = FALSE]
+    nid <- tolower(trimws(sp$name)); u <- unique(nid); i <- match(u, nid)
+    data.frame(name_id = u, name = sp$name[i], user_id = sp$user_id[i],
+               n = vapply(u, function(x) sum(sp$n_profiles[nid == x]), 0L),
+               stringsAsFactors = FALSE, row.names = NULL)
+  }
   # Species group key -> "spruce" / "pine" / "none": the panel's choice, else
   # the import's confirmed map for that file, else the guess. Input IDs carry
   # the read, so another file's groups start from their own defaults.
-  hs_sp_id <- function(st, key) sprintf("hs_sp_%d_%s", st$read_id, key)
-  hs_default <- function(st) {
-    guess <- setNames(guess_hpr_species(st$species$name, st$species$user_id), st$species$key)
+  hs_sp_id <- function(st, i) sprintf("hs_sp_%d_%d", st$read_id, i)
+  hs_default <- function(st, g) {
+    guess <- guess_hpr_species(g$name, g$user_id)
     f <- isolate(hs_file())
     if (!is.null(f$map) && identical(f$path, st$path)) {
-      m <- f$map[st$species$key]; guess[!is.na(m)] <- m[!is.na(m)]
+      nid <- tolower(trimws(st$species$name))
+      for (i in seq_len(nrow(g))) {
+        m <- f$map[st$species$key[nid == g$name_id[i]]]; m <- m[!is.na(m)]
+        if (length(m)) guess[i] <- m[[1L]]
+      }
     }
     guess
   }
   hs_map <- reactive({
     st <- hs_stems(); req(isTRUE(st$ok))
-    def <- hs_default(st)
-    setNames(vapply(st$species$key, function(k) or_default(input[[hs_sp_id(st, k)]], def[[k]]), ""),
-             st$species$key)
+    g <- hs_groups(st); def <- hs_default(st, g)
+    choice <- vapply(seq_len(nrow(g)), function(i) or_default(input[[hs_sp_id(st, i)]], def[i]), "")
+    out <- choice[match(tolower(trimws(st$species$name)), g$name_id)]
+    out[is.na(out)] <- "none"
+    setNames(out, st$species$key)
   })
   output$hs_species_ui <- renderUI({
     st <- hs_stems(); req(isTRUE(st$ok))
-    def <- hs_default(st)
-    sp <- st$species[st$species$n_stems > 0L, , drop = FALSE]
+    g <- hs_groups(st); def <- hs_default(st, g)
     tagList(
       div(class = "section-hdr", L("hdr_species_groups")),
       tags$table(class = "hpr-table hs-species",
         tags$thead(tags$tr(tags$th(L("col_species_group")), tags$th(L("col_stems")),
                            tags$th(L("col_apter_species")))),
-        tags$tbody(lapply(seq_len(nrow(sp)), function(i) tags$tr(
-          tags$td(sprintf("%s (%s)", sp$name[i], sp$key[i])),
-          tags$td(fmt_int(sp$n_profiles[i])),
-          tags$td(selectInput(hs_sp_id(st, sp$key[i]), NULL, hpr_species_choices(lang()),
-                              isolate(or_default(input[[hs_sp_id(st, sp$key[i])]], def[[sp$key[i]]])),
+        tags$tbody(lapply(seq_len(nrow(g)), function(i) tags$tr(
+          tags$td(g$name[i]),
+          tags$td(fmt_int(g$n[i])),
+          tags$td(selectInput(hs_sp_id(st, i), NULL, hpr_species_choices(lang()),
+                              isolate(or_default(input[[hs_sp_id(st, i)]], def[i])),
                               width = "115px")))))))
   })
 
@@ -217,17 +237,29 @@ server <- function(input, output, session) {
   hs_check <- reactive({
     st <- hs_stems(); req(st)
     if (!isTRUE(st$ok)) return(st)
-    hpr_stem_checks(st, hs_map())
+    ck <- hpr_stem_checks(st, hs_map())
+    ck$n_files <- st$n_files; ck$failed <- st$failed
+    ck
   })
   output$hs_validation <- renderUI({
     f <- hs_reading()
-    if (!is.null(f)) return(div(class = "note-muted", L("hs_reading", f$name)))
+    if (!is.null(f))
+      return(div(class = "note-muted", if (length(f$name) > 1L) L("hs_reading_files", fmt_int(length(f$name)))
+                                       else L("hs_reading", f$name)))
     ck <- hs_check(); req(ck)
-    head <- if (!is.null(ck$n_read)) L("hs_summary", ck$file, fmt_int(ck$n_read), fmt_int(ck$n_used))
+    multi <- !is.null(ck$n_files)      # several files: one total line, no file names
+    head <- if (!is.null(ck$n_read))
+      if (multi) L(if (ck$n_files == 1L) "hs_summary_file1" else "hs_summary_files",
+                   fmt_int(ck$n_files), fmt_int(ck$n_read), fmt_int(ck$n_used))
+      else L("hs_summary", ck$file, fmt_int(ck$n_read), fmt_int(ck$n_used))
+    failed <- if (multi && NROW(ck$failed))
+      div(class = "pm-msg-warn", paste(vapply(seq_len(nrow(ck$failed)), function(i)
+        L("hs_file_failed", ck$failed$file[i], tr_msg(ck$failed$reason[i], lang())), ""), collapse = "\n"))
     tagList(
       if (isTRUE(ck$ok)) div(class = "pm-msg-ok", head)
-      else div(class = "pm-msg-error", paste(c(if (!is.null(head)) head else L("err_file_unusable", ck$file),
+      else div(class = "pm-msg-error", paste(c(if (!is.null(head)) head else if (!multi) L("err_file_unusable", ck$file),
                                                tr_msg(ck$errors, lang())), collapse = "\n")),
+      failed,
       warn_div(ck$warnings))
   })
 
@@ -340,7 +372,7 @@ server <- function(input, output, session) {
       scenario <- list(price_matrix_path = path_b, products = pb$pd, length_classes = pb$lc)
     }
     spec <- list(src = src, params = if (src == "nfi") build_run_params(input) else list(),
-                 tl = tl, list_params = list(file = if (src == "hpr") hs$file else tl$file),
+                 tl = tl, list_params = list(file = if (src == "hpr") (if (is.na(hs$file)) NULL else hs$file) else tl$file),
                  path = path, pd = pd, lc = lc, scenario = scenario, files = files)
     if (src == "hpr") { spec$stems <- hs_stems(); spec$species_map <- hs_map() }
     run_src(src)
@@ -437,7 +469,7 @@ server <- function(input, output, session) {
 
   # Log table columns -> text ids.
   LOG_LABELS <- c(
-    plot_id_github = "col_plot", treid = "col_tree", species_group = "col_species",
+    plot_id_github = "col_plot", treid = "col_tree", file = "col_file", species_group = "col_species",
     ProductKey = "col_assortment", StartPos = "col_startpos", StopPos = "col_stoppos",
     LogLength = "col_length_cm", LengthClass_dm = "col_length_class_dm",
     TopDiameter_ob = "col_top_ob_mm", TopDiameter_ub = "col_top_ub_mm",
@@ -649,6 +681,9 @@ server <- function(input, output, session) {
                     L(c("col_height_source", "col_logs", "col_value_nok", "col_commercial_volume_m3",
                         "col_nok_per_m3")))
     if (isTRUE(is_hpr())) out[[L("col_height_source")]] <- NULL   # Tree = the StemKey
+    if ("file" %in% names(ts))                                    # several .hpr files: the file's position
+      out <- cbind(out[, 1:2, drop = FALSE], stats::setNames(data.frame(ts$file), L("col_file")),
+                   out[, -(1:2), drop = FALSE])
     drop_plot(out)
   }
   tree_key <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
@@ -813,6 +848,13 @@ server <- function(input, output, session) {
     k <- or_default(input$tally_key, ""); sk <- result()$keys
     v <- c(if (k %in% sk$A) "A", if (k %in% sk$B) "B", if (k %in% sk$A && k %in% sk$B) "diff")
     if (length(v)) v else "A"
+  })
+  # Log length distribution (A, and B below it after a comparison).
+  output$fig_log_lengths <- renderPlot(res = 96, height = function() if (compared()) 440 else 260, {
+    req(has_result())
+    apter_log_length_figure(log_length_distribution(result()$selected_logs_all),
+                            if (compared()) log_length_distribution(result_b()$selected_logs_all),
+                            lang = lang())
   })
   output$tally_scenario_ui <- renderUI({
     if (!compared()) return(NULL)

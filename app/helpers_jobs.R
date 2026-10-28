@@ -84,6 +84,13 @@ read_hpr_stems_async <- function(path, filename) {
   .backend_promise("read_hpr_stems", list(path, filename))
 }
 
+#' Read the stems of several .hpr files on a worker, one after the other
+#' (read_hpr_stem_files(), R/helpers_hpr_stems.R).
+read_hpr_stem_files_async <- function(paths, filenames) {
+  .ensure_plan(apter_workers())
+  .backend_promise("read_hpr_stem_files", list(paths, filenames))
+}
+
 #' Promises for chunk tasks (R/helpers_parallel.R), resolved in chunk order;
 #' on_done(i) is called as chunk i finishes.
 .chunk_promises <- function(expr, globals_list, on_done) {

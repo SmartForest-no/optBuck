@@ -380,5 +380,74 @@ future::plan(future::sequential)
 
 
 # ==============================================================================
+section("13. Several files (Phase 2)")
+# Two copies of the fixture, the second with every StemKey + 1000: keys are
+# unique, counts double, the species groups merge by name, and each stem's
+# result equals the single-file run. File names never reach any output.
+f2 <- tempfile(fileext = ".hpr"); x2 <- fx; ii <- seq_along(x2) >= first_stem
+for (j in which(ii & grepl("<StemKey>[0-9]+</StemKey>", x2))) {
+  m <- regmatches(x2[j], gregexpr("<StemKey>[0-9]+</StemKey>", x2[j]))[[1L]]
+  for (s in unique(m)) x2[j] <- gsub(s, sprintf("<StemKey>%d</StemKey>", 1000L + as.integer(gsub("[^0-9]", "", s))), x2[j], fixed = TRUE)
+}
+writeLines(x2, f2, useBytes = TRUE)
+nm13 <- c("Landowner_Smith_a.hpr", "Landowner_Smith_b.hpr")
+st13 <- read_hpr_stem_files(c(FIXTURE, f2), nm13)
+map13 <- setNames(guess_hpr_species(st13$species$name, st13$species$user_id), st13$species$key)
+ck13 <- hpr_stem_checks(st13, map13)
+p13 <- hpr_stem_profiles(st13, map13)
+r13 <- run_hpr_bucking(p13, workers = 1L)
+r1 <- run_hpr_bucking(p, workers = 1L)
+ts13 <- r13$tree_summary; ts1 <- r1$tree_summary
+k2 <- paste0(1000L + as.integer(ts1$treid))
+cmp_cols <- c("total_value_nok", "commercial_volume_m3", "n_logs_selected")
+same_f1 <- isTRUE(all.equal(ts13[match(ts1$treid, ts13$treid), cmp_cols], ts1[, cmp_cols], check.attributes = FALSE))
+same_f2 <- isTRUE(all.equal(ts13[match(k2, ts13$treid), cmp_cols], ts1[, cmp_cols], check.attributes = FALSE))
+sl13 <- r13$selected_logs_all; sl1 <- r1$selected_logs_all
+logs_eq <- nrow(sl13) == 2L * nrow(sl1) && isTRUE(all.equal(sum(sl13$value_nok), 2 * sum(sl1$value_nok)))
+files_ok <- setequal(ts13$file, 1:2) && all(ts13$file[ts13$treid %in% ts1$treid] == 1L) &&
+  all(sl13$file == ts13$file[match(sl13$treid, ts13$treid)])
+uniq_ok <- !anyDuplicated(ts13$treid) && !anyDuplicated(p13$tree_data$treid)
+n_names <- length(unique(tolower(trimws(st$species$name))))
+sp_ok <- length(unique(st13$species$name_id)) == n_names && nrow(st13$species) == 2L * nrow(st$species)
+cnt_ok <- ck13$n_read == 26L && ck13$n_used == 10L && st13$n_files == 2L && nrow(st13$failed) == 0L
+# Privacy: the file names appear nowhere.
+tabs13 <- c(Filter(is.data.frame, st13), Filter(is.data.frame, p13), Filter(is.data.frame, r13))
+vals13 <- c(unlist(lapply(tabs13, function(t) unlist(lapply(t, as.character))), use.names = FALSE),
+            unlist(st13[c("info", "warnings", "errors")]), ck13$info, ck13$warnings,
+            unlist(r13$params), r13$run_id, r13$label)
+name_ok <- !any(grepl("Landowner|Smith", vals13)) && is.na(st13$file) && is.na(ck13$file)
+ok13a <- cnt_ok && uniq_ok && sp_ok && same_f1 && same_f2 && logs_eq && files_ok && name_ok
+rec("Check 13a: Two copies of the fixture (keys + 1000): unique keys, doubled counts, species merged by name, the same per-stem results as one file, a file column, no file names",
+    ok(ok13a), sprintf("read %d, used %d, files %d | unique keys %s | species groups %d -> %d names %s | stems of file 1 = single run %s, file 2 %s | logs %d = 2 x %d (%s) | file column %s | names absent %s",
+                       ck13$n_read, ck13$n_used, st13$n_files, uniq_ok, nrow(st13$species), n_names, sp_ok,
+                       same_f1, same_f2, nrow(sl13), nrow(sl1), logs_eq, files_ok, name_ok))
+
+# Identical copies: file 2's stems repeat file 1's StemKeys and are dropped.
+st13b <- read_hpr_stem_files(c(FIXTURE, FIXTURE), nm13)
+ck13b <- hpr_stem_checks(st13b, setNames(guess_hpr_species(st13b$species$name, st13b$species$user_id), st13b$species$key))
+dup_ok <- ck13b$n_read == 26L && ck13b$n_used == 5L &&
+  any(grepl("13 stems dropped: StemKey already used by an earlier stem|StemKey already used", ck13b$warnings))
+rec("Check 13b: The same file twice: the second file's stems are dropped as already-used StemKeys, with a warning",
+    ok(dup_ok), sprintf("read %d, used %d | warnings: %s", ck13b$n_read, ck13b$n_used, paste(ck13b$warnings, collapse = " / ")))
+
+# A file that fails is skipped (named by position); the others are used.
+f_np <- with_stems(c(no_prof(stem_xml(1)), no_prof(stem_xml(2))))
+st13c <- read_hpr_stem_files(c(FIXTURE, f_np), c(nm13[1L], "Landowner_Smith_c.hpr"))
+ck13c <- hpr_stem_checks(st13c, setNames(guess_hpr_species(st13c$species$name, st13c$species$user_id), st13c$species$key))
+fail_ok <- isTRUE(st13c$ok) && identical(st13c$failed$file, 2L) && identical(st13c$failed$reason, "no stem profiles") &&
+  st13c$n_files == 1L && ck13c$n_read == 13L && ck13c$n_used == 5L && !any(grepl("Smith", unlist(st13c$failed)))
+# All files fail: an error.
+st13d <- read_hpr_stem_files(c(f_np, f_nostem2 <- with_stems(character(0))), c("x.hpr", "y.hpr"))
+all_fail <- !isTRUE(st13d$ok) && identical(st13d$errors, "None of the files can be used.") &&
+  identical(st13d$failed$reason, c("no stem profiles", "no stems"))
+rec("Check 13c: A failing file is skipped with its position and reason, the others are used; all failing is an error",
+    ok(fail_ok && all_fail), sprintf("file %s: '%s' | used files %d, stems %d/%d | all failing: %s / %s",
+                                     paste(st13c$failed$file, collapse = ","), paste(st13c$failed$reason, collapse = ","),
+                                     st13c$n_files, ck13c$n_used, ck13c$n_read, paste(st13d$errors, collapse = " "),
+                                     paste(st13d$failed$reason, collapse = ",")))
+unlink(c(f2, f_np, f_nostem2))
+
+
+# ==============================================================================
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 26 complete.\n")

@@ -198,7 +198,7 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
    - One translation table; no texts scattered in the code.
    - Lennart reviews the Norwegian forestry terms before the build.
    - Audit 17 tests both languages.
-2. **Quick additions.**
+2. **Quick additions (done, 2026-10-28, branch `phase2-quick-additions`).**
    - A log length distribution figure in the Logs tab.
    - Several .hpr files uploaded at once as the tree source, with stem keys made unique per file.
 3. **Cleaning of .hpr stems:** broken tops, plateaus and measurement drops. Skogforsk's Stambas defaults are the starting point:

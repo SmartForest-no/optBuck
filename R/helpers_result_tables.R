@@ -79,6 +79,32 @@ log_tally <- function(selected_logs, pm) {
   out
 }
 
+#' Logs per length class and type group (Sawlog, Pulpwood, Other; waste left
+#' out, as in log_tally()), for the Logs tab's length figure. The counts equal
+#' the log tally's Total row summed over the non-waste assortments.
+#'
+#' @param selected_logs A run's selected_logs_all.
+#' @return data.frame(length_class_dm, type (factor, ASSORTMENT_TYPE_GROUPS),
+#'   logs), ordered by length class and type.
+log_length_distribution <- function(selected_logs) {
+  g <- type_group(selected_logs$ProductType)
+  k <- !is.na(g) & !is.na(selected_logs$LengthClass_dm)
+  empty <- data.frame(length_class_dm = integer(0),
+                      type = factor(character(0), levels = ASSORTMENT_TYPE_GROUPS),
+                      logs = integer(0))
+  if (!any(k)) return(empty)
+  d <- as.data.frame(table(length_class_dm = as.integer(selected_logs$LengthClass_dm[k]),
+                           type = factor(g[k], levels = ASSORTMENT_TYPE_GROUPS)),
+                     stringsAsFactors = FALSE)
+  d$length_class_dm <- as.integer(d$length_class_dm)
+  d$type <- factor(d$type, levels = ASSORTMENT_TYPE_GROUPS)
+  d <- d[d$Freq > 0L, , drop = FALSE]
+  names(d)[names(d) == "Freq"] <- "logs"
+  d <- d[order(d$length_class_dm, d$type), , drop = FALSE]
+  rownames(d) <- NULL
+  d
+}
+
 #' Assortments in one or two tallies, in tally order (A's first).
 log_tally_keys <- function(tally_a, tally_b = NULL)
   unique(c(as.character(tally_a$ProductKey), as.character(tally_b$ProductKey)))
