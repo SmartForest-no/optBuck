@@ -261,6 +261,62 @@ pm_remove_length <- function(pm, id, dm) {
                 drop = FALSE])
 }
 
+# ---- bulk edits (Phase 4) ----------------------------------------------------------
+# Prices of a range or of the whole matrix changed at once. Empty (forbidden)
+# cells stay empty; results are rounded to 2 decimals and never below 0.
+
+.pm_matrix_grid <- function(pm, id) {
+  if (identical(id, PM_FLAT_ID) || nrow(.matrix_rows(pm_minimal(pm), id)) == 0L)
+    stop("No matrix '", id, "'.")
+  pm_to_grid(pm_minimal(pm), id)
+}
+
+.pm_bulk_price <- function(x) pmax(round(x, 2), 0)
+
+#' Add `value` NOK/m3 ("amount") or `value` % ("percent") to the priced cells
+#' of rows `rows` x columns `cols` (grid indices) of matrix `id`.
+pm_bulk_adjust <- function(pm, id, rows, cols, mode = c("amount", "percent"), value) {
+  mode <- match.arg(mode)
+  value <- suppressWarnings(as.numeric(value))
+  if (length(value) != 1L || !is.finite(value)) stop("Give the amount or percentage as a number.")
+  g <- .pm_matrix_grid(pm, id)
+  rows <- intersect(as.integer(rows), seq_len(nrow(g)))
+  cols <- intersect(as.integer(cols), seq_len(ncol(g)))
+  if (length(rows) == 0L || length(cols) == 0L) stop("Select cells in the grid first.")
+  m <- as.matrix(g)
+  v <- m[rows, cols, drop = FALSE]
+  new <- .pm_bulk_price(if (mode == "amount") v + value else v * (1 + value / 100))
+  m[rows, cols] <- ifelse(is.na(v), NA_real_, new)
+  g[] <- m
+  pm_from_grid(g, id, pm)
+}
+
+#' Fill matrix `id`: every priced cell = the price of its diameter class
+#' (`row_prices`, named by class in cm) + the correction of its length class
+#' (`length_corr`, named by dm). Empty cells stay empty.
+pm_bulk_fill <- function(pm, id, row_prices, length_corr) {
+  g <- .pm_matrix_grid(pm, id)
+  rp <- suppressWarnings(as.numeric(row_prices[rownames(g)]))
+  lc <- suppressWarnings(as.numeric(length_corr[colnames(g)]))
+  lc[is.na(lc)] <- 0
+  m <- as.matrix(g)
+  need <- rowSums(!is.na(m)) > 0L
+  if (any(is.na(rp) & need) || any(!is.finite(rp[!is.na(rp)])))
+    stop("Give a price for every diameter class.")
+  new <- .pm_bulk_price(outer(rp, lc, "+"))
+  m[] <- ifelse(is.na(m), NA_real_, new)
+  g[] <- m
+  pm_from_grid(g, id, pm)
+}
+
+#' Each diameter class's first priced cell (the fill dialog's starting prices);
+#' NA for an empty row.
+pm_row_first_prices <- function(pm, id) {
+  m <- as.matrix(.pm_matrix_grid(pm, id))
+  stats::setNames(apply(m, 1L, function(r) if (all(is.na(r))) NA_real_ else r[!is.na(r)][1L]),
+                  rownames(m))
+}
+
 #' Matrices whose diameter classes have gaps (classes must be consecutive cm).
 .pm_class_gaps <- function(pm) {
   s <- pm[.is_matrix_row(pm) & !is.na(pm$PriceDiameterClass_cm), , drop = FALSE]
