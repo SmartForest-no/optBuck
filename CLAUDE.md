@@ -376,5 +376,10 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   `review_<phase>/` folders. Audits do not rewrite their tracked `.txt`/`.csv`
   when only the `Run:` timestamp changes (`write_audit_outputs()`). `.claude/`
   and `scripts/local_only/` are gitignored.
+- **Running audits (2026-10-28):** during a phase run only the audits affected by
+  the change (the ones whose checks cover the code you touched). Run the full suite
+  once with `Rscript scripts/run_audits.R` (audits 14-28 and `performance_check.R`,
+  3 processes at a time, audit 17 alongside; one PASS/FAIL line each, exit status 1
+  on any FAIL) before asking for a merge. Audit 17 is the slow one (about 4 min).
 - See [docs/development.md](docs/development.md) for the full file layout and
   [docs/plans/PLAN.md](docs/plans/PLAN.md) for the development roadmap.

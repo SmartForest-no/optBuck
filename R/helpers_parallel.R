@@ -12,7 +12,8 @@
 #   apter.workers    number of workers; default detectCores() - 1. That
 #                    default assumes one R process on the machine: on a
 #                    multi-user server with several R processes, set it so
-#                    that processes x workers <= cores.
+#                    that processes x workers <= cores. The env var
+#                    APTER_WORKERS does the same when the option is not set.
 #   apter.chunk_size trees per chunk; default max(25, ceiling(n / (4 * workers))),
 #                    about four chunks per worker to balance uneven trees.
 #
@@ -23,11 +24,14 @@
 #           need no setup and keep no state between chunks.
 # ==============================================================================
 
-#' Number of parallel workers: option apter.workers, default detectCores() - 1
-#' (at least 1).
+#' Number of parallel workers: option apter.workers, else the env var
+#' APTER_WORKERS (how scripts/run_audits.R gives each audit process its share
+#' of the cores), else detectCores() - 1 (at least 1).
 apter_workers <- function() {
   w <- getOption("apter.workers")
-  if (is.null(w)) {
+  if (is.null(w) && nzchar(Sys.getenv("APTER_WORKERS")))
+    w <- suppressWarnings(as.integer(Sys.getenv("APTER_WORKERS")))
+  if (is.null(w) || is.na(w)) {
     cores <- suppressWarnings(parallel::detectCores())
     w <- if (is.na(cores)) 1L else cores - 1L
   }
