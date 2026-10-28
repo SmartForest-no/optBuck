@@ -1,6 +1,6 @@
 # Apter development plan
 
-Updated 2026-10-15. Replaces the previous PLAN.md and supersedes docs/plans/phase0.md (and any other files in docs/plans/). Detailed conventions live in CLAUDE.md; developer details, audits and benchmarks in docs/development.md.
+Updated 2026-10-27. Replaces the previous PLAN.md and supersedes docs/plans/phase0.md (and any other files in docs/plans/). Detailed conventions live in CLAUDE.md; developer details, audits and benchmarks in docs/development.md.
 
 Working rules: one phase per session, plan mode first, show the plan to Lennart before editing, work on a branch off main, re-run all audits at the end of a phase, and don't merge or push until Lennart says so. Never edit `scripts/prototype_reference/` or `audits/prototype_reference/`. When a convention is undecided, follow optBuck (SmartForest-no/optBuck) unless it conflicts with a decision in this file or CLAUDE.md.
 
@@ -123,25 +123,6 @@ Later: compare the recorded logs with the optimal bucking; under-bark profiles; 
 3. **Removed duplicates.** The comparison tab's A/B overview table (= the Summary's A/B grid; trees with logs A / B moved to the Summary) and its A/B value bars (= the Products tab's figure). Figures 11 → 8.
 4. **Audits.** New audit 27 (7 checks); audit 17 checks 14–16 and 27.
 
-## Roadmap (agreed 2026-10-22)
-
-0. **First task after the demo (Tuesday 2026-10-27): Norwegian language option** for the app's text (agreed 2026-10-23), before Phase 2.
-1. **Phase 1 (done, branch `grades-and-comparisons`):**
-   - A grade rule for .hpr products: which products start unticked as "Only for lower quality grades".
-   - "Copy from A" in Scenario B and "Copy from B" in Scenario A: all assortments and prices, after a short confirmation.
-   - The caption under the log tally becomes "Price-diameter class (cm) vs length class (dm)".
-   - Comparisons for scenarios with different assortments: B − A per assortment (tally, value-change bars) only for assortments both scenarios share; a comparison by assortment type (sawlog, pulpwood, other) when the assortments differ. Totals, NOK/m³, DBH classes and changed patterns stay as they are.
-2. **Phase 2: cleaning .hpr stems** (broken tops, plateaus, sudden drops). Skogforsk's Stambas defaults are the starting point:
-   - check from 2 m up to a diameter of 10 cm;
-   - broken top above 200 mm;
-   - minimum diameter fall 1 mm over 30 dm;
-   - maximum fall 30 mm over 1 dm and 60 mm over 10 dm.
-3. **Phase 3: bulk editing of price matrices.** Selected cells ± or × %; a row price plus length corrections.
-4. **Later:**
-   - distribution bucking;
-   - actual vs optimal bucking (merge with optBuck; .hpr and quality layer);
-   - deployment.
-
 ## Roadmap Phase 1: grades and comparisons (done, 2026-10-22, branch `grades-and-comparisons`)
 
 1. **Grade rule for .hpr products** (decision in CLAUDE.md, "hpr species and grades"). A report on the owner's five files (species groups, grade numbers and names, StartGrade, permitted grades) compared three rules: lowest grade (old), StartGrade, and most commonly permitted. The rule is now:
@@ -188,7 +169,62 @@ Interface work for the demo; computations unchanged (`scripts/performance_check.
 7. **Import dialog.** The intro text and the file label are gone; the 200 MB limit stays.
 8. **Audits.** Audit 27 check 10 (`assortment_summary()`); audit 17 checks 12, 15–17, 21, 24, 31 and 33 for the new structure (31 screenshots), with one-line, equal-height Summary cards in check 16.
 
-## Phase 6: stem profile import
+## Phase 1: Norwegian language option (2026-10-27, branch `norwegian-language`)
+
+Interface work; computations unchanged. Decisions in CLAUDE.md (accepted assumption "Languages"); how to add a text in docs/development.md ("Languages").
+
+1. **Switch and default.** A Norsk | English switch in the navbar. Norsk (bokmål) is the default. Switching keeps scenarios, uploads and results, with no reload. The browser remembers the choice, and `?lang=en` forces English.
+2. **One table.** `inputs/i18n/translations.csv` holds about 540 texts:
+   - app texts by id;
+   - backend message templates and data values, matched by their English text.
+
+   The backend stays English. The app translates messages when it shows them, so scripts, audits and baselines are unchanged.
+3. **Terms.** Lennart's choices: vrak, oppgjørsvolum, sagtømmer, stokkfordeling. The other terms are as proposed (CLAUDE.md).
+4. **Formats.**
+   - Norsk shows a decimal comma and a space as thousands separator: on screen, in the figures, in the price grid (a typed "430,5" is stored as 430.5) and on the altitude slider.
+   - Result downloads are translated: file names, columns and values. Norwegian CSVs use `;`, a decimal comma and a BOM.
+   - Exchange files (scenario, prices, tree-list template) keep their machine format in both languages.
+5. **Audits.**
+   - New audit 28 (7 checks): the table, the ids in the code, no English literals left in `app/`, template round trips, 68 real backend messages without a miss, downloads, tree counts.
+   - Audit 17 runs checks 05–33 in English and adds 34–39, a Norsk session: default, switch, both tabs, dialogs, a comparison, downloads, state kept across a switch, a Norsk file loaded in English, the choice kept after a reload. Screenshots are in `outputs/app_smoke/review_language/`.
+
+## Roadmap (agreed 2026-10-27)
+
+Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase gets its own branch off main and plan-mode approval before any editing.
+
+1. **Norwegian language option.**
+   - A language switch in the top bar (Norsk/English).
+   - Every user-facing text is translated: labels, buttons, messages, figure and table titles, column names, and download file and column names.
+   - One translation table; no texts scattered in the code.
+   - Lennart reviews the Norwegian forestry terms before the build.
+   - Audit 17 tests both languages.
+2. **Quick additions.**
+   - A log length distribution figure in the Logs tab.
+   - Several .hpr files uploaded at once as the tree source, with stem keys made unique per file.
+3. **Cleaning of .hpr stems:** broken tops, plateaus and measurement drops. Skogforsk's Stambas defaults are the starting point:
+   - check from 2 m up to a diameter of 10 cm;
+   - broken top above 200 mm;
+   - minimum diameter fall 1 mm over 30 dm;
+   - maximum fall 30 mm over 1 dm and 60 mm over 10 dm.
+4. **Bulk editing of price matrices.** Selected cells ± or × %; a row price plus length corrections.
+5. **.pin and export.**
+   - .pin import.
+   - Scenarios A and B exported as .pin.
+   - Simulation results exported as .hpr, one file per scenario, never with coordinates or operator data.
+6. **Stem quality and forced cuts (tvangskapp) for .hpr stems, as in Timan.** Optional, only for .hpr stems.
+   - Stem grades limit which products a log can go to.
+   - Recorded forced cuts are kept.
+   - Statistics on automatic versus forced cuts.
+7. **Distribution bucking (fordelingsaptering).** A new tab after the Simulator.
+   - A stand-level LP with a target log distribution, solved by column generation with the existing per-stem optimizer.
+   - Outputs: the value under the target, the value loss compared with value bucking, and optimized price matrices from the shadow prices, which can be loaded as Scenario B.
+   - Starts with a method note for Lennart's approval.
+8. **Merge with optBuck.**
+9. **Deployment on the NIBIO server.**
+10. **JOSS paper.**
+
+
+## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 
 - Long format (CSV or xlsx): `tree_id`, `species` (spruce/pine), `height` (m along the stem), `diameter` (cm, over bark), optional `plot_id`. Downloadable template. (.hpr stems are hpr Phase B.)
 - Profiles are over bark. Under-bark diameters with barkNOR (B ≥ 0 floor); dbh is read from the profile at 1.3 m.

@@ -407,6 +407,18 @@ The NFI data used by the app are included in the repository in a
 sanitized form, without plot locations or original plot IDs. No database
 access is needed.
 
+### Language
+
+The app opens in Norwegian (bokmål). The switch at the top right changes
+to English and back without losing your scenarios or results, and the
+browser remembers your choice. Add `?lang=en` to the address to open the
+app in English.
+
+Downloaded results follow the language: in Norwegian, CSV files use `;` and
+a decimal comma, so they open directly in Norwegian Excel. Scenario files,
+price files and the tree-list template have the same columns in both
+languages, so a file saved in one language loads in the other.
+
 ### Demo files
 
 The `demo/` folder has files to try the app with:

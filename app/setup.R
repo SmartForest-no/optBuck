@@ -32,15 +32,12 @@ trees_meta <- as.data.frame(arrow::read_parquet(
   col_select = c("plot_id_github", "treid", "species_group", "dbh_cm", "trehoyde",
                  "beregnet_hoyde", "hogstkl", "abonitet", "fylnr", "hoh")))
 
-# ---- HKL group mapping (user-facing -> raw hogstkl codes) -----------------
-HKL_CHOICES <- c(
-  "HKL 3 - younger production forest" = "3",
-  "HKL 4 - older production forest"   = "4",
-  "HKL 5 - mature / old-growth forest" = "5"
-)
+# ---- HKL group mapping (text id -> raw hogstkl codes) ---------------------
+# Labels come from the translation table (inputs/i18n/translations.csv).
+HKL_CHOICES <- c(hkl_3 = "3", hkl_4 = "4", hkl_5 = "5")
 HKL_MAP <- list("3" = c(31L, 32L), "4" = c(41L, 42L), "5" = c(51L, 52L))
-BONITET_LABELS <- c("6"="6 (very low)","8"="8","11"="11","14"="14",
-                    "17"="17","20"="20","23"="23","26"="26")
+# Site class labels: the class itself, with a note for the lowest one.
+bonitet_labels <- function(x, lang) ifelse(x == "6", tr("bonitet_6", lang = lang), x)
 # Productive-forest plots only (raw HKL 3-5, codes 31-52)
 plots_prod <- plots_all[plots_all$hogstkl %in% unlist(HKL_MAP), , drop = FALSE]
 
@@ -59,25 +56,27 @@ HOH_RANGE  <- c(floor(min(plots_prod$hoh, na.rm = TRUE) / HOH_STEP_M),
   "40"="Telemark", "42"="Agder", "46"="Vestland",
   "50"="Tr\u00f8ndelag", "55"="Troms", "56"="Finnmark",
   # Historical codes (kept for robustness)
-  "01"="\u00d8stfold (old)", "02"="Akershus (old)",
-  "04"="Hedmark (old)", "05"="Oppland (old)",
-  "06"="Buskerud (old)", "07"="Vestfold (old)",
-  "08"="Telemark (old)", "09"="Aust-Agder (old)",
-  "10"="Vest-Agder (old)", "12"="Hordaland (old)",
-  "14"="Sogn og Fjordane (old)", "16"="S\u00f8r-Tr\u00f8ndelag (old)",
-  "17"="Nord-Tr\u00f8ndelag (old)", "19"="Troms (old)", "20"="Finnmark (old)"
+  "01"="\u00d8stfold", "02"="Akershus",
+  "04"="Hedmark", "05"="Oppland",
+  "06"="Buskerud", "07"="Vestfold",
+  "08"="Telemark", "09"="Aust-Agder",
+  "10"="Vest-Agder", "12"="Hordaland",
+  "14"="Sogn og Fjordane", "16"="S\u00f8r-Tr\u00f8ndelag",
+  "17"="Nord-Tr\u00f8ndelag", "19"="Troms", "20"="Finnmark"
 )
-# Build county choices from codes actually in the data
+# County choices from the codes actually in the data, in the language of
+# the moment ("(old)" for historical codes; names are Norwegian already).
+.FYLNR_OLD <- c("01", "02", "04", "05", "06", "07", "08", "09", "10", "12", "14", "16", "17", "19", "20")
 .DATA_FYLNR <- sort(unique(as.character(plots_prod$fylnr)))
-.fylnr_lbl <- function(code) {
-  nm <- .FYLNR_NAMES[code]
-  if (is.na(nm)) sprintf("%s - unknown county", code)
-  else sprintf("%s - %s", code, nm)
+fylnr_choices <- function(lang) {
+  lbl <- vapply(.DATA_FYLNR, function(code) {
+    nm <- unname(.FYLNR_NAMES[code])
+    if (is.na(nm)) tr("county_unknown", code, lang = lang)
+    else if (code %in% .FYLNR_OLD) tr("county_old", code, nm, lang = lang)
+    else sprintf("%s - %s", code, nm)
+  }, character(1))
+  c(stats::setNames("__all__", tr("county_all", lang = lang)), stats::setNames(.DATA_FYLNR, lbl))
 }
-FYLNR_CHOICES <- c(
-  "All counties" = "__all__",
-  setNames(.DATA_FYLNR, vapply(.DATA_FYLNR, .fylnr_lbl, character(1)))
-)
 
 # ---- upload limit (Import from .hpr) -------------------------------------------
 # Harvester files are large (real .hpr files: 3-151 MB). Shiny has one upload
@@ -90,7 +89,16 @@ HPR_MAX_UPLOAD_MB <- local({
 options(shiny.maxRequestSize = HPR_MAX_UPLOAD_MB * 1024^2)
 
 # Apter species of an .hpr species group (import dialog and ".hpr stems").
-HPR_SPECIES_CHOICES <- c("Spruce" = "spruce", "Pine" = "pine", "Not used" = "none")
+species_group_choices <- function(lang)
+  stats::setNames(c("spruce", "pine", "both"), tr(c("sp_spruce", "sp_pine", "sp_both"), lang = lang))
+hpr_species_choices <- function(lang)
+  stats::setNames(c("spruce", "pine", "none"), tr(c("sp_spruce", "sp_pine", "sp_not_used"), lang = lang))
+
+# ---- language (Phase 1, 2026-10-27; R/helpers_i18n.R) -------------------------
+# The language the page starts in: Norsk, or the test-only APTER_LANG. The
+# browser then applies the viewer's own choice (www/apter.js).
+APP_LANG <- i18n_lang(Sys.getenv("APTER_LANG", ""))
+i18n_table()
 
 # ---- release version (repo-root VERSION file; internal, not shown) ------------
 APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))
