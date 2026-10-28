@@ -201,7 +201,7 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
 2. **Quick additions (done, 2026-10-28, branch `phase2-quick-additions`).**
    - A log length distribution figure in the Logs tab.
    - Several .hpr files uploaded at once as the tree source, with stem keys made unique per file.
-3. **Cleaning of .hpr stems:** broken tops, plateaus and measurement drops. Skogforsk's Stambas defaults are the starting point:
+3. **Cleaning of .hpr stems (done, 2026-10-28, branch `phase3-hpr-cleaning`):** broken tops, plateaus and measurement drops. Skogforsk's Stambas defaults; a stem failing a fall check is excluded, a broken top is only counted, one warning per check (CLAUDE.md, "hpr cleaning"):
    - check from 2 m up to a diameter of 10 cm;
    - broken top above 200 mm;
    - minimum diameter fall 1 mm over 30 dm;

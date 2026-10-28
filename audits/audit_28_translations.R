@@ -279,6 +279,14 @@ st <- read_hpr_stems(FIXTURE, "fixture.hpr"); see(st$errors, st$warnings, st$inf
 ck <- hpr_stem_checks(st, map_all); see(ck$errors, ck$warnings, ck$info)
 ck0 <- hpr_stem_checks(st, stats::setNames(rep("none", length(map_all)), names(map_all)))
 see(ck0$errors, ck0$warnings, ck0$info)
+# Cleaning: one stem per check (broken top, no fall, a 40 mm step).
+sk <- st$stems$species_key[st$stems$kind == "single"][1L]; s10 <- seq(0, 1000, by = 10)
+stc <- list(ok = TRUE, errors = character(0), warnings = character(0), info = character(0), file = NA_character_,
+            species = st$species, stems = data.frame(stem_key = c("1", "2", "3"), species_key = sk, kind = "single",
+                                                    category = "Over bark", n_points = 101L, stringsAsFactors = FALSE),
+            idx = rep(1:3, each = 101L), pos = rep(s10, 3L),
+            d = c(330 - 0.1 * s10, rep(150, 101L), ifelse(s10 < 500, 180, 140)))
+see(hpr_stem_checks(stc, stats::setNames("spruce", sk))$warnings)
 see(read_hpr_stems(variant(fx[!grepl("<Stem>|<StemKey>|</Stem>", fx)]), "nostems.hpr")$errors)
 stems_n <- length(seen) - tl_n - hpr_n
 

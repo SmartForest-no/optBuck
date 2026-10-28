@@ -53,6 +53,14 @@
 #      with its position and reason; (d) all files failing is the error "None
 #      of the files can be used."; (e) no uploaded file name in any result
 #      table, params, run label, message or CSV download
+# 14.  Cleaning (Phase 3, 2026-10-28): hpr_clean_flags() on 12 synthetic stems,
+#      one passing and one failing per rule (broken top > 200 mm; minimum
+#      fall 1 mm per 30 dm; maximum fall 30 mm per 1 dm and 60 mm per 10 dm),
+#      boundaries exactly on the threshold pass, a range under 30 dm and a
+#      plateau after 100 mm not checked; per-check counts, one warning line
+#      per check; broken-top stems are kept (counted only), too flat and too
+#      steep stems dropped once; fixture unchanged; Not-used species not
+#      counted; counts summed over two files; Norsk translation
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -484,6 +492,79 @@ rec("Check 13e: No uploaded file name in any result table (A and B), params, run
     ok(!any(leak_e) && names_e), sprintf("%d tables, %d CSV lines, %d messages searched | file names found: %d | file column in trees and logs: %s",
                                          length(tabs_e), length(dl_text), length(meta_e), sum(leak_e), names_e))
 unlink(c(f2, f_np, f_nostem2, f_e))
+
+
+# ==============================================================================
+section("14. Cleaning (Phase 3): broken top, minimum fall, maximum fall")
+kn <- function(x, y) { s <- seq(0, max(x), by = 10); list(p = s, d = stats::approx(x, y, xout = s)$y) }
+gr <- function(f, to) { s <- seq(0, to, by = 10); list(p = s, d = f(s)) }
+fl <- function(b, f, s) c(b, f, s) == 1                       # expected: broken top, too flat, too steep
+s5 <- seq(0, 1800, by = 10)
+cases <- list(                                                # profile, expected flags
+  base_ok          = list(list(p = s1, d = d1), fl(0, 0, 0)),
+  broken_top       = list(gr(function(s) 330 - 0.1 * s, 1000), fl(1, 0, 0)),              # ends at 230 mm
+  min_fall_exact   = list(gr(function(s) 205 - s / 300, 1800), fl(0, 0, 0)),               # exactly 1 mm per 30 dm
+  min_fall_slow    = list(gr(function(s) 205 - 0.9 * s / 300, 1800), fl(0, 1, 0)),         # 0.9 mm per 30 dm
+  plateau          = list(list(p = s5, d = 330 - 0.15 * ifelse(s5 <= 800, s5, ifelse(s5 <= 1300, 800, s5 - 500))),
+                          fl(0, 1, 0)),                                                    # 5 m without a fall
+  step_31mm        = list(list(p = s1, d = d1 - 31 * (s1 >= 1010)), fl(0, 0, 1)),          # 33 mm over 1 dm
+  step_30mm_exact  = list(kn(c(0, 500, 510, 1800), c(205, 200, 170, 160)), fl(0, 0, 0)),   # exactly 30 mm over 1 dm
+  fall_60_exact    = list(gr(function(s) 600 - 0.6 * s, 800), fl(0, 0, 0)),                # exactly 60 mm over 10 dm
+  fall_61          = list(gr(function(s) 600 - 0.61 * s, 800), fl(0, 0, 1)),               # 61 mm over 10 dm
+  short_flat_range = list(gr(function(s) rep(150, length(s)), 400), fl(0, 0, 0)),          # 2 m..4 m: under 30 dm, not checked
+  plateau_below_10 = list(kn(c(0, 1500, 1600, 2400), c(330, 105, 99, 98)), fl(0, 0, 0)),   # flat only after 100 mm is reached
+  broken_and_steep = list(kn(c(0, 500, 510, 1000), c(500, 450, 410, 380)), fl(1, 0, 1)))   # fails two checks
+exp14 <- do.call(rbind, lapply(cases, `[[`, 2))
+mk14 <- function(off) unlist(lapply(seq_along(cases), function(i)
+  stem_xml(i + off, body = dv_xml(cases[[i]][[1L]]$p, cases[[i]][[1L]]$d))))
+f14 <- with_stems(mk14(0L))
+st14 <- read_hpr_stems(f14)
+map14 <- setNames(guess_hpr_species(st14$species$name, st14$species$user_id), st14$species$key)
+fl14 <- as.matrix(hpr_clean_flags(st14$idx, st14$pos, st14$d, nrow(st14$stems)))
+ok14a <- isTRUE(st14$ok) && identical(unname(fl14), unname(exp14))
+bad14 <- names(cases)[apply(fl14 != exp14, 1L, any)]
+rec("Check 14a: hpr_clean_flags(): each synthetic stem (one passing and one failing per rule, boundaries exactly 1 mm / 30 mm / 60 mm pass) is flagged as expected",
+    ok(ok14a), sprintf("%d stems | mismatches: %s", length(cases), if (length(bad14)) paste(bad14, collapse = ", ") else "none"))
+
+ck14 <- hpr_stem_checks(st14, map14)
+w14 <- c("2 stems with a broken top (last diameter above 200 mm).",
+         "2 stems dropped: profile falls less than 1 mm per 30 dm.",
+         "3 stems dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm.")
+pr14 <- hpr_stem_profiles(st14, map14)
+rs14 <- setNames(pr14$excluded$excluded_reason, pr14$excluded$treid)
+ok14b <- identical(unname(ck14$clean_counts), c(2L, 2L, 3L)) && ck14$n_read == 12L && ck14$n_used == 7L &&
+  setequal(ck14$warnings, w14) && length(ck14$warnings) == 3L && !any(grepl("falls|broken", ck14$info)) &&
+  nrow(pr14$tree_data) == 7L && nrow(pr14$excluded) == 5L &&
+  all(c("2", "12") %in% pr14$tree_data$treid == c(TRUE, FALSE)) &&   # broken top kept; broken + steep dropped as steep
+  !"2" %in% names(rs14) && startsWith(rs14[["12"]], "profile falls more") &&
+  startsWith(rs14[["5"]], "profile falls less") && startsWith(rs14[["6"]], "profile falls more")
+rec("Check 14b: per-check counts 2 / 2 / 3 (a stem failing two checks counted in both), a broken top only counted (the stem is kept), too flat and too steep dropped once: 7 of 12 stems used, one warning line per check in the existing style",
+    ok(ok14b), sprintf("counts %s | used %d/%d | warnings: %s", paste(ck14$clean_counts, collapse = "/"),
+                       ck14$n_used, ck14$n_read, paste(ck14$warnings, collapse = " | ")))
+
+# The fixture is untouched; Not-used species are not counted; several files add up.
+ckfx <- hpr_stem_checks(st, map)
+ck14n <- hpr_stem_checks(st14, setNames(rep("none", length(map14)), names(map14)))
+f14b <- with_stems(mk14(100L))
+st14ab <- read_hpr_stem_files(c(f14, f14b), c("a.hpr", "b.hpr"))
+ck14ab <- hpr_stem_checks(st14ab, setNames(guess_hpr_species(st14ab$species$name, st14ab$species$user_id), st14ab$species$key))
+ok14c <- sum(ckfx$clean_counts) == 0L && ckfx$n_used == 5L && sum(ck14n$clean_counts) == 0L && !isTRUE(ck14n$ok) &&
+  identical(unname(ck14ab$clean_counts), c(4L, 4L, 6L)) && ck14ab$n_read == 24L && ck14ab$n_used == 14L &&
+  any(ck14ab$warnings == "4 stems with a broken top (last diameter above 200 mm).") &&
+  any(ck14ab$warnings == "6 stems dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm.")
+rec("Check 14c: the 13 fixture stems are not flagged (5 still used); stems of a Not-used species are not counted; two files give summed counts 4 / 4 / 6",
+    ok(ok14c), sprintf("fixture flagged %d, used %d | Not used: %d flagged | two files: %s, used %d/%d",
+                       sum(ckfx$clean_counts), ckfx$n_used, sum(ck14n$clean_counts),
+                       paste(ck14ab$clean_counts, collapse = "/"), ck14ab$n_used, ck14ab$n_read))
+
+if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
+i18n_reset_misses()
+no14 <- tr_msg(ck14$warnings, "no")
+ok14d <- !length(i18n_misses()) && all(no14 != ck14$warnings) && any(grepl("2 stammer med knekt topp \\(siste diameter over 200 mm\\)", no14)) &&
+  any(grepl("faller mindre enn 1 mm per 30 dm", no14)) && any(grepl("faller mer enn 30 mm over 1 dm eller 60 mm over 10 dm", no14))
+rec("Check 14d: the three warning lines translate to Norsk without a miss",
+    ok(ok14d), paste(no14, collapse = " | "))
+unlink(c(f14, f14b))
 
 
 # ==============================================================================

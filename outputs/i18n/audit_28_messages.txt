@@ -50,6 +50,9 @@ Height above ground = position + 10 cm (130 cm - DBHHeight 120 cm) for FURU. | H
 No stems are left to buck: no stem has a usable profile in a species group set to spruce or pine. | Ingen stammer igjen å aptere: ingen stamme har en brukbar profil i en treslagsgruppe satt til gran eller furu.
 7 stems dropped: species group GRAN (446) is set to Not used. | 7 stammer utelatt: treslagsgruppen GRAN (446) er satt til Ikke brukt.
 1 stem dropped: species group FURU (445) is set to Not used. | 1 stamme utelatt: treslagsgruppen FURU (445) er satt til Ikke brukt.
+1 stem with a broken top (last diameter above 200 mm). | 1 stamme med knekt topp (siste diameter over 200 mm).
+2 stems dropped: profile falls less than 1 mm per 30 dm. | 2 stammer utelatt: profilen faller mindre enn 1 mm per 30 dm.
+1 stem dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm. | 1 stamme utelatt: profilen faller mer enn 30 mm over 1 dm eller 60 mm over 10 dm.
 nostems.hpr contains no stems. | nostems.hpr inneholder ingen stammer.
 Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell. | Ukjent oppsett: forventet lange kolonner (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) eller et bredt rutenett med et matrisenavn (spruce_sawlog / pine_sawlog) i cellen øverst til venstre.
 Negative price in 1 row(s). | Negativ pris i 1 rad(er).
