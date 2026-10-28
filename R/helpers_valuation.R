@@ -54,7 +54,7 @@ DEFAULT_PRICE_SCENARIO <- "default_2021"
 
 #' Sawlog length classes supported in the default_2021 price matrix (dm).
 #' Used as a reference for validation checks.
-#' 31 dm was filled by interpolation (scripts/97_fill_31dm_sawlog_price_gap.R,
+#' 31 dm was filled by interpolation (a one-off script, since removed,
 #' 2026-08-03) — rows are marked PriceSource == "Interpolated".
 EXPECTED_SUPPORTED_SAWLOG_DM <- c(31L, 34L, 37L, 40L, 43L, 46L, 49L, 52L, 55L)
 
@@ -145,7 +145,7 @@ get_supported_sawlog_lengths <- function(pm) {
 #' This function converts LengthClasses to dm before comparing.
 #'
 #' The 31 dm gap was resolved by interpolation on 2026-08-03 (see
-#' scripts/97_fill_31dm_sawlog_price_gap.R) — it is kept here as a
+#' a one-off script, since removed) — it is kept here as a
 #' defensive check in case a future price scenario reintroduces the gap,
 #' in which case it will again be labelled and reported rather than erroring.
 #'

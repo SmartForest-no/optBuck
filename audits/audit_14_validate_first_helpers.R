@@ -39,7 +39,7 @@
 #                             required files missing, or accepted scripts changed
 #
 # Note (2026-08-03): the 31 dm sawlog gap was resolved by interpolation
-# (scripts/97_fill_31dm_sawlog_price_gap.R). Checks 11-12 now assert that
+# (a one-off script, since removed). Checks 11-12 now assert that
 # 31 dm is supported and flagged PriceSource == "Interpolated", rather than
 # asserting it is unsupported.
 #

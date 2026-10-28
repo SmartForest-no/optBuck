@@ -26,7 +26,6 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
 
 
 .tree_key <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
-.log_set  <- function(l) sort(paste(l$StartPos, l$StopPos, l$ProductKey))
 
 #' Per-tree comparison of two runs on the same trees.
 #'

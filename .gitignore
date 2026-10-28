@@ -54,17 +54,6 @@ outputs/app_cache/
 # ── Binary RDS cache files under inputs/ (regeneratable from CSV sources) ──────
 inputs/*.rds
 
-# ── Root-level cleanup run logs and inspection artefacts (temporary) ──────────
-cleanup_run_out.txt
-cleanup_run_err.txt
-inspect_cols_tmp.R
-smoke_test_tmp.R
-inspect_strata_tmp.R
-verify_app_tmp.R
-cache_run_out.txt
-cache_run_err.txt
-verify_hkl_tmp.R
-
 # ── General temporary / build artefacts ───────────────────────────────────────
 *.tmp
 *.bak
@@ -75,8 +64,14 @@ figures/presentation_2026-10/
 # ── Rounded plot coordinates (presentation exception) — never commit ─────────
 plot_coords*.csv
 
-# ── Audit 17 screenshots (regenerated on every run) ───────────────────────────
-outputs/app_smoke/screenshots/
+# ── Review screenshots: one folder, emptied at the start of each phase ────────
+# Audit 17 writes review/audit17/ (cleared on every run); ad-hoc phase
+# screenshots go directly in review/.
+outputs/app_smoke/review/
+
+# ── Local-only files (never committed) ─────────────────────────────────────────
+.claude/
+scripts/local_only/
 
 # ── Design reference screenshots (contain personal details) — never commit ──
 docs/design_reference/

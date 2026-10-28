@@ -32,7 +32,7 @@ was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
 | Performance (vectorised core, comparisons, workers, ExtendedTask) | Audit 22 PASS (8/8): 1 vs 15 workers and chunk sizes identical, a comparison equals two separate runs, all cases equal main before the phase (with the pre-Phase-4c limits), the app's background job equals the backend |
 
 The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
-(`scripts/97_fill_31dm_sawlog_price_gap.R`). Rows are flagged
+(a one-off script removed in the 2026-10 cleanup, see git history). Rows are flagged
 `PriceSource = "Interpolated"`.
 
 ---
@@ -116,9 +116,7 @@ audits/
   prototype_reference/      Frozen audits 05–12
 
 scripts/
-  97_fill_31dm_sawlog_price_gap.R         Fills the 31 dm sawlog price gap by interpolation
   98_create_github_safe_processed_data.R  Sanitizes data_processed/ into data_processed_github/
-  99_cleanup_project_structure.R          One-off post-prototype cleanup (already run)
   run_prototype_00_prepare_nfi_data.R     Runs the frozen Oracle extraction under the current root
   phase4b_save_default_baseline.R         Saved the pre-Phase-4b default results (run once on e8b1f05; do not rerun)
   performance_save_main_baseline.R        Saved main's results before the Performance phase (run once on 3fa0a9d; do not rerun)
@@ -181,7 +179,6 @@ docs/
 | `data_raw/` | Raw NFI data are read directly from Oracle |
 | `data_processed/` | Processed private NFI data (~15 MB); local only |
 | Oracle credentials, `.Renviron` | Never committed |
-| `outputs/_archive/` | Archived prototype outputs |
 | `outputs/stem_profiles/`, `optimizer_tests/`, `selected_stratum_summary/`, `mixed_species_example_bucking/`, `stratum_tests/` | Derived from private NFI trees or large; regenerate locally |
 | `inputs/*.rds` | Binary caches of the CSV inputs |
 | `logs/`, `figures/presentation_2026-10/` | Local logs and presentation material |
@@ -261,8 +258,8 @@ Oracle or ForestSens assets.
   `log_tally_xlsx()`, `dbh_class()`, `dbh_class_summary()`. The comparison
   tab lost `tbl_cmp_overview` (= the Summary's A/B grid) and `bar_cmp_value`
   (= the Products tab's A/B value figure).
-- Audit 17 saves screenshots of both tabs, the results and the comparison
-  to `outputs/app_smoke/screenshots/` for review.
+- Audit 17 saves its screenshots to `outputs/app_smoke/review/audit17/` (see Conventions
+  under "Running the audits").
 
 ## Languages (Norsk / English; roadmap Phase 1, 2026-10-27)
 
@@ -314,6 +311,21 @@ name unchanged keeps the stored name, so the key stays.
 Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
 REVIEW, or FAIL. Re-run all audits (14–28) at the end of every development phase.
+
+**Conventions (cleanup phase, 2026-10-28)**
+
+- **Review screenshots** go to one gitignored folder, `outputs/app_smoke/review/`.
+  Audit 17 writes its screenshots to `review/audit17/` (English ones as numbered
+  files, the Norsk session with the prefix `no_`, phase 2 with `phase2_`) and clears
+  only that subfolder at the start of each run. Ad-hoc screenshots taken for a
+  phase go directly in `review/` and are emptied by hand at the start of the next
+  phase. Never create `review_<phase>/` folders.
+- **Audit outputs and timestamps.** The audits' `.txt`/`.csv` files are tracked as
+  evidence, so a rerun must not change them without a reason:
+  `write_audit_outputs()` (`R/helpers_audit.R`) writes the previous bytes back when
+  the new log differs only in the `Run: <timestamp>` line. Logs that contain
+  timings (audit 21 check 4, audit 17's runtimes) still change and are
+  committed as before.
 
 **Prerequisites**
 
@@ -529,9 +541,9 @@ These keep the old name on purpose:
 | `scripts/prototype_reference/`, `audits/prototype_reference/` | Frozen (audit 14 checks 19–20) |
 | `data_processed_github/sanitization_manifest.txt` | Record of the sanitization run; regenerating it rewrites the committed data |
 | `outputs/helper_validation/helper_price_matrix_validation_summary.txt` | Written by frozen prototype script 14 |
-| `outputs/_archive/`, `logs/_archive/`, prototype output folders, the taper cache manifest | Records of past runs |
+| `logs/_archive/`, prototype output folders, the taper cache manifest | Records of past runs |
 | `docs/plans/phase0.md`, `docs/plans/PLAN.md` | Historical plan; "formerly nfiBuck" |
-| `scripts/99_cleanup_project_structure.R` header, `scripts/run_prototype_00_prepare_nfi_data.R` | Describe the old name and the old root that the wrapper replaces |
+| `scripts/run_prototype_00_prepare_nfi_data.R` | Describe the old name and the old root that the wrapper replaces |
 | This file, CLAUDE.md | "formerly nfiBuck" notes |
 
 ---
