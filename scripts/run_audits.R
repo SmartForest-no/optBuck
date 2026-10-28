@@ -10,7 +10,7 @@
 #
 #   what        audit numbers (16 20), ranges (14-20), names (audit_16_...),
 #               `perf` (scripts/performance_check.R) or `all`.
-#               Default: all = audits 14-28 and perf.
+#               Default: all = every audits/audit_NN_*.R from 14 up and perf.
 #   --jobs N    processes at a time (default 3, audit 17 included)
 #   --workers N future workers per process (default max(2, (cores - 1) %/%
 #               jobs), passed as APTER_WORKERS so the processes do not
@@ -68,7 +68,8 @@ last17  <- "--17-last" %in% args; args <- setdiff(args, "--17-last")
 if (is.na(jobs) || jobs < 1L) stop("--jobs must be a positive integer", call. = FALSE)
 
 # ---- the items -------------------------------------------------------------------
-files <- list.files(file.path(root_dir, "audits"), "^audit_(1[4-9]|2[0-8])_.*[.]R$")
+files <- list.files(file.path(root_dir, "audits"), "^audit_[0-9]{2}_.*[.]R$")
+files <- files[as.integer(sub("^audit_([0-9]+)_.*", "\\1", files)) >= 14L]   # 14 up: later audits are included
 items <- data.frame(name = sub("[.]R$", "", files), num = as.integer(sub("^audit_([0-9]+)_.*", "\\1", files)),
                     script = file.path(root_dir, "audits", files), stringsAsFactors = FALSE)
 items <- rbind(items, data.frame(name = "performance_check", num = NA_integer_,

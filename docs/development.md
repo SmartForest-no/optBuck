@@ -334,7 +334,7 @@ REVIEW, or FAIL. Re-run all audits (14–28) at the end of every development pha
 as separate Rscript processes and prints one PASS / REVIEW / FAIL line per item,
 then the total time; exit status 1 if anything FAILs.
 
-    Rscript scripts/run_audits.R                 # everything: 14-28 and perf
+    Rscript scripts/run_audits.R                 # everything: every audit from 14 up and perf
     Rscript scripts/run_audits.R 16 20 perf      # a few (numbers, ranges 14-20, names)
     Rscript scripts/run_audits.R --jobs 4        # processes at a time (default 3)
     Rscript scripts/run_audits.R --17-last       # audit 17 alone at the end
