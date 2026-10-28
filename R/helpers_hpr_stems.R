@@ -296,10 +296,10 @@ hpr_clean_flags <- function(idx, pos, d, n, check = seq_len(n)) {
 #' are counted in info only: the summary line (stems read, used) covers them
 #' (decided 2026-10-21).
 #'
-#' Cleaning (Phase 3, hpr_clean_flags()) then drops, among the stems left, broken
-#' tops, too flat and too steep profiles: one warning line per check, counted
-#' independently (a stem failing two checks is in both lines, dropped once under
-#' the first: broken top, too flat, too steep; `clean_counts` has the counts).
+#' Cleaning (Phase 3, hpr_clean_flags()) then checks the stems left: too flat and
+#' too steep profiles are dropped (once, under the first failing check); a broken
+#' top is only counted, the stem is kept (2026-10-28). One warning line per check,
+#' counted independently (`clean_counts` has the counts).
 #'
 #' @return list(ok, errors, warnings, info, file, n_read, n_used, use (row
 #'   indices of the stems bucked), species (per stem), offset, last (cm),
@@ -341,10 +341,10 @@ hpr_stem_checks <- function(st, species_map) {
                                            format(HPR_MAX_DIAMETER_MM, big.mark = ",")), TRUE)
   drop(last < dbh_at, "profile ends below 1.3 m above ground (no DBH)", FALSE)
 
-  # Cleaning (Phase 3): per-check counts are independent; a stem is dropped once, under its first failing check.
+  # Cleaning (Phase 3): per-check counts are independent; a broken top is only counted (the stem is kept),
+  # a stem failing a fall check is dropped once, under its first failing check.
   fl <- hpr_clean_flags(st$idx, st$pos, st$d, n, which(is.na(reason)))
-  clean_why <- c(broken_top = sprintf("broken top (last diameter above %s mm)", HPR_CLEAN_BROKEN_TOP_MM),
-                 too_flat = sprintf("profile falls less than %s mm per %s dm", HPR_CLEAN_MIN_FALL_MM, HPR_CLEAN_MIN_FALL_DM),
+  clean_why <- c(too_flat = sprintf("profile falls less than %s mm per %s dm", HPR_CLEAN_MIN_FALL_MM, HPR_CLEAN_MIN_FALL_DM),
                  too_steep = sprintf("profile falls more than %s mm over 1 dm or %s mm over 10 dm",
                                      HPR_CLEAN_MAX_FALL_1DM_MM, HPR_CLEAN_MAX_FALL_10DM_MM))
   for (k in names(clean_why)) reason[is.na(reason) & fl[[k]]] <- clean_why[[k]]
@@ -356,9 +356,14 @@ hpr_stem_checks <- function(st, species_map) {
   lines <- if (length(tab))
     sprintf("%s %s dropped: %s.", fmt(as.integer(tab)), ifelse(as.integer(tab) == 1L, "stem", "stems"), names(tab))
   real <- names(tab) %in% warned
-  hit <- clean_counts > 0L
-  clean_lines <- sprintf("%s %s dropped: %s.", fmt(as.integer(clean_counts[hit])),
-                         ifelse(clean_counts[hit] == 1L, "stem", "stems"), clean_why[hit])
+  noun <- function(k) ifelse(k == 1L, "stem", "stems")
+  hit <- clean_counts[names(clean_why)] > 0L
+  clean_lines <- c(
+    if (clean_counts[["broken_top"]] > 0L)
+      sprintf("%s %s with a broken top (last diameter above %s mm).", fmt(clean_counts[["broken_top"]]),
+              noun(clean_counts[["broken_top"]]), HPR_CLEAN_BROKEN_TOP_MM),
+    sprintf("%s %s dropped: %s.", fmt(as.integer(clean_counts[names(clean_why)][hit])),
+            noun(clean_counts[names(clean_why)][hit]), clean_why[hit]))
   warnings <- c(st$warnings, lines[real], clean_lines)
   used_groups <- unique(gi[use]); used_groups <- used_groups[!is.na(used_groups)]
   info <- c(st$info, lines[!real],

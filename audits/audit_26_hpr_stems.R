@@ -58,8 +58,9 @@
 #      fall 1 mm per 30 dm; maximum fall 30 mm per 1 dm and 60 mm per 10 dm),
 #      boundaries exactly on the threshold pass, a range under 30 dm and a
 #      plateau after 100 mm not checked; per-check counts, one warning line
-#      per check, a stem dropped once; fixture unchanged; Not-used species
-#      not counted; counts summed over two files; Norsk translation
+#      per check; broken-top stems are kept (counted only), too flat and too
+#      steep stems dropped once; fixture unchanged; Not-used species not
+#      counted; counts summed over two files; Norsk translation
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -526,17 +527,18 @@ rec("Check 14a: hpr_clean_flags(): each synthetic stem (one passing and one fail
     ok(ok14a), sprintf("%d stems | mismatches: %s", length(cases), if (length(bad14)) paste(bad14, collapse = ", ") else "none"))
 
 ck14 <- hpr_stem_checks(st14, map14)
-w14 <- c("2 stems dropped: broken top (last diameter above 200 mm).",
+w14 <- c("2 stems with a broken top (last diameter above 200 mm).",
          "2 stems dropped: profile falls less than 1 mm per 30 dm.",
          "3 stems dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm.")
 pr14 <- hpr_stem_profiles(st14, map14)
 rs14 <- setNames(pr14$excluded$excluded_reason, pr14$excluded$treid)
-ok14b <- identical(unname(ck14$clean_counts), c(2L, 2L, 3L)) && ck14$n_read == 12L && ck14$n_used == 6L &&
+ok14b <- identical(unname(ck14$clean_counts), c(2L, 2L, 3L)) && ck14$n_read == 12L && ck14$n_used == 7L &&
   setequal(ck14$warnings, w14) && length(ck14$warnings) == 3L && !any(grepl("falls|broken", ck14$info)) &&
-  nrow(pr14$tree_data) == 6L && nrow(pr14$excluded) == 6L &&
-  startsWith(rs14[["12"]], "broken top") &&                       # fails two checks: dropped once, under the first
+  nrow(pr14$tree_data) == 7L && nrow(pr14$excluded) == 5L &&
+  all(c("2", "12") %in% pr14$tree_data$treid == c(TRUE, FALSE)) &&   # broken top kept; broken + steep dropped as steep
+  !"2" %in% names(rs14) && startsWith(rs14[["12"]], "profile falls more") &&
   startsWith(rs14[["5"]], "profile falls less") && startsWith(rs14[["6"]], "profile falls more")
-rec("Check 14b: per-check counts 2 / 2 / 3 (a stem failing two checks counted in both), 6 of 12 stems used, one warning line per check in the existing style, each stem dropped once with its first reason",
+rec("Check 14b: per-check counts 2 / 2 / 3 (a stem failing two checks counted in both), a broken top only counted (the stem is kept), too flat and too steep dropped once: 7 of 12 stems used, one warning line per check in the existing style",
     ok(ok14b), sprintf("counts %s | used %d/%d | warnings: %s", paste(ck14$clean_counts, collapse = "/"),
                        ck14$n_used, ck14$n_read, paste(ck14$warnings, collapse = " | ")))
 
@@ -547,8 +549,8 @@ f14b <- with_stems(mk14(100L))
 st14ab <- read_hpr_stem_files(c(f14, f14b), c("a.hpr", "b.hpr"))
 ck14ab <- hpr_stem_checks(st14ab, setNames(guess_hpr_species(st14ab$species$name, st14ab$species$user_id), st14ab$species$key))
 ok14c <- sum(ckfx$clean_counts) == 0L && ckfx$n_used == 5L && sum(ck14n$clean_counts) == 0L && !isTRUE(ck14n$ok) &&
-  identical(unname(ck14ab$clean_counts), c(4L, 4L, 6L)) && ck14ab$n_read == 24L && ck14ab$n_used == 12L &&
-  any(ck14ab$warnings == "4 stems dropped: broken top (last diameter above 200 mm).") &&
+  identical(unname(ck14ab$clean_counts), c(4L, 4L, 6L)) && ck14ab$n_read == 24L && ck14ab$n_used == 14L &&
+  any(ck14ab$warnings == "4 stems with a broken top (last diameter above 200 mm).") &&
   any(ck14ab$warnings == "6 stems dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm.")
 rec("Check 14c: the 13 fixture stems are not flagged (5 still used); stems of a Not-used species are not counted; two files give summed counts 4 / 4 / 6",
     ok(ok14c), sprintf("fixture flagged %d, used %d | Not used: %d flagged | two files: %s, used %d/%d",
@@ -558,7 +560,7 @@ rec("Check 14c: the 13 fixture stems are not flagged (5 still used); stems of a 
 if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
 i18n_reset_misses()
 no14 <- tr_msg(ck14$warnings, "no")
-ok14d <- !length(i18n_misses()) && all(no14 != ck14$warnings) && any(grepl("knekt topp", no14)) &&
+ok14d <- !length(i18n_misses()) && all(no14 != ck14$warnings) && any(grepl("2 stammer med knekt topp \\(siste diameter over 200 mm\\)", no14)) &&
   any(grepl("faller mindre enn 1 mm per 30 dm", no14)) && any(grepl("faller mer enn 30 mm over 1 dm eller 60 mm over 10 dm", no14))
 rec("Check 14d: the three warning lines translate to Norsk without a miss",
     ok(ok14d), paste(no14, collapse = " | "))

@@ -697,11 +697,13 @@ These keep the old name on purpose:
   `profiles_to_profile_vectors()`.
 - **Cleaning (Phase 3, 2026-10-28).** After the file-problem drops,
   `hpr_stem_checks()` calls the pure `hpr_clean_flags()` for the remaining
-  stems: broken top (last diameter > 200 mm), too flat (a 30 dm window
+  stems: broken top (last diameter > 200 mm, counted only: the stem is
+  kept), too flat (a 30 dm window
   falls < 1 mm) and too steep (> 30 mm over 1 dm or > 60 mm over 10 dm),
   from 200 cm above the felling cut to the first measured diameter
-  ≤ 100 mm, on the stem's own measured points. A failing stem is excluded
-  (once, under its first failing check) with one warning line per check;
+  ≤ 100 mm, on the stem's own measured points. A too flat or too steep
+  stem is excluded (once, under its first failing check); each check has
+  one warning line;
   counts are independent per check and summed over files
   (`clean_counts`). Rules and thresholds: CLAUDE.md, "hpr cleaning"; test:
   audit 26 check 14.
