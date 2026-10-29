@@ -30,44 +30,8 @@ suppressPackageStartupMessages(
   source(file.path(root, "scripts", "app_backend", "01_run_sampled_plot_bucking.R")))
 
 out_dir <- file.path(root, "outputs", "roadmap7")
-dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-show <- function(df, name, title = name) {
-  cat("\n==== ", title, " ====\n", sep = "")
-  print(df, row.names = FALSE, right = FALSE)
-  utils::write.csv(df, file.path(out_dir, paste0(name, ".csv")), row.names = FALSE)
-  invisible(df)
-}
-secs <- function(expr) { t0 <- proc.time()[["elapsed"]]; force(expr); proc.time()[["elapsed"]] - t0 }
-
-# ---- script-only helpers -----------------------------------------------------------------
-
-# FG of one diameter class: S, W in percent over the length classes.
-fg_class <- function(S, W) 100 - 0.5 * sum(abs(S - W))
-
-# Hand check (stop if wrong): 100 - 0.5 * (10+7+1+1+1) = 90.
-stopifnot(isTRUE(all.equal(fg_class(c(30, 13, 19, 19, 19), rep(20, 5)), 90)))
-cat("FG hand check passed: FG = 90\n")
-
-# A job restricted to some stems (names of job$pvs); order and everything else kept.
-sub_job <- function(job, ids) {
-  keep <- names(job$pvs) %in% ids
-  job$pvs <- job$pvs[keep]
-  job$tree_data <- job$tree_data[as.character(job$tree_data$treid) %in% ids, , drop = FALSE]
-  job$meta$trees <- job$tree_data
-  job
-}
-
-# Rebuild only the runs (.load_runs) and the prepared runs (.prepare_runs) for a
-# price matrix, as a price-tuning iteration would. Returns the job and the times.
-swap_prices <- function(job, pm, pd, lc) {
-  path <- tempfile(fileext = ".csv"); pm_export(pm, path)
-  t_load <- secs(pps <- .load_runs(path, root, pd, lc, NULL))
-  pps[[1L]]$grade_opts <- normalize_grade_opts(NULL)
-  t_prep <- secs(prep <- .prepare_runs(lapply(pps, function(pp)
-    list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup, opts = pp$grade_opts))))
-  job$pps <- pps; job$prep <- prep
-  list(job = job, t_load = t_load, t_prep = t_prep)
-}
+source(file.path(root, "scripts", "roadmap7_helpers.R"))   # shared helpers (hand check runs here)
+show <- make_show(out_dir)
 
 # ---- 0. products and prices from the file ------------------------------------------------
 
@@ -142,10 +106,10 @@ pm_plus <- pm
 rows <- pm_plus$ProductKey == main_key & !is.na(pm_plus$PriceNOKperM3)
 pm_plus$PriceNOKperM3[rows] <- pm_plus$PriceNOKperM3[rows] + 10
 
-sw1 <- swap_prices(job1000, pm_plus, pr$pd, pr$lc)
+sw1 <- swap_prices(job1000, pm_plus, pr$pd, pr$lc, root)
 t_b_plus <- secs(b_plus <- buck_job(sw1$job, workers))
 res_plus <- finish_job(sw1$job, b_plus)
-sw2 <- swap_prices(job1000, pm, pr$pd, pr$lc)
+sw2 <- swap_prices(job1000, pm, pr$pd, pr$lc, root)
 t_b_back <- secs(b_back <- buck_job(sw2$job, workers))
 res_back <- finish_job(sw2$job, b_back)
 
@@ -164,33 +128,13 @@ show(reuse, "reuse_path", "Reuse path: swap prices into the existing job")
 
 # ---- 2. product classes -----------------------------------------------------------------
 
-ptab <- hpr_product_table(hp, smap_h)
-grp <- vapply(hp$products[ptab$key], function(p) or_default(p$group, NA_character_), "")
-sgrp <- vapply(hp$products[ptab$key], function(p)
-  paste(hp$species$name[match(p$species_keys, hp$species$key)], collapse = ", "), "")
-cells_file <- vapply(hp$products[ptab$key], function(p) nrow(p$cells), 0L)
-avail_file <- vapply(hp$products[ptab$key], function(p)
-  sum(!is.na(p$cells$price) & !p$cells$criteria %in% HPR_UNAVAILABLE), 0L)
-prod_file <- data.frame(species_group = sgrp, product = ptab$name, ProductGroupName = grp,
-                        classified = ptab$type, imported_by_default = ptab$default,
-                        length_classes_cm = ptab$lengths, diameter_classes_mm = ptab$diameters,
-                        cells = cells_file, available_cells = avail_file)
-show(prod_file, "products_in_file", "Products in the file (as classified by the import rule)")
+pt <- product_file_table(hp, smap_h)
+ptab <- pt$ptab; grp <- pt$grp; sgrp <- pt$sgrp
+show(pt$prod_file, "products_in_file", "Products in the file (as classified by the import rule)")
 
-lens <- assortment_lengths(sc$defs, pm)
-grid_n <- function(k) { r <- pm[pm$ProductKey == k, ]; c(nrow(r), sum(!is.na(r$PriceNOKperM3))) }
-gn <- t(vapply(keys, grid_n, c(0, 0)))
 hk <- sc$defs$HprProductKey
-prod_imp <- data.frame(
-  key = keys, species = sc$defs$Species, name = sc$defs$Name,
-  ProductGroupName = ifelse(is.na(hk), NA_character_, grp[match(hk, ptab$key)]),
-  type = sc$defs$Type, price_type = sc$defs$PriceType,
-  length_classes_cm = vapply(lens, function(l) paste(l, collapse = ","), ""),
-  diameter_rows_cm = vapply(keys, function(k) {
-    d <- pm$PriceDiameterClass_cm[pm$ProductKey == k]; d <- d[!is.na(d)]
-    if (length(d)) sprintf("%d-%d (%d)", min(d), max(d), length(unique(d))) else "-" }, ""),
-  cells = gn[, 1], available_cells = gn[, 2], row.names = NULL)
-show(prod_imp, "products_imported", "Imported assortments (grid after import; diameter rows in cm)")
+show(product_imported_table(sc, pm, grp, ptab), "products_imported",
+     "Imported assortments (grid after import; diameter rows in cm)")
 
 # Sawlog logs and volume per diameter class (all stems, original prices).
 saw_rows <- list()
@@ -221,33 +165,12 @@ show(pulp_max, "pulpwood_max_price", "Highest pulpwood price per species group")
 
 # ---- 3. initial FG ---------------------------------------------------------------------------
 
-# Counts [length x diameter] of a product's logs, availability and the two targets.
-fg_for <- function(k, tal) {
-  g <- pm[pm$ProductKey == k & !is.na(pm$LengthClass_dm), ]
-  L <- sort(unique(g$LengthClass_dm)); D <- sort(unique(g$PriceDiameterClass_cm))
-  avail <- matrix(FALSE, length(L), length(D), dimnames = list(L, D))
-  ok <- g[!is.na(g$PriceNOKperM3), ]
-  avail[cbind(match(ok$LengthClass_dm, L), match(ok$PriceDiameterClass_cm, D))] <- TRUE
-  tk <- tal[tal$ProductKey == k, ]
-  cnt <- matrix(0, length(L), length(D), dimnames = list(L, D))
-  cnt[cbind(match(tk$length_class_dm, L), match(tk$diameter_class_cm, D))] <- tk$logs
-  nj <- colSums(cnt)
-  norm <- function(w) sweep(w, 2L, pmax(colSums(w), 1e-12), "/") * 100
-  Wn <- norm(avail * 1)                           # neutral: equal share
-  Wl <- norm(apply(avail, 2L, cumsum) * avail)    # long: 1, 2, ..., k by length
-  S <- sweep(cnt, 2L, pmax(nj, 1e-12), "/") * 100
-  fg <- function(W) vapply(seq_along(D), function(j) fg_class(S[, j], W[, j]), 0)
-  list(L = L, D = D, N = nj, fg_neutral = fg(Wn), fg_long = fg(Wl))
-}
-overall <- function(f, which) { w <- f$N; ok <- w > 0
-  if (!any(ok)) NA_real_ else sum(w[ok] * f[[which]][ok]) / sum(w[ok]) }
-
 multi <- saw_keys[vapply(saw_keys, function(k)
   length(unique(pm$LengthClass_dm[pm$ProductKey == k & !is.na(pm$LengthClass_dm) &
                                   !is.na(pm$PriceNOKperM3)])) > 1L, NA)]
 tal_1000 <- log_tally(res_1000$selected_logs_all, pm)
 fg_rows <- lapply(multi, function(k) {
-  fa <- fg_for(k, tal_all); fs <- fg_for(k, tal_1000)
+  fa <- fg_for(k, tal_all, pm); fs <- fg_for(k, tal_1000, pm)
   data.frame(key = k, logs_all = sum(fa$N), FG_neutral_all = round(overall(fa, "fg_neutral"), 1),
              FG_long_all = round(overall(fa, "fg_long"), 1), logs_1000 = sum(fs$N),
              FG_neutral_1000 = round(overall(fs, "fg_neutral"), 1),
@@ -257,7 +180,7 @@ fg_tab <- do.call(rbind, fg_rows)
 show(fg_tab, "fg_overall", "Initial FG per sawlog product (length classes > 1)")
 
 main <- if (main_key %in% multi) main_key else multi[1L]
-fm <- fg_for(main, tal_all)
+fm <- fg_for(main, tal_all, pm)
 fg_cls <- data.frame(diameter_class_cm = fm$D, logs = fm$N,
                      FG_neutral = round(fm$fg_neutral, 1), FG_long = round(fm$fg_long, 1))
 fg_cls[fg_cls$logs == 0, c("FG_neutral", "FG_long")] <- NA
