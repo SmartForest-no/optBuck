@@ -1,0 +1,50 @@
+============================================================= 
+  Audit: .pin import and export (Phase 5b)
+  Run: 2026-10-29 09:56:39.710316
+============================================================= 
+
+--- 01. Both layouts import ---
+  [PASS  ] Check 01: Both layouts import (minimal and full): assortments, limits, lengths, volume methods and prices | minimal TRUE (6 rows, Pine Sawlog 310-430 cm, price 18/31 = 62) | full TRUE (4 rows, Spruce Sawlog Full min top 18, max top 60, max butt 70, method Top)
+
+--- 02. Key fallbacks ---
+  [PASS  ] Check 02: ProductUserID is the key; a missing or repeated one falls back to ProductName, a repeated name gets _2, _3 | normal PS1,PP1,SS1,SP1 | no ID: Pine Sawlog,PP1,SS1,SP1 | repeated ID: Pine Sawlog,Pine Pulpwood,SS1,SP1 | no IDs, three equal names: Pine Sawlog,Pine Pulpwood,Pine Sawlog_2,Pine Sawlog_3
+
+--- 03. BuckingCriteria ---
+  [PASS  ] Check 03: Manual-only and forbidden cells are left empty, 'excluded from apportionment' stays priced (.pin and .hpr) | .pin: unavailable cells per product 1/1, manual cell empty TRUE, excluded cell priced TRUE, forbidden cell empty TRUE | .hpr fixture: 22 manual-only cells in 5 products, 35 forbidden, product table counts both TRUE
+
+--- 04. Species guess ---
+  [PASS  ] Check 04: The species is guessed from SpeciesGroupUserID; an unknown ID is not imported by default | full: pine/spruce | minimal: pine/spruce | unknown ID: pine/none/spruce, default ticks TRUE/TRUE/FALSE/TRUE
+
+--- 05. Missing PriceDefinition and DiameterMINTop ---
+  [PASS  ] Check 05: A missing PriceDefinition gives 'Top cylinder' with no message; a missing DiameterMINTop gives the smallest class | methods Top cylinder | warnings 0, volume infos 0 | min tops 18 / 6 / 3 cm
+
+--- 06. Grades and hidden columns ---
+  [PASS  ] Check 06: Permitted grades fill PermittedGrades; ReferenceGrades and HprProductKey stay NA for .pin products | grades 1;2;3;4;5;6;7 | 1;2 | reference NA TRUE, key NA TRUE | .hpr import keys set TRUE
+
+--- 07. Export -> import round trip ---
+  [PASS  ] Check 07: Export -> import reproduces assortments, classes and prices (Top cylinder is written as Top) | minimal: defs TRUE prices TRUE | full: defs TRUE prices TRUE | default scenario: defs TRUE prices TRUE 
+
+--- 08. The exported file ---
+  [PASS  ] Check 08: The export has no waste rows, unique ProductUserIDs, grades only when present, SpeciesGroupUserID and a fixed minimal header | ids Pine_Pulpwood_Full,Spruce_Sawlog_Full | header SenderApplication/CreationDate/ModificationDate | grade blocks 2 (full) / 0 (minimal) | species Pine/Spruce | duplicates Same_name,Same_name_2
+
+--- 09. Privacy ---
+  [PASS  ] Check 09: Invented coordinates in an input .pin reach no output; the scan deletes an export with a coordinate element | import equals the plain import TRUE | export holds coordinates or the buyer ID: FALSE | scan failure removes the file TRUE (Coordinates found in the export; the file was not written.) | scan finds a coordinate element TRUE, none in the export TRUE
+
+--- 10. Dispatcher and app wiring ---
+  [PASS  ] Check 10: The root element decides; a .pin is not kept for the .hpr stems source (audit 17 check 42 drives the app) | kinds: pin pin, pin as .hpr pin, hpr hpr, hpr as .pin hpr | app: pin branch present TRUE, hpr_imported set in one place TRUE
+
+--- 11. Errors ---
+  [PASS  ] Check 11: Errors block the import (wrong root, units, message type, no products, not XML) and translate to Norsk | root: ok | dunit: ok | lunit: ok | msgtype: ok | noprod: ok | notxml: ok
+
+--- 12. .hpr unchanged ---
+  [PASS  ] Check 12: An .hpr is still read by ProductKey and its assortments keep HprProductKey | 8 product keys, all numeric TRUE
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result  n
+1   PASS 12
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase5b/outputs/pin_import_export/audit_32_pin_import_export.csv

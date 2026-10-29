@@ -62,6 +62,7 @@ scenario_column <- function(s) {
       btn(paste0("asm_reset_", s), t_("btn_reset_defaults")),
       btn(paste0("scen_copy_", s), t_("btn_copy_from", O)),
       dl(paste0("dl_scen_", s), t_("btn_download_scenario")),
+      dl(paste0("dl_pin_", s), t_("btn_download_pin")),
       btn(paste0("hpr_import_", s), t_("btn_import_hpr"))),
     apter_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
                      accept = c(".xlsx", ".csv")),

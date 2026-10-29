@@ -486,6 +486,18 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     output[[paste0("dl_scen_", s)]] <- downloadHandler(
       filename = function() L("file_scenario", side),
       content  = function(file) scenario_export(defs(side), prices(side), file))
+    # The scenario as a StanForD 2010 .pin (Phase 5b, R/helpers_pin_export.R).
+    output[[paste0("dl_pin_", s)]] <- downloadHandler(
+      filename = function() L("file_pin", side),
+      content  = function(file) {
+        x <- tryCatch(pin_export_scenario(defs(side), prices(side), file),
+                      error = function(e) list(ok = FALSE, errors = conditionMessage(e)))
+        if (!isTRUE(x$ok)) {
+          showNotification(L("pin_export_failed", paste(tr_msg(x$errors, lang()), collapse = " ")),
+                           type = "error", duration = NULL)
+          stop("pin_export_failed")
+        }
+      })
     # A scenario xlsx (with an "assortments" sheet) replaces the scenario;
     # any other xlsx or CSV is a price file for all its assortments.
     observeEvent(input[[paste0("scen_", s, "_upload")]], {
@@ -512,7 +524,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
   # species (guessed from its name) and the products to import (those
   # without the best grade start unticked), then the file's products and
   # prices replace this scenario's. The other scenario is not changed.
-  hpr <- reactiveVal(NULL)    # list(side, data = read_hpr() result, file)
+  hpr <- reactiveVal(NULL)    # list(side, data = read_product_file() result (.hpr or .pin), file)
   hpr_err <- reactiveVal(NULL)
 
   hpr_modal <- function(side) {
@@ -522,7 +534,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       size = "xl", easyClose = FALSE, fade = FALSE,
       # No intro text and no label (2026-10-23); the upload limit stays
       # (HPR_MAX_UPLOAD_MB, setup.R).
-      file_input_lang("hpr_file", NULL, accept = c(".hpr", ".zip", ".gz"), lang = l),
+      file_input_lang("hpr_file", NULL, accept = c(".hpr", ".zip", ".gz", ".pin"), lang = l),
       uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
       uiOutput("hpr_msg"),
       footer = tagList(modalButton(tr("btn_cancel", lang = l)),
@@ -557,9 +569,14 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     moved <- isTRUE(file.rename(f$datapath, kept)) ||
       (isTRUE(file.copy(f$datapath, kept, overwrite = TRUE)) && isTRUE(file.remove(f$datapath)))
     if (!moved) kept <- f$datapath
-    hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
     data <- withProgress(message = L("prog_reading", f$name), value = 0.5,
-                         read_hpr(kept, f$name))
+                         read_product_file(kept, f$name))
+    if (identical(data$kind, "pin")) {
+      # A .pin has no stems: it is never kept for the ".hpr stems" source (Phase 5b).
+      unlink(up_dir, recursive = TRUE); hpr_kept(NULL)
+    } else {
+      hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
+    }
     hpr(utils::modifyList(hpr(), list(data = data, file = f$name)))
     hpr_err(NULL)
   })

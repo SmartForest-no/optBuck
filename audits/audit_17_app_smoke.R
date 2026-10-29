@@ -542,7 +542,8 @@ browser_checks <- c(
   "Check 38: Downloads in Norsk: file names, CSV format and headers, tally xlsx, scenario xlsx format",
   "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime",
   "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names",
-  "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes")
+  "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes",
+  "Check 42: Import .hpr/.pin: a .pin imported into Scenario A (button and title say .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -1825,6 +1826,48 @@ if (!browser_ok) {
         sprintf("boxes visible with NFI: %s, with .hpr: %s | off by default: %s | labels '%s' | compared %s, changed stems %s | error notifications %s | B's boxes after Copy from A equal A's: %s%s",
                 c41$vis_nfi, c41$vis_hpr, c41$off, substr(gsub("\\s+", " ", or_default(c41$labels, "")), 1, 60),
                 c41$cmp, c41$changed, c41$nerr, c41$copied, err_txt(e41)))
+    # 42. Import .hpr/.pin (Phase 5b): the synthetic full .pin goes into Scenario A.
+    # The button and the dialog say .hpr/.pin; the species are guessed from the
+    # user IDs; Replace changes A only; the file kept for the .hpr stems source
+    # is untouched (a .pin has no stems); Download as .pin gives a
+    # ProductInstruction file without coordinates.
+    c42 <- list()
+    e42 <- try_drv({
+      fx42 <- file.path(root_dir, "inputs", "test_fixtures", "pin_full_synthetic.pin")
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      c42$kept_before <- app$get_values(export = TRUE)$export$hpr_kept_path
+      c42$button <- txt(app, "#hpr_import_a")
+      c42$b_before <- own_rows(app, "b")
+      app$click("hpr_import_a"); app$wait_for_idle()
+      c42$title <- txt(app, ".modal-title")
+      app$upload_file(hpr_file = fx42); app$wait_for_idle()
+      c42$species <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_species select'))",
+                                    ".map(function(s){ return s.value; }).join(',')"))
+      c42$ok_enabled <- !isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
+      shoot(app, "phase5b_01_pin_import_dialog")
+      app$click("hpr_apply"); app$wait_for_idle()
+      c42$open <- js(app, "document.querySelectorAll('.modal.show').length")
+      c42$msg <- txt(app, "#msg_a")
+      c42$a_rows <- own_rows(app, "a"); c42$b_after <- own_rows(app, "b")
+      c42$kept_after <- app$get_values(export = TRUE)$export$hpr_kept_path
+      shoot(app, "phase5b_02_pin_imported")
+      dl <- app$get_download("dl_pin_a")
+      c42$pin <- paste(readLines(dl, warn = FALSE, encoding = "UTF-8"), collapse = " ")
+      c42$nerr <- n_err_notif(app)
+    })
+    ok42 <- !nzchar(e42) && grepl(".hpr/.pin", c42$button, fixed = TRUE) && grepl(".hpr/.pin", c42$title, fixed = TRUE) &&
+      identical(c42$species, "pine,spruce") && isTRUE(c42$ok_enabled) && identical(c42$open, 0L) &&
+      grepl("Imported 2 assortments from pin_full_synthetic.pin into Scenario A.", c42$msg, fixed = TRUE) &&
+      grepl("pine pulpwood full", tolower(c42$a_rows), fixed = TRUE) && identical(c42$b_after, c42$b_before) &&
+      identical(c42$kept_after, c42$kept_before) && !grepl("pin_full", or_default(c42$kept_after, ""), fixed = TRUE) &&
+      grepl("<ProductInstruction", c42$pin, fixed = TRUE) && grepl("<ProductUserID>Pine_Pulpwood_Full</ProductUserID>", c42$pin, fixed = TRUE) &&
+      !grepl("Latitude|Longitude|Coordinate", c42$pin) && identical(c42$nerr, 0L)
+    rec(browser_checks[38], if (ok42) PASS else FAIL,
+        sprintf("button '%s', title '%s' | species %s, Replace enabled %s | after Replace: dialog open %s, '%s' | A rows: %s | B unchanged %s | kept .hpr unchanged %s | download: %d bytes, ProductInstruction %s | error notifications %s%s",
+                c42$button, c42$title, c42$species, c42$ok_enabled, c42$open, substr(gsub("[[:space:]]+", " ", or_default(c42$msg, "")), 1, 90),
+                substr(or_default(c42$a_rows, ""), 1, 120), identical(c42$b_after, c42$b_before),
+                identical(c42$kept_after, c42$kept_before), nchar(or_default(c42$pin, "")),
+                grepl("<ProductInstruction", or_default(c42$pin, ""), fixed = TRUE), c42$nerr, err_txt(e42)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.

@@ -124,7 +124,7 @@ The app opens on *Assortments and prices*, with **Scenario A** and
 above the other on narrow screens). Each card runs from top to bottom: the
 assortment table, the selected assortment with its prices, and the
 scenario's own buttons (add, reset, copy from the other scenario, download,
-upload, import from .hpr). Each
+upload, import from .hpr/.pin). Each
 scenario has its own assortments and its own price matrices. Apter ships
 with this base set and the 2021 price matrices for spruce and pine
 (diameters under bark); both scenarios start from it:
@@ -184,7 +184,7 @@ file with its assortments (sheet `assortments`) and its prices (one sheet
 per price matrix plus `flat_prices`). A file loaded into one scenario
 replaces that scenario's assortments and prices.
 
-**Importing from a harvester file (.hpr).** *Import from .hpr* (each
+**Importing from a harvester file (.hpr) or a product instruction (.pin).** *Import .hpr/.pin* (each
 scenario's buttons) reads the products and price matrices of a StanForD 2010
 harvester production file and replaces that scenario's assortments and
 prices; the other scenario is not changed. The file can be an .hpr, or an
@@ -217,8 +217,8 @@ assortment at 0 NOK/m³ is added for each species:
 - Diameter classes become whole-cm rows, each with the price of the class it
   falls in. Where a class starts between whole centimetres (e.g. 207 mm),
   the price changes at the whole centimetre.
-- Price cells marked as forbidden to cut are left empty: such logs are never
-  chosen. A diameter class forbidden at every length stays in the matrix as
+- Price cells marked as forbidden to cut, or as logs bucked manually only,
+  are left empty: such logs are never chosen. A diameter class forbidden at every length stays in the matrix as
   an empty row.
 - The price volume follows the product's volume method (top, Norwegian mid,
   mid or solid volume). For products priced on the length class, the price
@@ -237,6 +237,18 @@ bark functions, quality grades, length margins and distribution settings
 are not used, and prices are read as NOK/m³ under bark. Only the products,
 prices and species groups are read; stems, coordinates, dates and names in
 the file are not.
+
+A StanForD 2010 product instruction (.pin) is imported in the same way, from
+the same dialog. It has no species group definitions, so the species groups
+listed are the species IDs of its products (for example *SE1_Tall_SoundKnot*
+is suggested as Pine). A product without a price definition uses the
+top-cylinder volume method of a new assortment. A .pin has no stems, so it
+cannot be used as the source of .hpr stems.
+
+**Exporting a scenario as .pin.** *Download as .pin* (each scenario's
+buttons) writes the scenario's assortments and prices as a StanForD 2010
+product instruction, one file per scenario. The Waste assortments are left
+out, and the file holds no location or machine data.
 
 A matrix's columns are the assortment's allowed lengths and its rows its
 top-diameter classes. Lengths can be added and removed (a removed length is

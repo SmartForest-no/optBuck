@@ -387,6 +387,10 @@ map_both_spruce <- sp_map; map_both_spruce["445"] <- "spruce"   # FURU and GRAN 
 # Forbid every 120 mm price cell of product 8015.
 forbid_class_8015_120 <- function(l) {
   r <- prod_lines(l, "8015")
+  # The product's manual-only cells are empty cells since Phase 5b: priced here,
+  # so that only the forbidden class is empty.
+  l[r] <- sub(sprintf("<BuckingCriteria>%s</BuckingCriteria>", HPR_MANUAL),
+              "<BuckingCriteria>No limit</BuckingCriteria>", l[r], fixed = TRUE)
   for (i in r[grepl('diameterClassLowerLimit="120"', l[r], fixed = TRUE)]) {
     j <- i + grep("<BuckingCriteria>", l[i:length(l)], fixed = TRUE)[1L] - 1L
     l[j] <- sub("<BuckingCriteria>[^<]*</BuckingCriteria>",

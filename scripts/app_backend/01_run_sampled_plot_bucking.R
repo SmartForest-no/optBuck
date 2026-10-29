@@ -77,7 +77,7 @@ for (.h in c("helpers_utils", "helpers_paths", "helpers_i18n", "helpers_volume_m
              "helpers_parallel",
              "helpers_price_matrix", "helpers_comparison", "helpers_heights",
              "helpers_tree_list", "helpers_tree_selection", "helpers_hpr", "helpers_hpr_stems",
-             "helpers_hpr_export", "helpers_result_tables")) {
+             "helpers_hpr_export", "helpers_pin_export", "helpers_result_tables")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)

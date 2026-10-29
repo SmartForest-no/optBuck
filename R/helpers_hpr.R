@@ -13,7 +13,8 @@
 #           getPermittedGrades()), written on xml2. Deliberate departures
 #           (CLAUDE.md): min top = DiameterMINTop, max top = DiameterClassMAX,
 #           max butt = DiameterMAXButt; length classes round UP to whole dm;
-#           "Forbidden to buck the log even manually" cells are left empty;
+#           "Forbidden to buck the log even manually" and "Only logs bucked
+#           manually allowed" cells are left empty (Phase 5b);
 #           the price volume of "Length as defined in LengthClasses" products
 #           uses the class lower limit (PriceLengths_cm, helpers_products.R).
 #
@@ -36,8 +37,22 @@ HPR_SPECIES_PATTERNS <- list(
 #' Bucking criterion of a price cell that may not be cut: left empty.
 HPR_FORBIDDEN <- "Forbidden to buck the log even manually"
 
+#' Bucking criterion of a price cell for logs bucked by hand only. Apter
+#' simulates automatic bucking, so such cells are left empty too (decided
+#' 2026-10-29, Phase 5b). "The log is excluded from apportionment bucking,
+#' only bucking according to value allowed" stays priced.
+HPR_MANUAL <- "Only logs bucked manually allowed"
+
+#' Criteria of cells the optimiser may not use (left empty).
+HPR_UNAVAILABLE <- c(HPR_FORBIDDEN, HPR_MANUAL)
+
 #' StanForD volume categories Apter computes (others become solid volume).
 HPR_VOLUME_METHODS <- c("Top", "Calculated Norwegian mid", "Mid", "All diameters (solid volume)")
+
+#' Volume method of a .pin product without a PriceDefinition: the default of a
+#' new assortment in the app (Phase 5b). Never read from a file, so it is not
+#' in HPR_VOLUME_METHODS; hpr_to_scenario() accepts it without a warning.
+PIN_DEFAULT_VOLUME_METHOD <- "Top cylinder"
 
 #' Product group / name tokens of sawlogs and pulpwood (the hidden Type).
 HPR_SAWLOG_TOKENS   <- c("tømmer", "tommer", "sag", "timber", "saw", "kubb", "stock")
@@ -86,6 +101,45 @@ guess_hpr_species <- function(name, user_id = NA) {
   custom_type(name)
 }
 
+
+#' One product of a StanForD 2010 product definition (an .hpr Machine/ProductDefinition
+#' or a .pin ProductDefinition) as a list. `key` is ProductKey (.hpr); the .pin
+#' reader overwrites it (a .pin has none).
+.hpr_product <- function(p) {
+  cp <- xml2::xml_find_first(p, "./ClassifiedProductDefinition")
+  dd <- "./DiameterDefinition"; dc <- paste0(dd, "/DiameterClasses")
+  items <- xml2::xml_find_all(cp, "./ProductMatrixes/ProductMatrixItem")
+  grades <- .hall(cp, "./PermittedGradesDefinition/PermittedGradeNumber")
+  list(
+    key        = .hx1(p, "./ProductKey"),
+    name       = .hx1(cp, "./ProductName"),
+    group      = .hx1(cp, "./ProductGroupName"),
+    species_keys = unique(.hall(cp, "./SpeciesGroupKey")),
+    dia_classes  = sort(suppressWarnings(as.numeric(.hall(cp, paste0(dc, "/DiameterClass/DiameterClassLowerLimit"))))),
+    dia_class_max = .hnum(cp, paste0(dc, "/DiameterClassMAX")),
+    dia_under_bark = .hx1(cp, paste0(dc, "/DiameterUnderBark")),
+    min_top    = .hnum(cp, paste0(dd, "/DiameterMINTop")),
+    max_butt   = .hnum(cp, paste0(dd, "/DiameterMAXButt")),
+    top_pos    = .hnum(cp, paste0(dd, "/DiameterTopPosition")),
+    len_classes = sort(suppressWarnings(as.numeric(.hall(cp, "./LengthDefinition/LengthClass/LengthClassLowerLimit")))),
+    len_margins = suppressWarnings(as.numeric(.hall(cp, "./LengthDefinition/LengthClass/LengthClassMargin"))),
+    len_class_max = .hnum(cp, "./LengthDefinition/LengthClassMAX"),
+    volume_method = .hx1(cp, "./PriceDefinition/VolumeDiameterCategory"),
+    volume_top_pos = suppressWarnings(as.numeric(.hattr1(cp, "./PriceDefinition/VolumeDiameterCategory",
+                                                           "volumeDiameterTopPosition"))),
+    volume_adjustment = .hx1(cp, "./PriceDefinition/VolumeDiameterAdjustment"),
+    volume_length = .hx1(cp, "./PriceDefinition/VolumeLengthCategory"),
+    volume_under_bark = .hx1(cp, "./PriceDefinition/VolumeUnderBark"),
+    grades = if (inherits(xml2::xml_find_first(cp, "./PermittedGradesDefinition"), "xml_missing")) NULL
+             else suppressWarnings(as.numeric(grades)),
+    cells = data.frame(
+      d_mm  = suppressWarnings(as.numeric(xml2::xml_attr(items, "diameterClassLowerLimit"))),
+      l_cm  = suppressWarnings(as.numeric(xml2::xml_attr(items, "lengthClassLowerLimit"))),
+      # One XPath call per column over all items (not one per item).
+      price = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Price")))),
+      criteria = trimws(xml2::xml_text(xml2::xml_find_first(items, "./BuckingCriteria"))),
+      stringsAsFactors = FALSE))
+}
 
 # ---- reading -------------------------------------------------------------------------
 
@@ -216,7 +270,7 @@ read_hpr <- function(path, filename = basename(path)) {
   if (is.null(x)) return(fail(sprintf("%s is not a readable XML file.", filename)))
   xml2::xml_ns_strip(x)
   if (xml2::xml_name(x) != "HarvestedProduction")
-    return(fail(sprintf("%s is not a StanForD 2010 .hpr file (root element '%s', expected HarvestedProduction).",
+    return(fail(sprintf("%s is not a StanForD 2010 .hpr or .pin file (root element '%s', expected HarvestedProduction or ProductInstruction).",
                         filename, xml2::xml_name(x))))
   att <- xml2::xml_attrs(x)
   mt <- att["messageType"]
@@ -250,41 +304,7 @@ read_hpr <- function(path, filename = basename(path)) {
 
   # Products (classified only; 999999 "Unclassified" has no definition)
   pds <- xml2::xml_find_all(machine, "./ProductDefinition[ClassifiedProductDefinition]")
-  products <- lapply(pds, function(p) {
-    cp <- xml2::xml_find_first(p, "./ClassifiedProductDefinition")
-    dd <- "./DiameterDefinition"; dc <- paste0(dd, "/DiameterClasses")
-    items <- xml2::xml_find_all(cp, "./ProductMatrixes/ProductMatrixItem")
-    grades <- .hall(cp, "./PermittedGradesDefinition/PermittedGradeNumber")
-    list(
-      key        = .hx1(p, "./ProductKey"),
-      name       = .hx1(cp, "./ProductName"),
-      group      = .hx1(cp, "./ProductGroupName"),
-      species_keys = unique(.hall(cp, "./SpeciesGroupKey")),
-      dia_classes  = sort(suppressWarnings(as.numeric(.hall(cp, paste0(dc, "/DiameterClass/DiameterClassLowerLimit"))))),
-      dia_class_max = .hnum(cp, paste0(dc, "/DiameterClassMAX")),
-      dia_under_bark = .hx1(cp, paste0(dc, "/DiameterUnderBark")),
-      min_top    = .hnum(cp, paste0(dd, "/DiameterMINTop")),
-      max_butt   = .hnum(cp, paste0(dd, "/DiameterMAXButt")),
-      top_pos    = .hnum(cp, paste0(dd, "/DiameterTopPosition")),
-      len_classes = sort(suppressWarnings(as.numeric(.hall(cp, "./LengthDefinition/LengthClass/LengthClassLowerLimit")))),
-      len_margins = suppressWarnings(as.numeric(.hall(cp, "./LengthDefinition/LengthClass/LengthClassMargin"))),
-      len_class_max = .hnum(cp, "./LengthDefinition/LengthClassMAX"),
-      volume_method = .hx1(cp, "./PriceDefinition/VolumeDiameterCategory"),
-      volume_top_pos = suppressWarnings(as.numeric(.hattr1(cp, "./PriceDefinition/VolumeDiameterCategory",
-                                                             "volumeDiameterTopPosition"))),
-      volume_adjustment = .hx1(cp, "./PriceDefinition/VolumeDiameterAdjustment"),
-      volume_length = .hx1(cp, "./PriceDefinition/VolumeLengthCategory"),
-      volume_under_bark = .hx1(cp, "./PriceDefinition/VolumeUnderBark"),
-      grades = if (inherits(xml2::xml_find_first(cp, "./PermittedGradesDefinition"), "xml_missing")) NULL
-               else suppressWarnings(as.numeric(grades)),
-      cells = data.frame(
-        d_mm  = suppressWarnings(as.numeric(xml2::xml_attr(items, "diameterClassLowerLimit"))),
-        l_cm  = suppressWarnings(as.numeric(xml2::xml_attr(items, "lengthClassLowerLimit"))),
-        # One XPath call per column over all items (not one per item).
-        price = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Price")))),
-        criteria = trimws(xml2::xml_text(xml2::xml_find_first(items, "./BuckingCriteria"))),
-        stringsAsFactors = FALSE))
-  })
+  products <- lapply(pds, .hpr_product)
   pkeys <- vapply(products, `[[`, "", "key")
   if (length(products) == 0L) errors <- c(errors, "The file defines no products with prices (ClassifiedProductDefinition).")
   if (any(duplicated(pkeys)))
@@ -301,11 +321,105 @@ read_hpr <- function(path, filename = basename(path)) {
     warnings <- c(warnings, sprintf("Product(s) with a missing or unknown species group, not imported: %s.",
                                     paste(unknown, collapse = ", ")))
 
-  list(ok = length(errors) == 0L, errors = errors, warnings = warnings,
+  list(ok = length(errors) == 0L, errors = errors, warnings = warnings, kind = "hpr",
        header = list(file = filename, version = unname(att["version"]),
                      read = how, mb_read = if (how == "prefix") round(length(pre$bytes) / 1048576, 2) else NA,
                     mb_file = round(file.size(path) / 1048576, 2)),
        species = species, products = products)
+}
+
+
+# ---- .pin files (Phase 5b) ---------------------------------------------------------------
+
+#' Read the products of a StanForD 2010 .pin file (ProductInstruction): the
+#' same ProductDefinition elements as an .hpr, without species group
+#' definitions or product keys. Nothing of the header is read. The result has
+#' the shape of read_hpr() plus `kind = "pin"`: the product key is its
+#' ProductUserID (else its ProductName; a repeated one gets _2, _3, ...), and
+#' the species table is made of the distinct SpeciesGroupUserIDs (key = name =
+#' user ID), so the species map and the import dialog work as for an .hpr.
+#' A missing PriceDefinition means the volume method of a new assortment
+#' ("Top cylinder"); missing optional elements are not reported.
+read_pin <- function(path, filename = basename(path)) {
+  fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
+  x <- tryCatch(xml2::read_xml(path, options = c("NOBLANKS", "HUGE")), error = function(e) NULL)
+  if (is.null(x)) return(fail(sprintf("%s is not a readable XML file.", filename)))
+  xml2::xml_ns_strip(x)
+  if (xml2::xml_name(x) != "ProductInstruction")
+    return(fail(sprintf("%s is not a StanForD 2010 .hpr or .pin file (root element '%s', expected HarvestedProduction or ProductInstruction).",
+                        filename, xml2::xml_name(x))))
+  att <- xml2::xml_attrs(x)
+  mt <- att["messageType"]
+  if (!is.na(mt) && mt != "pin")
+    return(fail(sprintf("%s is a StanForD '%s' message, not pin.", filename, mt)))
+  errors <- character(0); warnings <- character(0)
+  du <- unname(att["diameterUnit"]); lu <- unname(att["lengthUnit"])
+  if (!is.na(du) && du != "mm") errors <- c(errors, sprintf("Diameter unit is '%s'; Apter reads mm only (no conversion).", du))
+  if (!is.na(lu) && lu != "cm") errors <- c(errors, sprintf("Length unit is '%s'; Apter reads cm only (no conversion).", lu))
+  if (length(errors) > 0L) return(list(ok = FALSE, errors = errors, warnings = warnings))
+
+  pds <- xml2::xml_find_all(x, "./ProductDefinition[ClassifiedProductDefinition]")
+  products <- lapply(pds, function(p) {
+    q <- .hpr_product(p)
+    cp <- xml2::xml_find_first(p, "./ClassifiedProductDefinition")
+    q$uid <- .hx1(p, "./ProductUserID")
+    q$species_keys <- unique(.hall(cp, "./SpeciesGroupUserID"))
+    q$species_keys <- q$species_keys[nzchar(q$species_keys)]
+    if (inherits(xml2::xml_find_first(cp, "./PriceDefinition"), "xml_missing")) {
+      q$volume_method <- PIN_DEFAULT_VOLUME_METHOD
+      q$volume_adjustment <- NA_character_
+    }
+    q
+  })
+  if (length(products) == 0L) errors <- c(errors, "The file defines no products with prices (ClassifiedProductDefinition).")
+
+  # Keys: ProductUserID, else ProductName (a repeated or missing user ID), else _2, _3, ...
+  uid <- vapply(products, function(q) if (is.na(q$uid)) "" else q$uid, "")
+  dup <- uid != "" & (duplicated(uid) | duplicated(uid, fromLast = TRUE))
+  keys <- character(length(products))
+  taken <- uid[uid != "" & !dup]
+  for (i in seq_along(products)) {
+    k <- if (uid[i] != "" && !dup[i]) uid[i] else {
+      nm <- if (is.na(products[[i]]$name) || !nzchar(products[[i]]$name)) "product" else products[[i]]$name
+      cand <- nm; n <- 1L
+      while (cand %in% taken) { n <- n + 1L; cand <- paste0(nm, "_", n) }
+      taken <- c(taken, cand)
+      cand
+    }
+    keys[i] <- k
+    products[[i]]$key <- k
+  }
+  names(products) <- keys
+
+  ids <- as.character(unique(unlist(lapply(products, `[[`, "species_keys"))))
+  species <- data.frame(key = ids, name = ids, user_id = ids,
+                        best_grade = rep(NA_real_, length(ids)), start_grade = rep(NA_real_, length(ids)),
+                        dbh_height = rep(NA_real_, length(ids)),
+                        stringsAsFactors = FALSE)
+  if (nrow(species) > 0L)
+    species$n_products <- vapply(species$key, function(k)
+      sum(vapply(products, function(p) k %in% p$species_keys, logical(1))), integer(1))
+  unknown <- unlist(lapply(products, function(p) if (length(p$species_keys) == 0L) p$name))
+  if (length(unknown) > 0L)
+    warnings <- c(warnings, sprintf("Product(s) with a missing or unknown species group, not imported: %s.",
+                                    paste(unknown, collapse = ", ")))
+  if (length(products) > 0L && nrow(species) == 0L)
+    errors <- c(errors, "The file defines no species groups.")
+
+  list(ok = length(errors) == 0L, errors = errors, warnings = warnings, kind = "pin",
+       header = list(file = filename, version = unname(att["version"]), read = "whole",
+                     mb_read = NA, mb_file = round(file.size(path) / 1048576, 2)),
+       species = species, products = products)
+}
+
+#' Read a product file by its root element: a .pin (ProductInstruction) with
+#' read_pin(), anything else with read_hpr() (which also takes .gz and .zip).
+#' Only the first bytes are looked at to decide, as .hpr files can be 150 MB.
+read_product_file <- function(path, filename = basename(path)) {
+  head <- tryCatch(readBin(path, "raw", 4096L), error = function(e) raw(0))
+  txt <- rawToChar(head[head != as.raw(0L)])
+  if (grepl("<ProductInstruction[[:space:]>]", txt, useBytes = TRUE)) read_pin(path, filename)
+  else read_hpr(path, filename)
 }
 
 
@@ -367,7 +481,7 @@ hpr_product_table <- function(hpr, species_map) {
   rows <- lapply(hpr$products, function(p) {
     sp <- unique(unname(species_map[p$species_keys])); sp <- sp[!is.na(sp) & sp != "none"]
     grade <- hpr_grade_ok(p, ref)
-    priced <- sum(!is.na(p$cells$price) & p$cells$criteria != HPR_FORBIDDEN)
+    priced <- sum(!is.na(p$cells$price) & !p$cells$criteria %in% HPR_UNAVAILABLE)
     reason <- if (length(sp) == 0L) "Species group not used"
               else if (priced == 0L) "No priced cells"
               else ""
@@ -377,7 +491,7 @@ hpr_product_table <- function(hpr, species_map) {
                type = .hpr_type(p$group, p$name),
                diameters = .hpr_range(p$dia_classes, "mm"),
                lengths = .hpr_range(p$len_classes, "cm"),
-               forbidden = sum(p$cells$criteria == HPR_FORBIDDEN, na.rm = TRUE),
+               forbidden = sum(p$cells$criteria %in% HPR_UNAVAILABLE),
                default = !nzchar(reason), reason = reason,
                grade_ok = grade, stringsAsFactors = FALSE)
   })
@@ -394,7 +508,7 @@ hpr_product_table <- function(hpr, species_map) {
 .hpr_grid <- function(p, key) {
   w <- character(0); info <- character(0)
   cells <- p$cells[!is.na(p$cells$d_mm) & !is.na(p$cells$l_cm), , drop = FALSE]
-  forbidden <- cells$criteria %in% HPR_FORBIDDEN
+  forbidden <- cells$criteria %in% HPR_UNAVAILABLE
   n_forb <- sum(forbidden)
   ok_cells <- cells[!is.na(cells$price) & !forbidden, , drop = FALSE]
   if (n_forb > 0L) info <- c(info, sprintf("%d forbidden cell(s) left empty (never chosen).", n_forb))
@@ -508,11 +622,11 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
       }
       pw <- grid$warnings; pinfo <- grid$info
       method <- p$volume_method
-      if (is.na(method) || !method %in% HPR_VOLUME_METHODS) {
+      if (is.na(method) || !method %in% c(HPR_VOLUME_METHODS, PIN_DEFAULT_VOLUME_METHOD)) {
         pw <- c(pw, sprintf("Volume method '%s' is not available; solid volume used.", method))
         method <- "All diameters (solid volume)"
       }
-      if (method != "All diameters (solid volume)" &&
+      if (method != "All diameters (solid volume)" && !is.na(p$volume_adjustment) &&
           !identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM))
         pinfo <- c(pinfo, sprintf("Volume diameter '%s': Apter rounds the %s diameter down to whole cm for this method.",
                             p$volume_adjustment, if (method == "Mid") "mid" else "top"))
@@ -553,11 +667,13 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
                           else NA_character_,
         # The reference grade(s) of the product's own species group(s) of this species: the grade
         # of every cell of a stem without grade data (decided 2026-10-28).
+        # (.pin files have no species group definitions: no reference grade, no .hpr key.)
         ReferenceGrades = {
-          r <- unlist(ref[intersect(p$species_keys[species_map[p$species_keys] == sp], names(ref))])
+          r <- if (identical(hpr$kind, "pin")) NULL
+               else unlist(ref[intersect(p$species_keys[species_map[p$species_keys] == sp], names(ref))])
           if (length(r)) norm_permitted_grades(paste(r, collapse = ";")) else NA_character_
         },
-        HprProductKey = p$key,
+        HprProductKey = if (identical(hpr$kind, "pin")) NA_character_ else p$key,
         stringsAsFactors = FALSE)
       pms[[length(pms) + 1L]] <- grid$pm
       used_keys <- c(used_keys, ak)

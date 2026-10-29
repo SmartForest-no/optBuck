@@ -36,6 +36,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 | Roadmap Phase 1 | Grade rule for .hpr products (reference grades); Copy from A/B; tally caption; comparisons for different assortments (shared assortments, by type) |
 | Results restructure | Four result tabs (Summary, Products, Trees, Logs); no comparison tab; merged per-assortment table; trees table with A/B and the cutting pattern on click |
 | Roadmap Phase 5a | Simulation results exported as .hpr, one file per scenario (stems copied from the source, no coordinates); hidden assortment column HprProductKey |
+| Roadmap Phase 5b | Products and prices from .pin files (same import dialog, decided by the root element) and a scenario exported as .pin; "Only logs bucked manually allowed" cells are left empty for .hpr and .pin |
 
 ## Phase 4d: scenarios and polish (done, 2026-10-15)
 
@@ -238,6 +239,16 @@ For .hpr stems only, optional, per scenario. Decisions (Lennart, 2026-10-28):
 - **Unchanged.** `CuttingWindowDefinition`, `LimitationCategory` and `DistributionCategory` are left out. With both checkboxes off all outputs and `performance_check.R` equal main.
 - **Known limitation.** With several .hpr files, grade numbers are assumed comparable across files.
 - **Tests.** Audit 30 on a small synthetic fixture (`inputs/test_fixtures/hpr_grades_synthetic.hpr`) plus one audit 17 smoke step.
+
+## Roadmap Phase 5b: .pin import and export (done, 2026-10-29, branch `phase5b-pin`)
+
+Decisions in CLAUDE.md (".pin import and export").
+
+1. **Import.** The existing dialog ("Import .hpr/.pin") accepts a plain `.pin`; the root element (`ProductInstruction` / `HarvestedProduction`) decides. Species groups are the distinct `SpeciesGroupUserID`s; the key is `ProductUserID`, else `ProductName`, else `_2`, `_3`. Missing `PriceDefinition`: "Top cylinder", no message; missing `DiameterMINTop`: the smallest class. Permitted grades are kept; ReferenceGrades and HprProductKey stay NA; the header and the extension blocks are never read. A .pin never sets `hpr_imported`.
+2. **BuckingCriteria (.hpr and .pin).** "Only logs bucked manually allowed" cells are left empty like "Forbidden to buck the log even manually"; "excluded from apportionment bucking" stays priced. REDACTED28 has no such cells (default import 1,493,115 NOK before and after). Two other local files: -1,129 NOK (-0.18 %, 418 of 16,403 logs cut differently, 194 of 6,668 stems) and -79 NOK (-0.02 %, 80 of 7,204 logs, 61 of 2,634 stems); no log kept its cut and changed product.
+3. **Export.** One .pin per scenario ("Download as .pin"), waste left out, fixed minimal header without coordinates, `hpr_export_products(style = "pin")` for the product body.
+4. **Tests.** Audit 32 (12 checks), audit 17 check 42, audit 25 adjusted (its fixture has manual-only cells).
+5. **Known, not fixed.** `read_hpr()` loses the bytes of a file under 512 bytes (`.hpr_prefix()`).
 
 ## Roadmap Phase 5a: .hpr export (done, 2026-10-28, branch `phase5a-hpr-export`)
 

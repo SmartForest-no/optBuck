@@ -98,13 +98,23 @@ HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "Pr
 #' @param groups data.frame(key, species): the header's species groups.
 #' @param used_keys All ProductKeys of the source file (numeric-looking ones
 #'   set the start of the new keys).
+#' @param style  "hpr" (default) or "pin" (Phase 5b): a .pin ProductDefinition has
+#'   a ProductUserID (`ids`, one per row of `defs`) instead of a ProductKey, no
+#'   metadata copied from a source product, no SpeciesGroupKey, a
+#'   SpeciesGroupUserID ("Spruce" / "Pine") and the permitted grades of the
+#'   assortment (only when it has some).
+#' @param ids    The ProductUserIDs of a .pin (style "pin").
 #' @return list(xml (one text per assortment), keys (named by
 #'   assortment_table_keys(defs): the exported ProductKey)).
-hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig)) {
+hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
+                                style = c("hpr", "pin"), ids = NULL) {
+  style <- match.arg(style)
+  pin <- identical(style, "pin")
   akeys <- assortment_table_keys(defs)
   lens  <- assortment_lengths(defs, pm)
   hk <- if ("HprProductKey" %in% names(defs)) as.character(defs$HprProductKey) else rep(NA_character_, nrow(defs))
   hk[!is.na(hk) & !hk %in% names(orig)] <- NA_character_      # not a product of this file
+  if (pin) hk[] <- NA_character_                              # a .pin copies nothing from a source
   hk[duplicated(hk) & !is.na(hk)] <- NA_character_            # the first row keeps the key
   uk <- suppressWarnings(as.numeric(used_keys))
   top <- max(c(0, uk[!uk %in% HPR_UNCLASSIFIED_KEY]), na.rm = TRUE)    # 999999 is the unclassified product
@@ -147,7 +157,8 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig))
       ifelse(is.na(pr), HPR_FORBIDDEN, "No limit"))
     gk <- groups$key[groups$species == as.character(d$Species)]
     paste0(
-      "<ProductDefinition><ProductKey>", keys[i], "</ProductKey><ClassifiedProductDefinition>",
+      if (pin) paste0("<ProductDefinition><ProductUserID>", .xesc(ids[i]), "</ProductUserID><ClassifiedProductDefinition>")
+      else paste0("<ProductDefinition><ProductKey>", keys[i], "</ProductKey><ClassifiedProductDefinition>"),
       "<ProductName>", .xesc(d$Name), "</ProductName>", meta,
       '<DiameterDefinition modificationRestricted="false"><DiameterClasses diameterClassCategory="Top">',
       paste0("<DiameterClass><DiameterClassLowerLimit>", .fnum(dcl, 2L),
@@ -171,10 +182,17 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig))
       if (matrix_priced && !identical(method, "All diameters (solid volume)"))
         "Length as defined in LengthClasses" else "Physical length cm",
       "</VolumeLengthCategory><VolumeUnderBark>true</VolumeUnderBark></PriceDefinition>",
-      if (!is.na(o)) { g <- .hx_elem(o, "PermittedGradesDefinition"); if (!is.na(g)) g },
+      if (pin) {
+        g <- if ("PermittedGrades" %in% names(d)) permitted_grades_set(d$PermittedGrades) else numeric(0)
+        if (length(g)) paste0('<PermittedGradesDefinition modificationRestricted="false">',
+                              paste0("<PermittedGradeNumber>", format(g, scientific = FALSE, trim = TRUE), "</PermittedGradeNumber>", collapse = ""),
+                              "</PermittedGradesDefinition>")
+      } else if (!is.na(o)) { g <- .hx_elem(o, "PermittedGradesDefinition"); if (!is.na(g)) g },
       "<ProductMatrixes>", paste(items, collapse = ""), "</ProductMatrixes>",
-      if (!is.na(o)) { u <- .hx_elem(o, "ProductUserID"); if (!is.na(u)) u },
-      if (length(gk)) paste0("<SpeciesGroupKey>", gk, "</SpeciesGroupKey>", collapse = ""),
+      if (!pin && !is.na(o)) { u <- .hx_elem(o, "ProductUserID"); if (!is.na(u)) u },
+      if (pin) paste0('<SpeciesGroupUserID agency="Other">', if (identical(as.character(d$Species), "pine")) "Pine" else "Spruce",
+                      "</SpeciesGroupUserID>")
+      else if (length(gk)) paste0("<SpeciesGroupKey>", gk, "</SpeciesGroupKey>", collapse = ""),
       "</ClassifiedProductDefinition></ProductDefinition>")
   }, "")
   list(xml = xml, keys = setNames(keys, akeys))
