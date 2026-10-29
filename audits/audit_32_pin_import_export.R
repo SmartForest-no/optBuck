@@ -339,8 +339,7 @@ section("11. Errors")
 err_of <- function(t, ext = ".pin") { f <- tempfile(fileext = ext); writeLines(t, f, useBytes = TRUE)
   h <- read_product_file(f); if (isTRUE(h$ok)) "(no error)" else paste(h$errors, collapse = " ") }
 e <- c(
-  # (padded: read_hpr() loses the bytes of a file under 512 bytes, a bug before this phase)
-  root = err_of(paste0('<Other xmlns="urn:skogforsk:stanford2010"><!-- ', strrep("x", 600), ' --></Other>')),
+  root = err_of('<Other xmlns="urn:skogforsk:stanford2010"><A/></Other>'),
   dunit = err_of(sub('diameterUnit="mm"', 'diameterUnit="cm"', rd(MINI), fixed = TRUE)),
   lunit = err_of(sub('lengthUnit="cm"', 'lengthUnit="m"', rd(MINI), fixed = TRUE)),
   msgtype = err_of(sub('messageType="pin"', 'messageType="hpr"', rd(MINI), fixed = TRUE)),
@@ -363,6 +362,27 @@ ok12 <- identical(read_product_file(HPRFX)$kind, "hpr") && identical(keys_h, nam
 rec("Check 12: An .hpr is still read by ProductKey and its assortments keep HprProductKey",
     ok(ok12), sprintf("%d product keys, all numeric %s", length(keys_h), all(grepl("^[0-9]+$", keys_h))))
 
-unlink(c(no_uid, rep_uid, same_name, unk, coords, OUTP, f9, as_pin_name, as_hpr_name))
+# ==============================================================================
+section("13. Files under 512 bytes")
+tiny_pin <- paste0('<ProductInstruction messageType="pin" diameterUnit="mm" lengthUnit="cm"><ProductDefinition>',
+                   '<ClassifiedProductDefinition><ProductName>P</ProductName><SpeciesGroupUserID>Pine</SpeciesGroupUserID>',
+                   '<ProductMatrixes><ProductMatrixItem diameterClassLowerLimit="180" lengthClassLowerLimit="310">',
+                   '<Price>62</Price></ProductMatrixItem></ProductMatrixes></ClassifiedProductDefinition></ProductDefinition></ProductInstruction>')
+tiny_root <- '<Other xmlns="urn:skogforsk:stanford2010"><A/></Other>'
+f13a <- tempfile(fileext = ".pin"); writeBin(charToRaw(tiny_pin), f13a)
+f13b <- tempfile(fileext = ".pin"); writeBin(charToRaw(tiny_root), f13b)
+t13 <- import(f13a)
+e13 <- read_product_file(f13b)
+g13 <- grid_of(t13$s, "P")
+ok13 <- file.size(f13a) < 512L && file.size(f13b) < 512L && isTRUE(t13$h$ok) && identical(t13$h$kind, "pin") &&
+  identical(names(t13$h$products), "P") && nrow(t13$s$defs) == 2L &&   # the product + the base waste row
+  isTRUE(all(g13[!is.na(g13)] == 62)) && sum(!is.na(g13)) == 1L &&
+  !isTRUE(e13$ok) && any(grepl("expected HarvestedProduction or ProductInstruction", e13$errors, fixed = TRUE)) &&
+  !any(grepl("not a readable XML", e13$errors, fixed = TRUE))
+rec("Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error",
+    ok(ok13), sprintf(".pin %d bytes, ok %s, %d assortments, priced cells %d | wrong root %d bytes: %s",
+                      file.size(f13a), t13$h$ok, nrow(t13$s$defs), sum(!is.na(g13)), file.size(f13b), paste(e13$errors, collapse = " ")))
+
+unlink(c(f13a, f13b, no_uid, rep_uid, same_name, unk, coords, OUTP, f9, as_pin_name, as_hpr_name))
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 32 complete.\n")

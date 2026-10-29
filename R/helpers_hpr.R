@@ -189,7 +189,7 @@ HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
     }
     keep <- max(0L, length(buf) - 512L)   # a match may straddle two chunks
     done[[length(done) + 1L]] <- buf[seq_len(keep)]
-    tail <- buf[-seq_len(keep)]
+    tail <- buf[seq_along(buf) > keep]   # not buf[-seq_len(keep)]: keep = 0 would select nothing
   }
 }
 

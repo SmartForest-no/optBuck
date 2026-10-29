@@ -33,7 +33,7 @@ REDACTED25: 13 forbidden cell(s) left empty (never chosen). | REDACTED25: 13 for
 REDACTED25: Diameter class limits not in whole cm (142 mm): prices change at whole cm. | REDACTED25: Diameterklassegrenser ikke i hele cm (142 mm): prisene skifter ved hele cm.
 Map at least one species group to Spruce or Pine. | Knytt minst én treslagsgruppe til gran eller furu.
 broken.hpr is not a readable XML file. | broken.hpr er ikke en lesbar XML-fil.
-foo.hpr is not a readable XML file. | foo.hpr er ikke en lesbar XML-fil.
+foo.hpr is not a StanForD 2010 .hpr or .pin file (root element 'Foo', expected HarvestedProduction or ProductInstruction). | foo.hpr er ikke en StanForD 2010 .hpr- eller .pin-fil (rotelement 'Foo', forventet HarvestedProduction eller ProductInstruction).
 Diameter unit is 'cm'; Apter reads mm only (no conversion). | Diameterenheten er 'cm'; optBuck leser bare mm (ingen omregning).
 pri.hpr is a StanForD 'pri' message, not hpr. | pri.hpr er en StanForD 'pri'-melding, ikke hpr.
 nohpr.zip contains no .hpr file. | nohpr.zip inneholder ingen .hpr-fil.

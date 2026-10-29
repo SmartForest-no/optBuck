@@ -247,8 +247,7 @@ Decisions in CLAUDE.md (".pin import and export").
 1. **Import.** The existing dialog ("Import .hpr/.pin") accepts a plain `.pin`; the root element (`ProductInstruction` / `HarvestedProduction`) decides. Species groups are the distinct `SpeciesGroupUserID`s; the key is `ProductUserID`, else `ProductName`, else `_2`, `_3`. Missing `PriceDefinition`: "Top cylinder", no message; missing `DiameterMINTop`: the smallest class. Permitted grades are kept; ReferenceGrades and HprProductKey stay NA; the header and the extension blocks are never read. A .pin never sets `hpr_imported`.
 2. **BuckingCriteria (.hpr and .pin).** "Only logs bucked manually allowed" cells are left empty like "Forbidden to buck the log even manually"; "excluded from apportionment bucking" stays priced. REDACTED28 has no such cells (default import 1,493,115 NOK before and after). Two other local files: -1,129 NOK (-0.18 %, 418 of 16,403 logs cut differently, 194 of 6,668 stems) and -79 NOK (-0.02 %, 80 of 7,204 logs, 61 of 2,634 stems); no log kept its cut and changed product.
 3. **Export.** One .pin per scenario ("Download as .pin"), waste left out, fixed minimal header without coordinates, `hpr_export_products(style = "pin")` for the product body.
-4. **Tests.** Audit 32 (12 checks), audit 17 check 42, audit 25 adjusted (its fixture has manual-only cells).
-5. **Known, not fixed.** `read_hpr()` loses the bytes of a file under 512 bytes (`.hpr_prefix()`).
+4. **Tests.** Audit 32 (13 checks), audit 17 check 42, audit 25 adjusted (its fixture has manual-only cells). Check 13 (housekeeping, 2026-10-29): files under 512 bytes are read (`.hpr_prefix()` used to lose their bytes).
 
 ## Roadmap Phase 5a: .hpr export (done, 2026-10-28, branch `phase5a-hpr-export`)
 

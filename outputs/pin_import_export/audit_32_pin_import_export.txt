@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .pin import and export (Phase 5b)
-  Run: 2026-10-29 09:56:39.710316
+  Run: 2026-10-29 12:17:47.677767
 ============================================================= 
 
 --- 01. Both layouts import ---
@@ -38,13 +38,16 @@
 
 --- 12. .hpr unchanged ---
   [PASS  ] Check 12: An .hpr is still read by ProductKey and its assortments keep HprProductKey | 8 product keys, all numeric TRUE
+
+--- 13. Files under 512 bytes ---
+  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: file67dc3caf3a9e.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 12
+1   PASS 13
 
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-phase5b/outputs/pin_import_export/audit_32_pin_import_export.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/pin_import_export/audit_32_pin_import_export.csv

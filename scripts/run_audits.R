@@ -150,18 +150,23 @@ running <- list(); results <- character(0); k <- 0L
 # script's own children that are still running (and nothing else).
 tryCatch(repeat {
   # Finished processes: print their line.
-  for (r in running) if (!r$p$is_alive()) {
+  # One is_alive() snapshot per round: a process that exits after this point is
+  # handled next round. (Asking again for the filter below could drop a process
+  # that died in between without ever printing or recording it.)
+  finished <- vapply(running, function(r) !r$p$is_alive(), NA)
+  for (r in running[finished]) {
     el <- as.numeric(difftime(Sys.time(), r$t0, units = "secs"))
-    res <- classify(r$it, r$p$get_exit_status(), r$log)
+    res <- tryCatch(classify(r$it, r$p$get_exit_status(), r$log), error = function(e) "FAIL")
     results[r$it$name] <- res
     cat(sprintf("%-6s %-46s %7.1f s\n", res, r$it$name, el))
     if (res == "FAIL") {
-      txt <- readLines(r$log, warn = FALSE, encoding = "UTF-8")
+      txt <- tryCatch(readLines(r$log, warn = FALSE, encoding = "UTF-8"),
+                      error = function(e) "(the log could not be read)")
       bad <- grep("\\[FAIL|^Error|Execution halted", txt, value = TRUE)
       cat(paste0("       ", utils::tail(if (length(bad)) bad else txt, 6L), collapse = "\n"), "\n", sep = "")
     }
   }
-  running <- Filter(function(r) r$p$is_alive(), running)
+  running <- running[!finished]
   # Start more. While audit 17 runs it takes one slot (the others get jobs - 1).
   alone17 <- last17 && k < nrow(queue) && !is.na(queue$num[k + 1L]) && queue$num[k + 1L] == 17L
   while (k < nrow(queue) && length(running) < jobs && !(alone17 && length(running) > 0L)) {
@@ -175,6 +180,11 @@ tryCatch(repeat {
   for (r in running) if (r$p$is_alive()) try(r$p$kill_tree(), silent = TRUE)
 })
 total <- as.numeric(difftime(Sys.time(), t_all, units = "secs"))
+# Every started item must be in the summary: one without a result is a FAIL.
+for (nm in setdiff(queue$name[seq_len(k)], names(results))) {
+  results[nm] <- "FAIL"
+  cat(sprintf("%-6s %-46s %7s\n       no result recorded\n", "FAIL", nm, "-"))
+}
 n <- table(factor(results, c("PASS", "REVIEW", "FAIL")))
 cat(sprintf("\n%d PASS, %d REVIEW, %d FAIL; total %.0f s (%.1f min)\n",
             n[["PASS"]], n[["REVIEW"]], n[["FAIL"]], total, total / 60))
