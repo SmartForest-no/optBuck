@@ -118,11 +118,37 @@ start_one <- function(it) {
   list(it = it, p = p, log = log, t0 = Sys.time())
 }
 
+# ---- pre-flight: orphaned headless Chromes (report only) -------------------------
+# A headless Chrome (--headless and --remote-debugging-port on its command line)
+# whose parent process no longer exists was left by an R process that was killed
+# or lost its session. Nothing is killed here: the browser audits (17, 29) start
+# their own Chrome with a private profile and close only that one. Windows only.
+orphan_chromes <- function() {
+  if (.Platform$OS.type != "windows") return(character(0))
+  ps1 <- tempfile(fileext = ".ps1")
+  writeLines(c(
+    "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object {",
+    "  $_.CommandLine -match '--headless' -and $_.CommandLine -match '--remote-debugging-port' } |",
+    "  ForEach-Object { if (-not (Get-Process -Id $_.ParentProcessId -ErrorAction SilentlyContinue)) { $_.ProcessId } }"), ps1)
+  on.exit(unlink(ps1))
+  out <- tryCatch(system2("powershell", c("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", shQuote(ps1)),
+                          stdout = TRUE, stderr = FALSE), error = function(e) character(0))
+  trimws(out[grepl("^\\s*[0-9]+\\s*$", out)])
+}
+orphans <- orphan_chromes()
+if (length(orphans))
+  cat(sprintf(paste0("Note: %d orphaned headless Chrome process(es) from earlier runs: PID %s.\n",
+                     "      Not touched. To remove them yourself: taskkill /F /T %s\n"),
+              length(orphans), paste(orphans, collapse = ", "),
+              paste0("/PID ", orphans, collapse = " ")))
+
 cat(sprintf("Running %d item(s), %d at a time, %d worker(s) each; logs in %s\n",
             nrow(queue), jobs, workers, log_dir))
 t_all <- Sys.time()
 running <- list(); results <- character(0); k <- 0L
-repeat {
+# On an interrupt, an error or the normal end, kill the process trees of this
+# script's own children that are still running (and nothing else).
+tryCatch(repeat {
   # Finished processes: print their line.
   for (r in running) if (!r$p$is_alive()) {
     el <- as.numeric(difftime(Sys.time(), r$t0, units = "secs"))
@@ -145,7 +171,9 @@ repeat {
   }
   if (k >= nrow(queue) && length(running) == 0L) break
   Sys.sleep(0.5)
-}
+}, finally = {
+  for (r in running) if (r$p$is_alive()) try(r$p$kill_tree(), silent = TRUE)
+})
 total <- as.numeric(difftime(Sys.time(), t_all, units = "secs"))
 n <- table(factor(results, c("PASS", "REVIEW", "FAIL")))
 cat(sprintf("\n%d PASS, %d REVIEW, %d FAIL; total %.0f s (%.1f min)\n",

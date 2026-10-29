@@ -385,6 +385,6 @@ used only by `scripts/hpr_stems_benchmark.R`, whose output is never committed.
   the change (the ones whose checks cover the code you touched). Run the full suite
   once with `Rscript scripts/run_audits.R` (every audit from 14 up and `performance_check.R`,
   3 processes at a time, audit 17 alongside; one PASS/FAIL line each, exit status 1
-  on any FAIL) before asking for a merge. Audit 17 is the slow one (about 4 min).
+  on any FAIL) before asking for a merge. Audit 17 is the slow one (about 4 min). The browser audits (17, 29) start their own Chrome with a private profile and close it on every exit path (`audit_browser_start()`/`audit_browser_stop()` in `R/helpers_audit.R`); never kill Chrome by name, and a missing screenshot fails check 22 (2026-10-29).
 - See [docs/development.md](docs/development.md) for the full file layout and
   [docs/plans/PLAN.md](docs/plans/PLAN.md) for the development roadmap.

@@ -208,6 +208,101 @@ write_audit_outputs <- function(results, audit_csv, log_path) {
 
 
 # ------------------------------------------------------------------------------
+# Headless Chrome for the browser audits (17, 29)
+# ------------------------------------------------------------------------------
+# chromote starts one headless Chrome per R process. Without --user-data-dir it
+# uses the default Chrome profile, which the user's own browser, leftover
+# headless Chromes and parallel audits share and lock. These helpers give each
+# audit process its own throw-away profile and close only the Chrome that this
+# process started (the processx handle chromote holds; never a kill by name,
+# command line or port). The port is chromote's random one.
+
+.AUDIT_BROWSER <- new.env(parent = emptyenv())
+
+#' Prepare a private Chrome profile for this R process. Call before the first
+#' AppDriver$new() (audit_app_driver() does the rest). Registers audit_browser_stop()
+#' to run when R exits, as a last resort for a halted script.
+audit_browser_start <- function() {
+  if (!requireNamespace("chromote", quietly = TRUE))
+    stop("chromote is not installed.", call. = FALSE)
+  audit_browser_stop()                                   # a start after a start begins clean
+  dir <- tempfile("apter-chrome-profile-")
+  dir.create(dir, recursive = TRUE)
+  chromote::set_chrome_args(c(chromote::default_chrome_args(),
+                              paste0("--user-data-dir=", normalizePath(dir, winslash = "/")),
+                              "--no-first-run", "--no-default-browser-check"))
+  .AUDIT_BROWSER$profile <- dir
+  if (!isTRUE(.AUDIT_BROWSER$finalizer)) {
+    reg.finalizer(.AUDIT_BROWSER, function(e) try(audit_browser_stop(), silent = TRUE), onexit = TRUE)
+    .AUDIT_BROWSER$finalizer <- TRUE
+  }
+  invisible(dir)
+}
+
+# Our own Chrome and Chromote (created lazily, so a failed start is an error of
+# the caller's AppDriver step), made the default so shinytest2 uses them.
+.audit_browser_open <- function() {
+  if (is.null(.AUDIT_BROWSER$profile)) audit_browser_start()
+  if (!is.null(.AUDIT_BROWSER$chromote) && isTRUE(try(.AUDIT_BROWSER$chromote$is_alive(), silent = TRUE)))
+    return(invisible(.AUDIT_BROWSER$chromote))
+  br <- chromote::Chrome$new()
+  .AUDIT_BROWSER$browser <- br
+  cm <- tryCatch(chromote::Chromote$new(browser = br), error = function(e) {
+    try(br$get_process()$kill_tree(), silent = TRUE)
+    stop(e)
+  })
+  .AUDIT_BROWSER$chromote <- cm
+  chromote::set_default_chromote_object(cm)
+  invisible(cm)
+}
+
+#' Stop the apps, close this process's Chromote, kill its Chrome tree if it is
+#' still alive and delete the profile folder. Safe to call twice.
+#'
+#' @param apps An AppDriver or a list of them (stopped first).
+audit_browser_stop <- function(apps = list()) {
+  if (inherits(apps, "AppDriver")) apps <- list(apps)
+  for (a in apps) try(a$stop(), silent = TRUE)
+  cm <- .AUDIT_BROWSER$chromote
+  br <- .AUDIT_BROWSER$browser
+  if (!is.null(cm)) try(cm$close(wait = 5), silent = TRUE)
+  p <- if (!is.null(br)) try(br$get_process(), silent = TRUE) else NULL
+  if (inherits(p, "process") && isTRUE(try(p$is_alive(), silent = TRUE)))
+    try(p$kill_tree(), silent = TRUE)
+  if (!is.null(.AUDIT_BROWSER$profile))
+    try(unlink(.AUDIT_BROWSER$profile, recursive = TRUE, force = TRUE), silent = TRUE)
+  .AUDIT_BROWSER$chromote <- NULL
+  .AUDIT_BROWSER$browser  <- NULL
+  .AUDIT_BROWSER$profile  <- NULL
+  invisible(NULL)
+}
+
+#' shinytest2::AppDriver$new() on this process's own Chrome, with one retry: on a
+#' failed start the Chrome and the profile are replaced and the start is tried
+#' again after 5 s. Returns the AppDriver or the error text (the callers'
+#' existing convention).
+#'
+#' @param ... Arguments of AppDriver$new().
+audit_app_driver <- function(...) {
+  once <- function() tryCatch({
+    .audit_browser_open()
+    shinytest2::AppDriver$new(...)
+  }, error = function(e) e)
+  app <- once()
+  if (inherits(app, "error")) {
+    first <- conditionMessage(app)
+    audit_browser_stop()
+    audit_browser_start()
+    Sys.sleep(5)
+    app <- once()
+    if (inherits(app, "error"))
+      return(paste0(conditionMessage(app), " (first attempt: ", first, ")"))
+  }
+  app
+}
+
+
+# ------------------------------------------------------------------------------
 # Optimizer audits: priced DP inputs per tree
 # ------------------------------------------------------------------------------
 

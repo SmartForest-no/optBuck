@@ -157,16 +157,17 @@ if (!browser_ok) {
       "shinytest2 / chromote not available")
 } else {
   Sys.setenv(NOT_CRAN = "true", APTER_N_PLOTS = "5", APTER_LANG = "en")
-  options(chromote.timeout = 60)
-  app <- tryCatch(
-    shinytest2::AppDriver$new(file.path(root_dir, "app"), name = "audit29",
-                              load_timeout = 60 * 1000, timeout = 120 * 1000,
-                              width = 1400, height = 1100),
-    error = function(e) conditionMessage(e))
+  options(chromote.timeout = 30)
+  # Own Chrome profile and Chrome process (helpers_audit.R): stopped below, and at
+  # R exit if the script halts first.
+  audit_browser_start()
+  app <- audit_app_driver(file.path(root_dir, "app"), name = "audit29",
+                          load_timeout = 60 * 1000, timeout = 120 * 1000,
+                          width = 1400, height = 1100)
   if (!inherits(app, "AppDriver")) {
     rec("Check 05: App: range +10 NOK in A (B unchanged); fill dialog", FAIL, paste("start error:", app))
+    audit_browser_stop()
   } else {
-    on.exit(try(app$stop(), silent = TRUE), add = TRUE)
     js <- function(code) tryCatch(app$get_js(code), error = function(e) NA)
     scen <- function(side) {
       f <- app$get_download(paste0("dl_scen_", side))
@@ -228,6 +229,7 @@ if (!browser_ok) {
         if (!is.null(res$err)) paste("error:", res$err)
         else sprintf("changed idx %s by %s; A range +10 correct (%d cells): %s | B unchanged: %s | fill cell 777 + 5 = 782 and empty cells kept: %s | field value and mode kept after Apply and a row button: %s",
                      res$diff, res$d, res$n, res$chg, res$b, res$fill, res$kept))
+    audit_browser_stop(app)
   }
 }
 

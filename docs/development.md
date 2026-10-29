@@ -350,6 +350,23 @@ not set), so the processes do not oversubscribe the cores. Logs: `outputs/audit_
 (gitignored). During a phase run only the affected audits; run the full suite once
 before asking for a merge.
 
+**Browser audits (17 and 29): own Chrome, always closed.** Each audit process
+starts its own headless Chrome with a private, throw-away profile
+(`audit_browser_start()` in `R/helpers_audit.R`; chromote's random debugging port)
+instead of the default Chrome profile, which the user's own browser, leftover
+headless Chromes and a parallel audit or session would share and lock. Starting
+the app retries once on a fresh Chrome (`audit_app_driver()`). The Chrome and the
+profile are closed on every exit path (`audit_browser_stop()`: `finally`, and at
+R exit for a halted script): only the Chrome process this audit started, through
+the handle chromote holds, never by process name, command line or port. An
+uncaught driver error (for example a dropped Chrome connection) fails the checks
+not yet run, with the error text, and the audit still writes its outputs. Audit
+17 takes every screenshot through one function (`shoot()`), probes one right after
+the start, and **fails** (check 22, and 22b for the Norsk session) if any
+screenshot is missing, with the first error message. `run_audits.R` reports
+orphaned headless Chromes from earlier runs (PIDs and a `taskkill` hint) but never
+kills them, and kills the process trees of its own children if interrupted.
+
 **Prerequisites**
 
 ```r

@@ -134,8 +134,10 @@
 # 21.  Tree list (Phase 5): upload the template -> validation panel lists 12
 #      trees and the height methods; Run -> the FinnHoyde height banner shows
 #      and the Trees table has a "Height source" column; no error notifications
-# 22.  Screenshots (31) of both tabs, the results and the comparisons saved to
-#      outputs/app_smoke/review/audit17/ (for review; gitignored, cleared by each run)
+# 22.  Screenshots of both tabs, the results and the comparisons saved to
+#      outputs/app_smoke/review/audit17/ (for review; gitignored, cleared by each
+#      run). FAIL if any attempted screenshot is missing (the count is the number
+#      of shoot() calls made); 22b: the same for the Norsk session
 # 23.  Total browser runtime under 300 s (REVIEW if above)
 # 24.  Scenario B's assortments (Phase 4d): a B rule change (spruce sawlog
 #      min top 14 cm) is highlighted on both sides; an assortment added to B
@@ -544,7 +546,7 @@ browser_checks <- c(
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
-} else {
+} else tryCatch({
   section("05-23. Browser checks")
   txt <- function(app, sel)
     tryCatch(paste(app$get_text(sel), collapse = " "), error = function(e) "")
@@ -568,12 +570,43 @@ if (!browser_ok) {
     id, jsonlite::toJSON(label, auto_unbox = TRUE)))
   shot_dir <- file.path(out_dir, "review", "audit17")   # gitignored; only this subfolder is cleared
   unlink(shot_dir, recursive = TRUE); ensure_dir(shot_dir)
+  # The only screenshot path (2026-10-29). A shot is rendered to a local temp
+  # file, then copied into shot_dir (created again if it vanished; one retry
+  # after 2 s). A failure keeps its error text; check 22 fails if any shot
+  # was attempted and is missing. Norsk-session shots (prefix no_) count apart.
   shots <- character(0)
-  shoot <- function(app, name) {
-    f <- file.path(shot_dir, paste0(name, ".png"))
-    ok <- tryCatch({ app$get_screenshot(f); file.exists(f) }, error = function(e) FALSE)
-    if (ok) shots <<- c(shots, f)
+  shot_state <- new.env()
+  shot_state$attempted <- 0L; shot_state$errors <- character(0)
+  shot_state$attempted_no <- 0L; shot_state$errors_no <- character(0)
+  shoot <- function(app, name, dir = shot_dir, selector = NULL, norsk = FALSE) {
+    f <- file.path(dir, paste0(name, ".png"))
+    if (norsk) shot_state$attempted_no <- shot_state$attempted_no + 1L
+    else shot_state$attempted <- shot_state$attempted + 1L
+    tmp <- tempfile(fileext = ".png")
+    attempt <- function() tryCatch({
+      unlink(tmp)
+      if (is.null(selector)) app$get_screenshot(tmp) else app$get_screenshot(tmp, selector = selector)
+      if (!file.exists(tmp)) stop("the screenshot was not rendered")
+      dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+      if (!isTRUE(file.copy(tmp, f, overwrite = TRUE)) || !file.exists(f)) stop("could not write ", f)
+      ""
+    }, error = function(e) conditionMessage(e))
+    msg <- attempt()
+    if (nzchar(msg)) { Sys.sleep(2); msg <- attempt() }
+    unlink(tmp)
+    if (nzchar(msg)) {
+      msg <- sprintf("%s: %s", name, gsub("\\s+", " ", msg))
+      if (norsk) shot_state$errors_no <- c(shot_state$errors_no, msg)
+      else shot_state$errors <- c(shot_state$errors, msg)
+      return(invisible(FALSE))
+    }
+    if (!norsk) shots <<- c(shots, f)
+    invisible(TRUE)
   }
+  # "7 of 34 screenshots in <dir>; first error: ..." (check 22 and 22b)
+  shot_summary <- function(n_ok, n_all, errs, where)
+    sprintf("%d of %d screenshots in %s%s", n_ok, n_all, where,
+            if (length(errs)) paste0("; first error: ", errs[1L]) else "")
   # A's or B's prices as the app would download them (long CSV).
   dl_pm <- function(app, id) {
     f <- tryCatch(app$get_download(id), error = function(e) NULL)
@@ -608,18 +641,33 @@ if (!browser_ok) {
   # app starts in Norsk otherwise); checks 34-39 a second session in Norsk.
   Sys.setenv(APTER_LANG = "en")
   # chromote waits 10 s for Chrome by default; cold starts on the remote
-  # desktop can exceed that.
-  options(chromote.timeout = 60)
+  # desktop can exceed that. 30 s per attempt, and audit_app_driver() retries
+  # once on a fresh Chrome and profile (helpers_audit.R).
+  options(chromote.timeout = 30)
   t_browser <- proc.time()
-  app <- tryCatch(
-    shinytest2::AppDriver$new(app_dir, name = "audit17",
-                              load_timeout = 60 * 1000,
-                              timeout = 120 * 1000,
-                              width = 1400, height = 1000),
-    error = function(e) conditionMessage(e))
+  # Own Chrome profile and Chrome process, closed on every exit path: the
+  # finally of this tryCatch, and at R exit if the script halts first.
+  audit_browser_start()
+  app <- audit_app_driver(app_dir, name = "audit17",
+                          load_timeout = 60 * 1000,
+                          timeout = 120 * 1000,
+                          width = 1400, height = 1000)
   app_ok <- inherits(app, "AppDriver")
   rec(browser_checks[1], if (app_ok) PASS else FAIL,
       if (app_ok) "app started" else paste("start error:", app))
+  # Probe: one screenshot right after the start. If this fails, screenshots do
+  # not work in this run at all; say so now, with the message.
+  if (app_ok) {
+    app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
+    if (!isTRUE(shoot(app, "00_probe"))) {
+      rec("Check 05b: Screenshot probe right after the start", FAIL,
+          shot_summary(0L, 1L, shot_state$errors, shot_dir))
+    } else {
+      unlink(file.path(shot_dir, "00_probe.png"))
+      shots <- setdiff(shots, file.path(shot_dir, "00_probe.png"))
+      shot_state$attempted <- shot_state$attempted - 1L
+    }
+  }
   if (app_ok) {
     # Runs are background tasks (ExtendedTask): after the click, wait until
     # no task is running and Run is enabled again.
@@ -694,11 +742,7 @@ if (!browser_ok) {
       " return [i.complete && i.naturalWidth > 0 ? 1 : 0, Math.round(ri.height), Math.round(rb.height),",
       " Math.round(rn.height), Math.round(Math.abs((ri.top + ri.height / 2) - (rb.top + rb.height / 2))),",
       " i.getAttribute('height'), Math.round(ri.width)].join(','); })()"))
-    shot_nav <- function(app, name) {
-      f <- file.path(shot_dir, paste0(name, ".png"))
-      ok <- tryCatch({ app$get_screenshot(f, selector = ".navbar"); file.exists(f) }, error = function(e) FALSE)
-      if (ok) shots <<- c(shots, f)
-    }
+    shot_nav <- function(app, name) shoot(app, name, selector = ".navbar")
     e6 <- try_drv({ app$set_window_size(width = 1920, height = 1000); app$wait_for_idle() })
     g1920 <- strsplit(as.character(geom(app)), ",")[[1]]
     shot_nav(app, "00a_navbar_1920")
@@ -1129,8 +1173,7 @@ if (!browser_ok) {
       app$set_inputs(tally_scenario = "A", wait_ = FALSE); app$wait_for_idle()
       c27$len2 <- figs(app, "fig_log_lengths")   # A above B
       c27$len2_h <- js(app, "document.querySelector('#fig_log_lengths').offsetHeight")
-      p2 <- shot_dir
-      try(app$get_screenshot(file.path(p2, "phase2_02_logs_tab_comparison.png")), silent = TRUE)
+      shoot(app, "phase2_02_logs_tab_comparison")
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c27$trees2 <- figs(app, c("fig_distributions", "fig_dbh_class"))
     })
@@ -1705,9 +1748,8 @@ if (!browser_ok) {
       c40$stems <- js(app, paste0("Array.from(document.querySelectorAll('#hs_species_ui tbody tr'))",
                                   ".map(function(r){ return r.children[1].innerText.trim(); }).join(',')"))
       c40$counts <- txt(app, "#tree_counts")
-      p40 <- shot_dir
       app$run_js("window.scrollTo(0, 0);")
-      try(app$get_screenshot(file.path(p40, "phase2_01_hpr_two_files_panel.png")), silent = TRUE)
+      shoot(app, "phase2_01_hpr_two_files_panel")
       run(app)
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
       c40$cmp <- compared_now(app)
@@ -1756,7 +1798,7 @@ if (!browser_ok) {
                                    "return document.getElementById(id).closest('.checkbox, .form-check').innerText.trim(); }).join(' | ')"))
       app$set_inputs(grade_use_a = TRUE, grade_cut_a = TRUE, wait_ = FALSE); app$wait_for_idle()
       app$run_js("document.getElementById('grade_use_a').scrollIntoView({block: 'center'});")
-      try(app$get_screenshot(file.path(shot_dir, "phase6_01_grade_options.png")), silent = TRUE)
+      shoot(app, "phase6_01_grade_options")
       app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(hs_upload = fx41)
       app$wait_for_js("document.querySelector('#hs_validation') && /5 stems read/.test(document.querySelector('#hs_validation').innerText)",
@@ -1767,7 +1809,7 @@ if (!browser_ok) {
       c41$cmp <- compared_now(app)
       c41$summary <- txt(app, "#summary_cards")
       c41$changed <- suppressWarnings(as.integer(sub("(?s).*Changed stems\\s*([0-9]+).*", "\\1", c41$summary, perl = TRUE)))
-      try(app$get_screenshot(file.path(shot_dir, "phase6_02_grades_comparison.png")), silent = TRUE)
+      shoot(app, "phase6_02_grades_comparison")
       c41$nerr <- n_err_notif(app)
       # Copy from A: B's boxes become A's.
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
@@ -1802,8 +1844,9 @@ if (!browser_ok) {
                 basename(or_default(c30$path, "(none)")), c30$during,
                 if (isTRUE(c30$after_file)) "still there" else "deleted",
                 if (isTRUE(c30$after_dir)) "still there" else "deleted", err_txt(e30)))
-    rec(browser_checks[18], if (length(shots) == 31L) PASS else REVIEW,
-        sprintf("%d of 31 screenshots in %s", length(shots), shot_dir))
+    rec(browser_checks[18],
+        if (shot_state$attempted > 0L && length(shots) == shot_state$attempted) PASS else FAIL,
+        shot_summary(length(shots), shot_state$attempted, shot_state$errors, shot_dir))
     try(app$stop(), silent = TRUE)
     t_el_en <- as.numeric((proc.time() - t_browser)["elapsed"])
 
@@ -1835,12 +1878,10 @@ if (!browser_ok) {
     vis_text <- function(app, sel = "body") js(app, sprintf(
       "(function(){ var e = document.querySelector('%s'); return e ? e.innerText : ''; })()", sel))
     lang_dir <- shot_dir
-    lshot <- function(app, name) try(app$get_screenshot(file.path(lang_dir, paste0("no_", name, ".png"))), silent = TRUE)
+    lshot <- function(app, name) shoot(app, paste0("no_", name), dir = lang_dir, norsk = TRUE)
     t_no <- proc.time()
-    appn <- tryCatch(
-      shinytest2::AppDriver$new(app_dir, name = "audit17_no", load_timeout = 60 * 1000,
-                                timeout = 120 * 1000, width = 1400, height = 1000),
-      error = function(e) conditionMessage(e))
+    appn <- audit_app_driver(app_dir, name = "audit17_no", load_timeout = 60 * 1000,
+                             timeout = 120 * 1000, width = 1400, height = 1000)
     if (!inherits(appn, "AppDriver")) {
       for (ck in browser_checks[30:35]) rec(ck, FAIL, paste("Norsk session did not start:", appn))
     } else {
@@ -2070,15 +2111,32 @@ if (!browser_ok) {
                   identical(digits(c39$no), digits(c39$en)), substr(gsub("\\s+", " ", or_default(c39$en, "")), 1, 80),
                   c39$tabs_en, c39$flat_b, c39$msg, c39$stored, c39$after_reload, c39$nav_reload, t_el_no, err_txt(e39)))
       try(app$stop(), silent = TRUE)
+      n_shots_no <- shot_state$attempted_no - length(shot_state$errors_no)
+      rec("Check 22b: Screenshots saved for review (Norsk session)",
+          if (shot_state$attempted_no > 0L && length(shot_state$errors_no) == 0L) PASS else FAIL,
+          shot_summary(n_shots_no, shot_state$attempted_no, shot_state$errors_no, lang_dir))
     }
   } else {
-    for (ck in browser_checks[c(2:18, 20:35)]) rec(ck, FAIL, "skipped: app did not start")
+    # every browser check except 05 (recorded above) and the runtime (recorded below)
+    for (ck in browser_checks[setdiff(seq_along(browser_checks), c(1L, 19L))])
+      rec(ck, FAIL, "skipped: app did not start")
   }
   # 23. runtime (the English session; the Norsk session has its own, check 39)
   t_el <- if (exists("t_el_en")) t_el_en else as.numeric((proc.time() - t_browser)["elapsed"])
   rec(browser_checks[19], if (t_el < 300) PASS else REVIEW,
       sprintf("browser checks took %.1f s (threshold: 300 s)", t_el))
-}
+}, error = function(e) {
+  # An uncaught driver error (Chrome's connection dropped, a timeout outside
+  # try_drv()): every check not recorded yet fails with the error text, and the
+  # audit still writes its outputs below.
+  msg <- gsub("\\s+", " ", conditionMessage(e))
+  cat("\nBrowser section aborted:", msg, "\n", file = audit_txt, append = TRUE)
+  todo <- setdiff(c(browser_checks, "Check 22b: Screenshots saved for review (Norsk session)"), E$results$check)
+  for (ck in todo)
+    rec(ck, FAIL, paste("not run: the browser section aborted:", substr(msg, 1L, 300L)))
+}, finally = {
+  audit_browser_stop(if (exists("app", inherits = FALSE) && inherits(app, "AppDriver")) app else list())
+})
 # ==============================================================================
 # Verdict and output
 # ==============================================================================
