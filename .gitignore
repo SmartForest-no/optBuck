@@ -78,3 +78,6 @@ docs/design_reference/
 
 # ── Logs of scripts/run_audits.R ───────────────────────────────────────────────
 outputs/audit_runs/
+
+# Roadmap 7 preparation: timing and product-class tables (local output)
+outputs/roadmap7/
