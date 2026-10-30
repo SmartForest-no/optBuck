@@ -13,12 +13,14 @@
 # Output  : outputs/roadmap7/tune_summary.csv, tune_trace_R<k>.csv,
 #           fg_trace.png (FG on the sample against iteration, one line per run)
 #
-# Usage   : Rscript scripts/roadmap7_tune.R [folder] [runs, e.g. 1,2,10]
+# Usage   : Rscript scripts/roadmap7_tune.R [folder] [runs, e.g. R2,R10,R8b]
+#           (without runs: R1-R10 and the early_stop = FALSE runs R2b, R4b, R5b, R8b, R8c;
+#           with runs, the summary and plot get the suffix _extra)
 # ==============================================================================
 
 args <- commandArgs(TRUE)
 folder <- if (length(args) >= 1L) args[1L] else "C:/apter_private/hpr"
-only   <- if (length(args) >= 2L) as.integer(strsplit(args[2L], ",", fixed = TRUE)[[1L]]) else NULL
+only   <- if (length(args) >= 2L) strsplit(args[2L], ",", fixed = TRUE)[[1L]] else NULL
 root <- local({
   d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
@@ -43,8 +45,14 @@ runs <- data.frame(
   pattern = c("140.*sca", "140.*sca", "140.*sca", "140.*sca", "140.*sca", "sag - REDACTED37",
               "sag - REDACTED37", "sag - REDACTED48", "REDACTED23", "140.*sca"),
   target = c("real", "real", "real", "neutral", "long", "neutral", "long", "neutral", "neutral", "real"),
-  n = c(rep(1000, 9), Inf), stringsAsFactors = FALSE)
-if (!is.null(only)) runs <- runs[runs$run %in% paste0("R", only), ]
+  n = c(rep(1000, 9), Inf), early_stop = TRUE, stringsAsFactors = FALSE)
+# early_stop = FALSE: always 30 iterations (R2b, R4b, R5b, R8b = R2, R4, R5, R8 without the stop rule;
+# R8c = R8b on all stems)
+runs <- rbind(runs, within(runs[match(c("R2", "R4", "R5", "R8", "R8"), runs$run), ], {
+  run <- c("R2b", "R4b", "R5b", "R8b", "R8c"); early_stop <- FALSE; n <- c(1000, 1000, 1000, 1000, Inf) }))
+if (!is.null(only)) runs <- runs[runs$run %in% only, ]
+suffix <- if (is.null(only)) "" else "_extra"
+fg_at <- function(tr, k) if (k <= nrow(tr)) round(tr$fg[k], 2) else NA_real_
 
 total_value <- function(res) sum(res$tree_summary$total_value_nok)
 sawlog_volume <- function(res) { sl <- res$selected_logs_all
@@ -83,7 +91,7 @@ for (fi in unique(runs$file)) {
     hpr <- hpr_tuning_info(dst, hk)
     cat(sprintf("\n-- %s: %s %s (%s), target %s, n = %s --\n", R$run, fl, pd$ProductName[match(key, pd$ProductKey)],
                 key, R$target, R$n))
-    t_run <- system.time(tu <- tune_prices(job, products, key, R$target, n = R$n, seed = 1, max_iter = 30, hpr = hpr))[["elapsed"]]
+    t_run <- system.time(tu <- tune_prices(job, products, key, R$target, n = R$n, seed = 1, max_iter = 30, hpr = hpr, early_stop = R$early_stop))[["elapsed"]]
     print(round(tu$trace, 2), row.names = FALSE)
     g <- tu$grid; W <- tu$W; P1 <- tu$P_first; Pb <- tu$best_price; basis <- tu$settings$basis
 
@@ -100,7 +108,10 @@ for (fi in unique(runs$file)) {
       basis = basis, n = if (is.finite(R$n)) R$n else tu$settings$stems,
       fg_sample_first = round(tr$fg[1L], 2), fg_sample_best = round(tr$fg[tu$best_iter], 2),
       fg_all_original = round(fg0, 2), fg_all_tuned = round(fgt, 2),
-      best_iter = tu$best_iter, iterations = nrow(tr),
+      best_iter = tu$best_iter, iterations = nrow(tr), early_stop = R$early_stop,
+      fg_it5 = fg_at(tr, 5L), fg_it10 = fg_at(tr, 10L), fg_it20 = fg_at(tr, 20L), fg_it30 = fg_at(tr, 30L),
+      product_logs_sample = tu$logs_first, product_logs_all = sum(tal0$n),
+      eligible_classes = sum(tu$eligible), target_classes = sum(colSums(!is.na(tu$W)) > 0),
       value_orig_all = round(v0), value_tuned_at_orig_prices = round(vt), value_change_pct = round(100 * (vt - v0) / v0, 2),
       product_volume_orig = round(sum(tal0$v), 1), product_volume_tuned = round(sum(tal_t$v), 1),
       sawlog_volume_orig = round(sawlog_volume(res0), 1), sawlog_volume_tuned = round(sawlog_volume(res_t), 1),
@@ -118,10 +129,10 @@ for (fi in unique(runs$file)) {
 }
 
 sm <- do.call(rbind, summary_rows); rownames(sm) <- NULL
-show(sm, "tune_summary", "Tuning runs R1-R10")
+show(sm, paste0("tune_summary", suffix), "Tuning runs")
 
 # ---- plot ------------------------------------------------------------------------
-grDevices::png(file.path(out_dir, "fg_trace.png"), width = 1000, height = 650, res = 120)
+grDevices::png(file.path(out_dir, paste0("fg_trace", suffix, ".png")), width = 1000, height = 650, res = 120)
 yr <- range(unlist(lapply(traces, function(x) x$fg)), na.rm = TRUE)
 xr <- c(1, max(vapply(traces, nrow, 0L)))
 cols <- grDevices::hcl.colors(max(3L, length(traces)), "Dark 3")

@@ -254,14 +254,17 @@ update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
 #' r = 1 bucks a sample of the job's stems with the original prices; each
 #' further iteration updates the prices (update_prices()), swaps them into the
 #' job and bucks the same sample again. Stops at max_iter, or when r >= 4 and
-#' the best FG up to r exceeds the best up to r - 3 by less than 0.1. Returns
-#' the iteration with the highest FG (on `basis`).
+#' the best FG up to r exceeds the best up to r - 3 by less than 0.1 (only if
+#' `early_stop`; with FALSE it always runs max_iter iterations). Returns the
+#' iteration with the highest FG (on `basis`).
 #'
 #' @param job A hpr job (prepare_hpr_stems_job()).
 #' @param products list(pd, lc, pm) the job was prepared with.
 #' @param hpr Passed to tuning_grid() (the file's classes and Distribution).
 #' @param basis "number" or "volume"; NULL: "volume" when target_type is "real"
 #'   and the product's DistributionCategory is "Volume of logs", else "number".
+#' @param early_stop TRUE (default): the stop rule above; FALSE: always max_iter
+#'   iterations.
 #' @param min_logs A diameter class is steered only if its first run has at
 #'   least this many logs (counts, whatever the basis).
 #' @return list(best_price, best_iter, trace, eligible, fg_class_first,
@@ -269,7 +272,7 @@ update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
 #'   steered (cells), cells_at_floor_best, P_first, prices (by iteration)).
 tune_prices <- function(job, products, product_id, target_type, distribution = NULL,
                         n = 1000, seed = 1, max_iter = 30, min_logs = 20, basis = NULL,
-                        hpr = NULL, workers = apter_workers()) {
+                        hpr = NULL, workers = apter_workers(), early_stop = TRUE) {
   grid <- tuning_grid(products, product_id, hpr)
   W <- tuning_target(grid, target_type, distribution)
   if (is.null(basis)) basis <- if (target_type == "real" && grid$basis_default == "volume") "volume" else "number"
@@ -282,7 +285,7 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
 
   cur <- products; P <- P1
   prices <- list(); trace <- list(); S_prev <- NULL
-  V1 <- NULL; eligible <- NULL; fg1 <- NULL; fg_hist <- numeric(0); fgs <- list()
+  V1 <- NULL; eligible <- NULL; logs_first <- NA_integer_; fg1 <- NULL; fg_hist <- numeric(0); fgs <- list()
   for (r in seq_len(max_iter)) {
     t0 <- proc.time()[["elapsed"]]
     if (r > 1L) job_s <- swap_job_prices(job_s, cur)
@@ -298,7 +301,7 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
       if (abs(val_prod - v_one) > 0.5)
         stop(sprintf("value check failed on iteration 1: the product's value in the result is %.3f NOK, sum(V*P1) is %.3f NOK (difference %.3f).",
                      val_prod, v_one, val_prod - v_one), call. = FALSE)
-      V1 <- tal$v
+      V1 <- tal$v; logs_first <- sum(tal$n)
       eligible <- colSums(tal$n) >= min_logs & colSums(!is.na(W)) > 0
       fg1 <- f_b$by_class
     }
@@ -311,7 +314,7 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
     prices[[r]] <- P; fgs[[r]] <- f_b$by_class
     fg_hist <- c(fg_hist, f_b$overall)
     best_r <- which.max(fg_hist)
-    if (r >= 4L && max(fg_hist) - max(fg_hist[seq_len(r - 3L)]) < 0.1) { trace[[r]]$elapsed_s <- proc.time()[["elapsed"]] - t0; break }
+    if (early_stop && r >= 4L && max(fg_hist) - max(fg_hist[seq_len(r - 3L)]) < 0.1) { trace[[r]]$elapsed_s <- proc.time()[["elapsed"]] - t0; break }
     if (r == max_iter) { trace[[r]]$elapsed_s <- proc.time()[["elapsed"]] - t0; break }
     Pn <- update_prices(P, P1, f_b$S, S_prev, W, r, eligible, floor_m, tal$v, V1)
     S_prev <- f_b$S
@@ -327,7 +330,7 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
   list(best_price = Pb, best_iter = best, trace = trace, eligible = setNames(eligible, colnames(P1)),
        fg_class_first = fg1, fg_class_best = fgs[[best]],
        settings = list(product_id = product_id, target_type = target_type, basis = basis, n = n,
-                       sample_size = length(idx), stems = N, seed = seed, max_iter = max_iter, min_logs = min_logs),
+                       sample_size = length(idx), stems = N, seed = seed, max_iter = max_iter, min_logs = min_logs, early_stop = early_stop),
        grid = grid, W = W, floor = c(fl, list(matrix = floor_m)), steered = sum(steer),
-       cells_at_floor_best = sum(at_floor), P_first = P1, prices = prices)
+       cells_at_floor_best = sum(at_floor), P_first = P1, prices = prices, logs_first = logs_first)
 }
