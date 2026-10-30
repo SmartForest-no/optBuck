@@ -39,7 +39,7 @@
 #           count_eligible_plots() matches a direct filter; a plot with
 #           missing altitude (synthetic) counts at the full range only
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
-#  6.  Layout: two tabs, "Assortments and prices" first and open, then
+#  6.  Layout: three tabs, "Assortments and prices" first and open, then
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
 #      release footer; no striped bar (removed in the restyle, option 3
 #      "Combination"); the look's main colours, read from the browser: light grey
@@ -543,7 +543,8 @@ browser_checks <- c(
   "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime",
   "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names",
   "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes",
-  "Check 42: Import .hpr/.pin: a .pin imported into Scenario A (button and title say .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates")
+  "Check 42: Import .hpr/.pin: a .pin imported into Scenario A (button and title say .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
+  "Check 43: Price tuning tab: message without .hpr stems; with the tuning fixture a tuning with two iterations gives the table, plot and price-change table; Use tuned prices in the other scenario copies the tuned prices")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -638,6 +639,8 @@ if (!browser_ok) {
   Sys.setenv(NOT_CRAN = "true")
   # NFI runs sample 5 plots instead of all (setup.R), to keep the audit short.
   Sys.setenv(APTER_N_PLOTS = "5")
+  # The Price tuning tab runs 2 iterations (test-only, app/setup.R).
+  Sys.setenv(APTER_TUNE_MAX_ITER = "2")
   # Checks 05-33 drive the English page (test-only APTER_LANG, setup.R; the
   # app starts in Norsk otherwise); checks 34-39 a second session in Norsk.
   Sys.setenv(APTER_LANG = "en")
@@ -760,7 +763,7 @@ if (!browser_ok) {
     # collapsed menu or at most icon height).
     narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
     logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
-    ok6 <- identical(tabs, "Assortments and prices|Simulator") &&
+    ok6 <- identical(tabs, "Assortments and prices|Simulator|Price tuning") &&
       identical(active, "Assortments and prices") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
@@ -1868,6 +1871,71 @@ if (!browser_ok) {
                 substr(or_default(c42$a_rows, ""), 1, 120), identical(c42$b_after, c42$b_before),
                 identical(c42$kept_after, c42$kept_before), nchar(or_default(c42$pin, "")),
                 grepl("<ProductInstruction", or_default(c42$pin, ""), fixed = TRUE), c42$nerr, err_txt(e42)))
+    # 43. Price tuning tab (roadmap 7, session 3): without .hpr stems only the
+    # message; with the invented tuning fixture (120 spruce stems) as the stem
+    # source and its products imported into A, tune spruce 140 SCA with the
+    # even target for two iterations (APTER_TUNE_MAX_ITER); table, plot and
+    # price-change table appear; Use tuned prices in scenario B replaces B with
+    # A's assortments and the tuned prices.
+    c43 <- list(msg = "", extra = NA_integer_, targets = "", rows = "", cols = "", price_cells = 0L, use = "", q = "",
+                open = NA_integer_, cells = 0L, equal = FALSE, changed = 0L, nerr = NA_integer_)
+    e43 <- try_drv({
+      fx43 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+      key43 <- "spruce_140_sca_sagt_mmer"
+      app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
+      c43$msg <- txt(app, "#tn_main")
+      c43$extra <- js(app, "document.querySelectorAll('#tn_main select, #tn_main input, #tn_run').length")
+      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tree_source = "hpr", wait_ = FALSE); app$wait_for_idle()
+      app$upload_file(hs_upload = fx43)
+      app$wait_for_js("document.querySelector('#hs_validation') && /120 stems read/.test(document.querySelector('#hs_validation').innerText)",
+                      timeout = 90 * 1000)
+      app$wait_for_idle()
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      app$click("hpr_import_a"); app$wait_for_idle()
+      app$upload_file(hpr_file = fx43); app$wait_for_idle()
+      app$click("hpr_apply"); app$wait_for_idle()
+      app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
+      app$wait_for_js("!!document.getElementById('tn_product')", timeout = 30 * 1000)
+      app$set_inputs(tn_side = "A", tn_product = key43, wait_ = FALSE); app$wait_for_idle()
+      c43$targets <- js(app, "Array.from(document.querySelectorAll('input[name=tn_target]')).map(function(e){ return e.value; }).join(',')")
+      app$set_inputs(tn_target = "neutral", wait_ = FALSE); app$wait_for_idle()
+      app$click("tn_run")
+      app$wait_for_js("!!document.querySelector('#tn_tbl .rt-tr') && !!document.querySelector('#tn_price_tbl .rt-tr') && !!document.querySelector('#tn_plot img')",
+                      timeout = 240 * 1000)
+      app$wait_for_idle()
+      c43$rows <- js(app, "Array.from(document.querySelectorAll('#tn_tbl .rt-tbody .rt-tr')).map(function(r){ return r.innerText.replace(/\\s+/g, ' ').trim(); }).join(' | ')")
+      c43$cols <- headers_of(app, "tn_tbl")
+      c43$price_cells <- js(app, "Array.from(document.querySelectorAll('#tn_price_tbl .rt-tbody .rt-td')).filter(function(c){ return /^-?[0-9]+$/.test(c.innerText.trim()); }).length")
+      c43$use <- trimws(txt(app, "#tn_use"))
+      shoot(app, "tuning_01_after_tuning")
+      tn <- app$get_values(export = TRUE)$export$tn_test
+      app$click("tn_use"); app$wait_for_idle()
+      c43$q <- txt(app, ".modal-title")
+      app$click("tn_use_ok"); app$wait_for_idle()
+      c43$open <- js(app, "document.querySelectorAll('.modal.show').length")
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      b43 <- pm_minimal(scen_of(app, "b")$pm); a43 <- pm_minimal(scen_of(app, "a")$pm)
+      b43 <- b43[b43$ProductKey == key43 & !is.na(b43$LengthClass_dm), ]; a43 <- a43[a43$ProductKey == key43 & !is.na(a43$LengthClass_dm), ]
+      li <- match(b43$LengthClass_dm, tn$lengths); ci <- match(tn$cm_map[as.character(b43$PriceDiameterClass_cm)], tn$diam_classes)
+      want <- tn$best_price[cbind(li, ci)]
+      c43$cells <- nrow(b43)
+      c43$equal <- nrow(b43) > 0L && all(abs(b43$PriceNOKperM3 - want) < 1e-6, na.rm = TRUE) && !anyNA(want)
+      c43$changed <- sum(abs(b43$PriceNOKperM3 - a43$PriceNOKperM3[match(paste(b43$LengthClass_dm, b43$PriceDiameterClass_cm), paste(a43$LengthClass_dm, a43$PriceDiameterClass_cm))]) > 1e-9, na.rm = TRUE)
+      c43$nerr <- n_err_notif(app)
+    })
+    ok43 <- !nzchar(e43) && identical(trimws(c43$msg), "Price tuning needs .hpr stems as tree source.") && identical(c43$extra, 0L) &&
+      identical(c43$targets, "real,neutral,long") && c43$price_cells >= 1L &&
+      grepl("Fordelingsgrad \\(%\\)", c43$rows) && grepl("Value at original prices \\(NOK\\)", c43$rows) &&
+      grepl("Product volume", c43$rows, fixed = TRUE) && grepl("Sawlog volume", c43$rows, fixed = TRUE) &&
+      identical(c43$cols, "|Original prices|Tuned prices|Change") && identical(c43$use, "Use tuned prices in scenario B") &&
+      grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&
+      isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
+    rec(browser_checks[length(browser_checks)], if (ok43) PASS else FAIL,
+        sprintf("message '%s' (inputs %s) | targets %s | rows: %s | columns '%s' | price-change cells %s | button '%s' | dialog '%s', open after OK %s | B cells %s equal to the tuned prices %s, changed against A %s | error notifications %s%s",
+                c43$msg, c43$extra, c43$targets, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$price_cells,
+                c43$use, c43$q, c43$open, c43$cells, c43$equal, c43$changed, c43$nerr, err_txt(e43)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.
@@ -1955,11 +2023,11 @@ if (!browser_ok) {
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
         c34$marker <- js(app, "window.__apter17 === 1")
       })
-      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "Sortiment og priser|Simulator") &&
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "Sortiment og priser|Simulator|Pristilpasning") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
         grepl("^Sortiment\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
         grepl("Sagtømmer;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
-        identical(c34$state_en, "en|en") && identical(c34$nav_en, "Assortments and prices|Simulator") &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "Assortments and prices|Simulator|Price tuning") &&
         identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
@@ -2147,7 +2215,7 @@ if (!browser_ok) {
         identical(c39$flat_b, "420") &&
         grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
         identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
-        identical(c39$nav_reload, "Assortments and prices|Simulator")
+        identical(c39$nav_reload, "Assortments and prices|Simulator|Price tuning")
       t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
       rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
           sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",

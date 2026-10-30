@@ -292,6 +292,7 @@ server <- function(input, output, session) {
 
   # ---- Assortments and prices (server_scenarios.R) ---------------------------
   sc <- scenario_server(input, output, session, lang)
+  tuning_server(input, output, session, lang, sc, hs_stems, hs_map)
 
 
   # ---- Runs as background tasks (helpers_jobs.R) ---------------------------

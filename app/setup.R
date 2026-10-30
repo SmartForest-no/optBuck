@@ -24,6 +24,9 @@ APP_DEFS       <- defs_from_products(APP_PRODUCTS)
 # APTER_N_PLOTS samples that many plots instead (seed 42; audit 17 runs with 5).
 APP_N_PLOTS <- suppressWarnings(as.integer(Sys.getenv("APTER_N_PLOTS")))   # NA = all plots
 APP_SEED    <- 42L
+# Test-only: the number of tuning iterations of the Price tuning tab (audit 17).
+if (nzchar(Sys.getenv("APTER_TUNE_MAX_ITER")))
+  options(apter.tune_max_iter = as.integer(Sys.getenv("APTER_TUNE_MAX_ITER")))
 
 # The NFI trees with the columns select_nfi_trees() (R/helpers_tree_selection.R)
 # needs: the sidebar's live tree counts use the run's own selection code.

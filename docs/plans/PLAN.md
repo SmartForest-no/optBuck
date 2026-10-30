@@ -262,6 +262,13 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 6. **Tests.** Audit 31 (10 checks, variants of the synthetic fixture with invented coordinates and private data), audit 17 checks 14 and 31. Real file (148.7 MB, 10,200 bucked stems): export 55 s, 124 MB, process peak 371 MB; re-import gives the same stems and logs, `m3 (price)` within 2.4e-4 m3 of 2,281 m3 (rounding), StemGrade identical (local benchmark, not committed).
 7. **Known limitation.** "Top cylinder" is written as "Top" (StanForD has no cylinder rule).
 
+## Roadmap 7, session 3: Price tuning tab (done, 2026-10-30, branch `roadmap7-tab`)
+
+1. **What.** A "Price tuning" tab after the Simulator (see CLAUDE.md, "Price tuning tab"): tune one sawlog product of Scenario A or B on the .hpr stems and use the tuned prices in the other scenario.
+2. **Needed first.** The hidden price-matrix column `FileDiameterClass_mm` (the file class lower limit of each whole-cm row), because the app has no file to read the classes from.
+3. **Blocking.** The tuning runs synchronously in the main process (deployment, roadmap item 9).
+4. **Tests.** Audit 33 (checks 9-12), audit 34 (checks 09-12), audit 17 check 43.
+
 ## Roadmap Phase 7a: distribution (target matrix) from .hpr and .pin (done, 2026-10-30, branch `distribution-import`)
 
 1. **What.** The target distribution of imported products is read, kept and written back. It is not used by runs: no change to bucking results, no UI change (`performance_check.R` equals main).

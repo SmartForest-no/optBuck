@@ -47,9 +47,12 @@ Sys.setenv(APTER_ROOT = ROOT)
 source(file.path(ROOT, "scripts", "app_backend",
                  "01_run_sampled_plot_bucking.R"))
 
+# price tuning (roadmap 7; the Price tuning tab, app/tuning.R)
+source(file.path(ROOT, "R", "helpers_price_tuning.R"))
+
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
-             "helpers_upload.R", "helpers_jobs.R", "app_ui.R", "server_scenarios.R",
+             "helpers_upload.R", "helpers_jobs.R", "tuning.R", "app_ui.R", "server_scenarios.R",
              "app_server.R")) {
   source(file.path(APP_DIR, .f), local = TRUE)
 }

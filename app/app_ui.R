@@ -232,6 +232,7 @@ ui <- page_navbar(
   ),
   prices_page,
   simulator_page,
+  tuning_page,
   nav_spacer(),
   nav_item(lang_switch()),
   nav_item(div(class = "navbar-logo-item", navbar_logo()))

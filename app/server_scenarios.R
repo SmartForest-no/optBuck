@@ -468,15 +468,20 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
   observeEvent(input$asm_rm_one,  do_remove(FALSE))
   observeEvent(input$asm_rm_both, do_remove(TRUE))
 
+  # `side` becomes a copy of scenario `from`'s stem-grade boxes with these
+  # assortments and prices (Copy from A/B, and the Price tuning tab).
+  replace_scenario <- function(side, from, d, pm) {
+    if (commit(side, d, pm)) {
+      # The stem-grade checkboxes come along (they are part of the scenario).
+      for (n in c("grade_use_", "grade_cut_"))
+        updateCheckboxInput(session, paste0(n, low(side)), value = isTRUE(input[[paste0(n, low(from))]]))
+      redraw(); say(side, "ok", T_("msg_scen_copied", side, from))
+    }
+  }
   observeEvent(input$scen_copy_ok, {
     side <- scen_copying(); req(side); o <- other(side)
     removeModal(); scen_copying(NULL)
-    if (commit(side, defs(o), prices(o))) {
-      # The stem-grade checkboxes come along (they are part of the scenario).
-      for (n in c("grade_use_", "grade_cut_"))
-        updateCheckboxInput(session, paste0(n, low(side)), value = isTRUE(input[[paste0(n, low(o))]]))
-      redraw(); say(side, "ok", T_("msg_scen_copied", side, o))
-    }
+    replace_scenario(side, o, defs(o), prices(o))
   })
 
 
@@ -965,6 +970,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
        differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
+       replace_scenario = replace_scenario,
        hpr_file = hpr_kept,          # the session's last upload (not yet imported)
        hpr_imported = hpr_imported)  # the file imported into a scenario, with its species map
 }
