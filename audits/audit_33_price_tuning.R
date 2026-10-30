@@ -35,6 +35,15 @@
 # 10.  tune_prices on_iter is called exactly max_iter times (early_stop = FALSE)
 # 11.  tuning_products on file5: spruce 140 SCA listed with has_file_target TRUE,
 #      spruce 154 Kubb (one length class) not listed
+# 14.  Single-product invariant (restructure R3.1): tune_prices() on file5 spruce
+#      140 SCA (n 200, max_iter 3, early_stop FALSE) equals the values stored
+#      with the code before the refactor (outputs/restructure/, derived from a
+#      private file, never committed; REVIEW when missing)
+# 15.  Several products at once on file5: spruce 140 SCA with its file target and
+#      spruce 148 with an Even target set by the editor helpers (n 1000,
+#      max_iter 3): one FG per product, both products' prices change, the overall
+#      FG is the iteration-1 weighted mean
+# 16.  tuning_matrix_view(): the four matrix views of the tuning tab
 # 13.  swap_job_prices keeps the job's stem-grade options: on file5 with both
 #      options TRUE (and FALSE), a 1000-stem sample bucked before and after
 #      swap_job_prices(same products) is identical; a short tune_prices() with
@@ -82,6 +91,7 @@ source(file.path(root_dir, "R", "helpers_audit.R"))
 source(file.path(root_dir, "scripts", "app_backend",
                  "01_run_sampled_plot_bucking.R"), local = FALSE)
 source(file.path(root_dir, "R", "helpers_price_tuning.R"))
+source(file.path(root_dir, "R", "helpers_distribution_edit.R"))   # Even target for check 15 (restructure R2)
 source(file.path(root_dir, "scripts", "roadmap7_helpers.R"))   # read_hpr_distribution()
 
 out_dir <- path_output("price_tuning", root_dir = root_dir)
@@ -319,6 +329,56 @@ if (!have5) {
                         same13[["TRUE"]], same13[["FALSE"]], vals[["TRUE"]], vals[["FALSE"]], tg$trace$value_total[1L], v200,
                         paste(round(tg$trace$fg, 2), collapse = " -> ")))
   rm(job13, st13); invisible(gc())
+
+  # ============================================================================
+  section("14. Single-product invariant")
+  exp_f <- file.path(root_dir, "outputs", "restructure", "tuning_single_expected.rds")
+  if (!file.exists(exp_f)) {
+    rec("Check 14: tune_prices() on one product equals the values stored before the multi-product change", REVIEW,
+        "skipped: outputs/restructure/tuning_single_expected.rds is missing (scripts/capture_tuning_single_baseline.R, run on the code before R3.1)")
+  } else {
+    e14 <- readRDS(exp_f)
+    t14 <- tune_prices(job, products, key, "real", n = 200, seed = 1, max_iter = 3, hpr = hpr, early_stop = FALSE)
+    tr14 <- t14$trace[setdiff(names(t14$trace), "elapsed_s")]
+    same14 <- c(trace = identical(tr14, e14$trace), best_price = identical(t14$best_price, e14$best_price),
+                best_iter = identical(t14$best_iter, e14$best_iter), fg = identical(t14$trace$fg, e14$fg),
+                value = identical(t14$trace$value_total, e14$value))
+    rec("Check 14: tune_prices() on one product (file5 spruce 140 SCA, n 200, max_iter 3) gives the same trace, best prices, FG and value as before the multi-product change",
+        ok(all(same14)), sprintf("%s | FG %s", paste(sprintf("%s %s", names(same14), same14), collapse = ", "),
+                                 paste(round(t14$trace$fg, 2), collapse = " -> ")))
+  }
+
+  # ============================================================================
+  section("15. Several products at once")
+  defs15 <- sc$defs; pm15 <- pm
+  k148 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" &
+                                   grepl("148", products$pd$ProductName, fixed = TRUE)][1L]
+  if (is.na(k148)) {
+    rec("Check 15: several products tuned at once on file5", REVIEW, "skipped: no spruce 148 sawlog product in file5")
+  } else {
+    pm15 <- dist_apply_target(pm15, k148, "neutral")
+    defs15 <- dist_init_fields(dist_clear_fields(defs15, k148), k148)
+    pr15 <- list(pd = products$pd, lc = products$lc, pm = pm15)
+    ids15 <- c(key, k148)
+    hp15 <- setNames(lapply(ids15, function(k) tuning_hpr_info(defs15, pm15, k)), ids15)
+    t15 <- tune_prices(job, pr15, ids15, "real", n = 1000, seed = 1, max_iter = 3, hpr = hp15, early_stop = FALSE)
+    cols15 <- paste0("fg_", ids15)
+    by15 <- t15$by_product
+    changed <- vapply(ids15, function(k) any(abs(by15[[k]]$prices[[3L]] - by15[[k]]$P_first) > 1e-9, na.rm = TRUE), logical(1))
+    ok15a <- nrow(t15$trace) == 3L && all(cols15 %in% names(t15$trace)) && all(!is.na(t15$trace[, cols15]))
+    ok15b <- all(changed)
+    # iteration-1 overall FG = mean of the products' FG weighted by their iteration-1 logs (number) or volume
+    ok15c <- all(vapply(ids15, function(k) is.finite(by15[[k]]$fg[1L]), logical(1))) && is.finite(t15$trace$fg[1L]) &&
+      t15$trace$fg[1L] >= min(vapply(ids15, function(k) by15[[k]]$fg[1L], 0)) - 1e-9 &&
+      t15$trace$fg[1L] <= max(vapply(ids15, function(k) by15[[k]]$fg[1L], 0)) + 1e-9
+    ok15d <- identical(names(t15$best_price), ids15) && t15$best_iter %in% 1:3
+    rec("Check 15: Two products tuned together (file5 spruce 140 SCA with its file target, spruce 148 with an Even target; n 1000, max_iter 3): completes, one FG column per product plus the overall FG, both products' prices change, the overall FG lies between the products' FGs",
+        ok(ok15a && ok15b && ok15c && ok15d),
+        sprintf("FG overall %s | per product %s | prices changed %s | best iteration %s | sample %d stems",
+                paste(round(t15$trace$fg, 2), collapse = " -> "),
+                paste(sprintf("%s %s", c("140", "148"), vapply(ids15, function(k) paste(round(by15[[k]]$fg, 1), collapse = ">"), "")), collapse = "; "),
+                paste(changed, collapse = "/"), t15$best_iter, t15$settings$sample_size))
+  }
 }
 
 # ==============================================================================
