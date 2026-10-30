@@ -420,7 +420,7 @@ server <- function(input, output, session) {
       hx <- list(sources = data.frame(path = fl$path, name = fl$name, stringsAsFactors = FALSE),
                  species_by_name = sbn, defs = list(A = d, B = if (compare) b$defs))
     }
-    run_task$invoke(spec, list(hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
+    run_task$invoke(spec, list(scenario_names = list(A = sc$name("A"), B = sc$name("B")), hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
                                keys = list(A = assortment_table_keys(d),
                                            B = if (compare) assortment_table_keys(b$defs)),
                                state = sc$pm_state(), t_click = t_click))
@@ -430,6 +430,13 @@ server <- function(input, output, session) {
     if (run_rejected()) return(NULL)
     run_task$result()
   })
+  # The scenarios' names as they were when the run started (restructure R1.8);
+  # A and B before a run and for results without them.
+  nm <- function(side) {
+    r <- tryCatch(result(), error = function(e) NULL)
+    or_default(r$scenario_names[[side]], side)
+  }
+  nm_diff <- function() paste(nm("B"), "−", nm("A"))
   has_result <- reactive(input$run_btn > 0L && !task_busy() && !is.null(result()))
   compared   <- reactive(has_result() && !is.null(result()$scenario))
 
@@ -439,7 +446,7 @@ server <- function(input, output, session) {
   only_tag <- function(keys) {
     if (!compared()) return(rep("", length(keys)))
     k <- result()$keys
-    ifelse(!keys %in% k$B, L("tag_only", "A"), ifelse(!keys %in% k$A, L("tag_only", "B"), ""))
+    ifelse(!keys %in% k$B, L("tag_only", nm("A")), ifelse(!keys %in% k$A, L("tag_only", nm("B")), ""))
   }
 
   # B's run (the backend's $scenario), with its prices.
@@ -583,7 +590,7 @@ server <- function(input, output, session) {
         ro_field(L(if (isTRUE(is_hpr())) "lbl_changed_stems" else "lbl_changed_patterns"),
                  fmt_int(sum(cmp_trees()$changed)))),
       layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-                     scen(L("scenario_a"), r), scen(L("scenario_b"), result_b())))
+                     scen(L("scenario_x", nm("A")), r), scen(L("scenario_x", nm("B")), result_b())))
   })
 
 
@@ -617,7 +624,7 @@ server <- function(input, output, session) {
     # column's own title ("Value change (NOK)", "Verdiendring (kr)").
     ab <- function(id, id_change, a, b, digits, change = TRUE) {
       out <- list(round(a, digits), round(b, digits))
-      names(out) <- L(id, c("A", "B"))
+      names(out) <- L(id, c(nm("A"), nm("B")))
       if (change) out[[L(id_change)]] <- round(b - a, digits)
       out
     }
@@ -653,8 +660,8 @@ server <- function(input, output, session) {
                               round(x$delta_nok_per_m3, 1),
                               round(100 * x$volume_share_default, 1), round(100 * x$volume_share_scenario, 1),
                               round(100 * x$delta_volume_share, 1)),
-                         c(L("col_nok_per_m3_x", "A"), L("col_nok_per_m3_x", "B"), L("col_change_nok_m3"),
-                           L("col_volume_share_x_pct", "A"), L("col_volume_share_x_pct", "B"),
+                         c(L("col_nok_per_m3_x", nm("A")), L("col_nok_per_m3_x", nm("B")), L("col_change_nok_m3"),
+                           L("col_volume_share_x_pct", nm("A")), L("col_volume_share_x_pct", nm("B")),
                            L("col_change_pp")))
     cbind(out, as.data.frame(num, check.names = FALSE))
   }), page_size = 20L, lang = lang()))
@@ -670,7 +677,7 @@ server <- function(input, output, session) {
     ttl <- L("fig_nok_by_assortment"); xl <- L("unit_nok_m3")
     if (compared())
       return(apter_hbar_ab(x$contrib_a, x$contrib_b, asm_label(x$key), title = ttl, xlab = xl,
-                           fmt = fmt_nok1, lang = lang()))
+                           fmt = fmt_nok1, lang = lang(), names = c(nm("A"), nm("B"))))
     apter_hbar(x$contrib_a, asm_label(x$key), title = ttl, xlab = xl, fmt = fmt_nok1,
                col = APTER_CHART$series1, lang = lang())
   })
@@ -733,12 +740,12 @@ server <- function(input, output, session) {
     if (!compared()) return(t)
     a <- result()$tree_summary; b <- result_b()$tree_summary
     vb <- round(b$total_value_nok[match(tree_key(a), tree_key(b))], 2)
-    names(t)[names(t) == L("col_logs")] <- L("col_logs_x", "A")
-    names(t)[names(t) == L("col_commercial_volume_m3")] <- L("col_commercial_volume_x_m3", "A")
-    names(t)[names(t) == L("col_nok_per_m3")] <- L("col_nok_per_m3_x", "A")
+    names(t)[names(t) == L("col_logs")] <- L("col_logs_x", nm("A"))
+    names(t)[names(t) == L("col_commercial_volume_m3")] <- L("col_commercial_volume_x_m3", nm("A"))
+    names(t)[names(t) == L("col_nok_per_m3")] <- L("col_nok_per_m3_x", nm("A"))
     i <- match(L("col_value_nok"), names(t)); va <- t[[i]]
     v <- stats::setNames(data.frame(va, vb, round(vb - va, 2)),
-                         c(L("col_value_x_nok", "A"), L("col_value_x_nok", "B"), L("col_change_nok")))
+                         c(L("col_value_x_nok", nm("A")), L("col_value_x_nok", nm("B")), L("col_change_nok")))
     cbind(t[, seq_len(i - 1L), drop = FALSE], v, t[, -seq_len(i), drop = FALSE])
   })
   tree_sel <- paged_table_server(input, output, session, "tbl_trees", trees_df, page_size = 15L,
@@ -748,8 +755,8 @@ server <- function(input, output, session) {
     filename = function() L("file_trees"),
     content  = function(file) {
       sc_col <- function(x, s) cbind(stats::setNames(data.frame(s), L("col_scenario")), x)
-      t <- sc_col(readable_trees(result()), "A")
-      if (compared()) t <- rbind(t, sc_col(readable_trees(result_b()), "B"))
+      t <- sc_col(readable_trees(result()), nm("A"))
+      if (compared()) t <- rbind(t, sc_col(readable_trees(result_b()), nm("B")))
       write_result_csv(t, file)
     })
 
@@ -769,7 +776,7 @@ server <- function(input, output, session) {
                        L(if (isTRUE(is_hpr())) "stem_title_stem" else "stem_title_tree",
                          row$treid, tr_value(row$species_group, lang()),
                          fmt_num(row$dbh_cm, 1L, lang(), big = FALSE), fmt_num(row$height_m, 1L, lang(), big = FALSE)),
-                       lang = lang())
+                       lang = lang(), names = c(nm("A"), nm("B")))
   })
 
   # Per-tree pattern comparison (R/helpers_comparison.R): the Summary's
@@ -787,8 +794,8 @@ server <- function(input, output, session) {
                       round(x$value_default, 2), round(x$value_scenario, 2),
                       round(fin(x$gain_at_scenario), 2), round(fin(x$gain_at_default), 2),
                       round(x$max_volume_diff_m3, 4), stringsAsFactors = FALSE)
-    names(out) <- c(L(c("col_plot", "col_tree", "col_species")), L("col_logs_x", c("A", "B")),
-                    L("col_value_x_nok", c("A", "B")), L("col_gain_at_x", c("B", "A")),
+    names(out) <- c(L(c("col_plot", "col_tree", "col_species")), L("col_logs_x", c(nm("A"), nm("B"))),
+                    L("col_value_x_nok", c(nm("A"), nm("B"))), L("col_gain_at_x", c(nm("B"), nm("A"))),
                     L("col_largest_volume_change"))
     drop_plot(out)
   })
@@ -820,15 +827,15 @@ server <- function(input, output, session) {
       round(a$commercial_volume_m3, 3), round(a$value_nok, 0), round(b$value_nok, 0),
       round(b$value_nok - a$value_nok, 0),
       round(a$nok_per_m3, 1), round(b$nok_per_m3, 1), round(b$nok_per_m3 - a$nok_per_m3, 1)),
-      c(L("col_commercial_volume_x_m3", "A"), L("col_value_x_nok", c("A", "B")), L("col_value_x_nok", "B − A"),
-        L("col_nok_per_m3_x", c("A", "B", "B − A")))))
+      c(L("col_commercial_volume_x_m3", nm("A")), L("col_value_x_nok", c(nm("A"), nm("B"))), L("col_value_x_nok", nm_diff()),
+        L("col_nok_per_m3_x", c(nm("A"), nm("B"), nm_diff())))))
   })
   output$dl_dbh_class <- downloadHandler(
     filename = function() L("file_dbh_class"),
     content  = function(file) write_result_csv(dbh_table(), file))
   output$fig_dbh_class <- renderPlot(res = 96, height = function() 320, {
     req(has_result())
-    apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b(), lang = lang())
+    apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b(), lang = lang(), names = c(nm("A"), nm("B")))
   })
 
   # DBH and height distributions per species, side by side (the same trees
@@ -859,8 +866,8 @@ server <- function(input, output, session) {
     filename = function() L("file_logs"),
     content  = function(file) {
       sc_col <- function(x, s) cbind(stats::setNames(data.frame(s), L("col_scenario")), x)
-      l <- sc_col(readable_logs(result()$selected_logs_all), "A")
-      if (compared()) l <- rbind(l, sc_col(readable_logs(result_b()$selected_logs_all), "B"))
+      l <- sc_col(readable_logs(result()$selected_logs_all), nm("A"))
+      if (compared()) l <- rbind(l, sc_col(readable_logs(result_b()$selected_logs_all), nm("B")))
       write_result_csv(l, file)
     })
 
@@ -870,11 +877,11 @@ server <- function(input, output, session) {
     if (!has_result() || is.null(result()$hpr_export)) return(NULL)
     if (!compared())
       return(downloadButton("dl_hpr_a", L("btn_dl_hpr"), class = "btn-secondary btn-sm"))
-    tagList(downloadButton("dl_hpr_a", L("btn_dl_hpr_ab", "A"), class = "btn-secondary btn-sm"),
-            downloadButton("dl_hpr_b", L("btn_dl_hpr_ab", "B"), class = "btn-secondary btn-sm"))
+    tagList(downloadButton("dl_hpr_a", L("btn_dl_hpr_ab", nm("A")), class = "btn-secondary btn-sm"),
+            downloadButton("dl_hpr_b", L("btn_dl_hpr_ab", nm("B")), class = "btn-secondary btn-sm"))
   })
   hpr_download <- function(side) downloadHandler(
-    filename = function() L("file_hpr", side),
+    filename = function() L("file_hpr", scenario_file_tag(nm(side), side)),
     content  = function(file) {
       r <- result(); hx <- r$hpr_export
       rs <- if (side == "A") r else result_b()
@@ -926,12 +933,12 @@ server <- function(input, output, session) {
     req(has_result())
     apter_log_length_figure(log_length_distribution(result()$selected_logs_all),
                             if (compared()) log_length_distribution(result_b()$selected_logs_all),
-                            lang = lang())
+                            lang = lang(), names = c(nm("A"), nm("B")))
   })
   output$tally_scenario_ui <- renderUI({
     if (!compared()) return(NULL)
     v <- tally_views(); cur <- isolate(input$tally_scenario)
-    radioButtons("tally_scenario", L("col_scenario"), setNames(v, c(A = "A", B = "B", diff = "B − A")[v]),
+    radioButtons("tally_scenario", L("col_scenario"), setNames(v, c(A = nm("A"), B = nm("B"), diff = nm_diff())[v]),
                  selected = if (!is.null(cur) && cur %in% v) cur else v[1L], inline = TRUE)
   })
   tally_view <- reactive({

@@ -400,17 +400,22 @@ pm_rename_key <- function(pm, from, to) {
 #' assortment table, cm; Type is the hidden product type, keep it as it is)
 #' and its prices in the wide layout of pm_template_wide() (one sheet per
 #' matrix, "flat_prices").
-scenario_export <- function(defs, pm, path) {
+# Sheets of a scenario xlsx that carry no price grid.
+SCENARIO_META_SHEETS <- c("assortments", "scenario")
+
+scenario_export <- function(defs, pm, path, name = NULL) {
   # The hidden distribution fields (Phase 7a) are not part of the exchange file.
   sheets <- c(list(assortments = defs[, setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS), drop = FALSE]),
               .pm_wide_sheets(pm))
+  # The scenario's display name (restructure R1.8), when it has one.
+  if (!is.null(name)) sheets <- c(sheets, list(scenario = data.frame(Name = as.character(name))))
   writexl::write_xlsx(sheets, path)
   invisible(path)
 }
 
 #' Read a scenario_export() xlsx (assortments plus prices) and check it.
 #'
-#' @return list(ok, defs, pm, errors, warnings).
+#' @return list(ok, defs, pm, errors, warnings, name (NULL without a 'scenario' sheet)).
 scenario_import <- function(path) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
@@ -431,7 +436,11 @@ scenario_import <- function(path) {
   if (length(up$errors) > 0L) return(fail(up$errors))
   v <- check_price_set(defs, up$long)
   if (!v$ok) return(fail(v$errors))
-  list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings)
+  nm <- if ("scenario" %in% sheets) tryCatch({
+    x <- readxl::read_excel(path, sheet = "scenario", col_types = "text")
+    if ("Name" %in% names(x) && nrow(x)) x$Name[1L]
+  }, error = function(e) NULL)
+  list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings, name = nm)
 }
 
 #' Check a price set: the assortment table with the price matrix it runs
@@ -740,7 +749,7 @@ read_price_matrix_upload <- function(path, filename = path, default,
     sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
     if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
     longs <- list(); ids <- character(0); errs <- character(0)
-    for (sh in setdiff(sheets, "assortments")) {   # a scenario file's table is not prices
+    for (sh in setdiff(sheets, SCENARIO_META_SHEETS)) {   # a scenario file's other sheets are not prices
       raw <- as.data.frame(readxl::read_excel(path, sheet = sh, col_names = FALSE,
                                               col_types = "text", .name_repair = "minimal"))
       if (identical(sh, PM_FLAT_ID)) {

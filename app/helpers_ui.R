@@ -361,9 +361,9 @@ apter_hbar <- function(vals, labels, title, xlab, fmt = format, col = APTER_CHAR
 #' Scenario A and B side by side per assortment, horizontal, sorted by the
 #' larger of the two values (largest on top). NA (not in that scenario):
 #' no bar and no label.
-apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en") {
+apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en", names = c("A", "B")) {
   ch <- APTER_CHART
-  sc <- tr(c("scenario_a", "scenario_b"), lang = lang)
+  sc <- tr("scenario_x", names, lang = lang)
   o <- order(pmax(a, b, na.rm = TRUE))
   lv <- unique(labels[o])
   d <- rbind(data.frame(name = labels, value = a, Scenario = sc[1L]),
@@ -402,7 +402,7 @@ apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en") 
 #' @param height_m Tree height (m), for the x-axis extent.
 #' @param title    Plot title.
 #' @param lang     Language of the axis, legend and note.
-apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lang = "en") {
+apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lang = "en", names = c("A", "B")) {
   ch  <- APTER_CHART
   # Custom assortment classes share the charcoal "other" fill (theme.R); their
   # label names the class.
@@ -417,7 +417,7 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lan
   graphics::axis(1, col = NA, col.ticks = NA)
   graphics::mtext(tr("fig_height_along_stem", lang = lang), side = 1, line = 2.2,
                   col = ch$muted, cex = 0.8)
-  sc <- tr(c("scenario_a", "scenario_b"), lang = lang)
+  sc <- tr("scenario_x", names, lang = lang)
   graphics::axis(2, at = if (two) c(2, 1) else 2, labels = if (two) sc else sc[1L],
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {
@@ -505,8 +505,8 @@ apter_distribution_figure <- function(dbh, height, species, height_lbl = "Height
 #' Scenario A solid, B dashed after a comparison.
 #'
 #' @param a,b dbh_class_summary() of Scenario A and (optionally) B.
-apter_dbh_class_figure <- function(a, b = NULL, lang = "en") {
-  scn <- tr(c("scenario_a", "scenario_b"), lang = lang)
+apter_dbh_class_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")) {
+  scn <- tr("scenario_x", names, lang = lang)
   cls <- function(d) d[d$dbh_class != "All", , drop = FALSE]
   a <- cls(a); if (nrow(a) == 0L) return(NULL)
   lv <- unique(a$dbh_class[order(a$class_lo)])
@@ -538,8 +538,8 @@ apter_dbh_class_figure <- function(a, b = NULL, lang = "en") {
 #' two panels, A above B, on shared axes.
 #'
 #' @param a,b log_length_distribution() of Scenario A and (optionally) B.
-apter_log_length_figure <- function(a, b = NULL, lang = "en") {
-  scn <- tr(c("scenario_a", "scenario_b"), lang = lang)
+apter_log_length_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")) {
+  scn <- tr("scenario_x", names, lang = lang)
   d <- rbind(if (nrow(a)) cbind(a, Scenario = scn[1L]),
              if (!is.null(b) && nrow(b)) cbind(b, Scenario = scn[2L]))
   if (is.null(d) || nrow(d) == 0L) return(NULL)

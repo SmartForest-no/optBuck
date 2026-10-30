@@ -4,8 +4,6 @@
 "tab_prices","ui","Assortments and prices","Sortiment og priser",""
 "tab_simulator","ui","Simulator","Simulator",""
 "scenario_x","ui","Scenario %s","Scenario %s",""
-"scenario_a","ui","Scenario A","Scenario A",""
-"scenario_b","ui","Scenario B","Scenario B",""
 "hdr_assortments","ui","Assortments","Sortiment",""
 "hdr_scenario","ui","Scenario","Scenario",""
 "hdr_stem_grades","ui","Stem grades (.hpr stems)","Stammekvalitet (.hpr-stammer)",""
@@ -610,3 +608,4 @@
 "col_excluded","ui","Excluded","Utelatt",""
 "btn_stems_use","ui","Use the assortments from this file in scenario %s","Bruk sortimentene fra denne filen i scenario %s",""
 "lbl_stems_use_file","ui","File","Fil",""
+"lbl_scenario_name","ui","Name","Navn","shown in results and file names; A and B if empty"
