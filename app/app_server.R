@@ -420,7 +420,7 @@ server <- function(input, output, session) {
       hx <- list(sources = data.frame(path = fl$path, name = fl$name, stringsAsFactors = FALSE),
                  species_by_name = sbn, defs = list(A = d, B = if (compare) b$defs))
     }
-    run_task$invoke(spec, list(scenario_names = list(A = sc$name("A"), B = sc$name("B")), hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
+    run_task$invoke(spec, list(ab_names = list(A = sc$name("A"), B = sc$name("B")), hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
                                keys = list(A = assortment_table_keys(d),
                                            B = if (compare) assortment_table_keys(b$defs)),
                                state = sc$pm_state(), t_click = t_click))
@@ -434,7 +434,7 @@ server <- function(input, output, session) {
   # A and B before a run and for results without them.
   nm <- function(side) {
     r <- tryCatch(result(), error = function(e) NULL)
-    or_default(r$scenario_names[[side]], side)
+    or_default(r$ab_names[[side]], side)
   }
   nm_diff <- function() paste(nm("B"), "−", nm("A"))
   has_result <- reactive(input$run_btn > 0L && !task_busy() && !is.null(result()))
