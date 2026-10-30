@@ -173,6 +173,24 @@ ok9 <- identical(tuning_sample_size(10200L, 7598L), 1343L) && identical(tuning_s
 rec("Check 9: tuning_sample_size 10200/7598 -> 1343; 7283/1469 -> 4958; 7283/800 -> 7283; 100/0 -> 100; at least 1, at most n_stems",
     ok(ok9), sprintf("%s, %s, %s", tuning_sample_size(10200L, 7598L), tuning_sample_size(7283L, 1469L), tuning_sample_size(100L, 0L)))
 
+
+# ==============================================================================
+section("16. tuning_matrix_view()")
+g16 <- list(lengths = c(37, 43, 49), diam_classes = c(142, 150),
+            price = matrix(c(500, 510, 520, 505, NA, 525), 3, 2, dimnames = list(c("37", "43", "49"), c("142", "150"))))
+W16 <- matrix(c(20, 30, 50, 100/3, NA, 200/3), 3, 2, dimnames = dimnames(g16$price))
+S16 <- matrix(c(10, 40, 50, 0, NA, 100), 3, 2, dimnames = dimnames(g16$price))
+by16 <- list(grid = g16, W = W16, S_orig = S16, S_tuned = W16, fg_orig = c(`142` = 90, `150` = 66.6667), fg_tuned = c(`142` = 100, `150` = 100),
+             P1 = g16$price, Pb = g16$price + matrix(c(-3, 0, 4, 0, NA, -6), 3, 2), eligible = c(`142` = TRUE, `150` = FALSE))
+v_t <- tuning_matrix_view(by16, "target"); v_o <- tuning_matrix_view(by16, "orig")
+v_u <- tuning_matrix_view(by16, "tuned"); v_c <- tuning_matrix_view(by16, "change")
+ok16 <- identical(dim(v_t$m), c(2L, 3L)) && identical(rownames(v_t$m), c("142", "150")) && identical(colnames(v_t$m), c("370", "430", "490")) &&
+  identical(unname(v_t$m[1, ]), c(20, 30, 50)) && identical(unname(v_t$m[2, ]), c(33, NA, 67)) && is.null(v_t$fg) &&
+  identical(unname(v_o$m[1, ]), c(10, 40, 50)) && identical(v_o$fg, c(90, 66.6667)) && identical(v_u$fg, c(100, 100)) &&
+  identical(unname(v_c$m[1, ]), c(-3, 0, 4)) && all(is.na(v_c$m[2, ])) && is.null(v_c$fg)    # class 150 is not eligible: nothing steered
+rec("Check 16: tuning_matrix_view(): classes in rows and lengths (cm) in columns; target and outcome shares in whole percent (NA where there is no price); FG per class for the outcome views only; price change for the steered cells only",
+    ok(ok16), sprintf("target %s | outcome %s | change %s", paste(v_t$m, collapse = ","), paste(v_o$m, collapse = ","), paste(v_c$m, collapse = ",")))
+
 # ==============================================================================
 # Private data: file5 (REDACTED28)
 f5 <- "C:/apter_private/hpr/REDACTED28"

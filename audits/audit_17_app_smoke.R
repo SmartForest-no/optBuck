@@ -544,7 +544,7 @@ browser_checks <- c(
   "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names",
   "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes",
   "Check 42: Import .hpr/.pin: a .pin imported into Scenario A through the upload field (title says .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
-  "Check 43: Price tuning tab: message without .hpr stems; with the tuning fixture a tuning with two iterations gives the table, plot and price-change table; Use tuned prices in the other scenario copies the tuned prices",
+  "Check 43: Price tuning tab: message without .hpr stems; an Even target set in the target view, the assortment list, a tuning with two iterations gives the key-figure table, the small figure and the four matrix views; Use tuned prices in the other scenario copies them and keeps the results; a change in the tuned scenario clears them",
   "Check 44: Stems and scenarios are independent: importing into a scenario leaves the stems untouched and loading stems leaves the scenarios untouched; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
   "Check 45: Scenario names: shown in the card title, Summary and Products headers and in the scenario xlsx",
   "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear")
@@ -1884,8 +1884,9 @@ if (!browser_ok) {
     # even target for two iterations (APTER_TUNE_MAX_ITER); table, plot and
     # price-change table appear; Use tuned prices in scenario B replaces B with
     # A's assortments and the tuned prices.
-    c43 <- list(opts = 0L, msg = "", extra = NA_integer_, targets = "", rows = "", cols = "", price_cells = 0L, use = "", q = "",
-                open = NA_integer_, cells = 0L, equal = FALSE, changed = 0L, nerr = NA_integer_)
+    c43 <- list(msg = "", extra = NA_integer_, boxes = "", rows = "", price_cells = 0L, use = "", q = "",
+                open = NA_integer_, cells = 0L, equal = FALSE, changed = 0L, nerr = NA_integer_,
+                plot_w = NA, plot_h = NA, views = list(), kept = FALSE, cleared = FALSE, radio = "")
     e43 <- try_drv({
       fx43 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
       key43 <- "spruce_140_sca_sagt_mmer"
@@ -1902,53 +1903,76 @@ if (!browser_ok) {
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(scen_a_upload = fx43); app$wait_for_idle()
       app$click("hpr_apply"); app$wait_for_idle()
+      # R3.2/R3.3: the target comes from the assortment; set an Even target with the editor's button
+      pick(app, "a", key43); app$wait_for_idle()
+      app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
+      app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)
+      app$click("dt_a_even"); app$wait_for_idle()
+      app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
-      app$wait_for_js("!!document.getElementById('tn_product')", timeout = 30 * 1000)
-      app$set_inputs(tn_side = "A", tn_product = key43, wait_ = FALSE); app$wait_for_idle()
-      c43$targets <- js(app, "Array.from(document.querySelectorAll('input[name=tn_target]')).map(function(e){ return e.value; }).join(',')")
-      app$set_inputs(tn_target = "neutral", wait_ = FALSE); app$wait_for_idle()
+      app$wait_for_js("!!document.getElementById('tn_run')", timeout = 30 * 1000)
+      app$set_inputs(tn_side = "A", wait_ = FALSE); app$wait_for_idle()
+      c43$boxes <- js(app, "Array.from(document.querySelectorAll('input[name=tn_products]')).map(function(e){ return e.value + (e.checked ? '+' : '-'); }).join(',')")
+      c43$radio <- js(app, "document.querySelectorAll('input[name=tn_target]').length")
       app$click("tn_run")
-      app$wait_for_js("!!document.querySelector('#tn_tbl .rt-tr') && !!document.querySelector('#tn_price_tbl .rt-tr') && !!document.querySelector('#tn_plot img')",
+      app$wait_for_js("!!document.querySelector('#tn_tbl .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr') && !!document.querySelector('#tn_plot img')",
                       timeout = 240 * 1000)
       app$wait_for_idle()
       c43$rows <- js(app, "Array.from(document.querySelectorAll('#tn_tbl .rt-tbody .rt-tr')).map(function(r){ return r.innerText.replace(/\\s+/g, ' ').trim(); }).join(' | ')")
       c43$cols <- headers_of(app, "tn_tbl")
-      c43$price_cells <- js(app, "Array.from(document.querySelectorAll('#tn_price_tbl .rt-tbody .rt-td')).filter(function(c){ return /^-?[0-9]+$/.test(c.innerText.trim()); }).length")
-      c43$use <- trimws(txt(app, "#tn_use"))
+      c43$plot_w <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().width")
+      c43$plot_h <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().height")
+      # the four matrix views of the assortment
+      for (v in c("target", "orig", "tuned", "change")) {
+        app$set_inputs(tn_matrix_view = v, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(0.5)
+        c43$views[[v]] <- list(hdr = headers_of(app, "tn_matrix"),
+                               cells = js(app, "Array.from(document.querySelectorAll('#tn_matrix .rt-tbody .rt-td')).filter(function(c){ return /^-?[0-9]+$/.test(c.innerText.trim()); }).length"))
+      }
+      app$set_inputs(tn_matrix_view = "orig", wait_ = FALSE); app$wait_for_idle(); Sys.sleep(0.5)
       shoot(app, "tuning_01_after_tuning")
-      # The product list opens fully visible (it is attached to the page body, not clipped by the card).
-      app$run_js("document.getElementById('tn_product').selectize.open();"); app$wait_for_idle()
-      c43$opts <- js(app, "Array.from(document.querySelectorAll('body > .selectize-dropdown .option')).filter(function(o){ var r = o.getBoundingClientRect(); return r.height > 0 && r.bottom <= window.innerHeight; }).length")
-      shoot(app, "tuning_02_product_dropdown")
-      app$run_js("document.getElementById('tn_product').selectize.close();"); app$wait_for_idle()
+      c43$use <- trimws(txt(app, "#tn_use"))
       tn <- app$get_values(export = TRUE)$export$tn_test
       app$click("tn_use"); app$wait_for_idle()
       c43$q <- txt(app, ".modal-title")
       app$click("tn_use_ok"); app$wait_for_idle()
       c43$open <- js(app, "document.querySelectorAll('.modal.show').length")
+      # R3.5: applying the tuned prices to the other scenario keeps the results visible
+      c43$kept <- isTRUE(js(app, "!!document.querySelector('#tn_tbl .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr')"))
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
-      # B and A as scenario files: the selected-assortment price download needs a row click, which does not register in this session (the app's download itself is right).
       b43 <- pm_minimal(scen_of(app, "b")$pm); a43 <- pm_minimal(scen_of(app, "a")$pm)
       b43 <- b43[b43$ProductKey == key43 & !is.na(b43$LengthClass_dm), ]; a43 <- a43[a43$ProductKey == key43 & !is.na(a43$LengthClass_dm), ]
-      li <- match(b43$LengthClass_dm, tn$lengths); ci <- match(tn$cm_map[as.character(b43$PriceDiameterClass_cm)], tn$diam_classes)
-      want <- tn$best_price[cbind(li, ci)]
+      tg <- tn$by[[key43]]
+      li <- match(b43$LengthClass_dm, tg$lengths); ci <- match(tg$cm_map[as.character(b43$PriceDiameterClass_cm)], tg$diam_classes)
+      want <- tg$best_price[cbind(li, ci)]
       c43$cells <- nrow(b43)
       c43$equal <- nrow(b43) > 0L && all(abs(b43$PriceNOKperM3 - want) < 1e-6, na.rm = TRUE) && !anyNA(want)
       c43$changed <- sum(abs(b43$PriceNOKperM3 - a43$PriceNOKperM3[match(paste(b43$LengthClass_dm, b43$PriceDiameterClass_cm), paste(a43$LengthClass_dm, a43$PriceDiameterClass_cm))]) > 1e-9, na.rm = TRUE)
+      # a change of the tuned scenario (A) clears the results
+      app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
+      app$click("dt_a_long"); app$wait_for_idle()
+      app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
+      c43$cleared <- !isTRUE(js(app, "!!document.querySelector('#tn_tbl .rt-tr')"))
       c43$nerr <- n_err_notif(app)
     })
     ok43 <- !nzchar(e43) && identical(trimws(c43$msg), "Price tuning needs .hpr stems as tree source.") && identical(c43$extra, 0L) &&
-      identical(c43$targets, "real,neutral,long") && c43$price_cells >= 1L &&
-      grepl("Fordelingsgrad \\(%\\)", c43$rows) && grepl("Value at original prices \\(NOK\\)", c43$rows) &&
+      grepl(paste0(key43, "+"), c43$boxes, fixed = TRUE) && !grepl("-", c43$boxes, fixed = TRUE) && identical(c43$radio, 0L) &&
+      grepl("Fordelingsgrad \\(%\\):", c43$rows) && grepl("Value at original prices \\(NOK\\)", c43$rows) &&
       grepl("Product volume", c43$rows, fixed = TRUE) && grepl("Sawlog volume", c43$rows, fixed = TRUE) &&
-      identical(c43$cols, "|Original prices|Tuned prices|Change") && identical(c43$use, "Use tuned prices in scenario B") &&
+      identical(c43$cols, "|Original prices|Tuned prices|Change") &&
+      isTRUE(abs(c43$plot_w - 420) < 4) && isTRUE(abs(c43$plot_h - 220) < 4) &&
+      all(vapply(c43$views, function(v) isTRUE(v$cells >= 1L), logical(1))) && length(c43$views) == 4L &&
+      grepl("FG", c43$views$orig$hdr, fixed = TRUE) && grepl("FG", c43$views$tuned$hdr, fixed = TRUE) &&
+      !grepl("FG", c43$views$target$hdr, fixed = TRUE) && !grepl("FG", c43$views$change$hdr, fixed = TRUE) &&
+      identical(c43$use, "Use tuned prices in scenario B") &&
       grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&
-      identical(c43$opts, 2L) && isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
+      isTRUE(c43$kept) && isTRUE(c43$cleared) &&
+      isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
     rec(grep("^Check 43:", browser_checks, value = TRUE), if (ok43) PASS else FAIL,
-        sprintf("message '%s' (inputs %s) | targets %s | rows: %s | columns '%s' | price-change cells %s | dropdown options visible %s | button '%s' | dialog '%s', open after OK %s | B cells %s equal to the tuned prices %s, changed against A %s | error notifications %s%s",
-                c43$msg, c43$extra, c43$targets, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$price_cells, c43$opts,
-                c43$use, c43$q, c43$open, c43$cells, c43$equal, c43$changed, c43$nerr, err_txt(e43)))
-
+        sprintf("message '%s' (inputs %s) | assortments %s, target radio %s | rows: %s | columns '%s' | figure %sx%s px | matrix views (cells): %s | button '%s' | dialog '%s', open after OK %s | results kept after applying to B %s | B cells %s equal to the tuned prices %s, changed against A %s | cleared by a change in A %s | error notifications %s%s",
+                c43$msg, c43$extra, c43$boxes, c43$radio, substr(or_default(c43$rows, ""), 1, 120), c43$cols, round(or_default(c43$plot_w, NA)), round(or_default(c43$plot_h, NA)),
+                paste(vapply(names(c43$views), function(n) sprintf("%s %s", n, c43$views[[n]]$cells), ""), collapse = ", "),
+                c43$use, c43$q, c43$open, c43$kept, c43$cells, c43$equal, c43$changed, c43$cleared, c43$nerr, err_txt(e43)))
     # 44. Stems and scenarios are independent (restructure R1.4, R1.5). The
     # tuning fixture's 120 stems are loaded (check 43) and Scenario A holds
     # its assortments.
