@@ -301,3 +301,42 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
   - `buckStem()` uses its own 1 cm/m frustum for every product, whatever the product's volume method, and floors length classes to 10 cm (365 → 360, below the class's lower limit).
 - **fieldPlot fixes** (Lennart's package, separate session): loop over species present; error handling around the fitHD() fallback; a working timeout; species curve for plots without heights; nlme:: calls; README install URL. Apter's wrapper works around these meanwhile.
 - **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores. Memory: a large .hpr stems A/B run (11,650 stems, 142 MB file, 15 workers) peaks at about 2.3 GB across the workers, plus about 0.4 GB in the main process (measured 2026-10-21).
+
+## Restructure (in progress, branch `restructure`, started 2026-10-30)
+
+Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, R3 multi-assortment tuning. Never merge to main from this branch. Plan: the approved session plan (Stems / Assortments and prices / Simulator / Price tuning tabs).
+
+### Checklist
+- [ ] Setup: branch, permissions, baseline for the single-product tuning invariant (`scripts/capture_tuning_single_baseline.R` -> `outputs/restructure/tuning_single_expected.rds`, gitignored)
+- [ ] R1.2 Stems tab and summary table
+- [ ] R1.3 Simulator tab reduced
+- [ ] R1.4 Decouple stems and scenarios (+ audit 17 checks)
+- [ ] R1.5 Use-assortments-from-this-file buttons
+- [ ] R1.6 One upload field per scenario (.hpr/.pin)
+- [ ] R1.7 Grade rules in the scenario panels (verify)
+- [ ] R1.8 Scenario names
+- [ ] R1.9 Crash check
+- [ ] R1.10 Translations, audits, push
+- [ ] R2.1-R2.4 Target distribution editor
+- [ ] R2.5 Scenario xlsx (fields, target sheets, file_classes sheet)
+- [ ] R2.6 Audits, push
+- [ ] R3.1 tune_prices with several products
+- [ ] R3.2-R3.5 Tuning tab
+- [ ] R3.6 Audits, push
+- [ ] End: full suite, manual file5 check, screenshots, CLAUDE.md/PLAN.md, push
+
+### Decisions made
+- Single-product expected values live in `outputs/restructure/` (gitignored), not in `inputs/test_fixtures/`: they derive from a real buyer's price list and the repo will become public. Audit 33 skips the invariant check (REVIEW) when the file or file5 is missing. Alternative: fixture in the repo (rejected by Lennart).
+- The scenario upload field has no .rds today (accepts .xlsx and .csv); .rds is not added.
+- The NFI source shows no stem summary on the Stems tab (stems are created at run time).
+- The grade checkboxes already sit in the scenario cards; R1.7 only verifies them.
+- A new target starts with MAXDeviation 0, category "Volume of logs", WithinProduct TRUE (file5 spruce 140 SCA Sagtomrer: Allowed TRUE, "Volume of logs", MAXDeviation 4, WithinProduct TRUE).
+- The scenario xlsx keeps `FileDiameterClass_mm` in a `file_classes` sheet (matrix id, diameter row in cm, FileDiameterClass_mm); a row-wise fallback exists only for products that never had file classes.
+- Tuning results are cleared only when the tuned side, the assortment selection or the stems change; applying the tuned prices to the other scenario keeps them visible.
+- Stems come only from files uploaded on the Stems tab; a file imported into a scenario is no longer offered as stem source.
+
+### Open questions for Lennart
+(none yet)
+
+### Blocked items
+(none yet)
