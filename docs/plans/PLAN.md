@@ -302,57 +302,18 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 - **fieldPlot fixes** (Lennart's package, separate session): loop over species present; error handling around the fitHD() fallback; a working timeout; species curve for plots without heights; nlme:: calls; README install URL. Apter's wrapper works around these meanwhile.
 - **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores. Memory: a large .hpr stems A/B run (11,650 stems, 142 MB file, 15 workers) peaks at about 2.3 GB across the workers, plus about 0.4 GB in the main process (measured 2026-10-21).
 
-## Restructure (R1-R3 done, 2026-10-30, branch `restructure`, not merged)
+## Restructure (done 2026-10-30)
 
-Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, R3 multi-assortment tuning. Never merge to main from this branch. Plan: the approved session plan (Stems / Assortments and prices / Simulator / Price tuning tabs).
-
-### Checklist
-- [x] Setup (ded54c5): branch, permissions, baseline for the single-product tuning invariant (`scripts/capture_tuning_single_baseline.R` -> `outputs/restructure/tuning_single_expected.rds`, gitignored)
-- [x] R1.2 Stems tab and summary table (c11493d)
-- [x] R1.3 Simulator tab reduced (c11493d)
-- [x] R1.4 Decouple stems and scenarios (c11493d; audit 17 check 44, bc2a9ff)
-- [x] R1.5 Use-assortments-from-this-file buttons (c11493d; audit 17 check 44)
-- [x] R1.6 One upload field per scenario (.hpr/.pin) (c11493d; audit 17 checks 29, 42)
-- [x] R1.7 Grade rules in the scenario panels: verified, no change needed (audit 17 check 41 passes with the source on the Stems tab)
-- [x] R1.8 Scenario names (e5aff0c, dd2e057; audit 17 check 45, audit 24 check 12)
-- [x] R1.9 Crash check: not reproduced (scripts/repro_tuning_crash.R)
-- [x] R1.10 Translations, audits (17, 24-33, performance_check PASS), push
-- [x] R2.1-R2.4 Target distribution editor (see git log: R2.1-R2.4; audit 17 check 46, audit 34 checks 30-33)
-- [x] R2.5 Scenario xlsx (fields, target sheets, file_classes sheet; audit 34 check 34)
-- [x] R2.6 Audits (17, 24, 28-34, performance_check PASS), push
-- [x] R3.1 tune_prices with several products (audit 33 checks 14-15; single-product values stored in outputs/restructure/, gitignored)
-- [x] R3.2-R3.5 Tuning tab (audit 17 check 43, audit 33 check 16)
-- [x] R3.6 Audits (17, 28-34, performance_check PASS), push
-- [x] End: full suite (`scripts/run_audits.R`: 22 PASS, 0 REVIEW, 0 FAIL), manual file5 check (`scripts/restructure_manual_check.R`: 140 SCA alone FG 82.9 -> 94.1, value -0.17 %, 91 s; with 148 (Even): 140 SCA 82.9 -> 98.5, 148 33.0 -> 35.1, value -0.60 %, 301 s), screenshots (`scripts/restructure_screenshots.R en|no` -> outputs/app_smoke/review/restructure/, gitignored), CLAUDE.md and PLAN.md updated, pushed (not merged)
+Four tabs (Stems, Assortments and prices, Simulator, Price tuning); stems and scenarios independent; one upload field per scenario (.xlsx, .csv, .hpr, .pin); scenario names; a target distribution editor per assortment (also in the scenario xlsx); price tuning of several assortments at once from their own targets. Tested and approved by Lennart; merged to main. Details are in CLAUDE.md (Stems tab, Scenario names, Distribution, Price tuning tab rows). Full suite: 22 PASS. file5 check (`scripts/restructure_manual_check.R`): 140 SCA alone FG 82.9 -> 94.1, value -0.17 %; with 148 (Even target) 98.5 / 35.1, value -0.60 %. R1.9 crash: not reproduced (`scripts/repro_tuning_crash.R`).
 
 ### Decisions made
-- Single-product expected values live in `outputs/restructure/` (gitignored), not in `inputs/test_fixtures/`: they derive from a real buyer's price list and the repo will become public. Audit 33 skips the invariant check (REVIEW) when the file or file5 is missing. Alternative: fixture in the repo (rejected by Lennart).
-- The scenario upload field has no .rds today (accepts .xlsx and .csv); .rds is not added.
-- The NFI source shows no stem summary on the Stems tab (stems are created at run time).
-- The grade checkboxes already sit in the scenario cards; R1.7 only verifies them.
-- A new target starts with MAXDeviation 0, category "Volume of logs", WithinProduct TRUE (file5 spruce 140 SCA Sagtomrer: Allowed TRUE, "Volume of logs", MAXDeviation 4, WithinProduct TRUE).
-- The scenario xlsx keeps `FileDiameterClass_mm` in a `file_classes` sheet (matrix id, diameter row in cm, FileDiameterClass_mm); a row-wise fallback exists only for products that never had file classes.
-- Tuning results are cleared only when the tuned side, the assortment selection or the stems change; applying the tuned prices to the other scenario keeps them visible.
-- Stems come only from files uploaded on the Stems tab; a file imported into a scenario is no longer offered as stem source.
+- Single-product tuning baseline lives in `outputs/restructure/` (gitignored), not in the repository (derived from a private buyer price list); audit 33 check 14 gives REVIEW without it.
+- The scenario upload field has no .rds; NFI shows no stem summary (trees are built at run time); the grade boxes already sat in the scenario cards.
+- Stems come only from files uploaded on the Stems tab; an import into a scenario never touches them and loading stems never touches a scenario.
+- Target editor: an edit sets all whole-cm rows of the same `FileDiameterClass_mm`; first target sets Allowed TRUE, "Volume of logs", WithinProduct TRUE, MAXDeviation 0; the xlsx keeps the fields, `target_<n>` sheets and a `file_classes` sheet.
+- Tuning: overall FG = mean weighted by iteration-1 logs (or volume); results are cleared only by a change of the tuned scenario, the selection or the stems, not by applying the prices to the other scenario; assortments with fewer than 20 logs are named in a warning and left out.
+- Result field for the names is `ab_names` (a name starting with `scenario` partially matched `result()$scenario`).
+- **Scenario names are read back from the scenario xlsx** (Lennart, 2026-10-30): uploading A's file into B also sets B's name to A's; Copy from A/B never changes a name.
+- **Buttons that name the other scenario ("Copy from B", "Make assortment equal to B") keep the letters A and B** (Lennart, 2026-10-30).
 
-- R1.9 crash: file5 imported into A through the scenario upload field and dialog, file5 as .hpr stems, Price tuning tab, product dropdown opened, spruce 140 SCA tuned (3 iterations): completes in 36 s, no R error, server process alive. A first attempt with the default product (Pine 289 Stamblokk, no target) showed no results table and no error. Not reproduced. Most likely cause removed by R1.4: the old import-then-stems coupling (the import re-read the stems and replaced the species map).
-- A scenario xlsx carries the scenario's name (sheet `scenario`); uploading A's xlsx into B therefore also sets B's name to A's (alternative: never read the name back; rejected, the design asks for it). Copy from A/B never changes the name.
-- The scenario card titles show the name ("Scenario <name>"); button texts that mention the other scenario ("Copy from B", "Make assortment equal to B") keep the letters A and B.
-- New result field `ab_names` (the names at the start of a run): not `scenario_names`, because `result()$scenario` partially matched it and made every run a comparison.
-- The app opens on the Stems tab; audits 17 and 29 navigate to Assortments and prices first.
-- Audit changes for the new layout (intended UI change): 17 (tab list, Stems tab for tree-source inputs, `run()` goes to the Simulator, uploads to the scenario field instead of the import button, check 31 uploads its stems, altitude slider checked against its card), 29 (navigates to the prices tab), 32 check 10 (source wiring).
-
-- R2 target view: a cell edit sets the same value in every whole-cm row of the same `FileDiameterClass_mm` (only that row when it has none); Even / Longer logs are computed per whole-cm row from the cells that have a price (`tuning_target()`'s rules), so rows of one file class get the same values; Clear also removes the four fields. Sums use 0 for cells without a value; a row is bold when its sum is neither 0 nor 100.
-- R2.4 first-target fields: DistributionAllowed TRUE, DistributionCategory "Volume of logs", DistributionWithinProduct TRUE, MAXDeviation 0 (file5 spruce 140 SCA Sagtomrer has Allowed TRUE, Volume of logs, WithinProduct TRUE, MAXDeviation 4). Fields read from a file are never changed unless the user changes the category. The category select shows only for an assortment that has the fields.
-- Scenario xlsx: target sheets are named `target_<n>` (corner cell = the ProductKey, as in the price sheets), because Excel sheet names are limited to 31 characters and keys can be longer; the four fields are assortment-table columns written only when some assortment has them; `file_classes` (ProductKey, PriceDiameterClass_cm, FileDiameterClass_mm) only when some row has a file class.
-
-- R3.1 overall FG for several products: mean of the products' FG weighted by each product's iteration-1 logs (basis number) or price volume (basis volume); with one product the product's own FG is used unchanged (identical to before, audit 33 check 14). The sample is the maximum of the products' `tuning_sample_size()` (computed in `tuning_run()`); `tune_prices()` itself takes `n`.
-- R3.3 with no target-bearing assortment the tab shows the scenario selector and the message "No assortment in this scenario has a target distribution." (the selector stays so the other scenario can be chosen); the list shows only sawlog matrix assortments that `tuning_products()` accepts and that have a target; products with fewer than 20 logs in the first run are left out of the tuning and named in a warning line ("Not tuned (too few logs): ..."); if none has enough logs the old "Too few logs" message shows.
-- R3.4 matrix views: file diameter classes (mm) in rows, lengths (cm) in columns like the price grid, FG per class as an extra column for the two outcome views; shares in whole percent, FG with one decimal; the price change shows only the steered cells.
-- R3.5 the results are cleared by a change of the tuned scenario's assortments or prices (also a target edit there), of the scenario choice, of the assortment selection, or of the stems or their species map; applying the tuned prices to the other scenario changes only that scenario and keeps them.
-
-### Open questions for Lennart
-(none yet)
-
-### Blocked items
-(none)
+Open questions: none. Blocked items: none.
