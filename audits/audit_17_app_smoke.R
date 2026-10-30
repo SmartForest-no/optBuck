@@ -1673,6 +1673,7 @@ if (!browser_ok) {
     # compares A and B (B was imported) on the 5 stems, without Plot columns.
     c31 <- list()
     e31 <- try_drv({
+      app$set_inputs(scen_name_a = "A", scen_name_b = "B", wait_ = FALSE)   # check 24 loaded A's xlsx, name included, into B
       c31$src_before <- app$get_value(input = "tree_source")
       app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE)
@@ -1942,7 +1943,7 @@ if (!browser_ok) {
       identical(c43$cols, "|Original prices|Tuned prices|Change") && identical(c43$use, "Use tuned prices in scenario B") &&
       grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&
       identical(c43$opts, 2L) && isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
-    rec(browser_checks[43], if (ok43) PASS else FAIL,
+    rec(grep("^Check 43:", browser_checks, value = TRUE), if (ok43) PASS else FAIL,
         sprintf("message '%s' (inputs %s) | targets %s | rows: %s | columns '%s' | price-change cells %s | dropdown options visible %s | button '%s' | dialog '%s', open after OK %s | B cells %s equal to the tuned prices %s, changed against A %s | error notifications %s%s",
                 c43$msg, c43$extra, c43$targets, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$price_cells, c43$opts,
                 c43$use, c43$q, c43$open, c43$cells, c43$equal, c43$changed, c43$nerr, err_txt(e43)))
@@ -1952,7 +1953,7 @@ if (!browser_ok) {
     # its assortments.
     c44 <- list()
     e44 <- try_drv({
-      fx44 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+      fx44 <- file.path(root_dir, "inputs", "test_fixtures", "pin_full_synthetic.pin")
       fx44b <- file.path(root_dir, "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
       on_stems <- function() { app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle() }
       on_prices <- function() { app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle() }
@@ -1992,7 +1993,7 @@ if (!browser_ok) {
       grepl("Scenario A", c44$title, fixed = TRUE) && identical(c44$file_inputs, 0L) && isTRUE(c44$apply_enabled) &&
       identical(c44$a3, c44$a2) && identical(c44$b3, c44$b2) && grepl("5 stems read", c44$valid3, fixed = TRUE) &&
       identical(c44$nerr, 0L)
-    rec(browser_checks[44], if (ok44) PASS else FAIL,
+    rec(grep("^Check 44:", browser_checks, value = TRUE), if (ok44) PASS else FAIL,
         sprintf("stems %s -> %s (unchanged after the import into B: %s) | B changed by the import %s, A unchanged %s | loading other stems leaves A and B as they were: %s | summary: %s | buttons: %s | dialog '%s', file inputs %s, Replace enabled %s | Cancel leaves A and B: %s | error notifications %s%s",
                 substr(gsub("\\s+", " ", or_default(c44$valid0, "")), 1, 40), substr(gsub("\\s+", " ", or_default(c44$valid3, "")), 1, 40),
                 identical(c44$valid1, c44$valid0), !identical(c44$b1, c44$b0), identical(c44$a1, c44$a0),
@@ -2022,7 +2023,7 @@ if (!browser_ok) {
       grepl("H\u00f8st", c45$products, fixed = TRUE) && grepl("V\u00e5r", c45$products, fixed = TRUE) &&
       identical(c45$xlsx_name, "H\u00f8st") && grepl("Scenario A", c45$title_empty, fixed = TRUE) &&
       identical(c45$nerr, 0L)
-    rec(browser_checks[45], if (ok45) PASS else FAIL,
+    rec(grep("^Check 45:", browser_checks, value = TRUE), if (ok45) PASS else FAIL,
         sprintf("title '%s' | Summary '%s' | Products columns '%s' | xlsx name '%s' | empty name falls back: '%s' | error notifications %s%s",
                 trimws(c45$title), substr(gsub("\\s+", " ", or_default(c45$summary, "")), 1, 60),
                 substr(or_default(c45$products, ""), 1, 90), c45$xlsx_name, trimws(c45$title_empty), c45$nerr, err_txt(e45)))
@@ -2295,10 +2296,12 @@ if (!browser_ok) {
         c39$stored <- js(app, "window.localStorage.getItem('apter.lang')")
         app$run_js("location.reload();")
         Sys.sleep(2)
-        app$wait_for_js("!!document.querySelector('.lang-btn.is-active') && !!document.querySelector('#tbl_asm_a .rt-th')",
+        app$wait_for_js("!!document.querySelector('.lang-btn.is-active')",   # the app opens on Stems after a reload
                         timeout = 60 * 1000)
         c39$after_reload <- lang_state(app); c39$nav_reload <- nav_txt(app)
       })
+      for (n39 in c("no", "en", "tabs_en", "flat_b", "msg", "stored", "after_reload", "nav_reload"))
+        if (is.null(c39[[n39]])) c39[[n39]] <- "(missing)"
       ok39 <- !nzchar(e39) && grepl("Endrede apteringsmønstre", or_default(c39$no, ""), fixed = TRUE) &&
         grepl("Changed cutting patterns", or_default(c39$en, ""), fixed = TRUE) &&
         identical(digits(c39$no), digits(c39$en)) && identical(c39$tabs_en, "Summary|Products|Trees|Logs") &&
@@ -2330,7 +2333,7 @@ if (!browser_ok) {
   # An uncaught driver error (Chrome's connection dropped, a timeout outside
   # try_drv()): every check not recorded yet fails with the error text, and the
   # audit still writes its outputs below.
-  msg <- gsub("\\s+", " ", conditionMessage(e))
+  msg <- gsub("\\s+", " ", paste(conditionMessage(e), "| in:", paste(deparse(conditionCall(e)), collapse = " ")))
   cat("\nBrowser section aborted:", msg, "\n", file = audit_txt, append = TRUE)
   todo <- setdiff(c(browser_checks, "Check 22b: Screenshots saved for review (Norsk session)"), E$results$check)
   for (ck in todo)
