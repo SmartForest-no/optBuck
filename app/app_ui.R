@@ -36,11 +36,26 @@ scenario_column <- function(s) {
     conditionalPanel(state("!= 'none'"), div(class = "asm-detail", id = paste0("asm_detail_", s),
       uiOutput(paste0("asm_head_", s)),
       conditionalPanel(state("== 'matrix'"),
-        div(class = "pm-grid",
-          div(class = "pm-axis", t_("pm_axis")),
-          rHandsontableOutput(paste0("pm_", s)),
-          uiOutput(paste0("pm_", s, "_cap")),     # "≥ 36 cm: priced as 36 up to max top 60 cm"
-          uiOutput(paste0("pm_", s, "_axes")))),
+        # Prices | Target distribution (restructure R2): the same grid, two views.
+        radioButtons(paste0("pm_", s, "_view"), NULL, inline = TRUE, selected = "prices",
+                     choiceNames = list(t_("view_prices"), t_("view_target")),
+                     choiceValues = c("prices", "target")),
+        conditionalPanel(sprintf("input.pm_%s_view != 'target'", s),
+          div(class = "pm-grid",
+            div(class = "pm-axis", t_("pm_axis")),
+            rHandsontableOutput(paste0("pm_", s)),
+            uiOutput(paste0("pm_", s, "_cap")),     # "≥ 36 cm: priced as 36 up to max top 60 cm"
+            uiOutput(paste0("pm_", s, "_axes")))),
+        conditionalPanel(sprintf("input.pm_%s_view == 'target'", s),
+          div(class = "pm-grid",
+            div(class = "pm-axis", t_("pm_axis")),
+            rHandsontableOutput(paste0("dt_", s)),
+            div(class = "pm-axes",
+              div(class = "pm-axes-row",
+                  btn(paste0("dt_", s, "_even"), t_("btn_target_even")),
+                  btn(paste0("dt_", s, "_long"), t_("btn_target_long")),
+                  btn(paste0("dt_", s, "_clear"), t_("btn_target_clear")),
+                  uiOutput(paste0("dt_", s, "_cat_ui"), inline = TRUE)))))),
       conditionalPanel(state("== 'flat'"),
         div(class = "asm-flat", id = paste0("flat_wrap_", s),
           uiOutput(paste0("flat_", s)),
@@ -252,4 +267,4 @@ ui <- page_navbar(
   nav_spacer(),
   nav_item(lang_switch()),
   nav_item(div(class = "navbar-logo-item", navbar_logo()))
-)
+)

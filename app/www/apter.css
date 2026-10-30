@@ -320,3 +320,5 @@ details.apter-card { margin-bottom: 16px; }
 .pager-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 8px; }
 .pager-bar .shiny-input-container { margin-bottom: 0; }
 .pager-info { color: var(--apter-muted); font-size: 0.82rem; min-width: 120px; text-align: center; }
+/* Target distribution view (restructure R2): a cell without a price. */
+.pm-na { background-color: #F3F4F3 !important; }

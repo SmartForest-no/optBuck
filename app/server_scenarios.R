@@ -769,6 +769,103 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     sc[[side]]$pm(pm_from_grid(g, PM_FLAT_ID, prices(side))); msgs[[side]](NULL)
   })
 
+  # ---- target distribution view (restructure R2; R/helpers_distribution_edit.R) -------
+  # The same grid with the target percentage per cell and a sum per diameter
+  # row (bold when it is neither 0 nor 100). Cells without a price are not
+  # editable. An edit goes to every whole-cm row of the same file class
+  # (dist_set_cell()); price edits never change it and these edits never
+  # change prices.
+  DT_RENDERER <- "
+function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.NumericRenderer.apply(this, arguments);
+  var av = instance.params && instance.params.avail;
+  var fl = instance.params && instance.params.flag;
+  var last = instance.countCols() - 1;
+  td.classList.remove('pm-na'); td.style.fontWeight = '';
+  if (col === last) { cellProperties.readOnly = true; }
+  else if (av && av[row] && av[row][col] === false) { cellProperties.readOnly = true; td.classList.add('pm-na'); }
+  if (fl && fl[row] === true) td.style.fontWeight = 'bold';
+  return td;
+}"
+  dt_widget <- function(pm, id) {
+    l <- isolate(lang())
+    g <- dist_grid(pm, id)
+    sums <- dist_row_sums(g)
+    df <- cbind(g, sums); names(df) <- c(colnames(g), L("col_sum"))
+    av <- cbind(dist_available(pm, id), TRUE)
+    w <- rhandsontable(df, rowHeaders = rownames(g), colHeaders = names(df),
+                       rowHeaderWidth = 50, height = 34 + 24 * nrow(df), stretchH = "all",
+                       matrix_id = id, avail = unname(av), flag = dist_row_flag(sums))
+    w <- hot_cols(w, renderer = DT_RENDERER, columnSorting = FALSE, format = "0.[00]")
+    if (l == "no") w <- hot_col(w, col = seq_len(ncol(df)), format = "0.[00]", language = "nb-NO")
+    w <- hot_col(w, col = ncol(df), readOnly = TRUE)
+    w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE, allowReadOnly = FALSE,
+                          allowComments = FALSE, allowCustomBorders = FALSE,
+                          customOpts = list(undo = list(name = tr("hot_undo", lang = l)),
+                                            redo = list(name = tr("hot_redo", lang = l))))
+    w$x$contextMenu$items <- w$x$contextMenu$items[!grepl("^(alignment|hsep)", names(w$x$contextMenu$items))]
+    hot_validate_numeric(w, cols = seq_len(ncol(g)), min = 0, max = 100)
+  }
+  render_target <- function(side) renderRHandsontable({
+    pm_tick(); id <- selected(); lang()
+    req(id, sel_state(side) == "matrix")
+    dt_widget(isolate(prices(side)), id)
+  })
+  output$dt_a <- render_target("A")
+  output$dt_b <- render_target("B")
+
+  # Write a changed target (and the four fields the first time) back.
+  set_target <- function(side, pm, id, has_target = dist_has_target(pm, id)) {
+    d <- isolate(defs(side))
+    d <- if (has_target) dist_init_fields(d, id) else dist_clear_fields(d, id)
+    sc[[side]]$defs(d); sc[[side]]$pm(pm); msgs[[side]](NULL); redraw()
+  }
+  apply_target_edit <- function(x, side) {
+    if (is.null(x$changes$changes)) return()            # load, not an edit
+    id <- or_default(x$params$matrix_id, isolate(selected()))
+    d <- isolate(defs(side))
+    if (!isTRUE(id %in% keys_of(d)[d$PriceType == "matrix"])) return()
+    pm <- isolate(prices(side)); ref <- dist_grid(pm, id)
+    g <- hot_to_r(x)
+    if (ncol(g) != ncol(ref) + 1L || nrow(g) != nrow(ref)) return()
+    g <- g[, seq_len(ncol(ref)), drop = FALSE]
+    a <- as.matrix(g); b <- as.matrix(ref)
+    chg <- which(!((is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & abs(a - b) < 1e-9)), arr.ind = TRUE)
+    err <- NULL
+    for (k in seq_len(nrow(chg))) {
+      r <- chg[k, 1L]; cc <- chg[k, 2L]
+      res <- tryCatch(dist_set_cell(pm, id, as.integer(rownames(ref)[r]), as.integer(colnames(ref)[cc]),
+                                    suppressWarnings(as.numeric(a[r, cc]))), error = function(e) e)
+      if (inherits(res, "error")) { err <- conditionMessage(res); break }
+      pm <- res
+    }
+    if (!is.null(err)) { say(side, "error", err); redraw(); return() }
+    set_target(side, pm, id)
+  }
+  observeEvent(input$dt_a, apply_target_edit(input$dt_a, "A"))
+  observeEvent(input$dt_b, apply_target_edit(input$dt_b, "B"))
+  for (side in c("A", "B")) local({
+    side <- side; s <- low(side); p <- paste0("dt_", s)
+    on_matrix <- function() { id <- isolate(selected()); req(id, isolate(sel_state(side)) == "matrix"); id }
+    observeEvent(input[[paste0(p, "_even")]], { id <- on_matrix(); set_target(side, dist_apply_target(isolate(prices(side)), id, "neutral"), id, TRUE) })
+    observeEvent(input[[paste0(p, "_long")]], { id <- on_matrix(); set_target(side, dist_apply_target(isolate(prices(side)), id, "long"), id, TRUE) })
+    observeEvent(input[[paste0(p, "_clear")]], { id <- on_matrix(); set_target(side, dist_clear(isolate(prices(side)), id), id, FALSE) })
+    # DistributionCategory: only for an assortment that has a target.
+    output[[paste0(p, "_cat_ui")]] <- renderUI({
+      pm_tick(); lang(); id <- selected(); req(id, sel_state(side) == "matrix")
+      d <- isolate(defs(side)); cat_ <- d$DistributionCategory[match(id, keys_of(d))]
+      req(!is.na(cat_))
+      selectInput(paste0(p, "_cat"), L("lbl_dist_category"), width = "190px", selected = cat_,
+                  choices = setNames(DIST_CATEGORIES, c(L("dist_cat_number"), L("dist_cat_volume"))))
+    })
+    observeEvent(input[[paste0(p, "_cat")]], {
+      id <- isolate(selected()); v <- input[[paste0(p, "_cat")]]
+      d <- isolate(defs(side)); i <- match(id, keys_of(d))
+      if (is.na(i) || is.na(d$DistributionCategory[i]) || identical(d$DistributionCategory[i], v) || !v %in% DIST_CATEGORIES) return()
+      sc[[side]]$defs(dist_set_category(d, id, v)); msgs[[side]](NULL)
+    })
+  })
+
   # Rows (diameter classes, ends only) and columns (lengths) of a matrix.
   axes_ui <- function(s, id, pm) {
     # The bulk-edit field and mode keep their values when the controls are redrawn.
@@ -945,4 +1042,4 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
        differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
        replace_scenario = replace_scenario, name = scen_name,
        open_hpr_import = open_hpr_import)  # opens the import dialog for a file (Stems tab)
-}
+}

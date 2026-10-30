@@ -546,7 +546,8 @@ browser_checks <- c(
   "Check 42: Import .hpr/.pin: a .pin imported into Scenario A through the upload field (title says .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
   "Check 43: Price tuning tab: message without .hpr stems; with the tuning fixture a tuning with two iterations gives the table, plot and price-change table; Use tuned prices in the other scenario copies the tuned prices",
   "Check 44: Stems and scenarios are independent: importing into a scenario leaves the stems untouched and loading stems leaves the scenarios untouched; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
-  "Check 45: Scenario names: shown in the card title, Summary and Products headers and in the scenario xlsx")
+  "Check 45: Scenario names: shown in the card title, Summary and Products headers and in the scenario xlsx",
+  "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -2027,6 +2028,53 @@ if (!browser_ok) {
         sprintf("title '%s' | Summary '%s' | Products columns '%s' | xlsx name '%s' | empty name falls back: '%s' | error notifications %s%s",
                 trimws(c45$title), substr(gsub("\\s+", " ", or_default(c45$summary, "")), 1, 60),
                 substr(or_default(c45$products, ""), 1, 90), c45$xlsx_name, trimws(c45$title_empty), c45$nerr, err_txt(e45)))
+
+    # 46. The target distribution view (restructure R2): the tuning fixture's
+    # spruce 140 SCA in Scenario A (check 43).
+    c46 <- list()
+    e46 <- try_drv({
+      key46 <- "spruce_140_sca_sagt_mmer"
+      cell <- function(r, c) js(app, sprintf("(function(){ var t = document.querySelectorAll('#dt_a .ht_master tbody tr')[%d]; return t ? t.querySelectorAll('td')[%d].innerText.trim() : ''; })()", r, c))
+      bold <- function(r, c) isTRUE(js(app, sprintf("(function(){ var t = document.querySelectorAll('#dt_a .ht_master tbody tr')[%d]; return !!t && t.querySelectorAll('td')[%d].style.fontWeight === 'bold'; })()", r, c)))
+      ncol_hot <- function() js(app, "HTMLWidgets.find('#dt_a').hot.countCols()")
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      pick(app, "a", key46); app$wait_for_idle()
+      c46$price_grid <- js(app, "!!document.querySelector('#pm_a .ht_master td')")
+      app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
+      app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)
+      c46$bulk_hidden <- !isTRUE(js(app, "(function(){ var e = document.getElementById('pm_a_bulk_apply'); return !!e && e.offsetParent !== null; })()"))
+      c46$buttons <- js(app, "['dt_a_even','dt_a_long','dt_a_clear'].map(function(i){ return document.getElementById(i).innerText.trim(); }).join('|')")
+      app$click("dt_a_even"); app$wait_for_idle(); Sys.sleep(1)
+      nc <- ncol_hot()
+      c46$sum_even <- cell(0, nc - 1L); c46$bold_even <- bold(0, 0)
+      # a cell edit: every row of the same file class gets it
+      app$run_js("HTMLWidgets.find('#dt_a').hot.setDataAtCell(0, 0, 20);"); app$wait_for_idle(); Sys.sleep(1)
+      c46$edited <- cell(0, 0); c46$bold_after <- bold(0, 0); c46$sum_after <- cell(0, nc - 1L)
+      c46$n_same <- js(app, "Array.from(document.querySelectorAll('#dt_a .ht_master tbody tr')).filter(function(r){ return r.querySelectorAll('td')[0].innerText.trim() === '20.00' || r.querySelectorAll('td')[0].innerText.trim() === '20'; }).length")
+      shoot(app, "restructure_02_target_view")
+      f46 <- app$get_download("dl_pin_a")
+      c46$pin <- paste(readLines(f46, warn = FALSE, encoding = "UTF-8"), collapse = " ")
+      x46 <- scen_of(app, "a"); pmx <- pm_minimal(x46$pm)
+      c46$xlsx_cells <- sum(abs(pmx$Distribution - 20) < 1e-9, na.rm = TRUE)
+      c46$xlsx_fields <- x46$defs$DistributionCategory[match(key46, assortment_table_keys(x46$defs))]
+      c46$prices_same <- identical(pm_prices(pmx), pm_prices(pm_minimal(scen_of(app, "a")$pm)))
+      app$click("dt_a_clear"); app$wait_for_idle(); Sys.sleep(1)
+      c46$cleared <- cell(0, nc - 1L)
+      c46$nerr <- n_err_notif(app)
+      app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
+    })
+    ok46 <- !nzchar(e46) && isTRUE(c46$bulk_hidden) && identical(c46$buttons, "Even|Longer logs|Clear") &&
+      grepl("^100(\\.00)?$", c46$sum_even) && !isTRUE(c46$bold_even) &&
+      grepl("^20(\\.00)?$", c46$edited) && isTRUE(c46$bold_after) && !grepl("^100(\\.00)?$", c46$sum_after) &&
+      isTRUE(c46$n_same >= 1L) &&
+      grepl("<Distribution>20(\\.0+)?</Distribution>", c46$pin) && !grepl("Latitude|Longitude|Coordinate", c46$pin) &&
+      isTRUE(c46$xlsx_cells >= 1L) && identical(c46$xlsx_fields, "Volume of logs") &&
+      grepl("^0(\\.00)?$", c46$cleared) && identical(c46$nerr, 0L)
+    rec(grep("^Check 46:", browser_checks, value = TRUE), if (ok46) PASS else FAIL,
+        sprintf("buttons '%s', price controls hidden %s | Even: sum '%s' (bold %s) | after editing a cell to 20: '%s', rows with 20 in that column %s, sum '%s' (bold %s) | .pin has <Distribution>20 %s | xlsx: %s cells = 20, category '%s' | after Clear: sum '%s' | error notifications %s%s",
+                c46$buttons, c46$bulk_hidden, c46$sum_even, c46$bold_even, c46$edited, c46$n_same, c46$sum_after, c46$bold_after,
+                grepl("<Distribution>20(\\.0+)?</Distribution>", or_default(c46$pin, "")), c46$xlsx_cells, c46$xlsx_fields,
+                c46$cleared, c46$nerr, err_txt(e46)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.
