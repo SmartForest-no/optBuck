@@ -62,10 +62,9 @@ scenario_column <- function(s) {
       btn(paste0("asm_reset_", s), t_("btn_reset_defaults")),
       btn(paste0("scen_copy_", s), t_("btn_copy_from", O)),
       dl(paste0("dl_scen_", s), t_("btn_download_scenario")),
-      dl(paste0("dl_pin_", s), t_("btn_download_pin")),
-      btn(paste0("hpr_import_", s), t_("btn_import_hpr"))),
+      dl(paste0("dl_pin_", s), t_("btn_download_pin"))),
     apter_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
-                     accept = c(".xlsx", ".csv")),
+                     accept = c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip")),
 
     # Stem grades (Phase 6): run options of this scenario, only for .hpr stems.
     conditionalPanel("input.tree_source == 'hpr'",
@@ -89,8 +88,16 @@ prices_page <- nav_panel(
 
 simulator_sidebar <- sidebar(
   width = 320,
+  actionButton("run_btn", t_("btn_run"),
+               class = "btn-primary", width = "100%")
+)
 
-  div(class = "sidebar-heading", t_("hdr_trees")),
+# ---- Stems (restructure R1, 2026-10-30) -------------------------------------------------
+# The stem source and its inputs live on their own tab, independent of the
+# scenarios. Input and output ids are unchanged from the former Simulator
+# sidebar. Right: a plain summary per species and, for .hpr stems, the
+# buttons that open the import dialog of a scenario for the loaded file.
+stems_inputs <- tagList(
   radioButtons("tree_source", t_("lbl_data_source"),
                choiceNames  = list(t_("src_nfi"), t_("src_list"), t_("src_hpr")),
                choiceValues = c("nfi", "list", "hpr"),
@@ -132,10 +139,17 @@ simulator_sidebar <- sidebar(
     uiOutput("hs_species_ui"),
     uiOutput("hs_validation")
   ),
-  uiOutput("tree_counts"),
+  uiOutput("tree_counts")
+)
 
-  actionButton("run_btn", t_("btn_run"),
-               class = "btn-primary", width = "100%")
+stems_page <- nav_panel(
+  t_("tab_stems"), value = "stems",
+  div(class = "apter-page",
+    layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(5, 7)),
+      apter_card(t_("hdr_trees"), stems_inputs),
+      apter_card(t_("hdr_stem_summary"),
+        reactableOutput("stem_summary"),
+        uiOutput("stems_use_ui"))))
 )
 
 simulator_page <- nav_panel(
@@ -221,7 +235,7 @@ ui <- page_navbar(
   window_title = tr("window_title", APP_DISPLAY_NAME, lang = APP_LANG),
   theme        = apter_theme(),
   fillable     = FALSE,
-  selected     = "prices",
+  selected     = "stems",
   header = tagList(
     tags$head(
       tags$link(rel = "stylesheet", href = asset_url("apter.css")),
@@ -230,6 +244,7 @@ ui <- page_navbar(
       tags$script(src = asset_url("apter.js"))
     )
   ),
+  stems_page,
   prices_page,
   simulator_page,
   tuning_page,

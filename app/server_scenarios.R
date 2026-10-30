@@ -506,9 +506,12 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
         }
       })
     # A scenario xlsx (with an "assortments" sheet) replaces the scenario;
-    # any other xlsx or CSV is a price file for all its assortments.
+    # any other xlsx or CSV is a price file for all its assortments; an
+    # .hpr, .pin (or .hpr.gz / .zip) opens the import dialog (R1.6).
     observeEvent(input[[paste0("scen_", s, "_upload")]], {
       f <- input[[paste0("scen_", s, "_upload")]]; req(f)
+      if (grepl("\\.(hpr|pin|gz|zip)$", f$name, ignore.case = TRUE))
+        return(open_hpr_import(side, f$datapath, f$name, uploaded = TRUE))
       sheets <- if (grepl("\\.xlsx$", f$name, ignore.case = TRUE))
         tryCatch(readxl::excel_sheets(f$datapath), error = function(e) character(0))
       if (!"assortments" %in% sheets) {
@@ -539,9 +542,8 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     modalDialog(
       title = tr("hpr_title", side, lang = l),
       size = "xl", easyClose = FALSE, fade = FALSE,
-      # No intro text and no label (2026-10-23); the upload limit stays
-      # (HPR_MAX_UPLOAD_MB, setup.R).
-      file_input_lang("hpr_file", NULL, accept = c(".hpr", ".zip", ".gz", ".pin"), lang = l),
+      # The file comes from the scenario's upload field or from the Stems tab
+      # (restructure R1.5/R1.6): the dialog has no upload of its own.
       uiOutput("hpr_check"), uiOutput("hpr_species"), uiOutput("hpr_products"),
       uiOutput("hpr_msg"),
       footer = tagList(modalButton(tr("btn_cancel", lang = l)),
@@ -549,48 +551,25 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
                                     class = "btn-primary", disabled = TRUE)))
   }
 
-  for (side in c("A", "B")) local({
-    side <- side
-    observeEvent(input[[paste0("hpr_import_", low(side))]], {
-      hpr(list(side = side)); hpr_err(NULL); showModal(hpr_modal(side))
-    })
-  })
-  # The uploaded file is kept for the session: moved out of Shiny's upload
-  # folder into a folder of the session's own (upload/, one file at a time: a
-  # new upload replaces it). When it is imported, it moves to imported/ with
-  # the confirmed species map (hpr_imported), so the ".hpr stems" source can
-  # buck it (hpr Phase B) even after a later upload that was cancelled. When
-  # the session ends the folder and the upload folders are deleted.
-  hpr_dir  <- file.path(tempdir(), paste0("apter_hpr_", session$token))
-  hpr_kept <- reactiveVal(NULL)   # list(name, path, mb)
-  hpr_imported <- reactiveVal(NULL)   # list(name, path, side, map)
+  # Read a product file (.hpr, .hpr.gz, .zip or .pin; decided by its content)
+  # and open the dialog for a scenario. `uploaded`: Shiny's upload folder is
+  # deleted when the session ends. A file taken from the Stems tab is only
+  # read here: the stems keep their own copy and are never changed.
   hpr_uploads <- character(0)     # Shiny's upload folders of this session
-  session$onSessionEnded(function() unlink(c(hpr_dir, hpr_uploads), recursive = TRUE))
-  observeEvent(input$hpr_file, {
-    f <- input$hpr_file; req(f, hpr())
-    hpr_uploads <<- unique(c(hpr_uploads, dirname(f$datapath)))
-    up_dir <- file.path(hpr_dir, "upload")
-    unlink(up_dir, recursive = TRUE)                    # the previous upload
-    dir.create(up_dir, showWarnings = FALSE, recursive = TRUE)
-    kept <- file.path(up_dir, basename(f$name))
-    moved <- isTRUE(file.rename(f$datapath, kept)) ||
-      (isTRUE(file.copy(f$datapath, kept, overwrite = TRUE)) && isTRUE(file.remove(f$datapath)))
-    if (!moved) kept <- f$datapath
-    data <- withProgress(message = L("prog_reading", f$name), value = 0.5,
-                         read_product_file(kept, f$name))
-    if (identical(data$kind, "pin")) {
-      # A .pin has no stems: it is never kept for the ".hpr stems" source (Phase 5b).
-      unlink(up_dir, recursive = TRUE); hpr_kept(NULL)
-    } else {
-      hpr_kept(list(name = f$name, path = kept, mb = round(file.size(kept) / 1048576, 1)))
-    }
-    hpr(utils::modifyList(hpr(), list(data = data, file = f$name)))
-    hpr_err(NULL)
-  })
+  session$onSessionEnded(function() unlink(hpr_uploads, recursive = TRUE))
+  hpr_kept <- reactiveVal(NULL)   # list(name, path): the file the dialog shows (test value)
+  open_hpr_import <- function(side, path, name, uploaded = FALSE) {
+    if (uploaded) hpr_uploads <<- unique(c(hpr_uploads, dirname(path)))
+    data <- withProgress(message = L("prog_reading", name), value = 0.5,
+                         read_product_file(path, name))
+    hpr_kept(list(name = name, path = path))
+    hpr(list(side = side, data = data, file = name)); hpr_err(NULL)
+    showModal(hpr_modal(side))
+  }
   hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
   # Test mode only (shinytest2): where the kept file is, so audit 17 can check
   # that it is deleted when the session ends.
-  exportTestValues(hpr_kept_path = or_default(hpr_kept()$path, hpr_imported()$path))
+  exportTestValues(hpr_kept_path = hpr_kept()$path)
   observe(updateActionButton(session, "hpr_apply", disabled = !isTRUE(hpr_data()$ok)))
 
   output$hpr_check <- renderUI({
@@ -675,16 +654,6 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     if (!isTRUE(res$ok)) return(hpr_err(c(list(T_("hpr_not_imported", h$file)), as.list(res$errors))))
     if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
     selected(keys_of(res$defs)[asm_order(res$defs)][1L])
-    # Keep the imported file and the confirmed map for the ".hpr stems" source.
-    k <- hpr_kept()
-    if (!is.null(k) && file.exists(k$path)) {
-      imp_dir <- file.path(hpr_dir, "imported")
-      unlink(imp_dir, recursive = TRUE); dir.create(imp_dir, showWarnings = FALSE, recursive = TRUE)
-      dest <- file.path(imp_dir, basename(k$path))
-      if (!isTRUE(file.rename(k$path, dest))) dest <- if (isTRUE(file.copy(k$path, dest))) dest else k$path
-      hpr_kept(NULL)
-      hpr_imported(list(name = h$file, path = dest, side = side, map = map))
-    }
     redraw(); removeModal()
     n <- sum(res$defs$Type != "waste")
     say(side, "ok", T_(if (n == 1L) "msg_imported_1" else "msg_imported", n, h$file, side), res$warnings)
@@ -971,6 +940,5 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
        differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
        replace_scenario = replace_scenario,
-       hpr_file = hpr_kept,          # the session's last upload (not yet imported)
-       hpr_imported = hpr_imported)  # the file imported into a scenario, with its species map
-}
+       open_hpr_import = open_hpr_import)  # opens the import dialog for a file (Stems tab)
+}

@@ -343,3 +343,26 @@ dbh_class_summary <- function(tree_summary, width = DBH_CLASS_WIDTH_CM, from = D
   rownames(out) <- NULL
   out
 }
+
+#' Stems per species for the Stems tab (restructure R1.2): the stems that will
+#' be bucked (count, mean DBH in cm, mean height in m) and, where the source
+#' reports them, the stems left out, per species (spruce first, then pine).
+#' Plain numbers only; a species with no stems and no exclusions is not listed.
+#'
+#' @param species,dbh_cm,height_m Per used stem.
+#' @param excluded_species Species of the excluded stems (any other value, such
+#'   as "none", is not counted).
+#' @return data.frame(species, n_stems, mean_dbh_cm, mean_height_m, n_excluded).
+stem_species_summary <- function(species, dbh_cm, height_m, excluded_species = character(0)) {
+  sp <- intersect(c("spruce", "pine"), unique(c(species, excluded_species)))
+  do.call(rbind, lapply(sp, function(s) {
+    i <- species == s
+    data.frame(species = s, n_stems = sum(i),
+               mean_dbh_cm = if (any(i)) mean(dbh_cm[i]) else NA_real_,
+               mean_height_m = if (any(i)) mean(height_m[i], na.rm = TRUE) else NA_real_,
+               n_excluded = sum(excluded_species == s), stringsAsFactors = FALSE)
+  })) -> out
+  if (is.null(out)) out <- data.frame(species = character(0), n_stems = integer(0), mean_dbh_cm = numeric(0),
+                                      mean_height_m = numeric(0), n_excluded = integer(0))
+  out
+}

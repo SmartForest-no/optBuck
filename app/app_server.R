@@ -135,12 +135,12 @@ server <- function(input, output, session) {
     hs_uploads <<- unique(c(hs_uploads, dirname(f$datapath)))
     hs_own(list(name = f$name, path = f$datapath))
   })
-  observeEvent(sc$hpr_imported(), hs_own(NULL), ignoreInit = TRUE)
+  # Independent of the scenarios (restructure R1.4): importing assortments
+  # never changes, reloads or clears the stems, and loading stems never
+  # changes a scenario.
   hs_file <- reactive({
-    own <- hs_own(); imp <- sc$hpr_imported()
-    if (!is.null(own)) return(list(name = own$name, path = own$path))
-    if (!is.null(imp)) return(list(name = imp$name, path = imp$path, side = imp$side, map = imp$map))
-    NULL
+    own <- hs_own()
+    if (!is.null(own)) list(name = own$name, path = own$path)
   })
 
   hs_stems   <- reactiveVal(NULL)   # read_hpr_stems() result, plus $path and $read_id
@@ -171,12 +171,8 @@ server <- function(input, output, session) {
   })
 
   output$hs_file_ui <- renderUI({
-    imp <- sc$hpr_imported(); own <- hs_own()
     tagList(
-      if (!is.null(imp) && is.null(own))
-        div(class = "hs-file", L("hs_using", imp$name, imp$side)),
-      file_input_lang("hs_upload",
-                      if (is.null(imp)) L("lbl_hpr_file", HPR_MAX_UPLOAD_MB) else L("lbl_hpr_other"),
+      file_input_lang("hs_upload", L("lbl_hpr_file", HPR_MAX_UPLOAD_MB),
                       accept = c(".hpr", ".zip", ".gz"), lang = lang(), multiple = TRUE))
   })
 
@@ -191,21 +187,10 @@ server <- function(input, output, session) {
                stringsAsFactors = FALSE, row.names = NULL)
   }
   # Species group key -> "spruce" / "pine" / "none": the panel's choice, else
-  # the import's confirmed map for that file, else the guess. Input IDs carry
-  # the read, so another file's groups start from their own defaults.
+  # the guess. Input IDs carry the read, so another file's groups start from
+  # their own defaults.
   hs_sp_id <- function(st, i) sprintf("hs_sp_%d_%d", st$read_id, i)
-  hs_default <- function(st, g) {
-    guess <- guess_hpr_species(g$name, g$user_id)
-    f <- isolate(hs_file())
-    if (!is.null(f$map) && identical(f$path, st$path)) {
-      nid <- tolower(trimws(st$species$name))
-      for (i in seq_len(nrow(g))) {
-        m <- f$map[st$species$key[nid == g$name_id[i]]]; m <- m[!is.na(m)]
-        if (length(m)) guess[i] <- m[[1L]]
-      }
-    }
-    guess
-  }
+  hs_default <- function(st, g) guess_hpr_species(g$name, g$user_id)
   hs_map <- reactive({
     st <- hs_stems(); req(isTRUE(st$ok))
     g <- hs_groups(st); def <- hs_default(st, g)
@@ -258,6 +243,51 @@ server <- function(input, output, session) {
                                                tr_msg(ck$errors, lang())), collapse = "\n")),
       failed,
       warn_div(ck$warnings))
+  })
+
+
+  # ---- Stems tab: summary per species and "use the assortments of this file" ----
+  # (restructure R1.2, R1.5). NFI trees are built at run time: no summary.
+  stem_summary_df <- reactive({
+    src <- input$tree_source
+    if (identical(src, "list")) {
+      p <- tl_prepared(); req(p, isTRUE(p$ok)); tr <- p$trees
+      u <- tr[tr$in_range, , drop = FALSE]
+      return(stem_species_summary(u$species_group, u$dbh_cm, u$height_m, tr$species_group[!tr$in_range]))
+    }
+    if (identical(src, "hpr")) {
+      st <- hs_stems(); req(isTRUE(st$ok))
+      ps <- hpr_stem_profiles(st, hs_map()); req(!is.null(ps$tree_data))
+      td <- ps$tree_data
+      return(stem_species_summary(td$species_group, td$dbh_cm, td$height_m,
+                                  ps$species[!is.na(ps$reason)]))
+    }
+    NULL
+  })
+  output$stem_summary <- renderReactable({
+    d <- stem_summary_df(); req(d, nrow(d) > 0L); l <- lang()
+    d$species <- vapply(d$species, function(x) L(paste0("sp_", x)), "")
+    names(d) <- c(L("col_species"), L("col_stems"), L("col_mean_dbh"), L("col_mean_height"), L("col_excluded"))
+    apter_reactable(d, digits = 1L, pagination = FALSE, lang = l)
+  })
+  output$stems_use_ui <- renderUI({
+    own <- hs_own(); st <- hs_stems()
+    req(identical(input$tree_source, "hpr"), !is.null(own), isTRUE(st$ok))
+    n <- length(own$path)
+    tagList(
+      if (n > 1L) selectInput("stems_use_file", L("lbl_stems_use_file"),
+                              choices = setNames(seq_len(n), own$name)),
+      div(class = "pm-actions",
+        actionButton("stems_use_a", L("btn_stems_use", "A"), class = "btn-secondary btn-sm"),
+        actionButton("stems_use_b", L("btn_stems_use", "B"), class = "btn-secondary btn-sm")))
+  })
+  for (side in c("A", "B")) local({
+    side <- side
+    observeEvent(input[[paste0("stems_use_", tolower(side))]], {
+      own <- hs_own(); req(own)
+      i <- if (length(own$path) > 1L) as.integer(or_default(input$stems_use_file, 1L)) else 1L
+      sc$open_hpr_import(side, own$path[i], own$name[i])
+    })
   })
 
 
