@@ -35,6 +35,11 @@
 # 10.  tune_prices on_iter is called exactly max_iter times (early_stop = FALSE)
 # 11.  tuning_products on file5: spruce 140 SCA listed with has_file_target TRUE,
 #      spruce 154 Kubb (one length class) not listed
+# 13.  swap_job_prices keeps the job's stem-grade options: on file5 with both
+#      options TRUE (and FALSE), a 1000-stem sample bucked before and after
+#      swap_job_prices(same products) is identical; a short tune_prices() with
+#      both options TRUE completes and its iteration 1 value equals a normal
+#      run with grades on for the same sample
 # 12.  tuning_hpr_info (from the hidden FileDiameterClass_mm) gives the same grid (lengths,
 #      file classes, cm_map, prices, Distribution) and the same targets as the
 #      file's own classes (read_hpr_distribution), for every tunable product of
@@ -170,6 +175,7 @@ if (!have5) {
   skipped(7, "tally_grid holds every log (file5)")
   skipped(8, "hidden Distribution column kept by apply_grid_prices (file5)")
   skipped(10, "tune_prices on_iter (file5)"); skipped(11, "tuning_products (file5)")
+  skipped(13, "swap_job_prices keeps the stem-grade options (file5)")
 } else {
   section("Setup: file5 products, grid and the original-price run of all stems")
   hp <- read_hpr(f5); stopifnot(isTRUE(hp$ok))
@@ -287,6 +293,32 @@ if (!have5) {
     !any(grepl("154", tp$name) & grepl("kubb", tp$name, ignore.case = TRUE))
   rec("Check 11: tuning_products lists spruce 140 SCA sawlog with has_file_target TRUE and not spruce 154 Kubb",
       ok(ok11), sprintf("%d tunable products: %s", nrow(tp), paste(tp$product_id, collapse = ", ")))
+
+  # ============================================================================
+  section("13. swap_job_prices keeps the stem-grade options")
+  st13 <- read_hpr_stems(f5); stopifnot(isTRUE(st13$ok))
+  smap13 <- setNames(guess_hpr_species(st13$species$name, st13$species$user_id), st13$species$key)
+  mk_job <- function(g) prepare_hpr_stems_job(st13, smap13, price_matrix_path = price_path, products = pr$pd,
+                                              length_classes = pr$lc, grade_opts = list(use_grades = g, cut_at_changes = g))
+  same_res <- function(a, b) identical(a$selected_logs_all, b$selected_logs_all) && identical(a$tree_summary, b$tree_summary)
+  sample_of <- function(j, n) { set.seed(1); subset_job_stems(j, sample(length(j$pvs), min(n, length(j$pvs)))) }
+  vals <- list(); same13 <- logical(0)
+  for (g in c(TRUE, FALSE)) {
+    j13 <- mk_job(g); js13 <- sample_of(j13, 1000L)
+    r1 <- finish_job(js13, buck_job(js13)); r2 <- finish_job(swap_job_prices(js13, products), buck_job(swap_job_prices(js13, products)))
+    same13[as.character(g)] <- same_res(r1, r2); vals[[as.character(g)]] <- sum(r1$tree_summary$total_value_nok)
+    if (g) job13 <- j13
+    rm(j13, js13, r1, r2); invisible(gc())
+  }
+  tg <- tune_prices(job13, products, key, "real", n = 200, seed = 1, max_iter = 3, hpr = hpr, early_stop = FALSE)
+  js200 <- sample_of(job13, 200L); v200 <- sum(finish_job(js200, buck_job(js200))$tree_summary$total_value_nok)
+  ok13 <- all(same13) && nrow(tg$trace) == 3L && abs(tg$trace$value_total[1L] - v200) < 1e-6 &&
+    abs(vals[["TRUE"]] - vals[["FALSE"]]) > 1
+  rec("Check 13: swap_job_prices keeps the stem-grade options: sample results identical before and after swapping (grades on and off); tune_prices with grades on runs, iteration 1 equals a normal run with grades on",
+      ok(ok13), sprintf("identical on %s, off %s | sample value grades on %.0f, off %.0f NOK | tune iteration 1 %.3f vs normal run %.3f | FG %s",
+                        same13[["TRUE"]], same13[["FALSE"]], vals[["TRUE"]], vals[["FALSE"]], tg$trace$value_total[1L], v200,
+                        paste(round(tg$trace$fg, 2), collapse = " -> ")))
+  rm(job13, st13); invisible(gc())
 }
 
 # ==============================================================================

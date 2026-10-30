@@ -34,13 +34,16 @@
 --- 11. tuning_products ---
   [PASS  ] Check 11: tuning_products lists spruce 140 SCA sawlog with has_file_target TRUE and not spruce 154 Kubb | 9 tunable products: pine_289_stamblokk, pine_240_sag_REDACTED34, pine_REDACTED13, pine_246_eksport, spruce_146_sag_REDACTED56, spruce_148_sm_REDACTED31, spruce_140_sca_sagt_mmer, spruce_140_REDACTED34, spruce_189_stamblokk
 
+--- 13. swap_job_prices keeps the stem-grade options ---
+  [PASS  ] Check 13: swap_job_prices keeps the stem-grade options: sample results identical before and after swapping (grades on and off); tune_prices with grades on runs, iteration 1 equals a normal run with grades on | identical on TRUE, off TRUE | sample value grades on 130375, off 152197 NOK | tune iteration 1 20501.181 vs normal run 20501.181 | FG 87.08 -> 86.96 -> 86.96
+
 --- 12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5) ---
   [PASS  ] Check 12: tuning_hpr_info equals the file's classes (lengths, classes, cm_map, prices, Distribution, basis) and real targets for every tunable product (file1, 3, 4, 5) | 15 tunable products, 5 with a file target compared
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 12
+1   PASS 13
 
   Verdict: PASS 
 ============================================================= 

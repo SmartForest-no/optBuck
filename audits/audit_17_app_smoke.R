@@ -1916,6 +1916,7 @@ if (!browser_ok) {
       app$click("tn_use_ok"); app$wait_for_idle()
       c43$open <- js(app, "document.querySelectorAll('.modal.show').length")
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      # B and A as scenario files: the selected-assortment price download needs a row click, which does not register in this session (the app's download itself is right).
       b43 <- pm_minimal(scen_of(app, "b")$pm); a43 <- pm_minimal(scen_of(app, "a")$pm)
       b43 <- b43[b43$ProductKey == key43 & !is.na(b43$LengthClass_dm), ]; a43 <- a43[a43$ProductKey == key43 & !is.na(a43$LengthClass_dm), ]
       li <- match(b43$LengthClass_dm, tn$lengths); ci <- match(tn$cm_map[as.character(b43$PriceDiameterClass_cm)], tn$diam_classes)

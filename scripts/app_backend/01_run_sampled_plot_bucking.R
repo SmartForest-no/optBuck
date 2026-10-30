@@ -780,7 +780,7 @@ prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "defau
 
 #' A job with other prices (price-matrix tuning): rebuilds only the runs
 #' (.load_runs) and the prepared runs (.prepare_runs); the profiles stay.
-#' Stem-grade options are off.
+#' The job's stem-grade options (the first run's) are kept.
 #'
 #' @param job      A job from prepare_hpr_job() or prepare_hpr_stems_job().
 #' @param products list(pd, lc, pm): ProductData, LengthClasses (with
@@ -791,7 +791,7 @@ swap_job_prices <- function(job, products, root = get_root_dir()) {
   on.exit(unlink(path), add = TRUE)
   pm_export(products$pm, path)
   pps <- .load_runs(path, root, products$pd, products$lc, NULL)
-  pps[[1L]]$grade_opts <- normalize_grade_opts(NULL)
+  pps[[1L]]$grade_opts <- normalize_grade_opts(job$pps[[1L]]$grade_opts)
   job$prep <- .prepare_runs(lapply(pps, function(pp)
     list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup, opts = pp$grade_opts)))
   job$pps <- pps
