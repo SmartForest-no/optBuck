@@ -320,9 +320,9 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 - [x] R2.1-R2.4 Target distribution editor (see git log: R2.1-R2.4; audit 17 check 46, audit 34 checks 30-33)
 - [x] R2.5 Scenario xlsx (fields, target sheets, file_classes sheet; audit 34 check 34)
 - [x] R2.6 Audits (17, 24, 28-34, performance_check PASS), push
-- [ ] R3.1 tune_prices with several products
-- [ ] R3.2-R3.5 Tuning tab
-- [ ] R3.6 Audits, push
+- [x] R3.1 tune_prices with several products (audit 33 checks 14-15; single-product values stored in outputs/restructure/, gitignored)
+- [x] R3.2-R3.5 Tuning tab (audit 17 check 43, audit 33 check 16)
+- [x] R3.6 Audits (17, 28-34, performance_check PASS), push
 - [ ] End: full suite, manual file5 check, screenshots, CLAUDE.md/PLAN.md, push
 
 ### Decisions made
@@ -345,6 +345,11 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 - R2 target view: a cell edit sets the same value in every whole-cm row of the same `FileDiameterClass_mm` (only that row when it has none); Even / Longer logs are computed per whole-cm row from the cells that have a price (`tuning_target()`'s rules), so rows of one file class get the same values; Clear also removes the four fields. Sums use 0 for cells without a value; a row is bold when its sum is neither 0 nor 100.
 - R2.4 first-target fields: DistributionAllowed TRUE, DistributionCategory "Volume of logs", DistributionWithinProduct TRUE, MAXDeviation 0 (file5 spruce 140 SCA Sagtomrer has Allowed TRUE, Volume of logs, WithinProduct TRUE, MAXDeviation 4). Fields read from a file are never changed unless the user changes the category. The category select shows only for an assortment that has the fields.
 - Scenario xlsx: target sheets are named `target_<n>` (corner cell = the ProductKey, as in the price sheets), because Excel sheet names are limited to 31 characters and keys can be longer; the four fields are assortment-table columns written only when some assortment has them; `file_classes` (ProductKey, PriceDiameterClass_cm, FileDiameterClass_mm) only when some row has a file class.
+
+- R3.1 overall FG for several products: mean of the products' FG weighted by each product's iteration-1 logs (basis number) or price volume (basis volume); with one product the product's own FG is used unchanged (identical to before, audit 33 check 14). The sample is the maximum of the products' `tuning_sample_size()` (computed in `tuning_run()`); `tune_prices()` itself takes `n`.
+- R3.3 with no target-bearing assortment the tab shows the scenario selector and the message "No assortment in this scenario has a target distribution." (the selector stays so the other scenario can be chosen); the list shows only sawlog matrix assortments that `tuning_products()` accepts and that have a target; products with fewer than 20 logs in the first run are left out of the tuning and named in a warning line ("Not tuned (too few logs): ..."); if none has enough logs the old "Too few logs" message shows.
+- R3.4 matrix views: file diameter classes (mm) in rows, lengths (cm) in columns like the price grid, FG per class as an extra column for the two outcome views; shares in whole percent, FG with one decimal; the price change shows only the steered cells.
+- R3.5 the results are cleared by a change of the tuned scenario's assortments or prices (also a target edit there), of the scenario choice, of the assortment selection, or of the stems or their species map; applying the tuned prices to the other scenario changes only that scenario and keeps them.
 
 ### Open questions for Lennart
 (none yet)
