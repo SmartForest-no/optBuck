@@ -276,7 +276,7 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 3. **Kept through edits.** `pm_minimal()` keeps the column, `pm_bind()` fills it with NA where one side lacks it, `pm_from_grid()` keeps a cell's value when its price changes, new cells have none, `pm_prices()` gives the four price columns that `write_price_file()` and the backend price loader use (the column never reaches a run). Not compared between A and B (`scenarios_differ()`, `assortment_diff()`).
 4. **Export.** `<Distribution>` per cell is the stored value (0 when none). `LengthDistributionDefinition` is written when the assortment has stored fields, after `PriceDefinition`/`PermittedGradesDefinition` and before `ProductMatrixes`, children in the order of the source files (DistributionAllowed, DistributionCategory, MAXDeviation, DistributionWithinProduct).
 5. **Tests.** Audit 34 (fixtures `distribution_synthetic.hpr/.pin` from `scripts/make_distribution_fixture.R`; checks 20-28 read the private files and are skipped when missing).
-6. **Known limitation.** Distribution, the four distribution fields and `FileDiameterClass_mm` (hidden price-matrix column, added 2026-10-30 for price tuning: the lower limit in mm of the file diameter class a whole-cm row was spread from) are not kept in the scenario xlsx download/upload (kept in copy A/B, edits and the .hpr/.pin round trip). Exported .hpr/.pin write whole-cm diameter classes, so re-importing an exported file gives whole-cm classes instead of the original file classes. An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
+6. **Known limitation.** Distribution, the four distribution fields and `FileDiameterClass_mm` (hidden price-matrix column, added 2026-10-30 for price tuning: the lower limit in mm of the file diameter class a whole-cm row was spread from) are kept in copy A/B, edits, the scenario xlsx (since restructure R2.5: assortment columns, sheets target_<n> and file_classes) and the .hpr/.pin round trip. Exported .hpr/.pin write whole-cm diameter classes, so re-importing an exported file gives whole-cm classes instead of the original file classes. An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
 
 ## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 
@@ -317,9 +317,9 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 - [x] R1.8 Scenario names (e5aff0c, dd2e057; audit 17 check 45, audit 24 check 12)
 - [x] R1.9 Crash check: not reproduced (scripts/repro_tuning_crash.R)
 - [x] R1.10 Translations, audits (17, 24-33, performance_check PASS), push
-- [ ] R2.1-R2.4 Target distribution editor
-- [ ] R2.5 Scenario xlsx (fields, target sheets, file_classes sheet)
-- [ ] R2.6 Audits, push
+- [x] R2.1-R2.4 Target distribution editor (see git log: R2.1-R2.4; audit 17 check 46, audit 34 checks 30-33)
+- [x] R2.5 Scenario xlsx (fields, target sheets, file_classes sheet; audit 34 check 34)
+- [x] R2.6 Audits (17, 24, 28-34, performance_check PASS), push
 - [ ] R3.1 tune_prices with several products
 - [ ] R3.2-R3.5 Tuning tab
 - [ ] R3.6 Audits, push
@@ -341,6 +341,10 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 - New result field `ab_names` (the names at the start of a run): not `scenario_names`, because `result()$scenario` partially matched it and made every run a comparison.
 - The app opens on the Stems tab; audits 17 and 29 navigate to Assortments and prices first.
 - Audit changes for the new layout (intended UI change): 17 (tab list, Stems tab for tree-source inputs, `run()` goes to the Simulator, uploads to the scenario field instead of the import button, check 31 uploads its stems, altitude slider checked against its card), 29 (navigates to the prices tab), 32 check 10 (source wiring).
+
+- R2 target view: a cell edit sets the same value in every whole-cm row of the same `FileDiameterClass_mm` (only that row when it has none); Even / Longer logs are computed per whole-cm row from the cells that have a price (`tuning_target()`'s rules), so rows of one file class get the same values; Clear also removes the four fields. Sums use 0 for cells without a value; a row is bold when its sum is neither 0 nor 100.
+- R2.4 first-target fields: DistributionAllowed TRUE, DistributionCategory "Volume of logs", DistributionWithinProduct TRUE, MAXDeviation 0 (file5 spruce 140 SCA Sagtomrer has Allowed TRUE, Volume of logs, WithinProduct TRUE, MAXDeviation 4). Fields read from a file are never changed unless the user changes the category. The category select shows only for an assortment that has the fields.
+- Scenario xlsx: target sheets are named `target_<n>` (corner cell = the ProductKey, as in the price sheets), because Excel sheet names are limited to 31 characters and keys can be longer; the four fields are assortment-table columns written only when some assortment has them; `file_classes` (ProductKey, PriceDiameterClass_cm, FileDiameterClass_mm) only when some row has a file class.
 
 ### Open questions for Lennart
 (none yet)

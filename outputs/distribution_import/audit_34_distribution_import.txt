@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: distribution import and export (Phase 7a)
-  Run: 2026-10-30 10:15:28.591487
+  Run: 2026-10-30 15:13:13.919638
 ============================================================= 
 
 --- 01. Import: Distribution per cell and the four product fields ---
@@ -24,8 +24,8 @@
 --- 07. Export: element position and order, <Distribution> per cell ---
   [PASS  ] Check 07: LengthDistributionDefinition after PriceDefinition and before ProductMatrixes in the source order, only with stored values; <Distribution> per cell | position/order TRUE | product without values: no element, 0 per cell TRUE | cell values TRUE | .pin TRUE
 
---- 08. No effect on comparison or highlighting; not in the scenario xlsx ---
-  [PASS  ] Check 08: Distribution-only differences do not highlight or trigger a comparison; the scenario xlsx does not carry the data (documented limitation) | no comparison/highlight TRUE | xlsx without data and re-import ok TRUE
+--- 08. No effect on comparison or highlighting ---
+  [PASS  ] Check 08: Distribution-only differences do not highlight or trigger a comparison | no comparison/highlight TRUE
 
 --- 09. FileDiameterClass_mm on the fixture ---
   [PASS  ] Check 09: FileDiameterClass_mm of every whole-cm row of the fixture sawlog equals its file class lower limit (180 / 250 / 320) | 60 rows, classes 180/250/320
@@ -59,11 +59,26 @@
 
 --- 12. FileDiameterClass_mm on file5 spruce 140 SCA Sagtommer ---
   [PASS  ] Check 12: file5 spruce 140 SCA Sagtommer: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits | 13 distinct values in 92 rows; file classes 13; equal TRUE
+
+--- 30. Editor: class-wide cell edit, prices untouched ---
+  [PASS  ] Check 30: A cell edit sets every whole-cm row of the same file class (rows without a file class: only that row), NA clears, prices unchanged, dist_grid() has the price grid's shape | class-wide TRUE | own class TRUE | clear TRUE | grid TRUE
+
+--- 31. Editor: Even / Longer logs equal tuning_target(); Clear ---
+  [PASS  ] Check 31: Even and Longer logs equal tuning_target() on the priced cells (rows sum to 100, prices unchanged); Clear removes the assortment's target (the column when it was the only one) | neutral TRUE, long TRUE | clear keeps other products TRUE | column dropped when empty TRUE
+
+--- 32. Editor: sums, flag, refused edits ---
+  [PASS  ] Check 32: Row sums; the flag is TRUE only for a sum that is neither 0 nor 100; a cell without a price and a value outside 0-100 are refused | sums TRUE | refused: 'The cell has no price: no target can be ' / 'A target is between 0 and 100 percent.'
+
+--- 33. Editor: the four fields ---
+  [PASS  ] Check 33: First target sets Allowed TRUE, 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared | file fields kept TRUE | first target TRUE | category TRUE | cleared TRUE | kept when set TRUE
+
+--- 34. Scenario xlsx round trip of the target and the file classes ---
+  [PASS  ] Check 34: Scenario xlsx round trip: Distribution, FileDiameterClass_mm and the four fields identical (sheets target_<n>, file_classes); no extra sheets or columns without data; price data unchanged | cells + file classes TRUE | fields TRUE | sheets TRUE (assortments,spruce_spruce_pulpwood,spruce_spruce_sawlog,flat_prices,target_1,file_classes) | editor target TRUE | no data, no extra sheets TRUE | prices TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 21
+1   PASS 26
 
   Verdict: PASS 
 ============================================================= 
