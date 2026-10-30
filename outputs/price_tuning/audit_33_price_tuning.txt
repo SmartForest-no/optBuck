@@ -5,6 +5,9 @@
 --- 2. update_prices on 2x2 grids (rows = length classes, columns = diameter classes) ---
   [PASS  ] Check 2: update_prices: plain step, stagnation, calibration, floor, unavailable and non-eligible cells | a TRUE, b TRUE, c TRUE, d TRUE, e TRUE
 
+--- 9. tuning_sample_size ---
+  [PASS  ] Check 9: tuning_sample_size 10200/7598 -> 1343; 7283/1469 -> 4958; 7283/800 -> 7283; 100/0 -> 100; at least 1, at most n_stems | 1343, 4958, 100
+
 --- Setup: file5 products, grid and the original-price run of all stems ---
 
 --- 3. tuning_target ---
@@ -24,11 +27,20 @@
 
 --- 8. hidden Distribution column ---
   [PASS  ] Check 8: file5's price matrix has the hidden Distribution column; apply_grid_prices keeps it identical; swap_job_prices passes it to no run | column present TRUE (1572 non-NA cells), identical after apply TRUE, absent in the run's pm TRUE
+
+--- 10. on_iter ---
+  [PASS  ] Check 10: on_iter is called exactly max_iter times (early_stop = FALSE) with (r, max_iter, fg) | 3 calls, FG 75.04 -> 83.44 -> 88.18
+
+--- 11. tuning_products ---
+  [PASS  ] Check 11: tuning_products lists spruce 140 SCA sawlog with has_file_target TRUE and not spruce 154 Kubb | 9 tunable products: pine_289_stamblokk, pine_240_sag_REDACTED34, pine_REDACTED13, pine_246_eksport, spruce_146_sag_REDACTED56, spruce_148_sm_REDACTED31, spruce_140_sca_sagt_mmer, spruce_140_REDACTED34, spruce_189_stamblokk
+
+--- 12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5) ---
+  [PASS  ] Check 12: tuning_hpr_info equals the file's classes (lengths, classes, cm_map, prices, Distribution, basis) and real targets for every tunable product (file1, 3, 4, 5) | 15 tunable products, 5 with a file target compared
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
-  result n
-1   PASS 8
+  result  n
+1   PASS 12
 
   Verdict: PASS 
 ============================================================= 

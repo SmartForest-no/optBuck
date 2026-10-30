@@ -265,6 +265,8 @@ update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
 #'   and the product's DistributionCategory is "Volume of logs", else "number".
 #' @param early_stop TRUE (default): the stop rule above; FALSE: always max_iter
 #'   iterations.
+#' @param on_iter NULL, or function(r, max_iter, fg) called after each iteration
+#'   (fg = that iteration's overall FG), e.g. for a progress display.
 #' @param min_logs A diameter class is steered only if its first run has at
 #'   least this many logs (counts, whatever the basis).
 #' @return list(best_price, best_iter, trace, eligible, fg_class_first,
@@ -272,7 +274,7 @@ update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
 #'   steered (cells), cells_at_floor_best, P_first, prices (by iteration)).
 tune_prices <- function(job, products, product_id, target_type, distribution = NULL,
                         n = 1000, seed = 1, max_iter = 30, min_logs = 20, basis = NULL,
-                        hpr = NULL, workers = apter_workers(), early_stop = TRUE) {
+                        hpr = NULL, workers = apter_workers(), early_stop = TRUE, on_iter = NULL) {
   grid <- tuning_grid(products, product_id, hpr)
   W <- tuning_target(grid, target_type, distribution)
   if (is.null(basis)) basis <- if (target_type == "real" && grid$basis_default == "volume") "volume" else "number"
@@ -313,6 +315,7 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
       elapsed_s = NA_real_)
     prices[[r]] <- P; fgs[[r]] <- f_b$by_class
     fg_hist <- c(fg_hist, f_b$overall)
+    if (is.function(on_iter)) on_iter(r, max_iter, f_b$overall)
     best_r <- which.max(fg_hist)
     if (early_stop && r >= 4L && max(fg_hist) - max(fg_hist[seq_len(r - 3L)]) < 0.1) { trace[[r]]$elapsed_s <- proc.time()[["elapsed"]] - t0; break }
     if (r == max_iter) { trace[[r]]$elapsed_s <- proc.time()[["elapsed"]] - t0; break }
@@ -333,4 +336,71 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
                        sample_size = length(idx), stems = N, seed = seed, max_iter = max_iter, min_logs = min_logs, early_stop = early_stop),
        grid = grid, W = W, floor = c(fl, list(matrix = floor_m)), steered = sum(steer),
        cells_at_floor_best = sum(at_floor), P_first = P1, prices = prices, logs_first = logs_first)
+}
+
+# ---- tuning in the app ----------------------------------------------------------------
+# The app has no .hpr file at hand, only the imported scenario (price matrix with
+# the hidden Distribution column, defs with the hidden DistributionCategory).
+
+#' The number of stems to tune on: all of them when the product has at most
+#' `target_logs` logs, else the share that gives about `target_logs` logs.
+#' Never more than n_stems, never less than 1.
+tuning_sample_size <- function(n_stems, product_logs, target_logs = 1000) {
+  n <- if (product_logs <= target_logs) n_stems else ceiling(n_stems * target_logs / product_logs)
+  max(1L, min(as.integer(n_stems), as.integer(n)))
+}
+
+#' The `hpr` argument of tuning_grid()/tune_prices() from a scenario alone.
+#'
+#' The diameter class of a whole-cm row is its hidden FileDiameterClass_mm (the
+#' lower limit of the .hpr/.pin class it was spread from); a row without one
+#' (not from a file, or a row added in the app) is its own class, whole cm x 10.
+#' Rows are never merged. The Distribution of a class is that of its first row.
+#'
+#' @param defs Assortment table (DistributionCategory is read from it, NA if absent).
+#' @param pm Price matrix of the scenario (long, hidden Distribution and
+#'   FileDiameterClass_mm columns optional).
+#' @return list(cells (d_mm, l_cm, dist), category), as hpr_tuning_info().
+tuning_hpr_info <- function(defs, pm, product_id) {
+  rows <- .tg_rows(pm, product_id)
+  if (nrow(rows) == 0L) stop("No matrix-priced product '", product_id, "' in the price matrix.")
+  lengths <- sort(unique(rows$LengthClass_dm))
+  cm <- sort(unique(rows$PriceDiameterClass_cm))
+  col <- function(n) if (n %in% names(rows)) rows[[n]] else rep(NA_real_, nrow(rows))
+  fc <- col(PM_FILE_CLASS_COL); dist_all <- col(PM_DISTRIBUTION_COL)
+  cls <- vapply(cm, function(c) { v <- fc[rows$PriceDiameterClass_cm == c & !is.na(fc)]
+                                  if (length(v)) v[1L] else c * 10 }, 0)
+  first <- !duplicated(cls)                                   # one row per class (the first, in cm order)
+  cells <- do.call(rbind, lapply(which(first), function(i) {
+    r <- rows[rows$PriceDiameterClass_cm == cm[i], , drop = FALSE]
+    data.frame(d_mm = cls[i], l_cm = lengths * 10, dist = dist_all[rows$PriceDiameterClass_cm == cm[i]][match(lengths, r$LengthClass_dm)])
+  }))
+  key <- match(product_id, assortment_table_keys(defs))
+  cat_ <- if (!is.na(key) && "DistributionCategory" %in% names(defs)) as.character(defs$DistributionCategory[key]) else NA_character_
+  list(cells = cells, category = cat_)
+}
+
+#' The products of a scenario that can be tuned: sawlog type, matrix-priced, more
+#' than one priced length class and more than one diameter class (the derived
+#' file classes with a price).
+#' @return data.frame(product_id, name, species, has_file_target); has_file_target =
+#'   the product has a Distribution value > 0 in pm.
+tuning_products <- function(defs, pm) {
+  keys <- assortment_table_keys(defs)
+  out <- list()
+  for (i in seq_along(keys)) {
+    if (!identical(as.character(defs$Type[i]), "sawlog") || !identical(as.character(defs$PriceType[i]), "matrix")) next
+    rows <- .tg_rows(pm, keys[i])
+    ok <- rows[!is.na(rows$PriceNOKperM3), , drop = FALSE]
+    if (nrow(ok) == 0L || length(unique(ok$LengthClass_dm)) < 2L) next
+    cls <- unique(tuning_hpr_info(defs, pm, keys[i])$cells$d_mm)
+    cls_ok <- unique(file_class_of_cm(ok$PriceDiameterClass_cm, cls))
+    if (length(cls_ok) < 2L) next
+    d <- if (PM_DISTRIBUTION_COL %in% names(rows)) rows[[PM_DISTRIBUTION_COL]] else NA_real_
+    out[[length(out) + 1L]] <- data.frame(product_id = keys[i], name = as.character(defs$Name[i]),
+                                          species = as.character(defs$Species[i]),
+                                          has_file_target = any(d > 0, na.rm = TRUE), stringsAsFactors = FALSE)
+  }
+  if (length(out)) do.call(rbind, out)
+  else data.frame(product_id = character(0), name = character(0), species = character(0), has_file_target = logical(0))
 }

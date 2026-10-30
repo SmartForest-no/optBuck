@@ -1,9 +1,13 @@
 check,result,detail
 Check 1: fg_grid hand case gives FG = 90 (overall and class),PASS,overall 90.000000
 "Check 2: update_prices: plain step, stagnation, calibration, floor, unavailable and non-eligible cells",PASS,"a TRUE, b TRUE, c TRUE, d TRUE, e TRUE"
+"Check 9: tuning_sample_size 10200/7598 -> 1343; 7283/1469 -> 4958; 7283/800 -> 7283; 100/0 -> 100; at least 1, at most n_stems",PASS,"1343, 4958, 100"
 Check 3: neutral and long sum to 100 per class (NA where unavailable); real = 0/30/45/25 on 37/43/49/55 dm; long = 10/20/30/40,PASS,"grid 4 lengths x 13 classes; neutral/long TRUE, real TRUE, long weights TRUE"
 Check 4: tuning_grid(apply_grid_prices(P))$price == P; other products and unavailable cells untouched; the original grid reproduces pm,PASS,92 Apter rows of the product
 "Check 5: tune_prices twice (real, n = 200, seed 1, max_iter 3) gives an identical trace and best_price",PASS,"iterations 3, best iteration 3, FG 75.04 -> 83.44 -> 88.18"
 Check 6: the product's value equals sum(V * P1) within 0.5 NOK (all stems); value_orig of iteration 1 equals the total value,PASS,"result 900466.363 NOK, sum(V*P1) 900466.363 NOK, difference -0.000000; total value 1493115.5 NOK"
 Check 7: tally_grid counts and price volume equal the product's totals in selected_logs_all; a log outside the grid stops with the difference,PASS,"7598 logs, 1313.3846 m3; grid 7598, 1313.3846 m3 | error: tally_grid(spruce_140_sca_sagt_mmer): the grid does not hold all logs: counts 7597 of 7598 (difference 1), price volume 1313.182040 of 1313.384640 m3 (differenc"
 Check 8: file5's price matrix has the hidden Distribution column; apply_grid_prices keeps it identical; swap_job_prices passes it to no run,PASS,"column present TRUE (1572 non-NA cells), identical after apply TRUE, absent in the run's pm TRUE"
+"Check 10: on_iter is called exactly max_iter times (early_stop = FALSE) with (r, max_iter, fg)",PASS,"3 calls, FG 75.04 -> 83.44 -> 88.18"
+Check 11: tuning_products lists spruce 140 SCA sawlog with has_file_target TRUE and not spruce 154 Kubb,PASS,"9 tunable products: pine_289_stamblokk, pine_240_sag_REDACTED34, pine_REDACTED13, pine_246_eksport, spruce_146_sag_REDACTED56, spruce_148_sm_REDACTED31, spruce_140_sca_sagt_mmer, spruce_140_REDACTED34, spruce_189_stamblokk"
+"Check 12: tuning_hpr_info equals the file's classes (lengths, classes, cm_map, prices, Distribution, basis) and real targets for every tunable product (file1, 3, 4, 5)",PASS,"15 tunable products, 5 with a file target compared"

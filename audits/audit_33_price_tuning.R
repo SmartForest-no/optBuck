@@ -30,6 +30,15 @@
 #  7.  tally_grid holds every log: counts and price volume of the grid equal the
 #      product's totals in selected_logs_all (original prices, all stems); a
 #      result with a log outside the grid stops with the difference
+#  9.  tuning_sample_size: 10200 stems / 7598 logs -> 1343; 7283 / 1469 -> 4958;
+#      7283 / 800 -> 7283; 100 / 0 -> 100 (and the bounds)
+# 10.  tune_prices on_iter is called exactly max_iter times (early_stop = FALSE)
+# 11.  tuning_products on file5: spruce 140 SCA listed with has_file_target TRUE,
+#      spruce 154 Kubb (one length class) not listed
+# 12.  tuning_hpr_info (from the hidden FileDiameterClass_mm) gives the same grid (lengths,
+#      file classes, cm_map, prices, Distribution) and the same targets as the
+#      file's own classes (read_hpr_distribution), for every tunable product of
+#      file1, file3, file4 and file5 (alphabetical private files)
 #  8.  The hidden Distribution column of the price matrix (Phase 7a): the
 #      imported pm has it, apply_grid_prices() leaves it identical, and
 #      swap_job_prices() does not pass it to the backend
@@ -142,6 +151,14 @@ rec("Check 2: update_prices: plain step, stagnation, calibration, floor, unavail
     sprintf("a %s, b %s, c %s, d %s, e %s", ok_a, ok_b, ok_c, ok_d, ok_e))
 
 # ==============================================================================
+section("9. tuning_sample_size")
+ok9 <- identical(tuning_sample_size(10200L, 7598L), 1343L) && identical(tuning_sample_size(7283L, 1469L), 4958L) && identical(tuning_sample_size(7283L, 800L), 7283L) &&
+  identical(tuning_sample_size(100L, 0L), 100L) && identical(tuning_sample_size(100L, 1000L), 100L) &&
+  tuning_sample_size(5L, 1e6) == 1L && tuning_sample_size(10L, 1001L) <= 10L
+rec("Check 9: tuning_sample_size 10200/7598 -> 1343; 7283/1469 -> 4958; 7283/800 -> 7283; 100/0 -> 100; at least 1, at most n_stems",
+    ok(ok9), sprintf("%s, %s, %s", tuning_sample_size(10200L, 7598L), tuning_sample_size(7283L, 1469L), tuning_sample_size(100L, 0L)))
+
+# ==============================================================================
 # Private data: file5 (REDACTED28)
 f5 <- "C:/apter_private/hpr/REDACTED28"
 have5 <- file.exists(f5)
@@ -152,6 +169,7 @@ if (!have5) {
   skipped(5, "tune_prices determinism on file5"); skipped(6, "iteration-1 value check on file5")
   skipped(7, "tally_grid holds every log (file5)")
   skipped(8, "hidden Distribution column kept by apply_grid_prices (file5)")
+  skipped(10, "tune_prices on_iter (file5)"); skipped(11, "tuning_products (file5)")
 } else {
   section("Setup: file5 products, grid and the original-price run of all stems")
   hp <- read_hpr(f5); stopifnot(isTRUE(hp$ok))
@@ -250,6 +268,66 @@ if (!have5) {
   rec("Check 8: file5's price matrix has the hidden Distribution column; apply_grid_prices keeps it identical; swap_job_prices passes it to no run",
       ok(d_has && d_same && d_off), sprintf("column present %s (%d non-NA cells), identical after apply %s, absent in the run's pm %s",
                                             d_has, if (d_has) sum(!is.na(products$pm[[D]])) else 0L, d_same, d_off))
+
+  # ============================================================================
+  section("10. on_iter")
+  calls <- list()
+  tn <- tune_prices(job, products, key, "real", n = 200, seed = 1, max_iter = 3, hpr = hpr, early_stop = FALSE,
+                    on_iter = function(r, m, fg) calls[[length(calls) + 1L]] <<- c(r = r, m = m, fg = fg))
+  ok10 <- length(calls) == 3L && identical(vapply(calls, `[[`, 0, "r"), c(1, 2, 3)) &&
+    all(vapply(calls, `[[`, 0, "m") == 3) && near(vapply(calls, `[[`, 0, "fg"), tn$trace$fg)
+  rec("Check 10: on_iter is called exactly max_iter times (early_stop = FALSE) with (r, max_iter, fg)",
+      ok(ok10), sprintf("%d calls, FG %s", length(calls), paste(round(vapply(calls, `[[`, 0, "fg"), 2), collapse = " -> ")))
+
+  # ============================================================================
+  section("11. tuning_products")
+  tp <- tuning_products(sc$defs, pm)
+  i140 <- grepl("140 sca", tp$name, ignore.case = TRUE) & tp$species == "spruce"
+  ok11 <- sum(i140) == 1L && isTRUE(tp$has_file_target[i140]) &&
+    !any(grepl("154", tp$name) & grepl("kubb", tp$name, ignore.case = TRUE))
+  rec("Check 11: tuning_products lists spruce 140 SCA sawlog with has_file_target TRUE and not spruce 154 Kubb",
+      ok(ok11), sprintf("%d tunable products: %s", nrow(tp), paste(tp$product_id, collapse = ", ")))
+}
+
+# ==============================================================================
+section("12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5)")
+files12 <- c(file1 = "REDACTED1", file3 = "REDACTED33",
+             file4 = "REDACTED27", file5 = "REDACTED28")
+paths12 <- file.path("C:/apter_private/hpr", files12)
+if (!all(file.exists(paths12))) {
+  rec("Check 12: tuning_hpr_info equals the file's classes and targets for every tunable product (file1, 3, 4, 5)", REVIEW,
+      sprintf("skipped: missing %s", paste(names(files12)[!file.exists(paths12)], collapse = ", ")))
+} else {
+  diffs <- character(0); n_prod <- 0L; n_tgt <- 0L
+  for (fi in seq_along(files12)) {
+    h12 <- read_hpr(paths12[fi]); sm12 <- setNames(guess_hpr_species(h12$species$name, h12$species$user_id), h12$species$key)
+    s12 <- hpr_to_scenario(h12, sm12); if (!isTRUE(s12$ok)) { diffs <- c(diffs, sprintf("%s: scenario not ok", names(files12)[fi])); next }
+    pm12 <- pm_minimal(s12$pm); pr12 <- products_from_defs(s12$defs, pm12); P12 <- list(pd = pr12$pd, lc = pr12$lc, pm = pm12)
+    d12 <- read_hpr_distribution(paths12[fi])
+    tp12 <- tuning_products(s12$defs, pm12)
+    for (k in tp12$product_id) {
+      n_prod <- n_prod + 1L
+      hk12 <- s12$defs$HprProductKey[match(k, assortment_table_keys(s12$defs))]
+      g_file <- tuning_grid(P12, k, hpr_tuning_info(d12, hk12))
+      g_der <- tuning_grid(P12, k, tuning_hpr_info(s12$defs, pm12, k))
+      bits <- c(lengths = identical(g_file$lengths, g_der$lengths), classes = identical(g_file$diam_classes, g_der$diam_classes),
+                cm_map = identical(unname(g_file$cm_map), unname(g_der$cm_map)),
+                price = identical(g_file$price, g_der$price), dist = identical(g_file$distribution, g_der$distribution),
+                basis = identical(g_file$basis_default, g_der$basis_default))
+      if (!all(bits)) diffs <- c(diffs, sprintf("%s %s: differs in %s | file classes (mm) %s | derived %s", names(files12)[fi], k,
+                                                paste(names(bits)[!bits], collapse = ","),
+                                                paste(g_file$diam_classes, collapse = " "), paste(g_der$diam_classes, collapse = " ")))
+      else if (any(g_file$distribution > 0)) {
+        n_tgt <- n_tgt + 1L
+        if (!identical(tuning_target(g_file, "real"), tuning_target(g_der, "real")))
+          diffs <- c(diffs, sprintf("%s %s: real target differs", names(files12)[fi], k))
+      }
+    }
+  }
+  rec("Check 12: tuning_hpr_info equals the file's classes (lengths, classes, cm_map, prices, Distribution, basis) and real targets for every tunable product (file1, 3, 4, 5)",
+      ok(length(diffs) == 0L && n_prod > 0L),
+      sprintf("%d tunable products, %d with a file target compared%s", n_prod, n_tgt,
+              if (length(diffs)) paste0(" | DIFFERENCES: ", paste(diffs, collapse = " ;; ")) else ""))
 }
 
 write_audit_outputs(E$results, audit_csv, audit_txt)
