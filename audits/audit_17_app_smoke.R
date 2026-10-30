@@ -507,7 +507,7 @@ if (!nzchar(helpers_err)) {
 # ==============================================================================
 browser_checks <- c(
   "Check 05: AppDriver starts the app",
-  "Check 06: Two tabs (Assortments and prices first), no Home or footer, no stripe, colours, optBuck, texts",
+  "Check 06: Four tabs (Stems first), no Home or footer, no stripe, colours, optBuck, texts",
   "Check 07: Bootstrap 5 and self-hosted Inter font loaded",
   "Check 08: Compact assortment table: base rows, columns, '–' for no limit",
   "Check 09: Both scenarios editable, nothing greyed, no differences at the start",
@@ -530,9 +530,9 @@ browser_checks <- c(
   "Check 26: Live tree counts in the sidebar match the run",
   "Check 27: Log tally (volume = the logs' commercial volume; B − A after a comparison) and the distribution and NOK-per-DBH-class figures render",
   "Check 28: Altitude slider: full range at the start, a narrowed band changes the counts, full range restores them",
-  "Check 29: Import from .hpr: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only",
+  "Check 29: Import from .hpr through the scenario upload field: dialog from A and B, a broken file blocked, species and products prefilled, Replace Scenario B changes B only",
   "Check 30: The kept .hpr upload is deleted when the session ends",
-  "Check 31: .hpr stems: not selected automatically; the imported file and species map are reused; a comparison runs on the stems, without plots",
+  "Check 31: .hpr stems: not selected automatically; uploaded on the Stems tab with their own species map; a comparison runs on the stems, without plots",
   "Check 32: Copy from A / Copy from B: confirmation, Cancel keeps the scenario, Copy makes it equal to the other",
   "Check 33: Comparison with B imported from .hpr (no shared commercial assortments): no value-change figure, all assortments listed, tally without B − A",
   "Check 34: Norsk by default; the switch changes static and server text to English and back without a reload",
@@ -543,8 +543,10 @@ browser_checks <- c(
   "Check 39: Switching keeps results and edits; a Norsk scenario file loads in English; the choice survives a reload; Norsk session runtime",
   "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names",
   "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes",
-  "Check 42: Import .hpr/.pin: a .pin imported into Scenario A (button and title say .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
-  "Check 43: Price tuning tab: message without .hpr stems; with the tuning fixture a tuning with two iterations gives the table, plot and price-change table; Use tuned prices in the other scenario copies the tuned prices")
+  "Check 42: Import .hpr/.pin: a .pin imported into Scenario A through the upload field (title says .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
+  "Check 43: Price tuning tab: message without .hpr stems; with the tuning fixture a tuning with two iterations gives the table, plot and price-change table; Use tuned prices in the other scenario copies the tuned prices",
+  "Check 44: Stems and scenarios are independent: importing into a scenario leaves the stems untouched and loading stems leaves the scenarios untouched; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
+  "Check 45: Scenario names: shown in the card title, Summary and Products headers and in the scenario xlsx")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -682,7 +684,10 @@ if (!browser_ok) {
         "!document.getElementById('run_btn').disabled"), timeout = timeout)
       app$wait_for_idle(timeout = timeout)
     }
-    run <- function(app) { app$click("run_btn"); wait_run(app) }
+    run <- function(app) {
+      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()   # Run is on the Simulator tab
+      app$click("run_btn"); wait_run(app)
+    }
     tab_shown <- function(app, value) isTRUE(js(app, sprintf(paste0(
       "(function(){ var a = document.querySelector('#result_tabs a[data-value=\"%s\"]');",
       " return !!a && a.offsetParent !== null; })()"), value)))
@@ -763,8 +768,8 @@ if (!browser_ok) {
     # collapsed menu or at most icon height).
     narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
     logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
-    ok6 <- identical(tabs, "Assortments and prices|Simulator|Price tuning") &&
-      identical(active, "Assortments and prices") && identical(n_old, 0L) &&
+    ok6 <- identical(tabs, "Stems|Assortments and prices|Simulator|Price tuning") &&
+      identical(active, "Stems") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
       !grepl("Apter", paste(title, brand), fixed = TRUE) &&
@@ -782,6 +787,7 @@ if (!browser_ok) {
                         logo6, paste(g1920, collapse = ","), paste(g700, collapse = ",")),
                 grepl("NFI data", texts6, fixed = TRUE),
                 grepl("(^|[^0-9.])2021([^0-9]|$)", texts6), grepl("wide or long", texts6, fixed = TRUE)))
+    app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()   # the app opens on Stems (restructure R1)
     bs_ver <- js(app, "typeof bootstrap !== 'undefined' ? bootstrap.Tooltip.VERSION : ''")
     inter_loaded <- js(app, paste0(
       "Array.from(document.fonts).some(f => f.family.replace(/[\"']/g, '') ",
@@ -935,7 +941,7 @@ if (!browser_ok) {
     # species group without a run.
     c26 <- list()
     e26 <- try_drv({
-      app$set_inputs(main_nav = "simulator")
+      app$set_inputs(main_nav = "stems")
       # The box re-renders after the input; wait until its text changes.
       counts_after <- function(...) {
         prev <- txt(app, "#tree_counts")
@@ -955,7 +961,7 @@ if (!browser_ok) {
     # The value labels stay within the other inputs' edges (Run button).
     edges28 <- function(app) js(app, paste0(
       "(() => { const b = s => document.querySelector(s).getBoundingClientRect();",
-      " const r = b('#run_btn'), f = b('.irs--shiny .irs-from'), t = b('.irs--shiny .irs-to');",
+      " const r = document.querySelector('#hoh_range').closest('.card-body').getBoundingClientRect(), f = b('.irs--shiny .irs-from'), t = b('.irs--shiny .irs-to');",
       " return [Math.round(f.left - r.left), Math.round(r.right - t.right)]; })()"))
     e28 <- try_drv({
       c28$start <- app$get_value(input = "hoh_range")
@@ -968,7 +974,8 @@ if (!browser_ok) {
     # 12. run with B = A (default selection: spruce, HKL 4; bonitet 17)
     busy_disabled <- NA; busy_status <- ""
     e12 <- try_drv({
-      # already on the Simulator with bonitet 17 (check 26 above): no set_inputs
+      # bonitet 17 from check 26 above; Run is on the Simulator tab
+      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
       app$click("run_btn")
       app$wait_for_idle(timeout = 120 * 1000)
       busy_disabled <- isTRUE(js(app, "document.getElementById('run_btn').disabled"))
@@ -1406,7 +1413,7 @@ if (!browser_ok) {
     tl_csv <- tempfile(fileext = ".csv")
     tree_list_template(tl_csv)
     e21 <- try_drv({
-      app$set_inputs(main_nav = "simulator")
+      app$set_inputs(main_nav = "stems")
       app$set_inputs(tree_source = "list", wait_ = FALSE)
       app$upload_file(tl_upload = tl_csv)
       app$wait_for_idle()
@@ -1496,7 +1503,7 @@ if (!browser_ok) {
         " var c = r.querySelectorAll('.rt-td'); return c[0].textContent.trim() + ' ' + c[1].textContent.trim(); }).join('|')"), id))
       n24$rows_a <- rows_of("tbl_asm_a"); n24$rows_b <- rows_of("tbl_asm_b")
       shoot(app, "08_scenarios_A_and_B")
-      app$set_inputs(main_nav = "simulator")
+      app$set_inputs(main_nav = "stems")
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
       run(app)
       app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
@@ -1588,17 +1595,15 @@ if (!browser_ok) {
     e29 <- try_drv({
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       c29$a_before <- own_rows(app, "a")
-      app$click("hpr_import_a"); app$wait_for_idle()
-      c29$title_a <- txt(app, ".modal-title")
       bad <- tempfile(fileext = ".hpr"); writeLines("not an hpr file", bad)
-      app$upload_file(hpr_file = bad); app$wait_for_idle()
+      app$upload_file(scen_a_upload = bad); app$wait_for_idle()   # R1.6: an .hpr in the scenario upload field opens the dialog
+      c29$title_a <- txt(app, ".modal-title")
       c29$err <- txt(app, "#hpr_check")
       c29$bad_disabled <- isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
       cancel(app)
-      app$click("hpr_import_b"); app$wait_for_idle()
-      c29$title_b <- txt(app, ".modal-title")
-      app$upload_file(hpr_file = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+      app$upload_file(scen_b_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
       app$wait_for_idle()
+      c29$title_b <- txt(app, ".modal-title")
       c29$species <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_species select'))",
                                     ".map(function(s){ return s.value; }).join(',')"))
       c29$ticked <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_products input[type=checkbox]'))",
@@ -1669,8 +1674,9 @@ if (!browser_ok) {
     c31 <- list()
     e31 <- try_drv({
       c31$src_before <- app$get_value(input = "tree_source")
-      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE)
+      app$upload_file(hs_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
       app$wait_for_js("document.querySelector('#hs_validation .pm-msg-ok, #hs_validation .pm-msg-error') !== null",
                       timeout = 60 * 1000)
       app$wait_for_idle()
@@ -1704,7 +1710,7 @@ if (!browser_ok) {
     })
     hdr_cols <- function(h) strsplit(or_default(h, ""), "|", fixed = TRUE)[[1L]]
     ok31 <- !nzchar(e31) && identical(c31$src_before, "nfi") &&
-      grepl("Using hpr_example_synthetic.hpr (imported into Scenario B)", c31$file, fixed = TRUE) &&
+      !grepl("imported into", c31$file, fixed = TRUE) &&
       identical(c31$species, "pine,spruce,none") &&
       grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
       identical(as.integer(c31$n_warn), 4L) && !grepl("Not used", c31$valid, fixed = TRUE) &&
@@ -1739,7 +1745,7 @@ if (!browser_ok) {
                                     fl2[j], fixed = TRUE)
       }
       writeLines(fl2, f40, useBytes = TRUE)
-      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(hs_upload = c(fx_src, f40))
       app$wait_for_js("document.querySelector('#hs_validation') && /2 files/.test(document.querySelector('#hs_validation').innerText)",
@@ -1803,7 +1809,7 @@ if (!browser_ok) {
       app$set_inputs(grade_use_a = TRUE, grade_cut_a = TRUE, wait_ = FALSE); app$wait_for_idle()
       app$run_js("document.getElementById('grade_use_a').scrollIntoView({block: 'center'});")
       shoot(app, "phase6_01_grade_options")
-      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(hs_upload = fx41)
       app$wait_for_js("document.querySelector('#hs_validation') && /5 stems read/.test(document.querySelector('#hs_validation').innerText)",
                       timeout = 60 * 1000)
@@ -1839,11 +1845,10 @@ if (!browser_ok) {
       fx42 <- file.path(root_dir, "inputs", "test_fixtures", "pin_full_synthetic.pin")
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       c42$kept_before <- app$get_values(export = TRUE)$export$hpr_kept_path
-      c42$button <- txt(app, "#hpr_import_a")
+      c42$button <- js(app, "document.getElementById('scen_a_upload').accept")
       c42$b_before <- own_rows(app, "b")
-      app$click("hpr_import_a"); app$wait_for_idle()
+      app$upload_file(scen_a_upload = fx42); app$wait_for_idle()
       c42$title <- txt(app, ".modal-title")
-      app$upload_file(hpr_file = fx42); app$wait_for_idle()
       c42$species <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_species select'))",
                                     ".map(function(s){ return s.value; }).join(',')"))
       c42$ok_enabled <- !isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
@@ -1858,7 +1863,7 @@ if (!browser_ok) {
       c42$pin <- paste(readLines(dl, warn = FALSE, encoding = "UTF-8"), collapse = " ")
       c42$nerr <- n_err_notif(app)
     })
-    ok42 <- !nzchar(e42) && grepl(".hpr/.pin", c42$button, fixed = TRUE) && grepl(".hpr/.pin", c42$title, fixed = TRUE) &&
+    ok42 <- !nzchar(e42) && grepl(".hpr", c42$button, fixed = TRUE) && grepl(".pin", c42$button, fixed = TRUE) && grepl(".hpr/.pin", c42$title, fixed = TRUE) &&
       identical(c42$species, "pine,spruce") && isTRUE(c42$ok_enabled) && identical(c42$open, 0L) &&
       grepl("Imported 2 assortments from pin_full_synthetic.pin into Scenario A.", c42$msg, fixed = TRUE) &&
       grepl("pine pulpwood full", tolower(c42$a_rows), fixed = TRUE) && identical(c42$b_after, c42$b_before) &&
@@ -1886,15 +1891,14 @@ if (!browser_ok) {
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
       c43$msg <- txt(app, "#tn_main")
       c43$extra <- js(app, "document.querySelectorAll('#tn_main select, #tn_main input, #tn_run').length")
-      app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(hs_upload = fx43)
       app$wait_for_js("document.querySelector('#hs_validation') && /120 stems read/.test(document.querySelector('#hs_validation').innerText)",
                       timeout = 90 * 1000)
       app$wait_for_idle()
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
-      app$click("hpr_import_a"); app$wait_for_idle()
-      app$upload_file(hpr_file = fx43); app$wait_for_idle()
+      app$upload_file(scen_a_upload = fx43); app$wait_for_idle()
       app$click("hpr_apply"); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
       app$wait_for_js("!!document.getElementById('tn_product')", timeout = 30 * 1000)
@@ -1938,10 +1942,90 @@ if (!browser_ok) {
       identical(c43$cols, "|Original prices|Tuned prices|Change") && identical(c43$use, "Use tuned prices in scenario B") &&
       grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&
       identical(c43$opts, 2L) && isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
-    rec(browser_checks[length(browser_checks)], if (ok43) PASS else FAIL,
+    rec(browser_checks[43], if (ok43) PASS else FAIL,
         sprintf("message '%s' (inputs %s) | targets %s | rows: %s | columns '%s' | price-change cells %s | dropdown options visible %s | button '%s' | dialog '%s', open after OK %s | B cells %s equal to the tuned prices %s, changed against A %s | error notifications %s%s",
                 c43$msg, c43$extra, c43$targets, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$price_cells, c43$opts,
                 c43$use, c43$q, c43$open, c43$cells, c43$equal, c43$changed, c43$nerr, err_txt(e43)))
+
+    # 44. Stems and scenarios are independent (restructure R1.4, R1.5). The
+    # tuning fixture's 120 stems are loaded (check 43) and Scenario A holds
+    # its assortments.
+    c44 <- list()
+    e44 <- try_drv({
+      fx44 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+      fx44b <- file.path(root_dir, "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
+      on_stems <- function() { app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle() }
+      on_prices <- function() { app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle() }
+      on_stems(); c44$valid0 <- txt(app, "#hs_validation"); c44$src0 <- app$get_value(input = "tree_source")
+      c44$summary <- rows_txt(app, "stem_summary")
+      shoot(app, "restructure_01_stems_tab")
+      # (a) stems first, then an import into Scenario B: the stems do not change
+      on_prices(); c44$a0 <- own_rows(app, "a"); c44$b0 <- own_rows(app, "b")
+      app$upload_file(scen_b_upload = fx44); app$wait_for_idle()
+      app$click("hpr_apply"); app$wait_for_idle()
+      c44$b1 <- own_rows(app, "b"); c44$a1 <- own_rows(app, "a")
+      on_stems(); c44$valid1 <- txt(app, "#hs_validation"); c44$src1 <- app$get_value(input = "tree_source")
+      # (b) Scenario A and B stay as they are when other stems are loaded
+      app$upload_file(hs_upload = fx44b)
+      app$wait_for_js("document.querySelector('#hs_validation') && /5 stems read/.test(document.querySelector('#hs_validation').innerText)",
+                      timeout = 60 * 1000)
+      app$wait_for_idle()
+      on_prices(); c44$a2 <- own_rows(app, "a"); c44$b2 <- own_rows(app, "b")
+      # (c) the buttons on the Stems tab open the dialog for the loaded file, without an upload
+      on_stems()
+      c44$buttons <- js(app, "Array.from(document.querySelectorAll('#stems_use_ui button')).map(function(b){ return b.innerText.trim(); }).join('|')")
+      app$click("stems_use_a"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 20 * 1000); app$wait_for_idle()
+      c44$title <- txt(app, ".modal-title")
+      c44$file_inputs <- js(app, "document.querySelectorAll('.modal-content input[type=file]').length")
+      c44$apply_enabled <- !isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
+      cancel(app)
+      on_prices(); c44$a3 <- own_rows(app, "a"); c44$b3 <- own_rows(app, "b")
+      on_stems(); c44$valid3 <- txt(app, "#hs_validation")
+      c44$nerr <- n_err_notif(app)
+    })
+    ok44 <- !nzchar(e44) && identical(c44$src0, "hpr") && identical(c44$src1, "hpr") &&
+      grepl("120 stems read", c44$valid0, fixed = TRUE) && identical(c44$valid1, c44$valid0) &&
+      !identical(c44$b1, c44$b0) && identical(c44$a1, c44$a0) &&
+      identical(c44$a2, c44$a1) && identical(c44$b2, c44$b1) &&
+      grepl("Spruce", c44$summary, fixed = TRUE) && grepl("120", c44$summary, fixed = TRUE) &&
+      identical(c44$buttons, "Use the assortments from this file in scenario A|Use the assortments from this file in scenario B") &&
+      grepl("Scenario A", c44$title, fixed = TRUE) && identical(c44$file_inputs, 0L) && isTRUE(c44$apply_enabled) &&
+      identical(c44$a3, c44$a2) && identical(c44$b3, c44$b2) && grepl("5 stems read", c44$valid3, fixed = TRUE) &&
+      identical(c44$nerr, 0L)
+    rec(browser_checks[44], if (ok44) PASS else FAIL,
+        sprintf("stems %s -> %s (unchanged after the import into B: %s) | B changed by the import %s, A unchanged %s | loading other stems leaves A and B as they were: %s | summary: %s | buttons: %s | dialog '%s', file inputs %s, Replace enabled %s | Cancel leaves A and B: %s | error notifications %s%s",
+                substr(gsub("\\s+", " ", or_default(c44$valid0, "")), 1, 40), substr(gsub("\\s+", " ", or_default(c44$valid3, "")), 1, 40),
+                identical(c44$valid1, c44$valid0), !identical(c44$b1, c44$b0), identical(c44$a1, c44$a0),
+                identical(c44$a2, c44$a1) && identical(c44$b2, c44$b1), substr(or_default(c44$summary, ""), 1, 60),
+                or_default(c44$buttons, ""), or_default(c44$title, ""), c44$file_inputs, c44$apply_enabled,
+                identical(c44$a3, c44$a2) && identical(c44$b3, c44$b2), c44$nerr, err_txt(e44)))
+    # 45. Scenario names (restructure R1.8): the card title, the Summary and
+    # Products headers and the scenario xlsx carry them; the run keeps the
+    # names it started with.
+    c45 <- list()
+    e45 <- try_drv({
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(scen_name_a = "H\u00f8st", scen_name_b = "V\u00e5r", wait_ = FALSE); app$wait_for_idle()
+      c45$title <- txt(app, "#scen_title_a")
+      run(app)
+      c45$summary <- txt(app, "#summary_cards")
+      app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
+      c45$products <- headers_of(app, "tbl_products")
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      f45 <- app$get_download("dl_scen_a"); c45$xlsx_name <- scenario_import(f45)$name
+      app$set_inputs(scen_name_a = "", wait_ = FALSE); app$wait_for_idle()
+      c45$title_empty <- txt(app, "#scen_title_a")
+      c45$nerr <- n_err_notif(app)
+    })
+    ok45 <- !nzchar(e45) && grepl("Scenario H\u00f8st", c45$title, fixed = TRUE) &&
+      grepl("Scenario H\u00f8st", c45$summary, fixed = TRUE) && grepl("Scenario V\u00e5r", c45$summary, fixed = TRUE) &&
+      grepl("H\u00f8st", c45$products, fixed = TRUE) && grepl("V\u00e5r", c45$products, fixed = TRUE) &&
+      identical(c45$xlsx_name, "H\u00f8st") && grepl("Scenario A", c45$title_empty, fixed = TRUE) &&
+      identical(c45$nerr, 0L)
+    rec(browser_checks[45], if (ok45) PASS else FAIL,
+        sprintf("title '%s' | Summary '%s' | Products columns '%s' | xlsx name '%s' | empty name falls back: '%s' | error notifications %s%s",
+                trimws(c45$title), substr(gsub("\\s+", " ", or_default(c45$summary, "")), 1, 60),
+                substr(or_default(c45$products, ""), 1, 90), c45$xlsx_name, trimws(c45$title_empty), c45$nerr, err_txt(e45)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.
@@ -2003,6 +2087,7 @@ if (!browser_ok) {
       for (ck in browser_checks[30:35]) rec(ck, FAIL, paste("Norsk session did not start:", appn))
     } else {
       app <- appn
+      app$set_inputs(main_nav = "prices", wait_ = FALSE)   # the app opens on Stems
       app$wait_for_js("document.fonts.status === 'loaded' && !!document.querySelector('#tbl_asm_a .rt-th')",
                       timeout = 30 * 1000)
       nav_txt <- function(app) js(app, "Array.from(document.querySelectorAll('#main_nav .nav-link')).map(function(a){ return a.textContent.trim(); }).join('|')")
@@ -2029,11 +2114,11 @@ if (!browser_ok) {
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
         c34$marker <- js(app, "window.__apter17 === 1")
       })
-      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "Sortiment og priser|Simulator|Pristilpasning") &&
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "Stammer|Sortiment og priser|Simulator|Pristilpasning") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
         grepl("^Sortiment\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
         grepl("Sagtømmer;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
-        identical(c34$state_en, "en|en") && identical(c34$nav_en, "Assortments and prices|Simulator|Price tuning") &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "Stems|Assortments and prices|Simulator|Price tuning") &&
         identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
@@ -2056,9 +2141,9 @@ if (!browser_ok) {
         pa <- dl_pm(app, "dl_a_long")
         c35$typed <- pa$PriceNOKperM3[pa$ProductKey == "spruce_sawlog" & pa$PriceDiameterClass_cm %in% 12 &
                                        pa$LengthClass_dm %in% 31]
-        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
         app$wait_for_js("!!document.querySelector('#tree_counts .tree-counts-n')", timeout = 60 * 1000)
-        c35$sidebar <- vis_text(app, ".bslib-sidebar-layout > .sidebar")
+        c35$sidebar <- vis_text(app, ".apter-page")
         c35$counts <- trimws(txt(app, "#tree_counts"))
         c35$species <- js(app, "$('#species_group')[0].selectize.getItem($('#species_group')[0].selectize.getValue()).text()")
         c35$county <- js(app, "$('#fylnr_sel')[0].selectize.getItem('__all__').text()")
@@ -2096,11 +2181,10 @@ if (!browser_ok) {
         pick(app, "b", "spruce_pulpwood"); app$wait_for_idle()
         app$click("asm_remove_b"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
         c36$remove <- modal_txt(app); close_modal(app)
-        app$click("hpr_import_a"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
-        app$upload_file(hpr_file = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+        app$upload_file(scen_a_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
         app$wait_for_js("!!document.querySelector('.hpr-summary')", timeout = 60 * 1000)
         c36$hpr <- modal_txt(app); lshot(app, "05_hpr_import_no"); close_modal(app)
-        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
         app$set_inputs(tree_source = "list", wait_ = FALSE); app$wait_for_idle()
         bad_tl <- tempfile(fileext = ".csv")
         utils::write.csv(data.frame(tree = 1:3, art = "spruce"), bad_tl, row.names = FALSE)
@@ -2221,7 +2305,7 @@ if (!browser_ok) {
         identical(c39$flat_b, "420") &&
         grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
         identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
-        identical(c39$nav_reload, "Assortments and prices|Simulator|Price tuning")
+        identical(c39$nav_reload, "Stems|Assortments and prices|Simulator|Price tuning")
       t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
       rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
           sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",

@@ -566,7 +566,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     if (uploaded) hpr_uploads <<- unique(c(hpr_uploads, dirname(path)))
     data <- withProgress(message = L("prog_reading", name), value = 0.5,
                          read_product_file(path, name))
-    hpr_kept(list(name = name, path = path))
+    hpr_kept(if (!identical(data$kind, "pin")) list(name = name, path = path))   # a .pin has no stems
     hpr(list(side = side, data = data, file = name)); hpr_err(NULL)
     showModal(hpr_modal(side))
   }
