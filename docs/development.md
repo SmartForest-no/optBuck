@@ -97,6 +97,7 @@ R/                          Core engine helpers
   helpers_hpr_export.R      .hpr export (Phase 5a): a scenario's result as a StanForD 2010 .hpr, copied from the source, no coordinates
   helpers_pin_export.R      .pin export (Phase 5b): a scenario as a StanForD 2010 .pin (fixed minimal header, no coordinates)
   helpers_result_tables.R   Log tally per price matrix (stocknota) and value by DBH class
+  helpers_price_tuning.R    Price-matrix tuning (roadmap 7, no UI yet): grid, target, FG, price update, tune_prices()
   helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
                             used by the backend and the app's live tree counts
 

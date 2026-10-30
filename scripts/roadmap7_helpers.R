@@ -25,8 +25,8 @@ secs <- function(expr) { t0 <- proc.time()[["elapsed"]]; force(expr); proc.time(
 
 # ---- FG ----------------------------------------------------------------------------------------
 
-# FG of one diameter class: S, W in percent over the length classes.
-fg_class <- function(S, W) 100 - 0.5 * sum(abs(S - W))
+# fg_class(), real_target() and file_class_of_cm() are in R/helpers_price_tuning.R.
+source(file.path(get_root_dir(), "R", "helpers_price_tuning.R"))
 
 # Hand check (stop if wrong): 100 - 0.5 * (10+7+1+1+1) = 90.
 stopifnot(isTRUE(all.equal(fg_class(c(30, 13, 19, 19, 19), rep(20, 5)), 90)))
@@ -55,25 +55,6 @@ fg_for <- function(k, tal, pm) {
   S <- sweep(cnt, 2L, pmax(nj, 1e-12), "/") * 100
   fg <- function(W) vapply(seq_along(D), function(j) fg_class(S[, j], W[, j]), 0)
   list(L = L, D = D, N = nj, fg_neutral = fg(Wn), fg_long = fg(Wl))
-}
-
-# Real target: the Distribution values of the available cells, normalised to
-# 100 % within each diameter class (columns). A class whose values sum to 0
-# has no target: its column is NA.
-#   dist, avail  matrices [length x diameter] of the same shape.
-real_target <- function(dist, avail) {
-  w <- dist * avail; w[is.na(w)] <- 0
-  s <- colSums(w)
-  out <- sweep(w, 2L, ifelse(s > 0, s, NA_real_), "/") * 100
-  out
-}
-
-# The Apter diameter row (whole cm) -> the file's diameter class (lower limit
-# mm): the largest class <= c * 10 mm, as the import maps prices (the smallest
-# class below it).
-file_class_of_cm <- function(cm, d_file) {
-  d_file <- sort(unique(d_file))
-  vapply(cm, function(c) { u <- d_file[d_file <= c * 10]; if (length(u)) max(u) else min(d_file) }, 0)
 }
 
 # FG against the file's own Distribution target. `cells` = the product's cells
@@ -117,26 +98,8 @@ overall_real <- function(f, which = "fg") {
 
 # ---- jobs --------------------------------------------------------------------------------------
 
-# A job restricted to some stems (names of job$pvs); order and everything else kept.
-sub_job <- function(job, ids) {
-  keep <- names(job$pvs) %in% ids
-  job$pvs <- job$pvs[keep]
-  job$tree_data <- job$tree_data[as.character(job$tree_data$treid) %in% ids, , drop = FALSE]
-  job$meta$trees <- job$tree_data
-  job
-}
-
-# Rebuild only the runs (.load_runs) and the prepared runs (.prepare_runs) for a
-# price matrix, as a price-tuning iteration would. Returns the job and the times.
-swap_prices <- function(job, pm, pd, lc, root) {
-  path <- tempfile(fileext = ".csv"); pm_export(pm, path)
-  t_load <- secs(pps <- .load_runs(path, root, pd, lc, NULL))
-  pps[[1L]]$grade_opts <- normalize_grade_opts(NULL)
-  t_prep <- secs(prep <- .prepare_runs(lapply(pps, function(pp)
-    list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup, opts = pp$grade_opts))))
-  job$pps <- pps; job$prep <- prep
-  list(job = job, t_load = t_load, t_prep = t_prep)
-}
+# A job restricted to some stems (names of job$pvs); subset_job_stems() in the backend.
+sub_job <- function(job, ids) subset_job_stems(job, match(ids, names(job$pvs)))
 
 # ---- product tables ----------------------------------------------------------------------
 

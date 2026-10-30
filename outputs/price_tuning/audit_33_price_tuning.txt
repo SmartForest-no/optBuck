@@ -1,0 +1,33 @@
+
+--- 1. fg_grid hand case ---
+  [PASS  ] Check 1: fg_grid hand case gives FG = 90 (overall and class) | overall 90.000000
+
+--- 2. update_prices on 2x2 grids (rows = length classes, columns = diameter classes) ---
+  [PASS  ] Check 2: update_prices: plain step, stagnation, calibration, floor, unavailable and non-eligible cells | a TRUE, b TRUE, c TRUE, d TRUE, e TRUE
+
+--- Setup: file5 products, grid and the original-price run of all stems ---
+
+--- 3. tuning_target ---
+  [PASS  ] Check 3: neutral and long sum to 100 per class (NA where unavailable); real = 0/30/45/25 on 37/43/49/55 dm; long = 10/20/30/40 | grid 4 lengths x 13 classes; neutral/long TRUE, real TRUE, long weights TRUE
+
+--- 4. apply_grid_prices round trip ---
+  [PASS  ] Check 4: tuning_grid(apply_grid_prices(P))$price == P; other products and unavailable cells untouched; the original grid reproduces pm | 92 Apter rows of the product
+
+--- 5. tune_prices determinism ---
+  [PASS  ] Check 5: tune_prices twice (real, n = 200, seed 1, max_iter 3) gives an identical trace and best_price | iterations 3, best iteration 3, FG 75.04 -> 83.44 -> 88.18
+
+--- 6. iteration-1 value check ---
+  [PASS  ] Check 6: the product's value equals sum(V * P1) within 0.5 NOK (all stems); value_orig of iteration 1 equals the total value | result 900466.363 NOK, sum(V*P1) 900466.363 NOK, difference -0.000000; total value 1493115.5 NOK
+
+--- 7. tally_grid holds every log ---
+  [PASS  ] Check 7: tally_grid counts and price volume equal the product's totals in selected_logs_all; a log outside the grid stops with the difference | 7598 logs, 1313.3846 m3; grid 7598, 1313.3846 m3 | error: tally_grid(spruce_140_sca_sagt_mmer): the grid does not hold all logs: counts 7597 of 7598 (difference 1), price volume 1313.182040 of 1313.384640 m3 (differenc
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result n
+1   PASS 7
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/price_tuning/audit_33_price_tuning.csv

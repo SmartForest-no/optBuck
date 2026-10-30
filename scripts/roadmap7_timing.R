@@ -65,7 +65,7 @@ ids <- names(job$pvs)
 set.seed(1)
 s100  <- sample(ids, 100L)
 s1000 <- sample(ids, 1000L)
-job100 <- sub_job(job, s100); job1000 <- sub_job(job, s1000)
+job100 <- subset_job_stems(job, match(s100, ids)); job1000 <- subset_job_stems(job, match(s1000, ids))
 
 # ---- 1b. warm-up (worker start), then timings -------------------------------------------
 
@@ -106,12 +106,12 @@ pm_plus <- pm
 rows <- pm_plus$ProductKey == main_key & !is.na(pm_plus$PriceNOKperM3)
 pm_plus$PriceNOKperM3[rows] <- pm_plus$PriceNOKperM3[rows] + 10
 
-sw1 <- swap_prices(job1000, pm_plus, pr$pd, pr$lc, root)
-t_b_plus <- secs(b_plus <- buck_job(sw1$job, workers))
-res_plus <- finish_job(sw1$job, b_plus)
-sw2 <- swap_prices(job1000, pm, pr$pd, pr$lc, root)
-t_b_back <- secs(b_back <- buck_job(sw2$job, workers))
-res_back <- finish_job(sw2$job, b_back)
+t_swap <- secs(job_plus <- swap_job_prices(job1000, list(pd = pr$pd, lc = pr$lc, pm = pm_plus)))
+t_b_plus <- secs(b_plus <- buck_job(job_plus, workers))
+res_plus <- finish_job(job_plus, b_plus)
+job_back <- swap_job_prices(job1000, list(pd = pr$pd, lc = pr$lc, pm = pm))
+t_b_back <- secs(b_back <- buck_job(job_back, workers))
+res_back <- finish_job(job_back, b_back)
 
 val <- function(r) sum(r$tree_summary$total_value_nok)
 differs  <- !identical(res_plus$selected_logs_all, res_1000$selected_logs_all) ||
@@ -119,10 +119,10 @@ differs  <- !identical(res_plus$selected_logs_all, res_1000$selected_logs_all) |
 restored <- identical(res_back$selected_logs_all, res_1000$selected_logs_all) &&
             identical(res_back$tree_summary, res_1000$tree_summary)
 reuse <- data.frame(
-  item = c("product changed (+10 NOK on every priced cell)", "rebuild pps (.load_runs), s", "rebuild prep (.prepare_runs), s",
+  item = c("product changed (+10 NOK on every priced cell)", "swap_job_prices (pps + prep), s",
            "buck_job 1000 stems, s", "total value original prices, NOK", "total value +10 NOK, NOK",
            "(a) result differs from original", "(b) restoring prices reproduces original exactly (identical)"),
-  value = c(main_key, round(sw1$t_load, 2), round(sw1$t_prep, 2), round(t_b_plus, 2),
+  value = c(main_key, round(t_swap, 2), round(t_b_plus, 2),
             round(val(res_1000), 1), round(val(res_plus), 1), differs, restored))
 show(reuse, "reuse_path", "Reuse path: swap prices into the existing job")
 

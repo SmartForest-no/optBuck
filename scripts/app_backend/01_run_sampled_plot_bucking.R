@@ -777,6 +777,39 @@ prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "defau
                   products, length_classes, params, scenario, grade_opts)
 }
 
+#' A job with other prices (price-matrix tuning): rebuilds only the runs
+#' (.load_runs) and the prepared runs (.prepare_runs); the profiles stay.
+#' Stem-grade options are off.
+#'
+#' @param job      A job from prepare_hpr_job() or prepare_hpr_stems_job().
+#' @param products list(pd, lc, pm): ProductData, LengthClasses (with
+#'   LogLength_dm) and the price matrix (pm_minimal layout, long).
+#' @return The job with new `pps` and `prep`.
+swap_job_prices <- function(job, products, root = get_root_dir()) {
+  path <- tempfile(fileext = ".csv")
+  on.exit(unlink(path), add = TRUE)
+  pm_export(products$pm, path)
+  pps <- .load_runs(path, root, products$pd, products$lc, NULL)
+  pps[[1L]]$grade_opts <- normalize_grade_opts(NULL)
+  job$prep <- .prepare_runs(lapply(pps, function(pp)
+    list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup, opts = pp$grade_opts)))
+  job$pps <- pps
+  job
+}
+
+#' A job restricted to some stems (price-matrix tuning samples).
+#'
+#' @param idx Integer positions in names(job$pvs) (the job's tree order).
+#' @return The job with those stems only; order and everything else kept.
+subset_job_stems <- function(job, idx) {
+  ids <- names(job$pvs)[sort(unique(idx))]
+  keep <- names(job$pvs) %in% ids
+  job$pvs <- job$pvs[keep]
+  job$tree_data <- job$tree_data[as.character(job$tree_data$treid) %in% ids, , drop = FALSE]
+  job$meta$trees <- job$tree_data
+  job
+}
+
 # The tree-list result for one run's result tables (also .hpr stems: kind "hpr").
 .result_tree_list <- function(job, core, pp, elapsed) {
   m <- job$meta
