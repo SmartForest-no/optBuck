@@ -176,6 +176,7 @@ if (!browser_ok) {
     gridA <- function(pm) pm_to_grid(pm, ID)
     shot <- function(name) try(app$get_screenshot(file.path(shot_dir, paste0(name, ".png"))), silent = TRUE)
     res <- tryCatch({
+      app$set_inputs(main_nav = "prices", wait_ = FALSE)   # the app opens on Stems (restructure R1)
       app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
       app$wait_for_js("!!document.querySelector('#pm_a .ht_master td')", timeout = 30 * 1000)
       app$wait_for_idle()

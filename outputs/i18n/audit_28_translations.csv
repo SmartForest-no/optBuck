@@ -1,7 +1,7 @@
 check,result,detail
-"Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates",PASS,"607 rows (msg 157, ui 384, value 66) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none"
-Check 02: every id the code uses exists; no ui id unused,PASS,"293 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE"
-Check 03: no untranslated English string literals in app/*.R,PASS,"1643 string literals, 27 prose-like, 26 translated at display | left: none"
+"Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates",PASS,"610 rows (msg 157, ui 387, value 66) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none"
+Check 02: every id the code uses exists; no ui id unused,PASS,"296 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE"
+Check 03: no untranslated English string literals in app/*.R,PASS,"1686 string literals, 27 prose-like, 26 translated at display | left: none"
 Check 04: every message template round-trips; English unchanged; unknown values pass through,PASS,107 templates | failed: none | misses: none | English unchanged TRUE | pass-through TRUE
 "Check 05: backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss",PASS,"73 distinct messages (tree list 42, .hpr import 25, .hpr stems 28, prices 16) | misses: none | unchanged: none"
 "Check 06: downloads: English CSV as write.csv; Norsk CSV with ';', decimal comma and BOM reads back; tally xlsx in both languages",PASS,"English CSV identical TRUE | Norsk CSV TRUE | xlsx sheets en 'spruce_sawlog', 'spruce_pulpwood', 'long' / no 'spruce_sawlog', 'spruce_pulpwood', 'liste', headers and numbers TRUE"

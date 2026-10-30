@@ -307,16 +307,16 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, R3 multi-assortment tuning. Never merge to main from this branch. Plan: the approved session plan (Stems / Assortments and prices / Simulator / Price tuning tabs).
 
 ### Checklist
-- [ ] Setup: branch, permissions, baseline for the single-product tuning invariant (`scripts/capture_tuning_single_baseline.R` -> `outputs/restructure/tuning_single_expected.rds`, gitignored)
-- [ ] R1.2 Stems tab and summary table
-- [ ] R1.3 Simulator tab reduced
-- [ ] R1.4 Decouple stems and scenarios (+ audit 17 checks)
-- [ ] R1.5 Use-assortments-from-this-file buttons
-- [ ] R1.6 One upload field per scenario (.hpr/.pin)
-- [ ] R1.7 Grade rules in the scenario panels (verify)
-- [ ] R1.8 Scenario names
-- [ ] R1.9 Crash check
-- [ ] R1.10 Translations, audits, push
+- [x] Setup (ded54c5): branch, permissions, baseline for the single-product tuning invariant (`scripts/capture_tuning_single_baseline.R` -> `outputs/restructure/tuning_single_expected.rds`, gitignored)
+- [x] R1.2 Stems tab and summary table (c11493d)
+- [x] R1.3 Simulator tab reduced (c11493d)
+- [x] R1.4 Decouple stems and scenarios (c11493d; audit 17 check 44, bc2a9ff)
+- [x] R1.5 Use-assortments-from-this-file buttons (c11493d; audit 17 check 44)
+- [x] R1.6 One upload field per scenario (.hpr/.pin) (c11493d; audit 17 checks 29, 42)
+- [x] R1.7 Grade rules in the scenario panels: verified, no change needed (audit 17 check 41 passes with the source on the Stems tab)
+- [x] R1.8 Scenario names (e5aff0c, dd2e057; audit 17 check 45, audit 24 check 12)
+- [x] R1.9 Crash check: not reproduced (scripts/repro_tuning_crash.R)
+- [x] R1.10 Translations, audits (17, 24-33, performance_check PASS), push
 - [ ] R2.1-R2.4 Target distribution editor
 - [ ] R2.5 Scenario xlsx (fields, target sheets, file_classes sheet)
 - [ ] R2.6 Audits, push
@@ -334,6 +334,13 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 - The scenario xlsx keeps `FileDiameterClass_mm` in a `file_classes` sheet (matrix id, diameter row in cm, FileDiameterClass_mm); a row-wise fallback exists only for products that never had file classes.
 - Tuning results are cleared only when the tuned side, the assortment selection or the stems change; applying the tuned prices to the other scenario keeps them visible.
 - Stems come only from files uploaded on the Stems tab; a file imported into a scenario is no longer offered as stem source.
+
+- R1.9 crash: file5 imported into A through the scenario upload field and dialog, file5 as .hpr stems, Price tuning tab, product dropdown opened, spruce 140 SCA tuned (3 iterations): completes in 36 s, no R error, server process alive. A first attempt with the default product (Pine 289 Stamblokk, no target) showed no results table and no error. Not reproduced. Most likely cause removed by R1.4: the old import-then-stems coupling (the import re-read the stems and replaced the species map).
+- A scenario xlsx carries the scenario's name (sheet `scenario`); uploading A's xlsx into B therefore also sets B's name to A's (alternative: never read the name back; rejected, the design asks for it). Copy from A/B never changes the name.
+- The scenario card titles show the name ("Scenario <name>"); button texts that mention the other scenario ("Copy from B", "Make assortment equal to B") keep the letters A and B.
+- New result field `ab_names` (the names at the start of a run): not `scenario_names`, because `result()$scenario` partially matched it and made every run a comparison.
+- The app opens on the Stems tab; audits 17 and 29 navigate to Assortments and prices first.
+- Audit changes for the new layout (intended UI change): 17 (tab list, Stems tab for tree-source inputs, `run()` goes to the Simulator, uploads to the scenario field instead of the import button, check 31 uploads its stems, altitude slider checked against its card), 29 (navigates to the prices tab), 32 check 10 (source wiring).
 
 ### Open questions for Lennart
 (none yet)

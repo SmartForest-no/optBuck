@@ -323,13 +323,13 @@ section("10. Dispatcher and app wiring")
 as_pin_name <- variant(HPRFX, function(t) t, ext = ".pin")           # an .hpr under a .pin name
 as_hpr_name <- variant(MINI, function(t) t, ext = ".hpr")            # a .pin under an .hpr name
 src <- paste(readLines(file.path(root_dir, "app", "server_scenarios.R"), warn = FALSE), collapse = "\n")
+ui_src <- paste(readLines(file.path(root_dir, "app", "app_ui.R"), warn = FALSE), collapse = "\n")
 ok10 <- identical(read_product_file(MINI)$kind, "pin") && identical(read_product_file(as_hpr_name)$kind, "pin") &&
   identical(read_product_file(HPRFX)$kind, "hpr") && identical(read_product_file(as_pin_name)$kind, "hpr") &&
-  grepl("identical(data$kind, \"pin\")", src, fixed = TRUE) && grepl("hpr_kept(NULL)", src, fixed = TRUE) &&
-  length(gregexpr("hpr_imported(list(", src, fixed = TRUE)[[1L]]) == 1L &&
-  grepl('accept = c(".hpr", ".zip", ".gz", ".pin")', src, fixed = TRUE)
+  grepl("if (!identical(data$kind, \"pin\")) hpr_kept(", src, fixed = TRUE) && !grepl("hpr_imported", src, fixed = TRUE) &&
+  grepl('accept = c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip")', ui_src, fixed = TRUE)
 rec("Check 10: The root element decides; a .pin is not kept for the .hpr stems source (audit 17 check 42 drives the app)",
-    ok(ok10), sprintf("kinds: pin %s, pin as .hpr %s, hpr %s, hpr as .pin %s | app: pin branch present %s, hpr_imported set in one place %s",
+    ok(ok10), sprintf("kinds: pin %s, pin as .hpr %s, hpr %s, hpr as .pin %s | app: pin branch present %s, hpr_imported gone %s",
                       read_product_file(MINI)$kind, read_product_file(as_hpr_name)$kind, read_product_file(HPRFX)$kind,
                       read_product_file(as_pin_name)$kind, grepl("identical(data$kind, \"pin\")", src, fixed = TRUE),
                       length(gregexpr("hpr_imported(list(", src, fixed = TRUE)[[1L]]) == 1L))
