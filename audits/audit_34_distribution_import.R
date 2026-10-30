@@ -40,6 +40,16 @@
 #      it, pm_prices() has only the price columns, the backend loader drops it
 # 12.  Private file5 spruce 140 SCA Saqtommer: 13 distinct values = the file's
 #      13 class lower limits
+# 30.  Editor (restructure R2): a cell edit sets every whole-cm row of the same file
+#      class (only the row without a file class); prices never change
+# 31.  Even / Longer logs equal tuning_target(); Clear removes the target
+# 32.  Row sums and the bold flag (neither 0 nor 100); unavailable cells and
+#      values outside 0-100 are refused
+# 33.  The four fields on the first target (allowed, Volume of logs, within
+#      product, MAXDeviation 0); fields from a file are kept; category change
+# 34.  Scenario xlsx round trip: Distribution, FileDiameterClass_mm and the four
+#      fields identical after download and upload (sheets target_<n> and
+#      file_classes); no extra sheets without data
 #  20-29. Private files (see above)
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
@@ -76,6 +86,8 @@ source(file.path(root_dir, "R", "helpers_audit.R"))
 source(file.path(root_dir, "scripts", "app_backend",
                  "01_run_sampled_plot_bucking.R"), local = FALSE)
 source(file.path(root_dir, "app", "helpers_upload.R"))
+source(file.path(root_dir, "R", "helpers_price_tuning.R"))      # tuning_target() (Even / Longer logs)
+source(file.path(root_dir, "R", "helpers_distribution_edit.R"))  # the editor (restructure R2)
 if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
 
 out_dir <- path_output("distribution_import", root_dir = root_dir)
@@ -320,21 +332,16 @@ rec("Check 07: LengthDistributionDefinition after PriceDefinition and before Pro
     sprintf("position/order %s | product without values: no element, 0 per cell %s | cell values %s | .pin %s", ok7a, ok7b, ok7c, ok7d))
 
 # ==============================================================================
-section("08. No effect on comparison or highlighting; not in the scenario xlsx")
+section("08. No effect on comparison or highlighting")
 pm_nod <- pm0; pm_nod[[DIST]] <- NULL
 pm_other <- pm0; pm_other[[DIST]] <- ifelse(is.na(pm0[[DIST]]), NA, pm0[[DIST]] + 1)
 d_other <- d0; d_other$MAXDeviation[match(SAW, d0$Name)] <- 9; d_other$DistributionCategory[match(SAW, d0$Name)] <- "Number of logs"
 ok8a <- !scenarios_differ(d0, pm0, d0, pm_nod) && !scenarios_differ(d0, pm0, d0, pm_other) &&
   !scenarios_differ(d0, pm0, d_other, pm0) && same_assortments(d0, d_other) &&
   !any(assortment_diff(d0, d_other)$diff) && same_prices(pm0, pm_other, k)
-xl <- tempfile(fileext = ".xlsx"); scenario_export(d0, pm0, xl)
-sh <- as.data.frame(readxl::read_excel(xl, sheet = "assortments", col_types = "text"))
-imp <- scenario_import(xl)
-ok8b <- !any(c(FIELDS, DIST) %in% names(sh)) && isTRUE(imp$ok) && !DIST %in% names(imp$pm) &&
-  all(vapply(FIELDS, function(n) all(is.na(imp$defs[[n]])), logical(1)))
-rec("Check 08: Distribution-only differences do not highlight or trigger a comparison; the scenario xlsx does not carry the data (documented limitation)",
-    ok(ok8a && ok8b), sprintf("no comparison/highlight %s | xlsx without data and re-import ok %s", ok8a, ok8b))
-unlink(xl)
+ok8b <- TRUE   # (the scenario xlsx carries the data since restructure R2.5: check 34)
+rec("Check 08: Distribution-only differences do not highlight or trigger a comparison",
+    ok(ok8a && ok8b), sprintf("no comparison/highlight %s", ok8a))
 
 # ==============================================================================
 section("09. FileDiameterClass_mm on the fixture")
@@ -556,6 +563,121 @@ if (!have("file5")) skip("Check 12: FileDiameterClass_mm of file5 spruce 140 SCA
       sprintf("%d distinct values in %d rows; file classes %d; equal %s", length(unique(v12)), length(v12), length(file12),
               identical(sort(unique(v12)), file12)))
 }
+
+# ==============================================================================
+section("30. Editor: class-wide cell edit, prices untouched")
+saw_k <- keyof(hpr$s, SAW)
+pm30 <- pm_minimal(hpr$s$pm)
+row_ids <- function(pm, cm, dm) which(pm$ProductKey == saw_k & pm$PriceDiameterClass_cm %in% cm & pm$LengthClass_dm %in% dm)
+e30 <- dist_set_cell(pm30, saw_k, 20, 43, 40)
+same_class <- e30[[DIST]][row_ids(e30, 18:24, 43)]
+other_rows <- setdiff(seq_len(nrow(e30)), row_ids(e30, 18:24, 43))
+ok30a <- all(same_class == 40) && identical(e30[[DIST]][other_rows], pm30[[DIST]][other_rows]) &&
+  identical(pm_prices(e30), pm_prices(pm30))
+# a row without a file class is its own class
+pm30n <- pm30; pm30n[[PM_FILE_CLASS_COL]] <- NA_real_
+e30n <- dist_set_cell(pm30n, saw_k, 20, 43, 40)
+ch <- which(!is.na(e30n[[DIST]]) & (is.na(pm30n[[DIST]]) | e30n[[DIST]] != pm30n[[DIST]]))
+ok30b <- length(ch) == 1L && e30n$PriceDiameterClass_cm[ch] == 20 && e30n$LengthClass_dm[ch] == 43
+# NA clears the cells of the class
+e30c <- dist_set_cell(e30, saw_k, 22, 43, NA)
+ok30c <- all(is.na(e30c[[DIST]][row_ids(e30c, 18:24, 43)]))
+# the editor grid shows the values at the grid positions
+g30 <- dist_grid(e30, saw_k)
+ok30d <- identical(dim(g30), dim(pm_to_grid(e30, saw_k))) && identical(dimnames(g30), dimnames(pm_to_grid(e30, saw_k))) &&
+  isTRUE(g30["20", "43"] == 40) && isTRUE(g30["18", "43"] == 40)
+rec("Check 30: A cell edit sets every whole-cm row of the same file class (rows without a file class: only that row), NA clears, prices unchanged, dist_grid() has the price grid's shape",
+    ok(ok30a && ok30b && ok30c && ok30d), sprintf("class-wide %s | own class %s | clear %s | grid %s", ok30a, ok30b, ok30c, ok30d))
+
+# ==============================================================================
+section("31. Editor: Even / Longer logs equal tuning_target(); Clear")
+tg_grid <- function(pm, key) {
+  av <- dist_available(pm, key)
+  g <- list(price = ifelse(t(av), 1, NA_real_)); dimnames(g$price) <- list(colnames(av), rownames(av)); g
+}
+ok31 <- TRUE; det31 <- character(0)
+for (ty in c("neutral", "long")) {
+  e <- dist_apply_target(pm30, saw_k, ty)
+  want <- tuning_target(tg_grid(pm30, saw_k), ty)           # length x diameter
+  got <- t(as.matrix(dist_grid(e, saw_k)))                  # length x diameter
+  same <- isTRUE(all.equal(unname(got), unname(want), tolerance = 1e-9)) && identical(is.na(got), is.na(want))
+  sums <- dist_row_sums(dist_grid(e, saw_k))
+  same <- same && all(abs(sums - 100) < 1e-9) && identical(pm_prices(e), pm_prices(pm30))
+  ok31 <- ok31 && same; det31 <- c(det31, sprintf("%s %s", ty, same))
+}
+cl <- dist_clear(pm30, saw_k)
+others <- pm30$ProductKey != saw_k
+ok31c <- !any(!is.na(col_of(cl)[cl$ProductKey == saw_k])) && identical(col_of(cl)[others], col_of(pm30)[others])
+only <- pm30[pm30$ProductKey == saw_k, , drop = FALSE]
+ok31d <- !DIST %in% names(dist_clear(only, saw_k))
+rec("Check 31: Even and Longer logs equal tuning_target() on the priced cells (rows sum to 100, prices unchanged); Clear removes the assortment's target (the column when it was the only one)",
+    ok(ok31 && ok31c && ok31d), sprintf("%s | clear keeps other products %s | column dropped when empty %s", paste(det31, collapse = ", "), ok31c, ok31d))
+
+# ==============================================================================
+section("32. Editor: sums, flag, refused edits")
+g32 <- data.frame(`37` = c(100, 0, 30, NA), `43` = c(0, 0, 60, NA), check.names = FALSE)
+sums32 <- dist_row_sums(g32)
+ok32a <- identical(sums32, c(100, 0, 90, 0)) && identical(dist_row_flag(sums32), c(FALSE, FALSE, TRUE, FALSE))
+err1 <- tryCatch({ dist_set_cell(pm30, saw_k, 18, 99, 10); "" }, error = function(e) conditionMessage(e))
+err2 <- tryCatch({ dist_set_cell(pm30, saw_k, 20, 43, 101); "" }, error = function(e) conditionMessage(e))
+err3 <- tryCatch({ dist_set_cell(pm30, saw_k, 20, 43, -1); "" }, error = function(e) conditionMessage(e))
+ok32b <- grepl("no price", err1) && grepl("between 0 and 100", err2) && grepl("between 0 and 100", err3)
+rec("Check 32: Row sums; the flag is TRUE only for a sum that is neither 0 nor 100; a cell without a price and a value outside 0-100 are refused",
+    ok(ok32a && ok32b), sprintf("sums %s | refused: '%s' / '%s'", ok32a, substr(err1, 1, 40), substr(err2, 1, 40)))
+
+# ==============================================================================
+section("33. Editor: the four fields")
+d33 <- hpr$s$defs
+ks33 <- assortment_table_keys(d33); i_saw <- match(saw_k, ks33)
+kept <- dist_init_fields(d33, saw_k)
+ok33a <- identical(fields_of(kept, i_saw), fields_of(d33, i_saw))          # from a file: unchanged
+pulp_k <- keyof(hpr$s, "Spruce Pulpwood"); j <- match(pulp_k, ks33)
+d33n <- dist_clear_fields(d33, pulp_k)                                      # an assortment without the fields
+fresh <- dist_init_fields(d33n, pulp_k)
+ok33b <- isTRUE(fresh$DistributionAllowed[j]) && identical(fresh$DistributionCategory[j], "Volume of logs") &&
+  isTRUE(fresh$DistributionWithinProduct[j]) && identical(fresh$MAXDeviation[j], 0)
+cat33 <- dist_set_category(fresh, pulp_k, "Number of logs")
+ok33c <- identical(cat33$DistributionCategory[j], "Number of logs") &&
+  inherits(tryCatch(dist_set_category(fresh, pulp_k, "x"), error = function(e) e), "error")
+ok33d <- all(is.na(unlist(dist_clear_fields(fresh, pulp_k)[j, FIELDS])))
+ok33e <- identical(dist_init_fields(cat33, pulp_k), cat33)                   # fields already there: kept
+rec("Check 33: First target sets Allowed TRUE, 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared",
+    ok(ok33a && ok33b && ok33c && ok33d && ok33e), sprintf("file fields kept %s | first target %s | category %s | cleared %s | kept when set %s", ok33a, ok33b, ok33c, ok33d, ok33e))
+
+# ==============================================================================
+section("34. Scenario xlsx round trip of the target and the file classes")
+d34 <- hpr$s$defs; pm34 <- pm_minimal(hpr$s$pm)
+x34 <- tempfile(fileext = ".xlsx"); scenario_export(d34, pm34, x34)
+r34 <- scenario_import(x34)
+a34 <- pm34[order(pm34$ProductKey, pm34$LengthClass_dm, pm34$PriceDiameterClass_cm), ]
+b34 <- pm_minimal(r34$pm)
+b34 <- b34[order(b34$ProductKey, b34$LengthClass_dm, b34$PriceDiameterClass_cm), ]
+ok34a <- isTRUE(r34$ok) && nrow(a34) == nrow(b34) && identical(a34[[DIST]], b34[[DIST]]) &&
+  identical(a34[[PM_FILE_CLASS_COL]], b34[[PM_FILE_CLASS_COL]]) && identical(pm_prices(a34), pm_prices(b34))
+ok34b <- all(vapply(FIELDS, function(n) identical(d34[[n]], r34$defs[[n]]), logical(1)))
+sh34 <- readxl::excel_sheets(x34)
+ok34c <- "file_classes" %in% sh34 && any(grepl("^target_", sh34))
+# an Even / Longer target set in the editor (no file classes)
+pm34e <- dist_apply_target(pm_prices(pm34), saw_k, "long"); d34e <- dist_init_fields(dist_clear_fields(d34, saw_k), saw_k)
+x34e <- tempfile(fileext = ".xlsx"); scenario_export(d34e, pm34e, x34e); r34e <- scenario_import(x34e)
+b34e <- pm_minimal(r34e$pm)
+ord <- function(p) p[order(p$ProductKey, p$LengthClass_dm, p$PriceDiameterClass_cm), ]
+ok34d <- isTRUE(r34e$ok) && identical(ord(b34e)[[DIST]], ord(pm_minimal(pm34e))[[DIST]]) && !PM_FILE_CLASS_COL %in% names(b34e) &&
+  !"file_classes" %in% readxl::excel_sheets(x34e) &&
+  all(vapply(FIELDS, function(n) identical(d34e[[n]], r34e$defs[[n]]), logical(1)))
+# no data: no extra sheets or columns
+x34n <- tempfile(fileext = ".xlsx"); scenario_export(defs_from_products(load_products()), load_price_matrix_long(), x34n)
+sh34n <- readxl::excel_sheets(x34n); r34n <- scenario_import(x34n)
+ok34e <- !"file_classes" %in% sh34n && !any(grepl("^target_", sh34n)) && isTRUE(r34n$ok) &&
+  !DIST %in% names(r34n$pm) && !PM_FILE_CLASS_COL %in% names(r34n$pm) &&
+  !any(FIELDS %in% names(as.data.frame(readxl::read_excel(x34n, sheet = "assortments", col_types = "text"))))
+ok34f <- identical(names(pm_prices(b34e)), PM_REQUIRED_COLS) &&
+  identical(ord(pm_prices(b34e)), ord(pm_prices(pm34e)))
+rec("Check 34: Scenario xlsx round trip: Distribution, FileDiameterClass_mm and the four fields identical (sheets target_<n>, file_classes); no extra sheets or columns without data; price data unchanged",
+    ok(ok34a && ok34b && ok34c && ok34d && ok34e && ok34f),
+    sprintf("cells + file classes %s | fields %s | sheets %s (%s) | editor target %s | no data, no extra sheets %s | prices %s",
+            ok34a, ok34b, ok34c, paste(sh34, collapse = ","), ok34d, ok34e, ok34f))
+unlink(c(x34, x34e, x34n))
 
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 34 complete.\n")

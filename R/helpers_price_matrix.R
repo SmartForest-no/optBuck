@@ -401,12 +401,19 @@ pm_rename_key <- function(pm, from, to) {
 #' and its prices in the wide layout of pm_template_wide() (one sheet per
 #' matrix, "flat_prices").
 # Sheets of a scenario xlsx that carry no price grid.
-SCENARIO_META_SHEETS <- c("assortments", "scenario")
+SCENARIO_META_SHEETS <- c("assortments", "scenario", "file_classes")
+.is_target_sheet <- function(x) grepl("^target_[0-9]+$", x)
 
 scenario_export <- function(defs, pm, path, name = NULL) {
-  # The hidden distribution fields (Phase 7a) are not part of the exchange file.
-  sheets <- c(list(assortments = defs[, setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS), drop = FALSE]),
-              .pm_wide_sheets(pm))
+  # The target distribution (restructure R2.5): the four fields as columns of
+  # the assortment table (only when some assortment has them), one sheet
+  # target_<n> per assortment with a target (the price sheet's layout; the
+  # corner cell is the ProductKey) and one sheet file_classes (matrix id,
+  # diameter row in cm, file diameter class in mm) for rows that have one.
+  has_fields <- any(!is.na(unlist(defs[, DISTRIBUTION_DEF_COLS, drop = FALSE])))
+  cols <- if (has_fields) ASSORTMENT_TABLE_COLS else setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS)
+  sheets <- c(list(assortments = defs[, cols, drop = FALSE]),
+              .pm_wide_sheets(pm), .pm_target_sheets(pm), .pm_file_class_sheet(pm))
   # The scenario's display name (restructure R1.8), when it has one.
   if (!is.null(name)) sheets <- c(sheets, list(scenario = data.frame(Name = as.character(name))))
   writexl::write_xlsx(sheets, path)
@@ -436,11 +443,40 @@ scenario_import <- function(path) {
   if (length(up$errors) > 0L) return(fail(up$errors))
   v <- check_price_set(defs, up$long)
   if (!v$ok) return(fail(v$errors))
+  v$pm <- .pm_attach_hidden(v$pm, path, sheets, keys[defs$PriceType == "matrix"])
   nm <- if ("scenario" %in% sheets) tryCatch({
     x <- readxl::read_excel(path, sheet = "scenario", col_types = "text")
     if ("Name" %in% names(x) && nrow(x)) x$Name[1L]
   }, error = function(e) NULL)
   list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings, name = nm)
+}
+
+#' Put the target (sheets target_<n>) and the file diameter classes (sheet
+#' file_classes) of a scenario xlsx back on the price matrix as its hidden
+#' columns. A value with no priced cell to hold it is ignored.
+.pm_attach_hidden <- function(pm, path, sheets, matrix_keys) {
+  pm <- pm_minimal(pm)
+  key <- function(p) paste(p$ProductKey, p$LengthClass_dm, p$PriceDiameterClass_cm)
+  for (sh in sheets[.is_target_sheet(sheets)]) {
+    raw <- as.data.frame(readxl::read_excel(path, sheet = sh, col_names = FALSE, col_types = "text", .name_repair = "minimal"))
+    p <- .parse_wide_grid(raw, id = NULL, valid_ids = matrix_keys)
+    if (is.null(p$long)) next
+    if (!PM_DISTRIBUTION_COL %in% names(pm)) pm[[PM_DISTRIBUTION_COL]] <- NA_real_
+    i <- match(key(pm), key(p$long))
+    hit <- !is.na(i) & .is_matrix_row(pm) & !is.na(pm$PriceNOKperM3)
+    pm[[PM_DISTRIBUTION_COL]][hit] <- p$long$PriceNOKperM3[i[hit]]
+  }
+  if ("file_classes" %in% sheets) {
+    fc <- as.data.frame(readxl::read_excel(path, sheet = "file_classes", col_types = "text"))
+    if (all(c("ProductKey", "PriceDiameterClass_cm", PM_FILE_CLASS_COL) %in% names(fc))) {
+      kk <- function(k, c) paste(trimws(k), suppressWarnings(as.integer(c)))
+      i <- match(kk(pm$ProductKey, pm$PriceDiameterClass_cm), kk(fc$ProductKey, fc$PriceDiameterClass_cm))
+      hit <- !is.na(i) & .is_matrix_row(pm)
+      pm[[PM_FILE_CLASS_COL]] <- NA_real_
+      pm[[PM_FILE_CLASS_COL]][hit] <- suppressWarnings(as.numeric(fc[[PM_FILE_CLASS_COL]][i[hit]]))
+    }
+  }
+  pm_minimal(pm)
 }
 
 #' Check a price set: the assortment table with the price matrix it runs
@@ -749,7 +785,7 @@ read_price_matrix_upload <- function(path, filename = path, default,
     sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
     if (is.null(sheets)) return(fail("Cannot read the xlsx file."))
     longs <- list(); ids <- character(0); errs <- character(0)
-    for (sh in setdiff(sheets, SCENARIO_META_SHEETS)) {   # a scenario file's other sheets are not prices
+    for (sh in setdiff(sheets, SCENARIO_META_SHEETS)[!.is_target_sheet(setdiff(sheets, SCENARIO_META_SHEETS))]) {   # a scenario file's other sheets are not prices
       raw <- as.data.frame(readxl::read_excel(path, sheet = sh, col_names = FALSE,
                                               col_types = "text", .name_repair = "minimal"))
       if (identical(sh, PM_FLAT_ID)) {
@@ -841,6 +877,42 @@ pm_template_long <- function(default, path) pm_export(default, path)
 pm_template_wide <- function(default, path) {
   writexl::write_xlsx(.pm_wide_sheets(default), path)
   invisible(path)
+}
+
+# A matrix's hidden column (Distribution or FileDiameterClass_mm) as a grid in
+# the layout of pm_to_grid(): NA where the cell has no value.
+.pm_hidden_grid <- function(pm, id, col) {
+  g <- pm_to_grid(pm, id)
+  m <- matrix(NA_real_, nrow(g), ncol(g), dimnames = dimnames(g))
+  s <- pm[pm$ProductKey == id & .is_matrix_row(pm) & !is.na(pm$PriceNOKperM3), , drop = FALSE]
+  if (nrow(s) && col %in% names(s))
+    m[cbind(match(s$PriceDiameterClass_cm, as.integer(rownames(g))), match(s$LengthClass_dm, as.integer(colnames(g))))] <- s[[col]]
+  as.data.frame(m, check.names = FALSE)
+}
+
+# Sheets target_1, target_2, ...: the Distribution of every matrix with a value.
+.pm_target_sheets <- function(pm) {
+  d <- pm_minimal(pm)
+  if (!PM_DISTRIBUTION_COL %in% names(d)) return(list())
+  ids <- setdiff(pm_matrix_ids(d), PM_FLAT_ID)
+  ids <- ids[vapply(ids, function(id) any(!is.na(d[[PM_DISTRIBUTION_COL]][d$ProductKey == id & .is_matrix_row(d)])), logical(1))]
+  out <- lapply(ids, function(id) {
+    g <- .pm_hidden_grid(d, id, PM_DISTRIBUTION_COL)
+    o <- cbind(setNames(data.frame(as.integer(rownames(g))), id), g)
+    names(o) <- c(id, colnames(g)); o
+  })
+  setNames(out, if (length(ids)) paste0("target_", seq_along(ids)) else character(0))
+}
+
+# Sheet file_classes: the file diameter class (mm) of every matrix row that has one.
+.pm_file_class_sheet <- function(pm) {
+  d <- pm_minimal(pm)
+  if (!PM_FILE_CLASS_COL %in% names(d)) return(list())
+  r <- d[.is_matrix_row(d) & !is.na(d[[PM_FILE_CLASS_COL]]), c("ProductKey", "PriceDiameterClass_cm", PM_FILE_CLASS_COL), drop = FALSE]
+  r <- r[!duplicated(r[, 1:2]), , drop = FALSE]
+  if (nrow(r) == 0L) return(list())
+  rownames(r) <- NULL
+  list(file_classes = r)
 }
 
 # The sheets of the wide layout: one per matrix, then "flat_prices".

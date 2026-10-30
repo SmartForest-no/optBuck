@@ -49,6 +49,7 @@ source(file.path(ROOT, "scripts", "app_backend",
 
 # price tuning (roadmap 7; the Price tuning tab, app/tuning.R)
 source(file.path(ROOT, "R", "helpers_price_tuning.R"))
+source(file.path(ROOT, "R", "helpers_distribution_edit.R"))
 
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
