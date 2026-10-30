@@ -53,8 +53,10 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map) {
     p <- prods(); l <- lang()
     lbl <- sprintf("%s – %s", tr_value(tools::toTitleCase(p$species), l), tr_value(p$name, l))
     cur <- isolate(input$tn_product)
-    selectInput("tn_product", L("tn_product"), setNames(p$product_id, lbl),
-                selected = if (isTRUE(cur %in% p$product_id)) cur, width = "320px")
+    # The open list is attached to the page body: the card would clip it.
+    selectizeInput("tn_product", L("tn_product"), setNames(p$product_id, lbl),
+                   selected = if (isTRUE(cur %in% p$product_id)) cur, width = "320px",
+                   options = list(dropdownParent = "body"))
   })
 
   has_file <- reactive({

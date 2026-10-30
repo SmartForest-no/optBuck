@@ -1877,7 +1877,7 @@ if (!browser_ok) {
     # even target for two iterations (APTER_TUNE_MAX_ITER); table, plot and
     # price-change table appear; Use tuned prices in scenario B replaces B with
     # A's assortments and the tuned prices.
-    c43 <- list(msg = "", extra = NA_integer_, targets = "", rows = "", cols = "", price_cells = 0L, use = "", q = "",
+    c43 <- list(opts = 0L, msg = "", extra = NA_integer_, targets = "", rows = "", cols = "", price_cells = 0L, use = "", q = "",
                 open = NA_integer_, cells = 0L, equal = FALSE, changed = 0L, nerr = NA_integer_)
     e43 <- try_drv({
       fx43 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
@@ -1910,6 +1910,11 @@ if (!browser_ok) {
       c43$price_cells <- js(app, "Array.from(document.querySelectorAll('#tn_price_tbl .rt-tbody .rt-td')).filter(function(c){ return /^-?[0-9]+$/.test(c.innerText.trim()); }).length")
       c43$use <- trimws(txt(app, "#tn_use"))
       shoot(app, "tuning_01_after_tuning")
+      # The product list opens fully visible (it is attached to the page body, not clipped by the card).
+      app$run_js("document.getElementById('tn_product').selectize.open();"); app$wait_for_idle()
+      c43$opts <- js(app, "Array.from(document.querySelectorAll('body > .selectize-dropdown .option')).filter(function(o){ var r = o.getBoundingClientRect(); return r.height > 0 && r.bottom <= window.innerHeight; }).length")
+      shoot(app, "tuning_02_product_dropdown")
+      app$run_js("document.getElementById('tn_product').selectize.close();"); app$wait_for_idle()
       tn <- app$get_values(export = TRUE)$export$tn_test
       app$click("tn_use"); app$wait_for_idle()
       c43$q <- txt(app, ".modal-title")
@@ -1932,10 +1937,10 @@ if (!browser_ok) {
       grepl("Product volume", c43$rows, fixed = TRUE) && grepl("Sawlog volume", c43$rows, fixed = TRUE) &&
       identical(c43$cols, "|Original prices|Tuned prices|Change") && identical(c43$use, "Use tuned prices in scenario B") &&
       grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&
-      isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
+      identical(c43$opts, 2L) && isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
     rec(browser_checks[length(browser_checks)], if (ok43) PASS else FAIL,
-        sprintf("message '%s' (inputs %s) | targets %s | rows: %s | columns '%s' | price-change cells %s | button '%s' | dialog '%s', open after OK %s | B cells %s equal to the tuned prices %s, changed against A %s | error notifications %s%s",
-                c43$msg, c43$extra, c43$targets, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$price_cells,
+        sprintf("message '%s' (inputs %s) | targets %s | rows: %s | columns '%s' | price-change cells %s | dropdown options visible %s | button '%s' | dialog '%s', open after OK %s | B cells %s equal to the tuned prices %s, changed against A %s | error notifications %s%s",
+                c43$msg, c43$extra, c43$targets, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$price_cells, c43$opts,
                 c43$use, c43$q, c43$open, c43$cells, c43$equal, c43$changed, c43$nerr, err_txt(e43)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
