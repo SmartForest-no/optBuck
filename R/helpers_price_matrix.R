@@ -53,6 +53,13 @@ ASSORTMENT_COLS <- c("Name", "Class", "Species", "MinTopDiameter_cm",
 #' only when some cell has a value; NA = the cell has none.
 PM_DISTRIBUTION_COL <- "Distribution"
 
+#' Second optional hidden column (2026-10-30): the lower limit (mm) of the
+#' .hpr/.pin diameter class a whole-cm row was spread from (e.g. 142). Kept
+#' like Distribution; used by price tuning only; never in a run or a price
+#' file; not in the scenario xlsx. NA = not from a file / a new row.
+PM_FILE_CLASS_COL <- "FileDiameterClass_mm"
+PM_HIDDEN_COLS <- c(PM_DISTRIBUTION_COL, PM_FILE_CLASS_COL)
+
 #' The four columns Apter uses, typed, from any PriceMatrix_long. A hidden
 #' Distribution column is kept when the matrix has one (see pm_prices()).
 pm_minimal <- function(pm) {
@@ -62,8 +69,8 @@ pm_minimal <- function(pm) {
     PriceDiameterClass_cm = suppressWarnings(as.integer(pm$PriceDiameterClass_cm)),
     PriceNOKperM3         = suppressWarnings(as.numeric(pm$PriceNOKperM3)),
     stringsAsFactors = FALSE)
-  if (PM_DISTRIBUTION_COL %in% names(pm))
-    out[[PM_DISTRIBUTION_COL]] <- suppressWarnings(as.numeric(pm[[PM_DISTRIBUTION_COL]]))
+  for (h in intersect(PM_HIDDEN_COLS, names(pm)))
+    out[[h]] <- suppressWarnings(as.numeric(pm[[h]]))
   out <- out[order(out$ProductKey, out$LengthClass_dm, out$PriceDiameterClass_cm,
                    na.last = TRUE), , drop = FALSE]
   rownames(out) <- NULL
@@ -81,8 +88,9 @@ pm_prices <- function(pm) {
 #' side only: the other side gets NA.
 pm_bind <- function(...) {
   l <- Filter(function(x) !is.null(x), list(...))
-  if (any(vapply(l, function(x) PM_DISTRIBUTION_COL %in% names(x), logical(1))))
-    l <- lapply(l, function(x) { if (!PM_DISTRIBUTION_COL %in% names(x)) x[[PM_DISTRIBUTION_COL]] <- rep(NA_real_, nrow(x)); x })
+  for (h in PM_HIDDEN_COLS)
+    if (any(vapply(l, function(x) h %in% names(x), logical(1))))
+      l <- lapply(l, function(x) { if (!h %in% names(x)) x[[h]] <- rep(NA_real_, nrow(x)); x })
   do.call(rbind, l)
 }
 
@@ -160,11 +168,13 @@ pm_from_grid <- function(grid, id, pm) {
   else pm$ProductKey == id & .is_matrix_row(pm)
   # The hidden Distribution of a cell stays with the cell (a price edit never
   # changes it); cells new to the grid have none.
-  if (PM_DISTRIBUTION_COL %in% names(pm)) {
+  # The file diameter class likewise stays with the row.
+  hid <- intersect(PM_HIDDEN_COLS, names(pm))
+  if (length(hid)) {
     old <- pm[drop, , drop = FALSE]
     hit <- match(paste(new$ProductKey, new$LengthClass_dm, new$PriceDiameterClass_cm),
                  paste(old$ProductKey, old$LengthClass_dm, old$PriceDiameterClass_cm))
-    new[[PM_DISTRIBUTION_COL]] <- old[[PM_DISTRIBUTION_COL]][hit]
+    for (h in hid) new[[h]] <- old[[h]][hit]
   }
   pm_minimal(rbind(pm[!drop, , drop = FALSE], new))
 }
@@ -249,7 +259,7 @@ pm_add_class <- function(pm, id, end = c("low", "high"), max_top_cm = Inf) {
                  as.integer(floor(max_top_cm)), format(max_top_cm)))
   new <- s[s$PriceDiameterClass_cm == from, , drop = FALSE]
   new$PriceDiameterClass_cm <- as.integer(to)
-  if (PM_DISTRIBUTION_COL %in% names(new)) new[[PM_DISTRIBUTION_COL]] <- NA_real_   # a new cell has none
+  for (h in intersect(PM_HIDDEN_COLS, names(new))) new[[h]] <- NA_real_   # a new cell has none
   pm_minimal(rbind(pm, new))
 }
 
@@ -275,7 +285,7 @@ pm_add_length <- function(pm, id, dm) {
   from <- lens[which.min(abs(lens - dm))]
   new <- s[s$LengthClass_dm == from, , drop = FALSE]
   new$LengthClass_dm <- as.integer(dm)
-  if (PM_DISTRIBUTION_COL %in% names(new)) new[[PM_DISTRIBUTION_COL]] <- NA_real_   # a new cell has none
+  for (h in intersect(PM_HIDDEN_COLS, names(new))) new[[h]] <- NA_real_   # a new cell has none
   pm_minimal(rbind(pm, new))
 }
 

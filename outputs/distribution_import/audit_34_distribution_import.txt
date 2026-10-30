@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: distribution import and export (Phase 7a)
-  Run: 2026-10-30 09:15:32.099091
+  Run: 2026-10-30 10:15:28.591487
 ============================================================= 
 
 --- 01. Import: Distribution per cell and the four product fields ---
@@ -27,6 +27,15 @@
 --- 08. No effect on comparison or highlighting; not in the scenario xlsx ---
   [PASS  ] Check 08: Distribution-only differences do not highlight or trigger a comparison; the scenario xlsx does not carry the data (documented limitation) | no comparison/highlight TRUE | xlsx without data and re-import ok TRUE
 
+--- 09. FileDiameterClass_mm on the fixture ---
+  [PASS  ] Check 09: FileDiameterClass_mm of every whole-cm row of the fixture sawlog equals its file class lower limit (180 / 250 / 320) | 60 rows, classes 180/250/320
+
+--- 10. FileDiameterClass_mm is kept; new rows have NA ---
+  [PASS  ] Check 10: FileDiameterClass_mm survives copy, bulk edit/fill, cell edit, rows/columns, rename, check_price_set; new rows, cells and assortments have NA; defaults get no column | edits TRUE | add class/length TRUE | remove TRUE | rename TRUE | copy assortment TRUE | copy prices TRUE | rebuild TRUE | new assortment TRUE | defaults TRUE
+
+--- 11. FileDiameterClass_mm never reaches a run ---
+  [PASS  ] Check 11: write_price_file() is byte-identical with and without FileDiameterClass_mm; pm_prices() has only the price columns; the backend loader drops the column | price file identical TRUE | backend pm identical TRUE
+
 --- 20-22. file5, file3, file4: spruce 140 SCA Sagtomer ---
   [PASS  ] Check 20: file5 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class, 0 on 370; Volume of logs, MAXDeviation 4, allowed | lengths 37:0 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 92 rows
   [PASS  ] Check 21: file3 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed | lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows
@@ -47,13 +56,16 @@
 --- 27-28. Round trip, all private files ---
   [PASS  ] Check 27: Round trip import -> export -> import identical for all 5 .hpr files (products written and re-read) | file1 same (9 assortments) | file2 same (16 assortments) | file3 same (6 assortments) | file4 same (6 assortments) | file5 same (21 assortments)
   [PASS  ] Check 28: Round trip import -> export -> import identical for both .pin files | hand.pin same (4 assortments) | real.pin same (1 assortments)
+
+--- 12. FileDiameterClass_mm on file5 spruce 140 SCA Sagtommer ---
+  [PASS  ] Check 12: file5 spruce 140 SCA Sagtommer: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits | 13 distinct values in 92 rows; file classes 13; equal TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 17
+1   PASS 21
 
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter-distribution/outputs/distribution_import/audit_34_distribution_import.csv
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/distribution_import/audit_34_distribution_import.csv

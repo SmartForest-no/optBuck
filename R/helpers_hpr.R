@@ -570,6 +570,8 @@ hpr_product_table <- function(hpr, species_map) {
   # class, the same way as the price; the column exists only if the product has any.
   if (any(!is.na(ok_cells$dist)))
     long[[PM_DISTRIBUTION_COL]] <- ok_cells$dist[match(paste(cls[g$i], L[g$j]), paste(ok_cells$d_mm, ok_cells$l_cm))]
+  # The lower limit (mm) of the file class the row was spread from, for price tuning.
+  long[[PM_FILE_CLASS_COL]] <- cls[g$i]
   # Columns without any priced cell are dropped (that length is not cut);
   # a whole-cm row without a priced cell stays as an empty row (a fully
   # forbidden inner class: never chosen), as pm_drop_empty_cells() keeps it.

@@ -31,6 +31,15 @@
 #      <Distribution> per cell
 #  8.  A Distribution-only difference neither highlights nor triggers a
 #      comparison; the scenario xlsx does not carry the data (documented)
+#  9.  FileDiameterClass_mm (hidden pm column, 2026-10-30): on the fixture it
+#      equals the lower limit of the file class of every whole-cm row (.hpr)
+# 10.  It is kept through scenario copy, bulk edit/fill, cell edit, rows and
+#      columns added or removed, rename; new rows/cells and new assortments
+#      have NA; defaults get no column
+# 11.  It never reaches a run: write_price_file() identical with and without
+#      it, pm_prices() has only the price columns, the backend loader drops it
+# 12.  Private file5 spruce 140 SCA Saqtommer: 13 distinct values = the file's
+#      13 class lower limits
 #  20-29. Private files (see above)
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
@@ -328,6 +337,74 @@ rec("Check 08: Distribution-only differences do not highlight or trigger a compa
 unlink(xl)
 
 # ==============================================================================
+section("09. FileDiameterClass_mm on the fixture")
+FC <- PM_FILE_CLASS_COL
+pm9 <- hpr$s$pm; k9 <- keyof(hpr$s, SAW)
+sw9 <- pm9[pm9$ProductKey == k9, , drop = FALSE]
+exp9 <- ifelse(sw9$PriceDiameterClass_cm <= 24, 180, ifelse(sw9$PriceDiameterClass_cm <= 31, 250, 320))
+ok9 <- FC %in% names(pm9) && identical(as.numeric(sw9[[FC]]), as.numeric(exp9)) &&
+  all(!is.na(pm9[[FC]][pm9$ProductKey %in% keyof(hpr$s, PULP)]))
+rec("Check 09: FileDiameterClass_mm of every whole-cm row of the fixture sawlog equals its file class lower limit (180 / 250 / 320)",
+    ok(ok9), sprintf("%d rows, classes %s", nrow(sw9), paste(sort(unique(sw9[[FC]])), collapse = "/")))
+
+# ==============================================================================
+section("10. FileDiameterClass_mm is kept; new rows have NA")
+fc_of <- function(pm, key, cm) unique(pm[[FC]][pm$ProductKey == key & pm$PriceDiameterClass_cm == cm])
+same_fc <- function(pm) identical(pm[[FC]][match(paste(pm0$ProductKey, pm0$LengthClass_dm, pm0$PriceDiameterClass_cm),
+                                                   paste(pm$ProductKey, pm$LengthClass_dm, pm$PriceDiameterClass_cm))], pm0[[FC]])
+k10 <- keyof(hpr$s, SAW)
+adj10 <- pm_bulk_adjust(pm0, k10, rows = 1:3, cols = 1:2, mode = "amount", value = 10)
+rp10 <- setNames(rep(500, nrow(pm_to_grid(pm0, k10))), rownames(pm_to_grid(pm0, k10)))
+fil10 <- pm_bulk_fill(pm0, k10, rp10, setNames(rep(0, 4), colnames(pm_to_grid(pm0, k10))))
+g10 <- pm_to_grid(pm0, k10); g10[1, 1] <- g10[1, 1] + 7
+ce10 <- pm_from_grid(g10, k10, pm0)
+hi10 <- pm_add_class(pm0, k10, "high"); lo10 <- pm_add_class(pm0, k10, "low"); al10 <- pm_add_length(pm0, k10, 40)
+ok10a <- same_fc(adj10) && same_fc(fil10) && same_fc(ce10) &&
+  identical(ce10[[FC]][ce10$ProductKey == k10 & ce10$LengthClass_dm == 37 & ce10$PriceDiameterClass_cm == 18], 180)
+ok10b <- all(is.na(hi10[[FC]][hi10$ProductKey == k10 & hi10$PriceDiameterClass_cm == 33])) &&
+  all(is.na(lo10[[FC]][lo10$ProductKey == k10 & lo10$PriceDiameterClass_cm == 17])) &&
+  all(is.na(al10[[FC]][al10$ProductKey == k10 & al10$LengthClass_dm == 40])) &&
+  identical(sum(!is.na(hi10[[FC]])), sum(!is.na(pm0[[FC]])))
+rc10 <- pm_remove_class(pm0, k10, "high"); rl10 <- pm_remove_length(pm0, k10, 55)
+ok10c <- identical(rc10[[FC]], pm0[[FC]][!(pm0$ProductKey == k10 & pm0$PriceDiameterClass_cm == 32)]) &&
+  identical(rl10[[FC]], pm0[[FC]][!(pm0$ProductKey == k10 & pm0$LengthClass_dm == 55)])
+rn10 <- pm_rename_key(pm0, k10, "spruce_renamed")
+ok10d <- identical(rn10[[FC]][rn10$ProductKey == "spruce_renamed"], pm0[[FC]][pm0$ProductKey == k10])
+b10 <- defs_from_products(load_products()); bpm10 <- load_price_matrix_long()
+cp10 <- copy_assortment(d0, pm0, b10, bpm10, k10)
+ok10e <- identical(sort(cp10$pm[[FC]][cp10$pm$ProductKey == k10]), sort(pm0[[FC]][pm0$ProductKey == k10])) &&
+  all(is.na(cp10$pm[[FC]][cp10$pm$ProductKey != k10]))
+cpp10 <- copy_prices(d0, pm0, d0, adj10, k10)
+ok10f <- same_fc(cpp10$pm)
+ck10 <- check_price_set(.type_assortment_table(d0), pm0)
+ok10g <- isTRUE(ck10$ok) && same_fc(ck10$pm)
+nw10 <- pm_bind(pm0, pm_start_prices("spruce_new", "matrix", 100, 10, 12, c(300, 400)))
+ok10h <- same_fc(nw10) && all(is.na(nw10[[FC]][nw10$ProductKey == "spruce_new"]))
+def10 <- load_price_matrix_long()
+ok10i <- !FC %in% names(def10) && !FC %in% names(pm_minimal(def10)) &&
+  all(is.na(pm_bind(pm_minimal(def10), pm0)[[FC]][seq_len(nrow(def10))]))
+rec("Check 10: FileDiameterClass_mm survives copy, bulk edit/fill, cell edit, rows/columns, rename, check_price_set; new rows, cells and assortments have NA; defaults get no column",
+    ok(ok10a && ok10b && ok10c && ok10d && ok10e && ok10f && ok10g && ok10h && ok10i),
+    sprintf("edits %s | add class/length %s | remove %s | rename %s | copy assortment %s | copy prices %s | rebuild %s | new assortment %s | defaults %s",
+            ok10a, ok10b, ok10c, ok10d, ok10e, ok10f, ok10g, ok10h, ok10i))
+
+# ==============================================================================
+section("11. FileDiameterClass_mm never reaches a run")
+f11a <- write_price_file(pm0); f11b <- write_price_file(pm_prices(pm0))
+f11c <- write_price_file(pm0[, setdiff(names(pm0), FC), drop = FALSE])
+ok11a <- identical(bytes(f11a), bytes(f11b)) && identical(bytes(f11a), bytes(f11c)) &&
+  !any(grepl(FC, readLines(f11a, warn = FALSE), fixed = TRUE)) && identical(names(pm_prices(pm0)), PM_REQUIRED_COLS)
+wf11 <- pm_def; wf11[[FC]] <- 180
+f11d <- tempfile(fileext = ".csv"); readr::write_csv(wf11, f11d, na = "")
+f_def_path <- tempfile(fileext = ".csv"); readr::write_csv(pm_def, f_def_path, na = "")
+l11a <- .load_products_prices(f_def_path, root_dir, NULL, NULL)
+l11b <- .load_products_prices(f11d, root_dir, NULL, NULL)
+ok11b <- !FC %in% names(l11b$pm) && identical(l11a$pm, l11b$pm)
+rec("Check 11: write_price_file() is byte-identical with and without FileDiameterClass_mm; pm_prices() has only the price columns; the backend loader drops the column",
+    ok(ok11a && ok11b), sprintf("price file identical %s | backend pm identical %s", ok11a, ok11b))
+unlink(c(f11a, f11b, f11c, f11d, f_def_path))
+
+# ==============================================================================
 # Private files (checks 20-29): read in place, skipped with a note when missing.
 # ==============================================================================
 PRIV_HPR <- "C:/apter_private/hpr"; PRIV_PIN <- "C:/apter_private/pin"
@@ -466,5 +543,19 @@ for (grp in list(list(27L, hpr_files, "hpr", "all 5 .hpr files (products written
 }
 
 unlink(c(rt_hpr$h$header$file))
+# ==============================================================================
+section("12. FileDiameterClass_mm on file5 spruce 140 SCA Sagtommer")
+if (!have("file5")) skip("Check 12: FileDiameterClass_mm of file5 spruce 140 SCA", "file5") else {
+  x12 <- get_priv("file5"); d12 <- x12$s$defs
+  i12 <- which(d12$Species == "spruce" & grepl("140 SCA", d12$Name, fixed = TRUE))[1L]
+  k12 <- assortment_table_keys(d12)[i12]; hk12 <- d12$HprProductKey[i12]
+  v12 <- x12$s$pm[[FC]][x12$s$pm$ProductKey == k12 & !is.na(x12$s$pm$LengthClass_dm)]
+  file12 <- sort(unique(x12$h$products[[hk12]]$cells$d_mm))
+  rec("Check 12: file5 spruce 140 SCA Sagtommer: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits",
+      ok(length(unique(v12)) == 13L && identical(sort(unique(v12)), file12) && !anyNA(v12)),
+      sprintf("%d distinct values in %d rows; file classes %d; equal %s", length(unique(v12)), length(v12), length(file12),
+              identical(sort(unique(v12)), file12)))
+}
+
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 34 complete.\n")

@@ -223,6 +223,7 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
    - Starts with a method note for Lennart's approval.
 8. **Merge with optBuck.**
 9. **Deployment on the NIBIO server.**
+   - Price tuning (the "Price tuning" tab) runs synchronously in the main R process and blocks that process for up to several minutes. On a multi-user server it needs a separate process or a queue.
 10. **JOSS paper.**
 
 
@@ -268,7 +269,7 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 3. **Kept through edits.** `pm_minimal()` keeps the column, `pm_bind()` fills it with NA where one side lacks it, `pm_from_grid()` keeps a cell's value when its price changes, new cells have none, `pm_prices()` gives the four price columns that `write_price_file()` and the backend price loader use (the column never reaches a run). Not compared between A and B (`scenarios_differ()`, `assortment_diff()`).
 4. **Export.** `<Distribution>` per cell is the stored value (0 when none). `LengthDistributionDefinition` is written when the assortment has stored fields, after `PriceDefinition`/`PermittedGradesDefinition` and before `ProductMatrixes`, children in the order of the source files (DistributionAllowed, DistributionCategory, MAXDeviation, DistributionWithinProduct).
 5. **Tests.** Audit 34 (fixtures `distribution_synthetic.hpr/.pin` from `scripts/make_distribution_fixture.R`; checks 20-28 read the private files and are skipped when missing).
-6. **Known limitation.** Distribution and the four distribution fields are not kept in the scenario xlsx download/upload (kept in copy A/B, edits and the .hpr/.pin round trip). An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
+6. **Known limitation.** Distribution, the four distribution fields and `FileDiameterClass_mm` (hidden price-matrix column, added 2026-10-30 for price tuning: the lower limit in mm of the file diameter class a whole-cm row was spread from) are not kept in the scenario xlsx download/upload (kept in copy A/B, edits and the .hpr/.pin round trip). Exported .hpr/.pin write whole-cm diameter classes, so re-importing an exported file gives whole-cm classes instead of the original file classes. An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
 
 ## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 

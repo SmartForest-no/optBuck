@@ -207,6 +207,7 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
     pm <- as.data.frame(readr::read_csv(price_matrix_path, show_col_types = FALSE))
   }
 
+  pm[["FileDiameterClass_mm"]] <- NULL
   pm[["Distribution"]] <- NULL   # hidden target distribution (Phase 7a): never used by a run
 
   val_result <- validate_price_matrix_against_products(pd, lc, pm)
