@@ -302,7 +302,7 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 - **fieldPlot fixes** (Lennart's package, separate session): loop over species present; error handling around the fitHD() fallback; a working timeout; species curve for plots without heights; nlme:: calls; README install URL. Apter's wrapper works around these meanwhile.
 - **Deployment** on the NIBIO server: set apter.workers so that R processes × workers ≤ cores. Memory: a large .hpr stems A/B run (11,650 stems, 142 MB file, 15 workers) peaks at about 2.3 GB across the workers, plus about 0.4 GB in the main process (measured 2026-10-21).
 
-## Restructure (in progress, branch `restructure`, started 2026-10-30)
+## Restructure (R1-R3 done, 2026-10-30, branch `restructure`, not merged)
 
 Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, R3 multi-assortment tuning. Never merge to main from this branch. Plan: the approved session plan (Stems / Assortments and prices / Simulator / Price tuning tabs).
 
@@ -323,7 +323,7 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 - [x] R3.1 tune_prices with several products (audit 33 checks 14-15; single-product values stored in outputs/restructure/, gitignored)
 - [x] R3.2-R3.5 Tuning tab (audit 17 check 43, audit 33 check 16)
 - [x] R3.6 Audits (17, 28-34, performance_check PASS), push
-- [ ] End: full suite, manual file5 check, screenshots, CLAUDE.md/PLAN.md, push
+- [x] End: full suite (`scripts/run_audits.R`: 22 PASS, 0 REVIEW, 0 FAIL), manual file5 check (`scripts/restructure_manual_check.R`: 140 SCA alone FG 82.9 -> 94.1, value -0.17 %, 91 s; with 148 (Even): 140 SCA 82.9 -> 98.5, 148 33.0 -> 35.1, value -0.60 %, 301 s), screenshots (`scripts/restructure_screenshots.R en|no` -> outputs/app_smoke/review/restructure/, gitignored), CLAUDE.md and PLAN.md updated, pushed (not merged)
 
 ### Decisions made
 - Single-product expected values live in `outputs/restructure/` (gitignored), not in `inputs/test_fixtures/`: they derive from a real buyer's price list and the repo will become public. Audit 33 skips the invariant check (REVIEW) when the file or file5 is missing. Alternative: fixture in the repo (rejected by Lennart).
@@ -355,4 +355,4 @@ Three phases: R1 Stems tab + decoupling + names, R2 target distribution editor, 
 (none yet)
 
 ### Blocked items
-(none yet)
+(none)
