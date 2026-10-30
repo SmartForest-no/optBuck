@@ -449,12 +449,31 @@ pre_phase4c_limits <- function(pd) {
 # gives that product's metadata (buyer, organisation, ...) back to the
 # assortment; it has no effect on runs. Kept on edits and in scenario files.
 
+# The four distribution fields are hidden as well (Phase 7a, 2026-10-30): the
+# product's LengthDistributionDefinition from an .hpr/.pin file
+# (DistributionAllowed, DistributionCategory, DistributionWithinProduct,
+# MAXDeviation), with the per-cell Distribution column of the price matrix
+# (PM_DISTRIBUTION_COL). NA = the file has none (and every other assortment).
+# Kept on edits and copies and written back by the .hpr/.pin export; not used
+# by runs (products_from_defs() does not pass them on), not compared between
+# A and B, and not in the scenario xlsx.
+
+#' The hidden distribution fields of the assortment table.
+DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
+                           "DistributionWithinProduct", "MAXDeviation")
+
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
-  "PermittedGrades", "ReferenceGrades", "HprProductKey")
+  "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS)
+
+# "TRUE"/"true"/TRUE -> TRUE, "FALSE"/... -> FALSE, anything else NA.
+.dist_logical <- function(x) {
+  v <- tolower(trimws(as.character(x)))
+  ifelse(v %in% c("true", "1"), TRUE, ifelse(v %in% c("false", "0"), FALSE, NA))
+}
 
 #' A permitted-grades string in its canonical form: sorted unique whole
 #' numbers joined by ";"; NA for empty, missing or unreadable.
@@ -512,7 +531,9 @@ assortment_table_keys <- function(defs) {
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
                                           "PriceType", "PriceLengths_cm", "PermittedGrades",
-                                          "ReferenceGrades", "HprProductKey"))
+                                          "ReferenceGrades", "HprProductKey",
+                                          "DistributionAllowed", "DistributionCategory",
+                                          "DistributionWithinProduct"))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
   # Tables without the hidden price lengths (all but hpr imports): none.
@@ -528,10 +549,17 @@ assortment_table_keys <- function(defs) {
   if (!"HprProductKey" %in% names(d)) d$HprProductKey <- rep(NA_character_, nrow(d))
   hk <- trimws(as.character(d$HprProductKey))
   d$HprProductKey <- ifelse(is.na(hk) | !nzchar(hk) | hk == "NA", NA_character_, hk)
+  # The hidden distribution fields (hpr/pin imports): NA otherwise.
+  for (n in DISTRIBUTION_DEF_COLS) if (!n %in% names(d)) d[[n]] <- rep(NA, nrow(d))
+  d$DistributionAllowed <- .dist_logical(d$DistributionAllowed)
+  d$DistributionWithinProduct <- .dist_logical(d$DistributionWithinProduct)
+  dc <- trimws(as.character(d$DistributionCategory))
+  d$DistributionCategory <- ifelse(is.na(dc) | !nzchar(dc) | dc == "NA", NA_character_, dc)
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
-  for (n in setdiff(ASSORTMENT_TABLE_COLS, num)) d[[n]] <- as.character(d[[n]])
+  for (n in setdiff(ASSORTMENT_TABLE_COLS, c(num, "DistributionAllowed", "DistributionWithinProduct")))
+    d[[n]] <- as.character(d[[n]])
   d <- d[, ASSORTMENT_TABLE_COLS, drop = FALSE]
   rownames(d) <- NULL
   d

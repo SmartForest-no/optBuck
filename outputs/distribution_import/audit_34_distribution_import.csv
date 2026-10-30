@@ -1,0 +1,18 @@
+check,result,detail
+Check 01: Import gives the expected Distribution per cell and the four fields (.hpr and .pin),PASS,.hpr TRUE | .pin TRUE
+Check 02: All whole-cm rows of a file diameter class have the same Distribution (.hpr and .pin),PASS,.hpr TRUE | .pin TRUE
+Check 03: Round trip import -> export -> import: identical Distribution per cell and four fields (.hpr and .pin),PASS,.hpr TRUE | .pin TRUE | .pin data via .hpr writer TRUE
+"Check 04: Scenario copy, bulk edits, cell edit, rows/columns, rename, check_price_set keep the hidden data; price edits leave it; new cells have none",PASS,bulk/fill/cell edit TRUE | add class/length TRUE | remove TRUE | rename TRUE | copy assortment TRUE | copy prices TRUE | rebuild TRUE | new assortment TRUE
+Check 05: Default and user-added products have NA in all five hidden fields; no new column in defaults or run ProductData,PASS,base fields NA TRUE | default pm without column TRUE | ProductData without fields TRUE
+Check 06: write_price_file() on a pm with Distribution is byte-identical to the same pm without it; the backend loader drops the column,PASS,price file identical TRUE | backend pm identical TRUE
+"Check 07: LengthDistributionDefinition after PriceDefinition and before ProductMatrixes in the source order, only with stored values; <Distribution> per cell",PASS,"position/order TRUE | product without values: no element, 0 per cell TRUE | cell values TRUE | .pin TRUE"
+Check 08: Distribution-only differences do not highlight or trigger a comparison; the scenario xlsx does not carry the data (documented limitation),PASS,no comparison/highlight TRUE | xlsx without data and re-import ok TRUE
+"Check 20: file5 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class, 0 on 370; Volume of logs, MAXDeviation 4, allowed",PASS,"lengths 37:0 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 92 rows"
+"Check 21: file3 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed",PASS,"lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows"
+"Check 22: file4 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed",PASS,"lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows"
+"Check 23: file1 sawlog products: all Distribution 0; DistributionAllowed as in the file (false for all but one product, which is true with all Distribution 0)",PASS,"3 sawlog assortments, 508 cells all 0, DistributionAllowed false for 2, true for 1"
+"Check 24: real.pin BM_Tall: Volume of logs, MAXDeviation 5, 40 Distribution values (0, 15, 70); imported cells equal the file cells",PASS,"raw values 40, set {0,15,70}, category Volume of logs, max deviation 5"
+"Check 25: hand.pin 20 Distribution values (10, 15, 20, 25) in PS1, PP1, SS1, SP1; no LengthDistributionDefinition (fields NA)",PASS,"raw values 20, set {10,15,20,25}"
+Check 26: Every imported whole-cm row carries the Distribution of its file cell (all private files); whole-cm rows of a file class never differ,PASS,"63 products compared, 0 differ"
+Check 27: Round trip import -> export -> import identical for all 5 .hpr files (products written and re-read),PASS,file1 same (9 assortments) | file2 same (16 assortments) | file3 same (6 assortments) | file4 same (6 assortments) | file5 same (21 assortments)
+Check 28: Round trip import -> export -> import identical for both .pin files,PASS,hand.pin same (4 assortments) | real.pin same (1 assortments)

@@ -89,6 +89,24 @@ HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "Pr
 
 # ---- product definitions ----------------------------------------------------------------
 
+#' The LengthDistributionDefinition of an assortment (Phase 7a): its stored
+#' DistributionAllowed, DistributionCategory, MAXDeviation and
+#' DistributionWithinProduct, in the element order of the source files; NULL
+#' when none is stored (then nothing is written, as before).
+.hpr_export_length_distribution <- function(d) {
+  g <- function(n) if (n %in% names(d)) d[[n]][1L] else NA
+  al <- g("DistributionAllowed"); ct <- g("DistributionCategory")
+  dv <- g("MAXDeviation"); wp <- g("DistributionWithinProduct")
+  if (all(is.na(c(al, ct, dv, wp)))) return(NULL)
+  tf <- function(x) if (isTRUE(x)) "true" else "false"
+  paste0('<LengthDistributionDefinition modificationRestricted="false">',
+         if (!is.na(al)) paste0("<DistributionAllowed>", tf(al), "</DistributionAllowed>"),
+         if (!is.na(ct)) paste0("<DistributionCategory>", .xesc(ct), "</DistributionCategory>"),
+         if (!is.na(dv)) paste0("<MAXDeviation>", .fnum(as.numeric(dv), 4L), "</MAXDeviation>"),
+         if (!is.na(wp)) paste0("<DistributionWithinProduct>", tf(wp), "</DistributionWithinProduct>"),
+         "</LengthDistributionDefinition>")
+}
+
 #' The ProductDefinition elements of a scenario.
 #'
 #' @param defs   Assortment table (ASSORTMENT_TABLE_COLS, with HprProductKey).
@@ -120,7 +138,7 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
   top <- max(c(0, uk[!uk %in% HPR_UNCLASSIFIED_KEY]), na.rm = TRUE)    # 999999 is the unclassified product
   newk <- seq_len(sum(is.na(hk))) + top
   keys <- hk; keys[is.na(hk)] <- format(newk, scientific = FALSE, trim = TRUE)
-  pm <- pm_minimal(pm)
+  pm <- pm_minimal(pm)            # keeps the hidden Distribution column
   orig <- lapply(orig, function(s) { Encoding(s) <- "UTF-8"; s })   # files are UTF-8 (the caller checks)
   xml <- vapply(seq_len(nrow(defs)), function(i) {
     d <- defs[i, , drop = FALSE]
@@ -130,6 +148,7 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
       sprintf("<ProductGroupName>%s</ProductGroupName>", .xesc(grp))
     } else paste(stats::na.omit(vapply(HPR_EXPORT_META_BEFORE, function(t) .hx_elem(o, t), "")), collapse = "")
     rows <- pm[pm$ProductKey == akeys[i], , drop = FALSE]
+    rows_dist <- if (PM_DISTRIBUTION_COL %in% names(rows)) rows[[PM_DISTRIBUTION_COL]] else rep(NA_real_, nrow(rows))
     matrix_priced <- identical(as.character(d$PriceType), "matrix")
     len_cm <- as.numeric(lens[[akeys[i]]])
     min_top <- as.numeric(d$MinTopDiameter_cm) * 10; max_top <- as.numeric(d$MaxTopDiameter_cm) * 10
@@ -137,13 +156,16 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
       dcl <- sort(unique(rows$PriceDiameterClass_cm[!is.na(rows$PriceDiameterClass_cm)])) * 10
       lim <- price_lengths(d$PriceLengths_cm, len_cm)           # class lower limits (cm)
       cells <- expand.grid(dc = dcl, li = seq_along(len_cm), KEEP.OUT.ATTRS = FALSE)
-      pr <- rows$PriceNOKperM3[match(paste(cells$dc / 10, len_cm[cells$li] / 10),
-                                     paste(rows$PriceDiameterClass_cm, rows$LengthClass_dm))]
+      hit <- match(paste(cells$dc / 10, len_cm[cells$li] / 10),
+                   paste(rows$PriceDiameterClass_cm, rows$LengthClass_dm))
+      pr <- rows$PriceNOKperM3[hit]
+      dist <- rows_dist[hit]        # one class per whole-cm row: each row's own stored value
     } else {
       dcl <- max(0, floor(min_top))
       lim <- len_cm
       cells <- expand.grid(dc = dcl, li = seq_along(len_cm), KEEP.OUT.ATTRS = FALSE)
       pr <- rep(rows$PriceNOKperM3[is.na(rows$LengthClass_dm)][1L], nrow(cells))
+      dist <- rep(NA_real_, nrow(cells))
     }
     top_pos <- or_default(as.numeric(d$DiameterTopPosition_cm), 0)
     method <- as.character(d$VolumeDiameterCategory)
@@ -151,9 +173,10 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
     round_down <- !identical(volume_rounding(d$VolumeDiameterCategory), "None")
     items <- sprintf(
       paste0('<ProductMatrixItem diameterClassLowerLimit="%s" lengthClassLowerLimit="%s"><Price>%s</Price>',
-             '<Distribution>0</Distribution><Limitation>0</Limitation><BuckingCriteria>%s</BuckingCriteria>',
+             '<Distribution>%s</Distribution><Limitation>0</Limitation><BuckingCriteria>%s</BuckingCriteria>',
              '</ProductMatrixItem>'),
       .fnum(cells$dc, 2L), .fnum(lim[cells$li], 2L), ifelse(is.na(pr), "0", .fnum(pr, 2L)),
+      ifelse(is.na(dist), "0", .fnum(dist, 4L)),     # stored target distribution (Phase 7a), 0 when none
       ifelse(is.na(pr), HPR_FORBIDDEN, "No limit"))
     gk <- groups$key[groups$species == as.character(d$Species)]
     paste0(
@@ -188,6 +211,9 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
                               paste0("<PermittedGradeNumber>", format(g, scientific = FALSE, trim = TRUE), "</PermittedGradeNumber>", collapse = ""),
                               "</PermittedGradesDefinition>")
       } else if (!is.na(o)) { g <- .hx_elem(o, "PermittedGradesDefinition"); if (!is.na(g)) g },
+      # LengthDistributionDefinition (Phase 7a): where the source files have it, after
+      # PermittedGradesDefinition and before the matrices; only when the assortment has stored values.
+      .hpr_export_length_distribution(d),
       "<ProductMatrixes>", paste(items, collapse = ""), "</ProductMatrixes>",
       if (!pin && !is.na(o)) { u <- .hx_elem(o, "ProductUserID"); if (!is.na(u)) u },
       if (pin) paste0('<SpeciesGroupUserID agency="Other">', if (identical(as.character(d$Species), "pine")) "Pine" else "Spruce",

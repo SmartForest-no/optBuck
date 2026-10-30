@@ -110,7 +110,16 @@ guess_hpr_species <- function(name, user_id = NA) {
   dd <- "./DiameterDefinition"; dc <- paste0(dd, "/DiameterClasses")
   items <- xml2::xml_find_all(cp, "./ProductMatrixes/ProductMatrixItem")
   grades <- .hall(cp, "./PermittedGradesDefinition/PermittedGradeNumber")
+  # Phase 7a: the product's LengthDistributionDefinition (target distribution), kept
+  # as it is (NA when the product has none); not used by runs.
+  ld <- "./LengthDistributionDefinition"
+  has_ld <- !inherits(xml2::xml_find_first(cp, ld), "xml_missing")
+  ldl <- function(x) if (is.na(x)) NA else tolower(x) %in% c("true", "1")
   list(
+    dist_allowed  = if (has_ld) ldl(.hx1(cp, paste0(ld, "/DistributionAllowed"))) else NA,
+    dist_category = if (has_ld) .hx1(cp, paste0(ld, "/DistributionCategory")) else NA_character_,
+    dist_within   = if (has_ld) ldl(.hx1(cp, paste0(ld, "/DistributionWithinProduct"))) else NA,
+    dist_maxdev   = if (has_ld) .hnum(cp, paste0(ld, "/MAXDeviation")) else NA_real_,
     key        = .hx1(p, "./ProductKey"),
     name       = .hx1(cp, "./ProductName"),
     group      = .hx1(cp, "./ProductGroupName"),
@@ -138,6 +147,7 @@ guess_hpr_species <- function(name, user_id = NA) {
       # One XPath call per column over all items (not one per item).
       price = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Price")))),
       criteria = trimws(xml2::xml_text(xml2::xml_find_first(items, "./BuckingCriteria"))),
+      dist  = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Distribution")))),
       stringsAsFactors = FALSE))
 }
 
@@ -556,6 +566,10 @@ hpr_product_table <- function(hpr, species_map) {
   long <- data.frame(ProductKey = key, LengthClass_dm = as.integer(cut[g$j] / 10),
                      PriceDiameterClass_cm = as.integer(rows_cm[g$i]),
                      PriceNOKperM3 = price, stringsAsFactors = FALSE)
+  # Phase 7a: the cell's target Distribution (%) goes to every whole-cm row of its file
+  # class, the same way as the price; the column exists only if the product has any.
+  if (any(!is.na(ok_cells$dist)))
+    long[[PM_DISTRIBUTION_COL]] <- ok_cells$dist[match(paste(cls[g$i], L[g$j]), paste(ok_cells$d_mm, ok_cells$l_cm))]
   # Columns without any priced cell are dropped (that length is not cut);
   # a whole-cm row without a priced cell stays as an empty row (a fully
   # forbidden inner class: never chosen), as pm_drop_empty_cells() keeps it.
@@ -674,6 +688,9 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
           if (length(r)) norm_permitted_grades(paste(r, collapse = ";")) else NA_character_
         },
         HprProductKey = if (identical(hpr$kind, "pin")) NA_character_ else p$key,
+        # Phase 7a: the product's LengthDistributionDefinition (NA = the file has none)
+        DistributionAllowed = p$dist_allowed, DistributionCategory = p$dist_category,
+        DistributionWithinProduct = p$dist_within, MAXDeviation = p$dist_maxdev,
         stringsAsFactors = FALSE)
       pms[[length(pms) + 1L]] <- grid$pm
       used_keys <- c(used_keys, ak)
@@ -690,7 +707,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
     }
   }
   rownames(defs) <- NULL
-  pm <- pm_minimal(do.call(rbind, lapply(pms, pm_minimal)))
+  pm <- pm_minimal(do.call(pm_bind, lapply(pms, pm_minimal)))
   v <- check_price_set(defs, pm)
   if (!v$ok) return(fail(v$errors, w))
   list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0),

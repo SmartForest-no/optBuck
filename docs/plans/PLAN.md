@@ -261,6 +261,15 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 6. **Tests.** Audit 31 (10 checks, variants of the synthetic fixture with invented coordinates and private data), audit 17 checks 14 and 31. Real file (148.7 MB, 10,200 bucked stems): export 55 s, 124 MB, process peak 371 MB; re-import gives the same stems and logs, `m3 (price)` within 2.4e-4 m3 of 2,281 m3 (rounding), StemGrade identical (local benchmark, not committed).
 7. **Known limitation.** "Top cylinder" is written as "Top" (StanForD has no cylinder rule).
 
+## Roadmap Phase 7a: distribution (target matrix) from .hpr and .pin (done, 2026-10-30, branch `distribution-import`)
+
+1. **What.** The target distribution of imported products is read, kept and written back. It is not used by runs: no change to bucking results, no UI change (`performance_check.R` equals main).
+2. **Hidden data.** Price matrix column `Distribution` (percent per cell; whole-cm rows get the value of their file class, as prices do; the column exists only when some cell has a value). Four hidden assortment fields `DistributionAllowed`, `DistributionCategory`, `DistributionWithinProduct`, `MAXDeviation` (the product's LengthDistributionDefinition). NA for everything not from a file and for files without them.
+3. **Kept through edits.** `pm_minimal()` keeps the column, `pm_bind()` fills it with NA where one side lacks it, `pm_from_grid()` keeps a cell's value when its price changes, new cells have none, `pm_prices()` gives the four price columns that `write_price_file()` and the backend price loader use (the column never reaches a run). Not compared between A and B (`scenarios_differ()`, `assortment_diff()`).
+4. **Export.** `<Distribution>` per cell is the stored value (0 when none). `LengthDistributionDefinition` is written when the assortment has stored fields, after `PriceDefinition`/`PermittedGradesDefinition` and before `ProductMatrixes`, children in the order of the source files (DistributionAllowed, DistributionCategory, MAXDeviation, DistributionWithinProduct).
+5. **Tests.** Audit 34 (fixtures `distribution_synthetic.hpr/.pin` from `scripts/make_distribution_fixture.R`; checks 20-28 read the private files and are skipped when missing).
+6. **Known limitation.** Distribution and the four distribution fields are not kept in the scenario xlsx download/upload (kept in copy A/B, edits and the .hpr/.pin round trip). An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
+
 ## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 
 - Long format (CSV or xlsx): `tree_id`, `species` (spruce/pine), `height` (m along the stem), `diameter` (cm, over bark), optional `plot_id`. Downloadable template. (.hpr stems are hpr Phase B.)

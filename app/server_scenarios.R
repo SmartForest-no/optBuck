@@ -98,7 +98,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     one(x)
   }
   swap_prices <- function(pm, keys, new = NULL)
-    pm_minimal(rbind(pm_minimal(pm)[!pm_minimal(pm)$ProductKey %in% keys, , drop = FALSE], new))
+    pm_minimal(pm_bind(pm_minimal(pm)[!pm_minimal(pm)$ProductKey %in% keys, , drop = FALSE], new))
 
 
   # ---- the selected assortment (shared by A and B) ---------------------------
@@ -342,6 +342,8 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     }
     rows$PermittedGrades <- if (!is.null(old_row)) old_row$PermittedGrades else NA_character_   # hidden; kept on edits
     rows$ReferenceGrades <- if (!is.null(old_row)) old_row$ReferenceGrades else NA_character_
+    for (n in DISTRIBUTION_DEF_COLS)   # hidden distribution fields (Phase 7a); kept on edits
+      rows[[n]] <- if (!is.null(old_row)) old_row[[n]] else rows[[n]][NA_integer_]
     errs <- list(); start <- NULL
     if (!same_pricing) {
       price <- num(input$asm_price)

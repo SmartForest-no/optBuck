@@ -47,7 +47,14 @@ ASSORTMENT_COLS <- c("Name", "Class", "Species", "MinTopDiameter_cm",
                      "VolumeDiameterAdjustment", "PriceType", "UseIn")
 
 
-#' The four columns Apter uses, typed, from any PriceMatrix_long.
+#' Optional hidden column of a price matrix (Phase 7a, 2026-10-30): the
+#' target distribution (percent) of a cell, read from .hpr/.pin files and
+#' written back on export. It is not used by the optimizer. The column exists
+#' only when some cell has a value; NA = the cell has none.
+PM_DISTRIBUTION_COL <- "Distribution"
+
+#' The four columns Apter uses, typed, from any PriceMatrix_long. A hidden
+#' Distribution column is kept when the matrix has one (see pm_prices()).
 pm_minimal <- function(pm) {
   out <- data.frame(
     ProductKey            = as.character(pm$ProductKey),
@@ -55,10 +62,28 @@ pm_minimal <- function(pm) {
     PriceDiameterClass_cm = suppressWarnings(as.integer(pm$PriceDiameterClass_cm)),
     PriceNOKperM3         = suppressWarnings(as.numeric(pm$PriceNOKperM3)),
     stringsAsFactors = FALSE)
+  if (PM_DISTRIBUTION_COL %in% names(pm))
+    out[[PM_DISTRIBUTION_COL]] <- suppressWarnings(as.numeric(pm[[PM_DISTRIBUTION_COL]]))
   out <- out[order(out$ProductKey, out$LengthClass_dm, out$PriceDiameterClass_cm,
                    na.last = TRUE), , drop = FALSE]
   rownames(out) <- NULL
   out
+}
+
+#' The price columns only (no hidden Distribution): what runs, the backend and
+#' price files see.
+pm_prices <- function(pm) {
+  out <- pm_minimal(pm)
+  out[, PM_REQUIRED_COLS, drop = FALSE]
+}
+
+#' rbind of price matrices where a hidden Distribution column may be on one
+#' side only: the other side gets NA.
+pm_bind <- function(...) {
+  l <- Filter(function(x) !is.null(x), list(...))
+  if (any(vapply(l, function(x) PM_DISTRIBUTION_COL %in% names(x), logical(1))))
+    l <- lapply(l, function(x) { if (!PM_DISTRIBUTION_COL %in% names(x)) x[[PM_DISTRIBUTION_COL]] <- rep(NA_real_, nrow(x)); x })
+  do.call(rbind, l)
 }
 
 .is_matrix_row <- function(pm) !is.na(pm$LengthClass_dm)
@@ -133,6 +158,14 @@ pm_from_grid <- function(grid, id, pm) {
   drop <- if (identical(id, PM_FLAT_ID))
     !.is_matrix_row(pm) & pm$ProductKey %in% new$ProductKey
   else pm$ProductKey == id & .is_matrix_row(pm)
+  # The hidden Distribution of a cell stays with the cell (a price edit never
+  # changes it); cells new to the grid have none.
+  if (PM_DISTRIBUTION_COL %in% names(pm)) {
+    old <- pm[drop, , drop = FALSE]
+    hit <- match(paste(new$ProductKey, new$LengthClass_dm, new$PriceDiameterClass_cm),
+                 paste(old$ProductKey, old$LengthClass_dm, old$PriceDiameterClass_cm))
+    new[[PM_DISTRIBUTION_COL]] <- old[[PM_DISTRIBUTION_COL]][hit]
+  }
   pm_minimal(rbind(pm[!drop, , drop = FALSE], new))
 }
 
@@ -216,6 +249,7 @@ pm_add_class <- function(pm, id, end = c("low", "high"), max_top_cm = Inf) {
                  as.integer(floor(max_top_cm)), format(max_top_cm)))
   new <- s[s$PriceDiameterClass_cm == from, , drop = FALSE]
   new$PriceDiameterClass_cm <- as.integer(to)
+  if (PM_DISTRIBUTION_COL %in% names(new)) new[[PM_DISTRIBUTION_COL]] <- NA_real_   # a new cell has none
   pm_minimal(rbind(pm, new))
 }
 
@@ -241,6 +275,7 @@ pm_add_length <- function(pm, id, dm) {
   from <- lens[which.min(abs(lens - dm))]
   new <- s[s$LengthClass_dm == from, , drop = FALSE]
   new$LengthClass_dm <- as.integer(dm)
+  if (PM_DISTRIBUTION_COL %in% names(new)) new[[PM_DISTRIBUTION_COL]] <- NA_real_   # a new cell has none
   pm_minimal(rbind(pm, new))
 }
 
@@ -356,7 +391,8 @@ pm_rename_key <- function(pm, from, to) {
 #' and its prices in the wide layout of pm_template_wide() (one sheet per
 #' matrix, "flat_prices").
 scenario_export <- function(defs, pm, path) {
-  sheets <- c(list(assortments = defs[, ASSORTMENT_TABLE_COLS, drop = FALSE]),
+  # The hidden distribution fields (Phase 7a) are not part of the exchange file.
+  sheets <- c(list(assortments = defs[, setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS), drop = FALSE]),
               .pm_wide_sheets(pm))
   writexl::write_xlsx(sheets, path)
   invisible(path)
@@ -372,7 +408,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey")), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS)), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]
@@ -410,7 +446,7 @@ check_price_set <- function(defs, pm) {
 
 # A scenario's prices of the given keys, sorted (for comparisons).
 .scenario_rows <- function(pm, keys) {
-  m <- pm_minimal(pm)
+  m <- pm_prices(pm)          # the hidden Distribution never counts as a difference
   m <- m[m$ProductKey %in% keys, , drop = FALSE]
   m <- m[order(m$ProductKey, m$LengthClass_dm, m$PriceDiameterClass_cm, na.last = TRUE), , drop = FALSE]
   rownames(m) <- NULL
@@ -426,7 +462,7 @@ check_price_set <- function(defs, pm) {
 #'   the other scenario).
 assortment_diff <- function(defs, other) {
   k <- assortment_table_keys(defs); ko <- assortment_table_keys(other)
-  cols <- ASSORTMENT_TABLE_COLS
+  cols <- setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS)   # hidden, no effect on runs
   diff <- matrix(FALSE, nrow(defs), length(cols), dimnames = list(k, cols))
   status <- rep("only", nrow(defs))
   for (i in seq_len(nrow(defs))) {
@@ -476,7 +512,7 @@ copy_assortment <- function(from_defs, from_pm, to_defs, to_pm, key) {
   rownames(to_defs) <- NULL
   f <- pm_minimal(from_pm); t <- pm_minimal(to_pm)
   list(defs = to_defs,
-       pm = pm_minimal(rbind(t[t$ProductKey != key, , drop = FALSE], f[f$ProductKey == key, , drop = FALSE])))
+       pm = pm_minimal(pm_bind(t[t$ProductKey != key, , drop = FALSE], f[f$ProductKey == key, , drop = FALSE])))
 }
 
 #' Copy the prices of `keys` from one scenario to the other, where the
@@ -490,8 +526,8 @@ copy_prices <- function(from_defs, from_pm, to_defs, to_pm, keys) {
   ok[ok] <- from_defs$PriceType[match(keys[ok], kf)] == to_defs$PriceType[match(keys[ok], kt)]
   copied <- keys[ok]
   f <- pm_minimal(from_pm); t <- pm_minimal(to_pm)
-  list(pm = pm_minimal(rbind(t[!t$ProductKey %in% copied, , drop = FALSE],
-                             f[f$ProductKey %in% copied, , drop = FALSE])),
+  list(pm = pm_minimal(pm_bind(t[!t$ProductKey %in% copied, , drop = FALSE],
+                               f[f$ProductKey %in% copied, , drop = FALSE])),
        copied = copied, skipped = keys[!ok])
 }
 
@@ -760,8 +796,8 @@ apply_price_upload <- function(path, filename, scenario, default, pd, lc) {
     drop <- (keep$ProductKey %in% up$ids & .is_matrix_row(keep)) |
             (PM_FLAT_ID %in% up$ids & !.is_matrix_row(keep) &
                keep$ProductKey %in% up$long$ProductKey[is.na(up$long$LengthClass_dm)])
-    rbind(keep[!drop, , drop = FALSE],
-          up$long[, PM_REQUIRED_COLS, drop = FALSE])
+    pm_bind(keep[!drop, , drop = FALSE],
+            up$long[, PM_REQUIRED_COLS, drop = FALSE])
   }
   v <- validate_scenario_pm(candidate, pd, lc, default = default)
   list(ok = v$ok, pm = v$pm, layout = up$layout, ids = up$ids,
@@ -773,7 +809,7 @@ apply_price_upload <- function(path, filename, scenario, default, pd, lc) {
 
 #' Long CSV of a full price matrix: the four required columns.
 pm_export <- function(pm, path) {
-  readr::write_csv(pm_minimal(pm), path, na = "")
+  readr::write_csv(pm_prices(pm), path, na = "")
   invisible(path)
 }
 

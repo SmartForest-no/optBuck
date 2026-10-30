@@ -197,7 +197,7 @@ d2 <- sc$defs
 extra1 <- d2[1L, ]; extra1$Name <- "Second from same product"
 extra2 <- d2[d2$Type == "waste", ][1L, ]; extra2$Name <- "Extra assortment"; extra2$HprProductKey <- NA_character_
 d2 <- rbind(d2, extra1, extra2); rownames(d2) <- NULL
-pm2 <- pm_minimal(rbind(pm, pm_start_prices(assortment_table_keys(d2)[nrow(d2) - 1L], "matrix", 100, 10, 12, c(310, 340)),
+pm2 <- pm_minimal(pm_bind(pm, pm_start_prices(assortment_table_keys(d2)[nrow(d2) - 1L], "matrix", 100, 10, 12, c(310, 340)),
                         pm_start_prices(assortment_table_keys(d2)[nrow(d2)], "flat", 5)))
 pr <- hpr_export_products(d2, pm2, setNames(as.list(rep("", length(src_keys))), src_keys),
                           data.frame(key = h$species$key, species = unname(map[h$species$key])))

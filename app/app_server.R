@@ -359,12 +359,12 @@ server <- function(input, output, session) {
     # Phase 4c (the default price file and products).
     files <- character(0); path <- "default_2021"; pd <- NULL; lc <- NULL
     if (!(identical(d, APP_DEFS) && identical(a, APP_PM_DEFAULT))) {
-      path <- write_price_file(a); files <- path
+      path <- write_price_file(pm_prices(a)); files <- path
       p <- products_from_defs(d, a); pd <- p$pd; lc <- p$lc
     }
     scenario <- NULL
     if (compare) {
-      path_b <- write_price_file(b$pm); files <- c(files, path_b)
+      path_b <- write_price_file(pm_prices(b$pm)); files <- c(files, path_b)
       pb <- products_from_defs(b$defs, b$pm)
       scenario <- list(price_matrix_path = path_b, products = pb$pd, length_classes = pb$lc,
                        grade_opts = sc$grade_opts("B"))
