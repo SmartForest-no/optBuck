@@ -108,6 +108,11 @@ details.apter-card { margin-bottom: 16px; }
   margin: 18px 0 8px;
 }
 .section-hdr:first-child { margin-top: 0; }
+/* Price tuning tab: the heading keeps the case of its units; the axis label sits on the table. */
+.tn-hdr { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; color: var(--apter-label); margin: 18px 0 8px; }
+.tn-block { display: block; }
+.tn-block .html-fill-item { flex: none; }
+.tn-axis { color: var(--apter-muted); font-size: 0.85rem; margin: 0; line-height: 1.2; }
 
 /* ---- summary boxes ---------------------------------------------------------- */
 .ro-row {

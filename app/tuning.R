@@ -107,11 +107,11 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map) {
   output$tn_results <- renderUI({
     r <- res(); if (is.null(r)) return(NULL)
     if (isTRUE(r$too_few)) return(div(class = "pm-msg-error", L("tn_too_few")))
-    tagList(
+    div(class = "tn-block",
       reactable::reactableOutput("tn_tbl"),
       plotOutput("tn_plot", height = "260px"),
-      div(class = "section-hdr", L("tn_price_change")),
-      div(class = "note-muted", L("tn_col_class_mm")),
+      div(class = "tn-hdr", L("tn_price_change")),
+      div(class = "tn-axis", L("tn_col_class_mm")),
       reactable::reactableOutput("tn_price_tbl"),
       div(class = "tally-downloads",
           actionButton("tn_use", L("tn_use", other(r$side)), class = "btn-secondary btn-sm")))
@@ -141,8 +141,8 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map) {
     r <- res(); req(r, !isTRUE(r$too_few)); tr_ <- r$trace
     op <- par(mar = c(4, 4.2, 1, 1)); on.exit(par(op))
     plot(tr_$r, tr_$fg, type = "b", pch = 1, xlab = L("tn_iteration"), ylab = L("tn_row_fg"),
-         xaxt = "n", bty = "l")
-    axis(1, at = tr_$r)
+         xaxt = "n", bty = "l", las = 1)
+    at <- pretty(tr_$r); axis(1, at = at[at == round(at) & at >= 1 & at <= max(tr_$r)])
     points(r$best_iter, tr_$fg[r$best_iter], pch = 19, cex = 1.4)
   })
 
