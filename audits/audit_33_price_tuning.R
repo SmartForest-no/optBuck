@@ -6,7 +6,7 @@
 #           fg_grid(), update_prices(), tune_prices()) and the backend's
 #           swap_job_prices() / subset_job_stems().
 #
-# Private data : checks 3-7 read the owner's real .hpr file5 (REDACTED28
+# Private data : checks 3-8 read the owner's real .hpr file5 (REDACTED28
 #           in C:/apter_private/hpr/, outside the repository, read in place).
 #           No audit before this one reads a private file. When the file is
 #           missing these checks are recorded as REVIEW ("skipped", verdict
@@ -30,6 +30,9 @@
 #  7.  tally_grid holds every log: counts and price volume of the grid equal the
 #      product's totals in selected_logs_all (original prices, all stems); a
 #      result with a log outside the grid stops with the difference
+#  8.  The hidden Distribution column of the price matrix (Phase 7a): the
+#      imported pm has it, apply_grid_prices() leaves it identical, and
+#      swap_job_prices() does not pass it to the backend
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
 #
@@ -148,6 +151,7 @@ if (!have5) {
   skipped(3, "targets on file5 spruce 140 SCA"); skipped(4, "apply_grid_prices round trip on file5")
   skipped(5, "tune_prices determinism on file5"); skipped(6, "iteration-1 value check on file5")
   skipped(7, "tally_grid holds every log (file5)")
+  skipped(8, "hidden Distribution column kept by apply_grid_prices (file5)")
 } else {
   section("Setup: file5 products, grid and the original-price run of all stems")
   hp <- read_hpr(f5); stopifnot(isTRUE(hp$ok))
@@ -235,6 +239,17 @@ if (!have5) {
   rec("Check 7: tally_grid counts and price volume equal the product's totals in selected_logs_all; a log outside the grid stops with the difference",
       ok(ok7a && ok7b), sprintf("%d logs, %.4f m3; grid %d, %.4f m3 | error: %s", nl, vl, sum(tal$n), sum(tal$v),
                                 substr(err, 1L, 160L)))
+
+  # ============================================================================
+  section("8. hidden Distribution column")
+  D <- "Distribution"
+  d_has <- D %in% names(products$pm)
+  d_same <- identical(prod2$pm[[D]], products$pm[[D]]) && identical(names(prod2$pm), names(products$pm))
+  job_sw <- swap_job_prices(subset_job_stems(job, 1:20), prod2)
+  d_off <- !D %in% names(job_sw$pps[[1L]]$pm)
+  rec("Check 8: file5's price matrix has the hidden Distribution column; apply_grid_prices keeps it identical; swap_job_prices passes it to no run",
+      ok(d_has && d_same && d_off), sprintf("column present %s (%d non-NA cells), identical after apply %s, absent in the run's pm %s",
+                                            d_has, if (d_has) sum(!is.na(products$pm[[D]])) else 0L, d_same, d_off))
 }
 
 write_audit_outputs(E$results, audit_csv, audit_txt)

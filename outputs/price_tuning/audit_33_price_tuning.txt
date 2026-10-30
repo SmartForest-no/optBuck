@@ -21,11 +21,14 @@
 
 --- 7. tally_grid holds every log ---
   [PASS  ] Check 7: tally_grid counts and price volume equal the product's totals in selected_logs_all; a log outside the grid stops with the difference | 7598 logs, 1313.3846 m3; grid 7598, 1313.3846 m3 | error: tally_grid(spruce_140_sca_sagt_mmer): the grid does not hold all logs: counts 7597 of 7598 (difference 1), price volume 1313.182040 of 1313.384640 m3 (differenc
+
+--- 8. hidden Distribution column ---
+  [PASS  ] Check 8: file5's price matrix has the hidden Distribution column; apply_grid_prices keeps it identical; swap_job_prices passes it to no run | column present TRUE (1572 non-NA cells), identical after apply TRUE, absent in the run's pm TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result n
-1   PASS 7
+1   PASS 8
 
   Verdict: PASS 
 ============================================================= 
