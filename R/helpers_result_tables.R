@@ -366,3 +366,26 @@ stem_species_summary <- function(species, dbh_cm, height_m, excluded_species = c
                                       mean_height_m = numeric(0), n_excluded = integer(0))
   out
 }
+
+#' The Summary comparison of two runs (R4 D4): total value, NOK per m3,
+#' commercial volume, price volume and the sawlog share of the commercial
+#' volume (sawlog m3 / all m3, under bark) for A and B, with B - A and the
+#' relative difference (%).
+#'
+#' @param r_a,r_b Backend results (selected_logs_all, per_m3_summary).
+#' @return data.frame(id, a, b, diff, pct): ids value, nok_per_m3,
+#'   commercial_volume, price_volume, sawlog_share (percent); pct is
+#'   100 * (b - a) / a, NA when a is 0.
+summary_comparison <- function(r_a, r_b) {
+  one <- function(r) {
+    l <- r$selected_logs_all; s <- r$per_m3_summary; s <- s[s$scope == "Total", , drop = FALSE]
+    cv <- sum(l$commercial_volume_m3, na.rm = TRUE)
+    saw <- sum(l$commercial_volume_m3[as.character(l$ProductType) %in% "sawlog"], na.rm = TRUE)
+    c(value = sum(l$value_nok, na.rm = TRUE), nok_per_m3 = s$nok_per_m3[1L],
+      commercial_volume = s$commercial_volume_m3[1L], price_volume = sum(l$price_volume_m3, na.rm = TRUE),
+      sawlog_share = if (cv > 0) 100 * saw / cv else NA_real_)
+  }
+  a <- one(r_a); b <- one(r_b)
+  data.frame(id = names(a), a = unname(a), b = unname(b), diff = unname(b - a),
+             pct = ifelse(!is.na(a) & a != 0, 100 * (b - a) / a, NA_real_), stringsAsFactors = FALSE)
+}

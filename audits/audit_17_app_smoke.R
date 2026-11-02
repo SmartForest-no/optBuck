@@ -547,7 +547,9 @@ browser_checks <- c(
   "Check 43: Price tuning tab: message without .hpr stems; an Even target set in the target view, the assortment list, a tuning with two iterations gives the key-figure table, the small figure and the four matrix views; Use tuned prices in the other scenario copies them and keeps the results; a change in the tuned scenario clears them",
   "Check 44: Stems and scenarios are independent: importing into a scenario leaves the stems untouched and loading stems leaves the scenarios untouched; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
   "Check 45: No scenario names: no name fields, titles and headers say Scenario A/B, the scenario xlsx has no name",
-  "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear")
+  "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
+  "Check 47: Stems panel of the built-in source (R4 D2): the intro, Use this selection builds the species table (equal to the live counts) and two density plots, and any setting change clears it",
+  "Check 48: Empty states and Help (R4 D1), in Norsk: a tree list with nothing loaded gives the message in Simulator and Pristilpasning and hides the run button; the Help tab has its three sections")
 if (!browser_ok) {
   for (ck in browser_checks)
     rec(ck, FAIL, "skipped: browser dependencies missing (see Check 01)")
@@ -769,8 +771,8 @@ if (!browser_ok) {
     # collapsed menu or at most icon height).
     narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
     logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
-    ok6 <- identical(tabs, "Stems|Assortments and prices|Simulator|Price tuning") &&
-      identical(active, "Stems") && identical(n_old, 0L) &&
+    ok6 <- identical(tabs, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help") &&
+      identical(active, "1 Stems") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
       !grepl("Apter", paste(title, brand), fixed = TRUE) &&
@@ -1072,7 +1074,7 @@ if (!browser_ok) {
     # table with all five columns, the type table and the contribution
     # figure; none of the removed outputs.
     e15 <- try_drv({ app$set_inputs(result_tabs = "trees"); app$wait_for_idle() })
-    c27$trees1 <- figs(app, c("fig_distributions", "fig_dbh_class"))
+    c27$trees1 <- figs(app, "fig_dbh_class")
     # Value by DBH class: the species totals ("All") add up to the run's trees.
     dbh15 <- tryCatch(utils::read.csv(app$get_download("dl_dbh_class"), check.names = FALSE,
                                       stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
@@ -1166,13 +1168,26 @@ if (!browser_ok) {
       length(unique(sub("^[01]:", "", cards16))) == 1L
     grid16 <- js(app, paste0("Array.from(document.querySelectorAll('#summary_cards .summary-scen .ro-row'))",
                              ".map(function(r){ return getComputedStyle(r).gridTemplateColumns.split(' ').length; }).join(',')"))
+    # R4 D4: the sentence, the A/B table (5 rows, the value row's difference equals
+    # the sentence) and the value-by-type figure.
+    sent16 <- txt(app, "#summary_cards .summary-sentence")
+    thdr16 <- headers_of(app, "tbl_summary_cmp"); trow16 <- rows_txt(app, "tbl_summary_cmp")
+    fig16 <- js(app, "Array.from(document.querySelectorAll('#bar_value_by_type img')).filter(function(e){ return e.offsetParent !== null && e.naturalWidth > 0; }).length")
+    rows16 <- strsplit(strsplit(or_default(trow16, ""), "|", fixed = TRUE)[[1L]], ";", fixed = TRUE)
+    num16 <- function(x) as.numeric(gsub("[^0-9.-]", "", gsub("−", "-", x)))
+    vrow16 <- Filter(function(x) identical(x[1L], "Total value (NOK)"), rows16)
+    sent_amt16 <- suppressWarnings(as.numeric(gsub("[^0-9]", "", sub("^Scenario B gives ([0-9,]+) NOK.*$", "\\1", sent16))))
+    sum_cmp16 <- identical(thdr16, "|A|B|Difference (B − A)|Difference (%)") && length(rows16) == 5L &&
+      identical(vapply(rows16, `[`, "", 1L), c("Total value (NOK)", "NOK per m³", "Commercial volume (m³ u.b.)", "Price volume (m³)", "Sawlog share (%)")) &&
+      length(vrow16) == 1L && grepl("^Scenario B gives (the same value as|[0-9,]+ NOK \\([0-9.]+ %\\) (higher|lower) value than) scenario A for these stems\\.$", sent16) &&
+      (grepl("same value", sent16, fixed = TRUE) || isTRUE(abs(num16(vrow16[[1L]][4L])) - sent_amt16 <= 1)) &&
+      identical(fig16, 1L)
     csv16 <- read_logs_csv(app)
     tcsv16 <- read_trees_csv(app)
+    # R4 D4: a comparison shows a sentence, the A/B table and the run info tiles
+    # (no per-scenario cards any more).
     exp16 <- paste(c("Run time", "Plots", "Trees", "Trees with logs (A / B)",
-                     "Changed cutting patterns", "Scenario A", "Total value (NOK)",
-                     "Commercial volume (m³ u.b.)",
-                     "NOK per m³", "Price volume (m³)", "Scenario B", "Total value (NOK)",
-                     "Commercial volume (m³ u.b.)", "NOK per m³", "Price volume (m³)"), collapse = "|")
+                     "Changed cutting patterns"), collapse = "|")
     e27 <- try_drv({
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tally_scenario = "diff", wait_ = FALSE); app$wait_for_idle()
@@ -1187,7 +1202,7 @@ if (!browser_ok) {
       c27$len2_h <- js(app, "document.querySelector('#fig_log_lengths').offsetHeight")
       shoot(app, "phase2_02_logs_tab_comparison")
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
-      c27$trees2 <- figs(app, c("fig_distributions", "fig_dbh_class"))
+      c27$trees2 <- figs(app, "fig_dbh_class")
     })
     # Trees after the comparison: Value A, Value B and Change; sorted by
     # change (largest first); a row click draws A and B. Products: value and
@@ -1237,14 +1252,14 @@ if (!browser_ok) {
       !cmp_tab16 && identical(tabs16, RESULT_TABS) && ok16b &&
       grepl("^[0-9,]+$", pat_txt) && isTRUE(c16$cards_ok) &&
       isTRUE(stem_img >= 1L) && identical(nerr16, 0L) && identical(sum16, exp16) &&
-      !nzchar(paste0(e16d, e16e)) && identical(grid16, "2,2") &&
+      !nzchar(paste0(e16d, e16e)) && !nzchar(or_default(grid16, "")) && isTRUE(sum_cmp16) &&
       !is.null(csv16) && identical(sort(unique(csv16$Scenario)), c("A", "B")) &&
       all(table(csv16$Scenario) > 0) &&
       !is.null(tcsv16) && identical(sort(unique(tcsv16$Scenario)), c("A", "B")) &&
       identical(sum(tcsv16$Scenario == "A"), sum(tcsv16$Scenario == "B"))
     rec(browser_checks[12], if (ok16) PASS else FAIL,
         sprintf("summary: '%s' (cards one-line label:height %s) | grid columns per scenario: %s | logs CSV: %s | trees CSV: %s | highlighted cells B %s, A %s; cells differing in B's download: %s | upload: '%s' | comparison tab: %s, tabs '%s' | changed pattern: '%s' | stem diagram: %s | trees: headers %s, sorted by change %s (%d rows), note '%s', changed-trees CSV %s rows | products: headers '%s', value change figure %s, CSV columns %d | error notifications: %s%s",
-                sum16, c16$cards, grid16,
+                paste0(sum16, ' [', thdr16, ' ~ ', trow16, ' ~ ', sent16, ' ~ fig ', fig16, ']'), c16$cards, grid16,
                 if (is.null(csv16)) "none" else paste(sprintf("%s %d", names(table(csv16$Scenario)), table(csv16$Scenario)), collapse = ", "),
                 if (is.null(tcsv16)) "none" else paste(sprintf("%s %d", names(table(tcsv16$Scenario)), table(tcsv16$Scenario)), collapse = ", "),
                 n_hl, n_hl_a, n_diff16, substr(trimws(msg16), 1, 100), cmp_tab16, tabs16,
@@ -2040,11 +2055,11 @@ if (!browser_ok) {
       c45$nerr <- n_err_notif(app)
     })
     ok45 <- !nzchar(e45) && identical(as.integer(c45$fields), 0L) && grepl("Scenario A", c45$title, fixed = TRUE) &&
-      grepl("Scenario A", c45$summary, fixed = TRUE) && grepl("Scenario B", c45$summary, fixed = TRUE) &&
+      grepl("scenario A", c45$summary, fixed = TRUE) && grepl("Scenario B", c45$summary, fixed = TRUE) &&
       !"scenario" %in% c45$xlsx_sheets && identical(c45$nerr, 0L)
     rec(grep("^Check 45:", browser_checks, value = TRUE), if (ok45) PASS else FAIL,
         sprintf("name fields %s | title '%s' | Summary '%s' | Products columns '%s' | xlsx sheets %s | error notifications %s%s",
-                c45$fields, trimws(c45$title), substr(gsub("\s+", " ", or_default(c45$summary, "")), 1, 60),
+                c45$fields, trimws(c45$title), substr(gsub("[[:space:]]+", " ", or_default(c45$summary, "")), 1, 60),
                 substr(or_default(c45$products, ""), 1, 90), paste(c45$xlsx_sheets, collapse = "/"), c45$nerr, err_txt(e45)))
 
     # 46. The target distribution view (restructure R2): the tuning fixture's
@@ -2093,6 +2108,52 @@ if (!browser_ok) {
                 c46$buttons, c46$bulk_hidden, c46$sum_even, c46$bold_even, c46$edited, c46$n_same, c46$sum_after, c46$bold_after,
                 grepl("<Distribution>20(\\.0+)?</Distribution>", or_default(c46$pin, "")), c46$xlsx_cells, c46$xlsx_fields,
                 c46$cleared, c46$nerr, err_txt(e46)))
+    # 47. The Stems panel of the built-in source (R4 D2).
+    c47 <- list()
+    vis_rows <- function(app, id) js(app, sprintf("Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr-group')).filter(function(e){ return e.offsetParent !== null; }).length", id))
+    vis_img <- function(app, id) js(app, sprintf("Array.from(document.querySelectorAll('#%s img')).filter(function(e){ return e.offsetParent !== null && e.naturalWidth > 0; }).length", id))
+    e47 <- try_drv({
+      app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(species_group = "both", hkl_group = "5", fylnr_sel = "11", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(abonitet = c("11", "14", "17"), hoh_range = c(0, 1000), wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
+      c47$intro <- txt(app, ".apter-page .page-intro")
+      c47$btn <- trimws(txt(app, "#stems_use_nfi"))
+      c47$rows_before <- vis_rows(app, "stem_summary")
+      c47$plot_before <- vis_img(app, "fig_stem_dists")
+      app$click("stems_use_nfi"); app$wait_for_idle()
+      app$wait_for_js("Array.from(document.querySelectorAll('#stem_summary .rt-tbody .rt-tr-group')).some(function(e){ return e.offsetParent !== null; })", timeout = 30 * 1000)
+      app$wait_for_js("Array.from(document.querySelectorAll('#fig_stem_dists img')).some(function(e){ return e.offsetParent !== null && e.naturalWidth > 0; })", timeout = 30 * 1000)
+      c47$rows_after <- vis_rows(app, "stem_summary")
+      c47$plot_after <- vis_img(app, "fig_stem_dists")
+      c47$summary <- rows_txt(app, "stem_summary")
+      c47$counts <- txt(app, "#tree_counts")
+      shoot(app, "47_stems_panel_nfi")
+      app$set_inputs(fylnr_sel = "__all__", wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
+      c47$rows_cleared <- vis_rows(app, "stem_summary"); c47$plot_cleared <- vis_img(app, "fig_stem_dists")
+      app$set_inputs(fylnr_sel = "11", wait_ = FALSE); app$wait_for_idle()
+      c47$nerr <- n_err_notif(app)
+    })
+    # The species table equals the live counts ("5 plots - 42 pine trees").
+    n47 <- function(sp) {
+      m <- regmatches(or_default(c47$counts, ""), regexec(sprintf("([0-9][0-9,. ]*) %s", sp), or_default(c47$counts, "")))[[1L]]
+      if (length(m) < 2L) 0L else as.integer(gsub("[^0-9]", "", m[2L]))
+    }
+    t47 <- function(sp) {
+      r <- strsplit(strsplit(or_default(c47$summary, ""), "|", fixed = TRUE)[[1L]], ";", fixed = TRUE)
+      sum(vapply(r, function(x) if (tolower(x[1L]) == sp) as.integer(gsub("[^0-9]", "", x[2L])) else 0L, 0L))
+    }
+    ok47 <- !nzchar(e47) && grepl("Choose the stems optBuck will buck", c47$intro, fixed = TRUE) &&
+      identical(c47$btn, "Use this selection") && identical(c47$rows_before, 0L) && identical(c47$plot_before, 0L) &&
+      isTRUE(c47$rows_after >= 1L) && isTRUE(c47$plot_after >= 1L) &&
+      identical(t47("spruce"), n47("spruce")) && identical(t47("pine"), n47("pine")) &&
+      isTRUE(t47("spruce") + t47("pine") > 0L) &&
+      identical(c47$rows_cleared, 0L) && identical(c47$plot_cleared, 0L) && identical(c47$nerr, 0L)
+    rec(grep("^Check 47:", browser_checks, value = TRUE), if (ok47) PASS else FAIL,
+        sprintf("intro '%s' | button '%s' | rows before/after/cleared %s/%s/%s | density plots before/after/cleared %s/%s/%s | summary '%s' | live counts '%s' | error notifications %s%s",
+                substr(or_default(c47$intro, ""), 1, 40), c47$btn, c47$rows_before, c47$rows_after, c47$rows_cleared,
+                c47$plot_before, c47$plot_after, c47$plot_cleared, or_default(c47$summary, ""),
+                gsub("[[:space:]]+", " ", trimws(or_default(c47$counts, ""))), c47$nerr, err_txt(e47)))
     # 30. The kept .hpr upload is deleted when the session ends: its path
     # (exported in test mode) exists during the session; after the browser
     # closes the session, the file and its folder are gone.
@@ -2181,11 +2242,11 @@ if (!browser_ok) {
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
         c34$marker <- js(app, "window.__apter17 === 1")
       })
-      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "Stammer|Sortiment og priser|Simulator|Pristilpasning") &&
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortiment og priser|3 Simulator|4 Pristilpasning|Hjelp") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
         grepl("^Sortiment\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
         grepl("Sagtømmer;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
-        identical(c34$state_en, "en|en") && identical(c34$nav_en, "Stems|Assortments and prices|Simulator|Price tuning") &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help") &&
         identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
@@ -2195,6 +2256,41 @@ if (!browser_ok) {
                   substr(or_default(c34$row1, ""), 1, 40), c34$state_en, c34$nav_en, c34$run_en,
                   substr(or_default(c34$hdr_en, ""), 1, 60), c34$state_back,
                   identical(c34$hdr_back, c34$hdr), c34$marker, err_txt(e34)))
+
+      # 48. Empty states and the Help tab (R4 D1), in a fresh Norsk session.
+      c48 <- list()
+      e48 <- try_drv({
+        app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(tree_source = "list", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        wait_tab <- function(v) app$wait_for_js(sprintf("document.querySelector('.tab-pane[data-value=\"%s\"]').classList.contains('active')", v), timeout = 15 * 1000)
+        wait_tab("simulator"); c48$sim <- vis_text(app, ".tab-pane[data-value=\"simulator\"]")
+        c48$run_visible <- isTRUE(js(app, "(function(){ var e = document.getElementById('run_btn'); return !!e && e.offsetParent !== null; })()"))
+        lshot(app, "48_simulator_empty")
+        app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
+        wait_tab("tuning"); c48$tn <- vis_text(app, ".tab-pane[data-value=\"tuning\"]")
+        app$set_inputs(main_nav = "help", wait_ = FALSE); app$wait_for_idle()
+        c48$help <- vis_text(app, ".help-page")
+        lshot(app, "48_help")
+        app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+        c48$run_nfi <- isTRUE(js(app, "(function(){ var e = document.getElementById('run_btn'); return !!e && e.offsetParent !== null; })()"))
+        app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+        c48$nerr <- n_err_notif(app)
+      })
+      ok48 <- !nzchar(e48) && grepl("Velg stammer under 1 Stammer først.", c48$sim, fixed = TRUE) && !c48$run_visible &&
+        grepl("optBuck finner den mest verdifulle kappingen", c48$sim, fixed = TRUE) &&
+        grepl("Velg stammer under 1 Stammer først.", c48$tn, fixed = TRUE) &&
+        grepl("Juster prisene i et scenario", c48$tn, fixed = TRUE) &&
+        grepl("Slik bruker du optBuck", c48$help, fixed = TRUE) && grepl("Begreper", c48$help, fixed = TRUE) &&
+        grepl("Filformater", c48$help, fixed = TRUE) && grepl("Kostnad ved styring", c48$help, fixed = TRUE) &&
+        isTRUE(c48$run_nfi) && identical(c48$nerr, 0L)
+      rec(grep("^Check 48:", browser_checks, value = TRUE), if (ok48) PASS else FAIL,
+          sprintf("Simulator: '%s' run visible %s | Pristilpasning: '%s' | Help sections %s | run visible with the built-in source %s | error notifications %s%s",
+                  substr(gsub("[[:space:]]+", " ", or_default(c48$sim, "")), 1, 90), c48$run_visible,
+                  substr(gsub("[[:space:]]+", " ", or_default(c48$tn, "")), 1, 90),
+                  grepl("Filformater", or_default(c48$help, ""), fixed = TRUE), c48$run_nfi, c48$nerr, err_txt(e48)))
 
       # 35. Both tabs and the sidebar in Norsk; no English on the page.
       c35 <- list()
@@ -2287,6 +2383,7 @@ if (!browser_ok) {
         c37$tabs <- result_tabs_txt(app)
         c37$summary <- vis_text(app, "#summary_cards"); lshot(app, "07_summary_no")
         c37$left <- english_left(vis_text(app))
+        c37$ctx <- regmatches(vis_text(app), regexpr(".{0,60}sawlog.{0,40}", vis_text(app)))
         app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
         c37$products <- headers_of(app, "tbl_products"); c37$type_rows <- rows_txt(app, "tbl_per_m3_type")
         c37$left <- c(c37$left, english_left(vis_text(app))); lshot(app, "08_products_no")
@@ -2296,7 +2393,7 @@ if (!browser_ok) {
         app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
         c37$tally <- trimws(txt(app, "#tally_note")); c37$logs <- headers_of(app, "tbl_selected_logs")
         c37$left <- c(c37$left, english_left(vis_text(app))); lshot(app, "10_logs_no")
-        c37$imgs <- js(app, paste0("['bar_nok_contribution','fig_distributions','fig_dbh_class','stem_compare']",
+        c37$imgs <- js(app, paste0("['bar_nok_contribution','fig_dbh_class','stem_compare']",
                                    ".filter(function(i){ var e = document.querySelector('#' + i + ' img'); return e && e.naturalWidth > 0; }).length"))
         c37$nerr <- n_err_notif(app)
       })
@@ -2311,12 +2408,12 @@ if (!browser_ok) {
         grepl(" av ", or_default(c37$pager, ""), fixed = TRUE) &&
         identical(c37$tally, "Prisdiameterklasse (cm) mot lengdeklasse (dm)") &&
         grepl("Sortiment", or_default(c37$logs, ""), fixed = TRUE) &&
-        identical(as.integer(c37$imgs), 4L) && identical(as.integer(c37$nerr), 0L) && !length(unique(c37$left))
+        identical(as.integer(c37$imgs), 3L) && identical(as.integer(c37$nerr), 0L) && !length(unique(c37$left))
       rec(browser_checks[33], if (ok37) PASS else FAIL,
           sprintf("tabs '%s' | NOK/m³ '%s' | products '%s' | trees '%s' | pager '%s' | tally '%s' | figures %s of 4 | errors %s | English left: %s%s",
                   c37$tabs, gsub("\\s+", " ", paste(nok_val, collapse = "")), substr(or_default(c37$products, ""), 1, 70),
                   substr(or_default(c37$trees, ""), 1, 70), c37$pager, c37$tally, c37$imgs, c37$nerr,
-                  shorten_txt(unique(c37$left)), err_txt(e37)))
+                  shorten_txt(unique(c37$left)), paste0(err_txt(e37), if (length(c37$ctx)) paste0(" | sawlog in: ", c37$ctx[1L]) else "")))
 
       # 38. Downloads in Norsk.
       c38 <- list()
@@ -2374,7 +2471,7 @@ if (!browser_ok) {
         identical(c39$flat_b, "420") &&
         grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
         identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
-        identical(c39$nav_reload, "Stems|Assortments and prices|Simulator|Price tuning")
+        identical(c39$nav_reload, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help")
       t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
       rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
           sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",

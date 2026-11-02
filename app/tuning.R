@@ -21,12 +21,13 @@ TUNE_MIN_LOGS <- 20L
 
 tuning_page <- nav_panel(
   t_("tab_tuning"), value = "tuning",
-  card(card_body(uiOutput("tn_main"),
+  card(card_body(p(class = "page-intro", t_("intro_tuning")),
+                 uiOutput("tn_main"),
                  uiOutput("tn_results"))))
 
 #' @param sc The scenario_server() result (defs_a, pm_a, defs_b, pm_b, grade_opts,
 #'   replace_scenario).
-tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map) {
+tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map, stems_ready) {
   L <- function(id, ...) tr(id, ..., lang = lang())
   other <- function(side) if (side == "A") "B" else "A"
   defs_of <- function(side) if (side == "A") sc$defs_a() else sc$defs_b()
@@ -45,6 +46,7 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map) {
   })
 
   output$tn_main <- renderUI({
+    if (!isTRUE(stems_ready())) return(div(class = "note-muted", L("need_stems")))
     if (!is_hpr()) return(div(class = "note-muted", L("tn_need_hpr")))
     div(class = "tally-controls",
       radioButtons("tn_side", L("tn_scenario"), c("A", "B"), selected = isolate(side()), inline = TRUE),

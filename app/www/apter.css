@@ -324,3 +324,5 @@ details.apter-card { margin-bottom: 16px; }
 .pm-na { background-color: #F3F4F3 !important; }
 .tn-top { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 .tn-top .reactable { max-width: 100%; }
+
+.summary-sentence { color: #1F1F1F; margin: 0 0 12px; font-size: 0.95rem; }

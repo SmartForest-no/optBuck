@@ -101,10 +101,13 @@ prices_page <- nav_panel(
 
 # ---- Simulator -----------------------------------------------------------------------
 
+# The run button and the results show only when stems are ready (R4 D1; output
+# stems_ready); otherwise one message.
 simulator_sidebar <- sidebar(
   width = 320,
-  actionButton("run_btn", t_("btn_run"),
-               class = "btn-primary", width = "100%")
+  conditionalPanel("output.stems_ready",
+    actionButton("run_btn", t_("btn_run"),
+                 class = "btn-primary", width = "100%"))
 )
 
 # ---- Stems (restructure R1, 2026-10-30) -------------------------------------------------
@@ -138,7 +141,8 @@ stems_inputs <- tagList(
                   min = HOH_RANGE[1L], max = HOH_RANGE[2L], value = HOH_RANGE,
                   step = HOH_STEP_M, post = " m", ticks = FALSE, width = "100%")
     )$find("input")$addAttrs(`data-force-edges` = "true")$allTags(),
-    uiOutput("stratum_error")
+    uiOutput("stratum_error"),
+    actionButton("stems_use_nfi", t_("btn_use_selection"), class = "btn-primary btn-sm")
   ),
   conditionalPanel("input.tree_source == 'list'",
     apter_file_input("tl_upload", t_("lbl_tree_list"), accept = c(".csv", ".xlsx")),
@@ -160,10 +164,12 @@ stems_inputs <- tagList(
 stems_page <- nav_panel(
   t_("tab_stems"), value = "stems",
   div(class = "apter-page",
+    p(class = "page-intro", t_("intro_stems")),
     layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(5, 7)),
       apter_card(t_("hdr_trees"), stems_inputs),
       apter_card(t_("hdr_stem_summary"),
-        reactableOutput("stem_summary"),
+        uiOutput("stem_summary"),
+        plotOutput("fig_stem_dists", height = "300px"),
         uiOutput("stems_use_ui"))))
 )
 
@@ -173,13 +179,15 @@ simulator_page <- nav_panel(
     sidebar = simulator_sidebar,
     fillable = FALSE,
 
+    p(class = "page-intro", t_("intro_simulator")),
+    conditionalPanel("!output.stems_ready", div(class = "note-muted", t_("need_stems"))),
     div(id = "run_status_box", uiOutput("run_status")),
     uiOutput("height_banner"),
 
     # Four result tabs (results restructure, 2026-10-23): Summary, Products,
     # Trees, Logs. Comparison outputs sit in the tab of their content and
     # render only after a comparison; there is no comparison tab.
-    navset_card_underline(id = "result_tabs",
+    conditionalPanel("output.stems_ready", navset_card_underline(id = "result_tabs",
 
       nav_panel(t_("tab_summary"), value = "summary",
         uiOutput("stale_notice"),
@@ -201,9 +209,8 @@ simulator_page <- nav_panel(
       ),
 
       nav_panel(t_("tab_trees"), value = "trees",
-        # DBH and height distributions side by side, then NOK/m3 by DBH class
+        # NOK/m3 by DBH class
         # (lines; 2026-10-23).
-        plotOutput("fig_distributions", height = "300px"),
         plotOutput("fig_dbh_class", height = "auto"),
         div(class = "section-hdr", t_("hdr_trees")),
         paged_table_ui("tbl_trees"),
@@ -238,7 +245,7 @@ simulator_page <- nav_panel(
         downloadButton("dl_logs", t_("btn_dl_logs"), class = "btn-secondary btn-sm"),
         uiOutput("dl_hpr_ui", inline = TRUE)
       )
-    )
+    ))
   )
 )
 
@@ -263,6 +270,7 @@ ui <- page_navbar(
   prices_page,
   simulator_page,
   tuning_page,
+  help_page,
   nav_spacer(),
   nav_item(lang_switch()),
   nav_item(div(class = "navbar-logo-item", navbar_logo()))

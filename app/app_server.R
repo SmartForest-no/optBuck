@@ -246,26 +246,67 @@ server <- function(input, output, session) {
   })
 
 
+  # Stems are ready (R4 D1): the built-in source with its current selection
+  # always is; a tree list or .hpr stems once loaded and usable. Simulator and
+  # Price tuning show one message instead when they are not.
+  stems_ready <- reactive({
+    switch(or_default(input$tree_source, "nfi"),
+           list = isTRUE(tl_prepared()$ok),
+           hpr  = isTRUE(tryCatch(hs_check()$ok, error = function(e) FALSE)),
+           TRUE)
+  })
+  output$stems_ready <- reactive(stems_ready())
+  outputOptions(output, "stems_ready", suspendWhenHidden = FALSE)
+
   # ---- Stems tab: summary per species and "use the assortments of this file" ----
   # (restructure R1.2, R1.5). NFI trees are built at run time: no summary.
-  stem_summary_df <- reactive({
+  # Built-in source (R4 D2): "Use this selection" builds the tree list of the
+  # current settings (select_nfi_trees(), no bucking); any later change of a
+  # setting clears it again.
+  nfi_used <- reactiveVal(NULL)               # list(params, trees)
+  observeEvent(input$stems_use_nfi, {
+    req(length(input$hkl_group) > 0L, length(input$abonitet) > 0L)
+    p <- build_run_params(input)
+    nfi_used(list(params = p, trees = select_nfi_trees(trees_meta, p)$trees))
+  })
+  observe({
+    p <- tryCatch(build_run_params(input), error = function(e) NULL)   # depends on every setting
+    u <- isolate(nfi_used())
+    if (!is.null(u) && !identical(p, u$params)) nfi_used(NULL)
+  })
+  # The stems of the chosen source: list(trees = species_group, dbh_cm,
+  # height_m of the stems to be bucked, excluded = species of excluded stems).
+  stem_data <- reactive({
     src <- input$tree_source
     if (identical(src, "list")) {
       p <- tl_prepared(); req(p, isTRUE(p$ok)); tr <- p$trees
-      u <- tr[tr$in_range, , drop = FALSE]
-      return(stem_species_summary(u$species_group, u$dbh_cm, u$height_m, tr$species_group[!tr$in_range]))
+      return(list(trees = tr[tr$in_range, c("species_group", "dbh_cm", "height_m"), drop = FALSE],
+                  excluded = tr$species_group[!tr$in_range]))
     }
     if (identical(src, "hpr")) {
       st <- hs_stems(); req(isTRUE(st$ok))
       ps <- hpr_stem_profiles(st, hs_map()); req(!is.null(ps$tree_data))
-      td <- ps$tree_data
-      return(stem_species_summary(td$species_group, td$dbh_cm, td$height_m,
-                                  ps$species[!is.na(ps$reason)]))
+      return(list(trees = ps$tree_data[, c("species_group", "dbh_cm", "height_m"), drop = FALSE],
+                  excluded = ps$species[!is.na(ps$reason)]))
     }
-    NULL
+    u <- nfi_used(); req(u)
+    list(trees = u$trees[, c("species_group", "dbh_cm", "height_m"), drop = FALSE], excluded = character(0))
   })
-  output$stem_summary <- renderReactable({
-    d <- stem_summary_df(); req(d, nrow(d) > 0L); l <- lang()
+  stem_summary_df <- reactive({
+    d <- stem_data()
+    stem_species_summary(d$trees$species_group, d$trees$dbh_cm, d$trees$height_m, d$excluded)
+  })
+  # DBH and height per species (moved here from Simulator > Trees).
+  output$fig_stem_dists <- renderPlot(res = 96, {
+    d <- stem_data()$trees
+    apter_distribution_figure(d$dbh_cm, d$height_m, d$species_group,
+                              L(if (identical(input$tree_source, "hpr")) "col_measured_length_m" else "col_height_m"),
+                              lang = lang())
+  })
+  output$stem_summary <- renderUI({   # uiOutput: an empty result really clears the table
+    d <- tryCatch(stem_summary_df(), error = function(e) NULL)   # nothing to show: clear the table
+    if (is.null(d) || nrow(d) == 0L) return(NULL)
+    l <- lang()
     d$species <- vapply(d$species, function(x) L(paste0("sp_", x)), "")
     names(d) <- c(L("col_species"), L("col_stems"), L("col_mean_dbh"), L("col_mean_height"), L("col_excluded"))
     apter_reactable(d, digits = 1L, pagination = FALSE, lang = l)
@@ -322,7 +363,7 @@ server <- function(input, output, session) {
 
   # ---- Assortments and prices (server_scenarios.R) ---------------------------
   sc <- scenario_server(input, output, session, lang)
-  tuning_server(input, output, session, lang, sc, hs_stems, hs_map)
+  tuning_server(input, output, session, lang, sc, hs_stems, hs_map, stems_ready)
 
 
   # ---- Runs as background tasks (helpers_jobs.R) ---------------------------
@@ -565,16 +606,16 @@ server <- function(input, output, session) {
         ro_field(L("lbl_total_value"), value(r)),
         ro_field(L("lbl_nok_per_m3"), nok(r)),
         ro_field(L("lbl_price_volume"), pvol(r))))
-    # A comparison: the run once, then Scenario A (left) and B (right), each
-    # a 2 x 2 grid: value and commercial volume, then NOK/m3 and price volume.
-    scen <- function(title, x) div(class = "summary-scen",
-      div(class = "section-hdr", title),
-      div(class = "ro-row ro-grid-2",
-        ro_field(L("lbl_total_value"), value(x)),
-        ro_field(L("lbl_commercial_volume"), vol(x)),
-        ro_field(L("lbl_nok_per_m3"), nok(x)),
-        ro_field(L("lbl_price_volume"), pvol(x))))
+    # A comparison (R4 D4): one sentence, the A / B table, the run info as
+    # small tiles and the value by assortment type.
+    cmp <- summary_comparison(r, result_b())
+    dv <- cmp$diff[cmp$id == "value"]; pv <- cmp$pct[cmp$id == "value"]
+    sentence <- if (is.na(dv) || round(dv) == 0) L("sum_same")
+                else L(if (dv > 0) "sum_higher" else "sum_lower", fmt_int(abs(dv)),
+                       fmt_num(abs(or_default(pv, 0)), 1L, l, big = FALSE))
     tagList(
+      p(class = "summary-sentence", sentence),
+      reactableOutput("tbl_summary_cmp"),
       ro_field_row(
         run_time,
         plots,
@@ -585,8 +626,28 @@ server <- function(input, output, session) {
         # a short one-line label, the total is the Trees card (2026-10-23).
         ro_field(L(if (isTRUE(is_hpr())) "lbl_changed_stems" else "lbl_changed_patterns"),
                  fmt_int(sum(cmp_trees()$changed)))),
-      layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
-                     scen(L("scenario_x", nm("A")), r), scen(L("scenario_x", nm("B")), result_b())))
+      plotOutput("bar_value_by_type", height = "auto"))
+  })
+
+  # The comparison table: A, B, B - A and the difference in percent.
+  output$tbl_summary_cmp <- renderReactable({
+    req(compared()); l <- lang()
+    cmp <- summary_comparison(result(), result_b())
+    dig <- c(value = 0L, nok_per_m3 = 1L, commercial_volume = 2L, price_volume = 2L, sawlog_share = 1L)[cmp$id]
+    lab <- c(value = "lbl_total_value", nok_per_m3 = "lbl_nok_per_m3", commercial_volume = "lbl_commercial_volume",
+             price_volume = "lbl_price_volume", sawlog_share = "lbl_sawlog_share")[cmp$id]
+    f <- function(x) vapply(seq_along(x), function(i) fmt_num(x[i], dig[[i]], l), "")
+    df <- data.frame(vapply(unname(lab), L, "", USE.NAMES = FALSE), f(cmp$a), f(cmp$b), f(cmp$diff),
+                     fmt_num(cmp$pct, 1L, l, big = FALSE), stringsAsFactors = FALSE)
+    names(df) <- c(" ", L("sum_col_a"), L("sum_col_b"), L("sum_col_diff"), L("sum_col_diff_pct"))
+    apter_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
+  })
+  # Value by assortment type (Sawlog, Pulpwood, Other): A and B side by side.
+  output$bar_value_by_type <- renderPlot(res = 96, height = function() hbar_height(3L, ab = TRUE), {
+    req(compared())
+    x <- compare_by_type(result(), result_b())
+    apter_hbar_ab(x$value_a, x$value_b, tr_value(x$type, lang()), title = L("sum_fig_title"),
+                  xlab = L("sum_unit_value"), fmt = fmt_int, lang = lang(), names = c("A", "B"))
   })
 
 
@@ -834,12 +895,6 @@ server <- function(input, output, session) {
     apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b(), lang = lang(), names = c(nm("A"), nm("B")))
   })
 
-  # DBH and height distributions per species, side by side (the same trees
-  # in A and B, so shown once).
-  output$fig_distributions <- renderPlot(res = 96, {
-    req(has_result()); ts <- result()$tree_summary
-    apter_distribution_figure(ts$dbh_cm, ts$height_m, ts$species_group, height_lbl(), lang = lang())
-  })
 
 
   # ---- Logs (renamed from Selected logs) ------------------------------------------------------------
