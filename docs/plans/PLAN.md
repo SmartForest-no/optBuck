@@ -317,3 +317,117 @@ Four tabs (Stems, Assortments and prices, Simulator, Price tuning); stems and sc
 - **Buttons that name the other scenario ("Copy from B", "Make assortment equal to B") keep the letters A and B** (Lennart, 2026-10-30).
 
 Open questions: none. Blocked items: none.
+
+## Polish (in progress) — Phase R4 "practitioner polish", branch `polish`
+
+Rules, design and answers copied verbatim from Lennart's task (2026-11-02). After any context compaction re-read **this whole section** and `git log -15`. Short entries such as "as in the design" always mean the verbatim text below.
+
+### Progress checklist (tick + commit hash)
+- [ ] 0. This section (commit)
+- [ ] 1. D3 Sortiment og priser
+- [ ] 2. D1 Guidance (tabs, intros, empty states, Help tab)
+- [ ] 3. D2 Stammer tab
+- [ ] 4. D4 Simulator > Sammendrag
+- [ ] 5. D6 StanForD exports (+ audit 35)
+- [ ] 6. D5 Pristilpasning presentation
+- [ ] 7. D7 Tuning on all stem sources
+- [ ] 8. Full suite, manual check, screenshots, CLAUDE.md/PLAN.md, final report
+
+### Decisions made
+(what, choice, alternatives, why — appended after each step)
+- XSD files live in `C:/apter_private/stanford_xsd/` (`v31/`, `v33/`), never committed (no licence text in the page or the files). Audit 35 gives REVIEW if they are missing. `.pin` is written as version 3.3 (as real.pin); an `.hpr` export keeps the source file's version (file5: 3.1) and is validated against the matching XSD.
+
+### Open questions for Lennart
+(none yet)
+
+### Blocked items
+(none yet)
+
+### Rules (whole session)
+- Branch: `polish` (from main). One git command per call, no &&; `git -c safe.directory=*` if needed. Push only with `git push origin polish`, never to main. No merge.
+- Rscript: `C:\Users\leno\AppData\Local\Programs\R\R-4.5.1\bin\Rscript.exe`
+- Progress log: this section with a checklist of all steps (tick + commit hash), "Decisions made" (what, choice, alternatives, why), "Open questions for Lennart", "Blocked items". Update and commit after every step. After any context compaction, re-read this section and `git log -15` before continuing.
+- In Stage C, where something is still open, choose the simplest option that keeps the UI plain and existing behaviour, log it, continue.
+- Audits: affected audits after each step; after each group of steps 17, 28, 29-34 and `performance_check.R`; at the end the full suite (`Rscript scripts/run_audits.R`). Restore tracked audit outputs that differ only in timestamps, runtimes, temp names, folder names or CRLF (one git restore per file).
+- `performance_check.R` must match main. Bucking and tuning numbers must not change: audit 33's single-product invariant and `outputs/restructure/tuning_single_expected.rds` must still hold. Only the export files (D6) may change on purpose.
+- Never weaken or delete audit checks. Updating expected UI structure (tab names, moved elements, labels) is allowed when this design intends it; log each such change.
+- If a step fails after three genuine attempts: revert its uncommitted changes, log it under "Blocked items", continue with the next independent step. Stop the whole session only if `performance_check.R` cannot match main, a private file would be modified, or the repo would lose data.
+- Private files (`C:/apter_private/`: file1..file5 as in audit 33, hand.pin, real.pin) are read in place, never copied or committed.
+- UI plain: no notes beyond the texts specified here, no new colours outside the app's existing theme tokens. Every new text in translations.csv in English and Norwegian Bokmål; audit 28 must pass.
+- Headless Chrome (audits 17/29): existing patterns (shoot(), browser_checks in tryCatch/finally, own Chrome profile). Never kill Chrome by name; retry a flaky check once.
+
+### DESIGN (decided; implement in Stage C)
+**D1 Guidance**
+- Numbered tab labels: "1 Stammer", "2 Sortiment og priser", "3 Simulator", "4 Pristilpasning" (EN "1 Stems", "2 Assortments and prices", "3 Simulator", "4 Price tuning"). A last unnumbered tab "Hjelp"/"Help".
+- One intro sentence at the top of each tab, in the same style as the existing one on Sortiment og priser:
+  - Stammer: NO "Velg stammene optBuck skal kappe: et utvalg fra Landsskogtakseringen, en egen treliste eller stammer fra hogstmaskinens produksjonsfiler (.hpr)." EN "Choose the stems optBuck will buck: a selection from the National Forest Inventory, your own tree list, or stems from harvester production files (.hpr)."
+  - Simulator: NO "optBuck finner den mest verdifulle kappingen av hver stamme med prisene i scenario A og B, og sammenligner resultatene." EN "optBuck finds the most valuable bucking of each stem with the prices in scenario A and B, and compares the results."
+  - Pristilpasning: NO "Juster prisene i et scenario slik at kappingen gir lengdefordelingen sagbruket ønsker (ønsket fordeling), med minst mulig verditap." EN "Adjust the prices in a scenario so that bucking gives the length distribution the sawmill wants (target distribution), with the smallest possible loss of value."
+- Empty states: Simulator and Pristilpasning show NO "Velg stammer under 1 Stammer først." / EN "Choose stems under 1 Stems first." when no stems are ready (instead of failing or showing empty panels). (Answer 1: the built-in source counts as ready with its current selection; the empty state applies only to .hpr and tree-list sources with nothing loaded.)
+- Help tab, plain text in three sections. (1) "Slik bruker du optBuck": one or two sentences per numbered tab. (2) "Begreper", using these definitions (translate faithfully, do not add claims):
+  - Scenario A og B: two sets of assortments, prices and bucking rules that optBuck compares on the same stems.
+  - Ønsket fordeling: the share of logs (or volume) the sawmill wants in each length class within each diameter class; stored per assortment in .pin files.
+  - Fordelingsgrad: how well the length mix in each diameter class matches the target, 100 % = perfect match; weighted over diameter classes by number of logs (or volume).
+  - Pristilpasning: prices are adjusted step by step until bucking for maximum value gives a length mix close to the target.
+  - Kostnad ved styring: the loss in value of the whole harvest, at the original prices, when bucking with the tuned prices instead of the original ones.
+  - .hpr: harvester production file with stem profiles, logs and the products used. .pin: product instruction file with assortments, price matrices and target distributions, sent to the harvester.
+  - For the other terms used in the app (salgbart volum, oppgjørsvolum, stammekvaliteter, sortiment, prismatrise) draft definitions from how the code computes them, and list them under "Open questions for Lennart" for review.
+  - (3) "Filformater": accepted uploads per tab.
+
+**D2 Stammer tab**
+- Built-in source: a button NO "Bruk dette utvalget" / EN "Use this selection" below the settings. On click, build the tree list (no bucking) and show the right-hand panel. Changing any setting afterwards clears the panel until the button is clicked again. The Simulator run keeps working as now.
+- Right-hand panel for every source: the existing species table plus two density plots, diameter at breast height (cm) and tree height (m), one line per species. Move them from Simulator > Trær and remove them there; if that tab is then empty, remove it (Stage A: the tab keeps the DBH-class figure, trees table and stem diagram, so it stays).
+- Keep the "Bruk sortimentene fra denne filen i scenario A/B" buttons.
+
+**D3 Sortiment og priser**
+- Upload label: NO "Last opp sortiment og priser: scenario (.xlsx), prisfil (.xlsx eller .csv) eller hogstmaskinfil (.hpr eller .pin)" / EN "Upload assortments and prices: scenario (.xlsx), price file (.xlsx or .csv) or harvester file (.hpr or .pin)".
+- Remove the scenario name inputs and every use of the names (results, legends, file names, xlsx metadata). Uploading an xlsx that still has a name sheet must work and ignore it.
+- Rediger > Fast pris: "Startpris (kr/m³)" becomes NO "Pris (kr/m³)" / EN "Price (NOK/m³)".
+
+**D4 Simulator > Sammendrag**
+- Top: one sentence, NO "Scenario B gir {kr} kr ({p} %) høyere|lavere verdi enn scenario A for disse stammene." (or "samme verdi som"), EN equivalent.
+- A comparison table: rows Totalverdi (kr), Kr per m³, Salgbart volum (m³fub), Oppgjørsvolum (m³), and sawlog share (%) (answer 2: sawlog commercial volume / total commercial volume, m³fub); columns A, B, Differanse (B - A), Differanse (%).
+- Run info (kjøretid, prøveflater, trær, trær med stokker, endrede apteringsmønstre) as one small line or small tiles below the table.
+- One small bar chart, value per assortment type A vs B side by side in theme colours.
+
+**D5 Pristilpasning (presentation only; numbers unchanged)**
+- List all sawlog assortments of the chosen scenario. Tunable ones as checkboxes (checked by default). Non-tunable ones greyed and disabled, with the reason in grey after the name: NO "ingen ønsket fordeling (legg inn under 2 Sortiment og priser)" / "bare én lengdeklasse" / "bare én diameterklasse" (EN equivalents). Pulpwood is not listed.
+- Results, top to bottom:
+  1. NO "Prisene ble tilpasset på {n} av {N} stammer; tallene under gjelder alle {N} stammene." (EN equivalent).
+  2. Table NO "Treff per sortiment": one row per assortment: Sortiment | Stokker | Fordelingsgrad (%) før | etter | Volum (m³) før | etter | Status. Status NO "Tilpasset" or "Ikke tilpasset: bare {k} stokker; minst 20 stokker per diameterklasse trengs" (when no diameter class had at least 20 logs). Column groups NO "Før tilpasning" / "Etter tilpasning".
+  3. Line under it: NO "Fordelingsgrad: hvor godt lengdefordelingen i hver diameterklasse treffer ønsket fordeling (100 % = perfekt treff)."
+  4. Table NO "Kostnad for hele hogsten": rows Verdi av alle stammer (kr), Sagtømmervolum (m³); columns Før, Etter, Endring (kr and %). Caption NO "Begge verdiene er regnet med de opprinnelige prisene. Endringen er verditapet ved å kappe mot ønsket fordeling i stedet for høyest mulig verdi."
+  5. Figure below the tables: title NO "Fordelingsgrad per iterasjon", about 700 x 320 px, one coloured line per tuned assortment in theme colours, best iteration marked, legend with display names. Caption NO "Prisene justeres trinn for trinn. Kurvene viser hvor godt hver iterasjon treffer ønsket fordeling; den beste iterasjonen (markert) brukes." (Answer 5: colours from the existing theme tokens in app/www/apter.css, first line in the primary green; with fewer tokens than assortments the same colour with a different line type; no new colour values.)
+  6. Matrices as now, with fixes: rows are diameter classes, so the row header is NO "Diameterklasse (mm)" and a column group label NO "Lengdeklasse (cm)" sits above the length columns (currently "Diameterklasse (mm)" wrongly sits above the length columns); column "FG" becomes NO "Fordelingsgrad (%)"; diameter classes without logs show "–" instead of 0 and an empty fordelingsgrad; in the price change view unchanged cells show "–" with the caption NO "–: ikke justert (færre enn 20 stokker i diameterklassen, eller ingen ønsket fordeling)."
+  7. Use display names everywhere, as in the checkbox list ("Gran – REDACTED25"), never internal ids like "Spruce REDACTED25".
+
+**D6 StanForD exports (.pin and .hpr)**
+- Every export must validate against the XSD (`C:/apter_private/stanford_xsd/`). Fix every violation; loop until zero errors (libxml2 reports one error per sequence).
+- For products imported from a file, keep the source's own elements and values (ProductUserID, SpeciesGroupUserID, ModificationDate, ManualFreeBuck, TopLogFreeBuck, ProductCondition, LimitationDefinition, CuttingWindowDefinition and any other element Apter does not edit); store what is needed as hidden data at import, following the Distribution pattern. Write only what Apter changes (prices, targets, edited classes). Products created in Apter get schema-valid neutral values (log the choices).
+- Set ModificationDate to the export time for products whose prices or targets differ from the imported ones.
+- Write the original file diameter classes (FileDiameterClass_mm) when present; remove that known limitation from PLAN.md.
+- Audit checks: exported .pin and .hpr validate against the XSD (REVIEW if the XSD is missing); ProductUserID and SpeciesGroupUserID survive import -> export; file5 import -> .pin export -> import gives identical prices, targets and classes.
+- Answer 3: neutral values for Apter-created products provided every export validates. SpeciesGroupUserID for a product created in Apter = the SpeciesGroupUserID of an imported product of the same species in that scenario if one exists, otherwise "Spruce"/"Pine". ProductUserID for such products: built from the name, ASCII only ([A-Za-z0-9_-], Norwegian letters transliterated), unique within the file. ProductCondition and LimitationDefinition: schema-valid neutral values, logged.
+- Extra: ProductUserID unique within each exported file (the XSD has a unique constraint): keep the original on the first, append "_2", "_3" to the others; log; audit 35 check.
+- Extra: ModificationDate: at import store a hidden fingerprint per product of its imported prices and targets (hash of the price and Distribution cells). At export a product whose current fingerprint differs, or that has none, gets the export time; others keep their imported ModificationDate. Audit 35 check (unchanged product keeps its date; product with one edited price gets a new date).
+- Extra: hidden source elements must also survive copy assortment, "Gjør sortimentet likt A/B", replace_scenario() and "Bruk tilpassede priser i scenario B". Audit 35.
+- Extra (answer, A5 edge case): price edits behave like target edits. Editing a price cell sets the price for every whole-cm row with the same FileDiameterClass_mm (only that row when it is NA). Bulk edits are unaffected. Audit check. Default assortments have no file classes, so performance_check must still match main.
+
+**D7 Tuning on all stem sources** (feasible per Stage A): allow price tuning with built-in and tree-list stems using the same functions; the D1 empty state replaces the ".hpr only" message. No cache (answer 4): accept the ~6 s NFI preparation.
+
+Order in Stage C: D3 -> D1 -> D2 -> D4 -> D6 -> D5 -> D7, one commit per finished step, push the branch after each group.
+
+### End of Stage C
+1. Full suite, all PASS (REVIEW only for skipped private or XSD checks, explained).
+2. Manual check on file5: tune 140 SCA alone with its file target, FG on all stems 82.9 -> 94.1, value -0.17 % (unchanged). If D7 is done: one tuning run with built-in stems (the A1 selection: Gran og furu, HKL 5, bonitet 11/14/17, fylke 11 Rogaland, 0-1000 m; 21 plots, 18 spruce, 131 pine) on default assortments with an Even target on the main spruce sawlog assortment; report numbers and runtime.
+3. Screenshots in English and Norwegian of every tab, the Stems panel for built-in and .hpr stems, the Simulator summary, the Pristilpasning results with each matrix view, and the Help tab, in `outputs/app_smoke/review/polish/`. List them in the report.
+4. Update CLAUDE.md and PLAN.md (keep Decisions made, Open questions, Blocked items for review). Commit, push branch, no merge.
+5. Final report (short, tables): per design item what was done with commit hashes; validation results; decisions; open questions; blocked items; audits (also every audit expectation changed and why); manual check; screenshots.
+
+### Stage A findings (summary)
+- NFI tree list for the A1 selection: 0.08 s read + 0.19 s select; panel density plots are `fig_distributions` (`app/app_server.R:843`, `apter_distribution_figure()` in `app/helpers_ui.R:479`); Trær keeps `fig_dbh_class`, `tbl_trees`, `stem_compare`.
+- Tuning works on any job (`prepare_sampled_job`/`prepare_tree_list_job`/`prepare_hpr_stems_job`).
+- XSD validation before changes: file5 valid (3.1), real.pin valid (3.3), hand.pin 12 errors (hand-made, no action); our .pin 25 errors (areaUnit/volumeUnit/weightUnit, header ApplicationVersionCreated, ProductGroupName before ModificationDate); our .hpr 23 errors (ProductInfo/ProductGroupName before ModificationDate).
+- Import keeps only `HprProductKey`; ProductUserID/SpeciesGroupUserID are lost (pin writes `200_Massevirke`, file5 has `200_Massevirke_FURU`; species `NO1_FURU`, `NO2_Gran`, ...).
+- Export builds diameter classes from whole cm x 10 (`R/helpers_hpr_export.R:156`); `FileDiameterClass_mm` survives `pm_minimal()`.
+- Summary numbers all available (`per_m3_summary` Total, `selected_logs_all`, `assortment_summary()`, `compare_by_type()`).
