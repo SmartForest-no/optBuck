@@ -404,7 +404,7 @@ pm_rename_key <- function(pm, from, to) {
 SCENARIO_META_SHEETS <- c("assortments", "scenario", "file_classes")
 .is_target_sheet <- function(x) grepl("^target_[0-9]+$", x)
 
-scenario_export <- function(defs, pm, path, name = NULL) {
+scenario_export <- function(defs, pm, path) {
   # The target distribution (restructure R2.5): the four fields as columns of
   # the assortment table (only when some assortment has them), one sheet
   # target_<n> per assortment with a target (the price sheet's layout; the
@@ -414,15 +414,13 @@ scenario_export <- function(defs, pm, path, name = NULL) {
   cols <- if (has_fields) ASSORTMENT_TABLE_COLS else setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS)
   sheets <- c(list(assortments = defs[, cols, drop = FALSE]),
               .pm_wide_sheets(pm), .pm_target_sheets(pm), .pm_file_class_sheet(pm))
-  # The scenario's display name (restructure R1.8), when it has one.
-  if (!is.null(name)) sheets <- c(sheets, list(scenario = data.frame(Name = as.character(name))))
   writexl::write_xlsx(sheets, path)
   invisible(path)
 }
 
 #' Read a scenario_export() xlsx (assortments plus prices) and check it.
 #'
-#' @return list(ok, defs, pm, errors, warnings, name (NULL without a 'scenario' sheet)).
+#' @return list(ok, defs, pm, errors, warnings).
 scenario_import <- function(path) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
@@ -444,11 +442,8 @@ scenario_import <- function(path) {
   v <- check_price_set(defs, up$long)
   if (!v$ok) return(fail(v$errors))
   v$pm <- .pm_attach_hidden(v$pm, path, sheets, keys[defs$PriceType == "matrix"])
-  nm <- if ("scenario" %in% sheets) tryCatch({
-    x <- readxl::read_excel(path, sheet = "scenario", col_types = "text")
-    if ("Name" %in% names(x) && nrow(x)) x$Name[1L]
-  }, error = function(e) NULL)
-  list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings, name = nm)
+  # An older file may have a 'scenario' sheet with a name; it is ignored.
+  list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings)
 }
 
 #' Put the target (sheets target_<n>) and the file diameter classes (sheet

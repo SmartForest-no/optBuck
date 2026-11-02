@@ -420,7 +420,7 @@ server <- function(input, output, session) {
       hx <- list(sources = data.frame(path = fl$path, name = fl$name, stringsAsFactors = FALSE),
                  species_by_name = sbn, defs = list(A = d, B = if (compare) b$defs))
     }
-    run_task$invoke(spec, list(ab_names = list(A = sc$name("A"), B = sc$name("B")), hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
+    run_task$invoke(spec, list(hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
                                keys = list(A = assortment_table_keys(d),
                                            B = if (compare) assortment_table_keys(b$defs)),
                                state = sc$pm_state(), t_click = t_click))
@@ -430,12 +430,8 @@ server <- function(input, output, session) {
     if (run_rejected()) return(NULL)
     run_task$result()
   })
-  # The scenarios' names as they were when the run started (restructure R1.8);
-  # A and B before a run and for results without them.
-  nm <- function(side) {
-    r <- tryCatch(result(), error = function(e) NULL)
-    or_default(r$ab_names[[side]], side)
-  }
+  # Scenarios are called A and B (names were removed in R4).
+  nm <- function(side) side
   nm_diff <- function() paste(nm("B"), "−", nm("A"))
   has_result <- reactive(input$run_btn > 0L && !task_busy() && !is.null(result()))
   compared   <- reactive(has_result() && !is.null(result()$scenario))
@@ -881,7 +877,7 @@ server <- function(input, output, session) {
             downloadButton("dl_hpr_b", L("btn_dl_hpr_ab", nm("B")), class = "btn-secondary btn-sm"))
   })
   hpr_download <- function(side) downloadHandler(
-    filename = function() L("file_hpr", scenario_file_tag(nm(side), side)),
+    filename = function() L("file_hpr", side),
     content  = function(file) {
       r <- result(); hx <- r$hpr_export
       rs <- if (side == "A") r else result_b()

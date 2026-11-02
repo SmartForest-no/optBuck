@@ -546,7 +546,7 @@ browser_checks <- c(
   "Check 42: Import .hpr/.pin: a .pin imported into Scenario A through the upload field (title says .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
   "Check 43: Price tuning tab: message without .hpr stems; an Even target set in the target view, the assortment list, a tuning with two iterations gives the key-figure table, the small figure and the four matrix views; Use tuned prices in the other scenario copies them and keeps the results; a change in the tuned scenario clears them",
   "Check 44: Stems and scenarios are independent: importing into a scenario leaves the stems untouched and loading stems leaves the scenarios untouched; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
-  "Check 45: Scenario names: shown in the card title, Summary and Products headers and in the scenario xlsx",
+  "Check 45: No scenario names: no name fields, titles and headers say Scenario A/B, the scenario xlsx has no name",
   "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear")
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -1674,7 +1674,6 @@ if (!browser_ok) {
     # compares A and B (B was imported) on the 5 stems, without Plot columns.
     c31 <- list()
     e31 <- try_drv({
-      app$set_inputs(scen_name_a = "A", scen_name_b = "B", wait_ = FALSE)   # check 24 loaded A's xlsx, name included, into B
       c31$src_before <- app$get_value(input = "tree_source")
       app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE)
@@ -2025,33 +2024,28 @@ if (!browser_ok) {
                 identical(c44$a2, c44$a1) && identical(c44$b2, c44$b1), substr(or_default(c44$summary, ""), 1, 60),
                 or_default(c44$buttons, ""), or_default(c44$title, ""), c44$file_inputs, c44$apply_enabled,
                 identical(c44$a3, c44$a2) && identical(c44$b3, c44$b2), c44$nerr, err_txt(e44)))
-    # 45. Scenario names (restructure R1.8): the card title, the Summary and
-    # Products headers and the scenario xlsx carry them; the run keeps the
-    # names it started with.
+    # 45. No scenario names (R4 D3): no name fields; the card title, Summary
+    # and Products headers say A and B; the scenario xlsx has no name.
     c45 <- list()
     e45 <- try_drv({
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
-      app$set_inputs(scen_name_a = "H\u00f8st", scen_name_b = "V\u00e5r", wait_ = FALSE); app$wait_for_idle()
+      c45$fields <- js(app, "document.querySelectorAll('#scen_name_a, #scen_name_b').length")
       c45$title <- txt(app, "#scen_title_a")
       run(app)
       c45$summary <- txt(app, "#summary_cards")
       app$set_inputs(result_tabs = "products", wait_ = FALSE); app$wait_for_idle()
       c45$products <- headers_of(app, "tbl_products")
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
-      f45 <- app$get_download("dl_scen_a"); c45$xlsx_name <- scenario_import(f45)$name
-      app$set_inputs(scen_name_a = "", wait_ = FALSE); app$wait_for_idle()
-      c45$title_empty <- txt(app, "#scen_title_a")
+      f45 <- app$get_download("dl_scen_a"); c45$xlsx_sheets <- readxl::excel_sheets(f45)
       c45$nerr <- n_err_notif(app)
     })
-    ok45 <- !nzchar(e45) && grepl("Scenario H\u00f8st", c45$title, fixed = TRUE) &&
-      grepl("Scenario H\u00f8st", c45$summary, fixed = TRUE) && grepl("Scenario V\u00e5r", c45$summary, fixed = TRUE) &&
-      grepl("H\u00f8st", c45$products, fixed = TRUE) && grepl("V\u00e5r", c45$products, fixed = TRUE) &&
-      identical(c45$xlsx_name, "H\u00f8st") && grepl("Scenario A", c45$title_empty, fixed = TRUE) &&
-      identical(c45$nerr, 0L)
+    ok45 <- !nzchar(e45) && identical(as.integer(c45$fields), 0L) && grepl("Scenario A", c45$title, fixed = TRUE) &&
+      grepl("Scenario A", c45$summary, fixed = TRUE) && grepl("Scenario B", c45$summary, fixed = TRUE) &&
+      !"scenario" %in% c45$xlsx_sheets && identical(c45$nerr, 0L)
     rec(grep("^Check 45:", browser_checks, value = TRUE), if (ok45) PASS else FAIL,
-        sprintf("title '%s' | Summary '%s' | Products columns '%s' | xlsx name '%s' | empty name falls back: '%s' | error notifications %s%s",
-                trimws(c45$title), substr(gsub("\\s+", " ", or_default(c45$summary, "")), 1, 60),
-                substr(or_default(c45$products, ""), 1, 90), c45$xlsx_name, trimws(c45$title_empty), c45$nerr, err_txt(e45)))
+        sprintf("name fields %s | title '%s' | Summary '%s' | Products columns '%s' | xlsx sheets %s | error notifications %s%s",
+                c45$fields, trimws(c45$title), substr(gsub("\s+", " ", or_default(c45$summary, "")), 1, 60),
+                substr(or_default(c45$products, ""), 1, 90), paste(c45$xlsx_sheets, collapse = "/"), c45$nerr, err_txt(e45)))
 
     # 46. The target distribution view (restructure R2): the tuning fixture's
     # spruce 140 SCA in Scenario A (check 43).

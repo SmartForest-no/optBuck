@@ -28,7 +28,6 @@ scenario_column <- function(s) {
   dl  <- function(id, label) downloadButton(id, label, class = "btn-secondary btn-sm")
   state <- function(cond) sprintf("output.asm_state_%s %s", s, cond)
   apter_card(uiOutput(paste0("scen_title_", s), inline = TRUE),
-    textInput(paste0("scen_name_", s), t_("lbl_scenario_name"), value = S, width = "220px"),
     div(class = "section-hdr", t_("hdr_assortments")),
     reactableOutput(paste0("tbl_asm_", s)),
 

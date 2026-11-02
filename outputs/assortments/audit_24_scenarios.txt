@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: scenarios A and B (assortments and prices)
-  Run: 2026-10-30 13:30:57.392094
+  Run: 2026-11-02 11:54:21.595545
 ============================================================= 
 
 --- 01. Derived fields ---
@@ -36,8 +36,8 @@
 --- 11. Price type per assortment and scenario ---
   [PASS  ] Check 11: Price type per assortment and scenario; copy_prices() copies only alike-priced ones | matrix and flat in one scenario valid: TRUE | copied: spruce_sawlog,pine_sawlog,spruce_waste,pine_waste | skipped: spruce_pulpwood,spruce_poles | A after copying B's pulpwood: matrix, valid TRUE
 
---- 12. Scenario names (restructure R1.8) ---
-  [PASS  ] Check 12: scenario_label() trims, caps at 20 characters and falls back to A/B; scenario_file_tag() keeps [A-Za-z0-9_-]; the name round-trips through the scenario xlsx (none without it) | label TRUE | file tag TRUE | xlsx round trip TRUE (ok TRUE, name FALSE, no-name TRUE, defs TRUE, pm TRUE)
+--- 12. No scenario names (R4 D3) ---
+  [PASS  ] Check 12: the scenario xlsx has no name sheet; an older xlsx with a name sheet imports the same and the name is ignored; scenario_label()/scenario_file_tag() are gone | no scenario sheet TRUE | old file ok TRUE | defs TRUE | pm TRUE
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

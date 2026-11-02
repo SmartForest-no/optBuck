@@ -340,21 +340,22 @@ rec("Check 11: Price type per assortment and scenario; copy_prices() copies only
 
 
 # ==============================================================================
-section("12. Scenario names (restructure R1.8)")
-ok12a <- identical(scenario_label("  Sag  ", "A"), "Sag") && identical(scenario_label("", "B"), "B") &&
-  identical(scenario_label(NULL, "A"), "A") && identical(scenario_label(NA, "B"), "B") &&
-  nchar(scenario_label(strrep("x", 50), "A")) == 20L
-ok12b <- identical(scenario_file_tag("Høst / vår 1", "A"), "Host_var_1") &&
-  identical(scenario_file_tag("***", "B"), "B") && identical(scenario_file_tag("", "A"), "A")
+section("12. No scenario names (R4 D3)")
+# Names were removed: the scenario xlsx carries no 'scenario' sheet, and an older
+# file that still has one (with a Name) imports exactly the same, ignoring it.
 tmp12 <- tempfile(fileext = ".xlsx")
-scenario_export(defs, pm0, tmp12, name = "Høst 2026")
+scenario_export(defs, pm0, tmp12)
 r12 <- scenario_import(tmp12)
-tmp12b <- tempfile(fileext = ".xlsx"); scenario_export(defs, pm0, tmp12b)
-r12b <- scenario_import(tmp12b)
-ok12c <- isTRUE(r12$ok) && identical(r12$name, "Høst 2026") && isTRUE(r12b$ok) && is.null(r12b$name) &&
-  identical(r12$defs, r12b$defs) && identical(r12$pm, r12b$pm)
-rec("Check 12: scenario_label() trims, caps at 20 characters and falls back to A/B; scenario_file_tag() keeps [A-Za-z0-9_-]; the name round-trips through the scenario xlsx (none without it)",
-    ok(ok12a && ok12b && ok12c), sprintf("label %s | file tag %s | xlsx round trip %s (ok %s, name %s, no-name %s, defs %s, pm %s)", ok12a, ok12b, ok12c, isTRUE(r12$ok), identical(r12$name, "H00f8st 2026"), is.null(r12b$name), identical(r12$defs, r12b$defs), identical(r12$pm, r12b$pm)))
+sheets12 <- readxl::excel_sheets(tmp12)
+old12 <- tempfile(fileext = ".xlsx")
+sh <- lapply(setNames(sheets12, sheets12), function(n) as.data.frame(readxl::read_excel(tmp12, sheet = n, col_types = "text")))
+writexl::write_xlsx(c(sh, list(scenario = data.frame(Name = "Høst 2026"))), old12)
+r12b <- scenario_import(old12)
+ok12 <- isTRUE(r12$ok) && !"scenario" %in% sheets12 && is.null(r12$name) && isTRUE(r12b$ok) && is.null(r12b$name) &&
+  identical(r12$defs, r12b$defs) && identical(r12$pm, r12b$pm) &&
+  !exists("scenario_label", mode = "function") && !exists("scenario_file_tag", mode = "function")
+rec("Check 12: the scenario xlsx has no name sheet; an older xlsx with a name sheet imports the same and the name is ignored; scenario_label()/scenario_file_tag() are gone",
+    ok(ok12), sprintf("no scenario sheet %s | old file ok %s | defs %s | pm %s", !"scenario" %in% sheets12, isTRUE(r12b$ok), identical(r12$defs, r12b$defs), identical(r12$pm, r12b$pm)))
 
 
 # ==============================================================================

@@ -32,8 +32,8 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
   defs   <- function(side) sc[[side]]$defs()
   prices <- function(side) sc[[side]]$pm()
   T_     <- i18n_text
-  # The scenario's display name (restructure R1.8): its text field, A or B if empty.
-  scen_name <- function(side) scenario_label(input[[paste0("scen_name_", low(side))]], side)
+  # Scenarios are called A and B (names were removed in R4).
+  scen_name <- function(side) side
 
   pm_tick <- reactiveVal(0L)                      # re-render the grids
   redraw  <- function() pm_tick(isolate(pm_tick()) + 1L)
@@ -494,11 +494,11 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     side <- side; s <- low(side)
     output[[paste0("scen_title_", s)]] <- renderUI(L("scenario_x", scen_name(side)))
     output[[paste0("dl_scen_", s)]] <- downloadHandler(
-      filename = function() L("file_scenario", scenario_file_tag(scen_name(side), side)),
-      content  = function(file) scenario_export(defs(side), prices(side), file, name = scen_name(side)))
+      filename = function() L("file_scenario", side),
+      content  = function(file) scenario_export(defs(side), prices(side), file))
     # The scenario as a StanForD 2010 .pin (Phase 5b, R/helpers_pin_export.R).
     output[[paste0("dl_pin_", s)]] <- downloadHandler(
-      filename = function() L("file_pin", scenario_file_tag(scen_name(side), side)),
+      filename = function() L("file_pin", side),
       content  = function(file) {
         x <- tryCatch(pin_export_scenario(defs(side), prices(side), file),
                       error = function(e) list(ok = FALSE, errors = conditionMessage(e)))
@@ -528,7 +528,6 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       if (!isTRUE(res$ok))
         return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
       sc[[side]]$defs(res$defs); sc[[side]]$pm(res$pm); redraw()
-      if (!is.null(res$name)) updateTextInput(session, paste0("scen_name_", s), value = res$name)
       say(side, "ok", T_("msg_loaded_scenario", f$name, nrow(res$defs)), res$warnings)
     })
   })
@@ -1031,15 +1030,15 @@ function(instance, td, row, col, prop, value, cellProperties) {
     # Download the selected assortment's prices.
     sel_prices <- function() { pm <- pm_minimal(prices(side)); pm[pm$ProductKey == selected(), , drop = FALSE] }
     output[[paste0("dl_", s, "_wide")]] <- downloadHandler(
-      filename = function() L("file_prices_xlsx", scenario_file_tag(scen_name(side), side), selected()),
+      filename = function() L("file_prices_xlsx", side, selected()),
       content = function(file) pm_template_wide(sel_prices(), file))
     output[[paste0("dl_", s, "_long")]] <- downloadHandler(
-      filename = function() L("file_prices_csv", scenario_file_tag(scen_name(side), side), selected()),
+      filename = function() L("file_prices_csv", side, selected()),
       content = function(file) pm_export(sel_prices(), file))
   })
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
        differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
-       replace_scenario = replace_scenario, name = scen_name,
+       replace_scenario = replace_scenario,
        open_hpr_import = open_hpr_import)  # opens the import dialog for a file (Stems tab)
 }
