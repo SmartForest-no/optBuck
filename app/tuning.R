@@ -168,6 +168,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       fg2 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_t, 0)), v2 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_t, 0)),
       st = vapply(r$ids, function(k) if (k %in% r$used) L("tn_status_ok") else L("tn_status_few", fmt_num(r$n_logs[[k]], 0L, l)), ""),
       stringsAsFactors = FALSE)
+    rownames(df) <- NULL   # the named vapply() results would show as a row-name column
     cols <- list(a = reactable::colDef(name = L("col_assortment"), width = 260),
                  n = reactable::colDef(name = L("col_logs"), width = 90, align = "right"),
                  fg1 = reactable::colDef(name = L("tn_col_fg"), width = 120, align = "right"),

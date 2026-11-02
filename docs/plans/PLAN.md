@@ -331,7 +331,7 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 - [x] 5. D6 StanForD exports (+ audit 35) (commit "D5, D6, D7")
 - [x] 6. D5 Pristilpasning presentation (same commit)
 - [x] 7. D7 Tuning on all stem sources (same commit)
-- [ ] 8. Full suite, manual check, screenshots, CLAUDE.md/PLAN.md, final report
+- [x] 8. Full suite (23 PASS, 0 REVIEW, 0 FAIL), manual checks (`scripts/restructure_manual_check.R`: 140 SCA alone 82.9 -> 94.1, -0.17 %; `scripts/polish_manual_check.R`), screenshots (`scripts/polish_screenshots.R`, outputs/app_smoke/review/polish/), CLAUDE.md, PLAN.md
 
 ### Decisions made
 (what, choice, alternatives, why — appended after each step)
@@ -353,7 +353,8 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 - D6: the schema's Price/Distribution are integers, so a price such as 430.5 is exported as 431 (and shares rounded to whole percent); importing an export back gives the rounded values.
 
 ### Blocked items
-(none yet)
+- Built-in tuning (D7), A1 selection (21 plots, 18 spruce, 131 pine): the main spruce sawlog has too few logs to tune ("For få stokker"); pine sawlog with an Even target tunes (FG 50.6 -> 54.4, value -0.47 %, 22 s); default stratum spruce sawlog 44.7 -> 79.5, value -3.56 %, 93 s (sample 1,211 of 12,427 stems).
+- D1/D2/D4 were committed together (14150ca), D5/D6/D7 together (22e3bbd): their changes share files (translations.csv, tuning.R, audit 17).
 
 ### Rules (whole session)
 - Branch: `polish` (from main). One git command per call, no &&; `git -c safe.directory=*` if needed. Push only with `git push origin polish`, never to main. No merge.
