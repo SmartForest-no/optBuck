@@ -128,7 +128,7 @@ ro_field_row <- function(...) div(class = "ro-row", ...)
 apter_reactable <- function(df, digits = NULL, page_size = 10L,
                             details = NULL, columns = NULL, row_class = NULL,
                             selection = NULL, sortable = TRUE, pagination = TRUE,
-                            on_click = NULL, lang = "en") {
+                            on_click = NULL, lang = "en", column_groups = NULL) {
   df <- as.data.frame(df, stringsAsFactors = FALSE)
   if (!is.null(digits)) {
     num <- vapply(df, function(x) is.double(x), logical(1))
@@ -142,6 +142,7 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
     class           = if (!pagination || nrow(df) <= page_size) "apter-single-page",
     details         = details,
     columns         = columns,
+    columnGroups    = column_groups,
     rowClass        = row_class,
     selection       = selection,
     onClick         = if (!is.null(on_click)) on_click else if (!is.null(selection)) "select",

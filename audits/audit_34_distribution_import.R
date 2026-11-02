@@ -195,6 +195,10 @@ rt_same <- function(a, b) {
   res <- vapply(which(as.character(a$defs$Type) != "waste"), function(i) {
     j <- match(ka[i], kb); if (is.na(j)) return(FALSE)
     fa <- fields_of(a$defs, i); fb <- fields_of(b$defs, j)
+    # R4 D6: the schema requires a LengthDistributionDefinition, so a product with none stored is written
+    # with the neutral one (not allowed, Number of logs, 0, within product) and reads back as that.
+    if (all(is.na(unlist(fa)))) fa <- list(DistributionAllowed = FALSE, DistributionCategory = "Number of logs",
+                                           DistributionWithinProduct = TRUE, MAXDeviation = 0)
     va <- a$pm[a$pm$ProductKey == ka[i] & !is.na(a$pm$LengthClass_dm), , drop = FALSE]
     vb <- b$pm[b$pm$ProductKey == kb[j] & !is.na(b$pm$LengthClass_dm), , drop = FALSE]
     stored <- any(!is.na(col_of(va)))
@@ -311,25 +315,29 @@ x_saw <- ex$xml[1]; x_pulp <- ex$xml[2]
 pos <- function(x, tag) regexpr(tag, x, fixed = TRUE)[1]
 ok7a <- pos(x_saw, "</PriceDefinition>") > 0 &&
   pos(x_saw, "</PriceDefinition>") < pos(x_saw, "<LengthDistributionDefinition") &&
-  pos(x_saw, "</LengthDistributionDefinition>") < pos(x_saw, "<ProductMatrixes>") &&
+  pos(x_saw, "</LengthDistributionDefinition>") < pos(x_saw, "<ProductMatrixes ") &&
   pos(x_saw, "<DistributionAllowed>") < pos(x_saw, "<DistributionCategory>") &&
   pos(x_saw, "<DistributionCategory>") < pos(x_saw, "<MAXDeviation>") &&
   pos(x_saw, "<MAXDeviation>") < pos(x_saw, "<DistributionWithinProduct>") &&
   grepl("<DistributionAllowed>true</DistributionAllowed><DistributionCategory>Volume of logs</DistributionCategory><MAXDeviation>4</MAXDeviation><DistributionWithinProduct>true</DistributionWithinProduct>", x_saw, fixed = TRUE)
-ok7b <- !grepl("LengthDistributionDefinition", x_pulp, fixed = TRUE) &&
+neutral7 <- paste0('<LengthDistributionDefinition modificationRestricted="false"><DistributionAllowed>false</DistributionAllowed>',
+                   "<DistributionCategory>Number of logs</DistributionCategory><MAXDeviation>0</MAXDeviation>",
+                   "<DistributionWithinProduct>true</DistributionWithinProduct></LengthDistributionDefinition>")
+ok7b <- grepl(neutral7, x_pulp, fixed = TRUE) &&
   length(gregexpr("<Distribution>0</Distribution>", x_pulp, fixed = TRUE)[[1]]) ==
     length(gregexpr("<ProductMatrixItem ", x_pulp, fixed = TRUE)[[1]])
 vals <- as.numeric(regmatches(x_saw, gregexpr("(?<=<Distribution>)[0-9.]+(?=</Distribution>)", x_saw, perl = TRUE))[[1]])
-ok7c <- length(vals) == 4L * 15L && setequal(vals, c(0, 20, 25, 30, 45, 50))
+# R4 D6: the file's own diameter classes (180, 250, 320), not one class per whole cm: 3 classes x 4 lengths
+ok7c <- length(vals) == 4L * 3L && setequal(vals, c(0, 20, 25, 30, 45, 50))
 # PermittedGradesDefinition (when there) comes before the distribution; the .pin writer uses the same code
 pin_ids <- pin_product_ids(c(SAW, PULP))
 ex_pin <- hpr_export_products(rbind(d_saw, d_pulp), pm0, orig = list(), groups = NULL, used_keys = character(0),
                               style = "pin", ids = pin_ids)
 ok7d <- identical(sub("^<ProductDefinition><ProductUserID>[^<]*</ProductUserID>", "", ex_pin$xml[1]) != "", TRUE) &&
-  grepl("<LengthDistributionDefinition", ex_pin$xml[1], fixed = TRUE) && !grepl("<LengthDistributionDefinition", ex_pin$xml[2], fixed = TRUE)
-rec("Check 07: LengthDistributionDefinition after PriceDefinition and before ProductMatrixes in the source order, only with stored values; <Distribution> per cell",
+  grepl("<LengthDistributionDefinition", ex_pin$xml[1], fixed = TRUE) && grepl(neutral7, ex_pin$xml[2], fixed = TRUE)
+rec("Check 07: LengthDistributionDefinition after PriceDefinition and before ProductMatrixes in the source order (the stored values, else the neutral element the schema requires); <Distribution> per cell of the file's own classes",
     ok(ok7a && ok7b && ok7c && ok7d),
-    sprintf("position/order %s | product without values: no element, 0 per cell %s | cell values %s | .pin %s", ok7a, ok7b, ok7c, ok7d))
+    sprintf("position/order %s | product without values: neutral element, 0 per cell %s | cell values %s | .pin %s", ok7a, ok7b, ok7c, ok7d))
 
 # ==============================================================================
 section("08. No effect on comparison or highlighting")

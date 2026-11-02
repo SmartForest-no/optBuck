@@ -120,6 +120,18 @@ guess_hpr_species <- function(name, user_id = NA) {
     dist_category = if (has_ld) .hx1(cp, paste0(ld, "/DistributionCategory")) else NA_character_,
     dist_within   = if (has_ld) ldl(.hx1(cp, paste0(ld, "/DistributionWithinProduct"))) else NA,
     dist_maxdev   = if (has_ld) .hnum(cp, paste0(ld, "/MAXDeviation")) else NA_real_,
+    # R4 D6: the product's own text and identity elements, kept for the export
+    # (source_xml_build()). A .pin has the ProductUserID on the ProductDefinition.
+    src_cp  = as.character(cp),
+    src_uid = {
+      u <- xml2::xml_find_first(cp, "./ProductUserID")
+      if (inherits(u, "xml_missing")) u <- xml2::xml_find_first(p, "./ProductUserID")
+      if (inherits(u, "xml_missing")) NA_character_ else as.character(u)
+    },
+    src_sg  = {
+      g <- xml2::xml_find_first(cp, "./SpeciesGroupUserID")
+      if (inherits(g, "xml_missing")) NA_character_ else as.character(g)
+    },
     key        = .hx1(p, "./ProductKey"),
     name       = .hx1(cp, "./ProductName"),
     group      = .hx1(cp, "./ProductGroupName"),
@@ -693,6 +705,16 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
         # Phase 7a: the product's LengthDistributionDefinition (NA = the file has none)
         DistributionAllowed = p$dist_allowed, DistributionCategory = p$dist_category,
         DistributionWithinProduct = p$dist_within, MAXDeviation = p$dist_maxdev,
+        # R4 D6: the source product's own elements (ProductUserID, SpeciesGroupUserID,
+        # ModificationDate, ...); the fingerprint of its prices and targets is set below.
+        SourceXml = source_xml_build(p$src_cp, p$src_uid, {
+          if (identical(hpr$kind, "pin")) p$src_sg else {
+            gk <- p$species_keys[species_map[p$species_keys] == sp][1L]
+            ug <- hpr$species$user_id[match(gk, hpr$species$key)]
+            if (is.na(ug) || !nzchar(ug)) NA_character_
+            else sprintf('<SpeciesGroupUserID agency="Other">%s</SpeciesGroupUserID>', .xesc(ug))
+          }
+        }),
         stringsAsFactors = FALSE)
       pms[[length(pms) + 1L]] <- grid$pm
       used_keys <- c(used_keys, ak)
@@ -712,6 +734,10 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
   pm <- pm_minimal(do.call(pm_bind, lapply(pms, pm_minimal)))
   v <- check_price_set(defs, pm)
   if (!v$ok) return(fail(v$errors, w))
+  # The fingerprint of each imported product's prices and targets (R4 D6).
+  fpm <- pm_minimal(v$pm)
+  defs$SourceFingerprint <- ifelse(is.na(defs$SourceXml), NA_character_,
+    vapply(assortment_table_keys(defs), function(k) product_fingerprint(fpm, k), "", USE.NAMES = FALSE))
   list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0),
        warnings = w, info = c(info, v$warnings))   # validation notes: info
 }

@@ -107,121 +107,283 @@ HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "Pr
          "</LengthDistributionDefinition>")
 }
 
+# ---- what an imported product keeps (R4 D6) ---------------------------------------------
+
+#' ASCII text for an ID: Norwegian letters transliterated (ae, o, aa), every
+#' other character outside [A-Za-z0-9_-] a "_" (runs squeezed, ends trimmed).
+ascii_id <- function(x) {
+  x <- as.character(x)
+  x <- gsub("\u00e6", "ae", x, fixed = TRUE); x <- gsub("\u00c6", "Ae", x, fixed = TRUE)
+  x <- gsub("\u00f8", "o", x, fixed = TRUE);  x <- gsub("\u00d8", "O", x, fixed = TRUE)
+  x <- gsub("\u00e5", "aa", x, fixed = TRUE); x <- gsub("\u00c5", "Aa", x, fixed = TRUE)
+  x <- iconv(x, "UTF-8", "ASCII//TRANSLIT", sub = "_")
+  x <- gsub("[^A-Za-z0-9_-]+", "_", x)
+  gsub("^_+|_+$", "", x)
+}
+
+#' Made-unique IDs: the first of a repeated ID keeps it, the others get _2,
+#' _3, ... (never an ID that exists in the list).
+unique_ids <- function(id) {
+  id <- as.character(id); out <- id
+  taken <- id[!duplicated(id)]
+  for (i in which(duplicated(id))) {
+    n <- 2L; cand <- paste0(id[i], "_", n)
+    while (cand %in% taken) { n <- n + 1L; cand <- paste0(id[i], "_", n) }
+    out[i] <- cand; taken <- c(taken, cand)
+  }
+  out
+}
+
+#' Hash of an assortment's imported prices and targets: its matrix cells
+#' (diameter class, length class, price, Distribution) in a fixed order. A
+#' product whose current fingerprint differs from the stored one has been
+#' edited, and gets a new ModificationDate on export.
+#' @param pm  A price matrix (pm_minimal()).
+#' @param key The assortment's ProductKey.
+product_fingerprint <- function(pm, key) {
+  r <- pm[as.character(pm$ProductKey) == key, , drop = FALSE]
+  if (nrow(r) == 0L) return(NA_character_)
+  r <- r[order(r$PriceDiameterClass_cm, r$LengthClass_dm), , drop = FALSE]
+  d <- if (PM_DISTRIBUTION_COL %in% names(r)) r[[PM_DISTRIBUTION_COL]] else rep(NA_real_, nrow(r))
+  num <- function(x) ifelse(is.na(x), "NA", formatC(as.numeric(x), format = "f", digits = 4))
+  s <- paste(sprintf("%s|%s|%s|%s", r$PriceDiameterClass_cm, r$LengthClass_dm, num(r$PriceNOKperM3), num(d)),
+             collapse = ";")
+  f <- tempfile(); on.exit(unlink(f))
+  writeBin(charToRaw(s), f)
+  unname(tools::md5sum(f))
+}
+
+# The elements of a source product kept as they are: one <src> text with the
+# children md (ModificationDate), pre (the elements between ProductName and
+# DiameterDefinition), mid (ManualFreeBuck .. CuttingWindowDefinition), grades
+# (PermittedGradesDefinition), limit (LimitationDefinition), post
+# (LongLogButtHeight), uid (the ProductUserID element) and sguid (the
+# SpeciesGroupUserID element). `cp` is the ClassifiedProductDefinition as text.
+source_xml_build <- function(cp, uid = NA_character_, sguid = NA_character_) {
+  cp <- gsub(">[[:space:]]+<", "><", as.character(cp))
+  pre_txt <- sub("(?s)^.*?</ProductName>(.*?)<DiameterDefinition(?:\\s[^>]*)?>.*$", "\\1", cp, perl = TRUE)
+  if (identical(pre_txt, cp)) pre_txt <- ""
+  md <- .hx_text(pre_txt, "ModificationDate")
+  pre <- .hx_strip(pre_txt, "ModificationDate")
+  mid <- paste(stats::na.omit(vapply(c("ManualFreeBuck", "TopLogFreeBuck", "ProductCondition", "CuttingWindowDefinition"),
+                                     function(t) .hx_elem(cp, t), "")), collapse = "")
+  one <- function(tag, v) if (is.na(v) || !nzchar(v)) "" else sprintf("<%1$s>%2$s</%1$s>", tag, v)
+  if (is.na(uid)) uid <- .hx_elem(cp, "ProductUserID")
+  if (is.na(sguid)) sguid <- .hx_elem(cp, "SpeciesGroupUserID")
+  out <- paste0("<src>", one("md", md), one("pre", pre), one("mid", mid),
+                one("grades", .hx_elem(cp, "PermittedGradesDefinition")),
+                one("limit", .hx_elem(cp, "LimitationDefinition")),
+                one("post", .hx_elem(cp, "LongLogButtHeight")),
+                one("uid", gsub(">[[:space:]]+<", "><", uid)), one("sguid", gsub(">[[:space:]]+<", "><", sguid)), "</src>")
+  Encoding(out) <- "UTF-8"
+  out
+}
+
+# One part of source_xml_build(): "" when absent or the source is NA.
+source_xml_part <- function(src, tag) {
+  if (is.na(src)) return("")
+  v <- .hx_text(src, tag)
+  if (is.na(v)) return("")
+  Encoding(v) <- "UTF-8"; v
+}
+
+# Neutral values for what a product created in Apter has no source for (R4 D6).
+EXPORT_NEUTRAL_MID <- paste0("<ManualFreeBuck>false</ManualFreeBuck><TopLogFreeBuck>false</TopLogFreeBuck>",
+                             "<ProductCondition>Buck always</ProductCondition>")
+EXPORT_NEUTRAL_LIMIT <- paste0('<LimitationDefinition modificationRestricted="false"><LimitationCategory>',
+                               "No limitation</LimitationCategory><LimitationResult>No action</LimitationResult>",
+                               "</LimitationDefinition>")
+EXPORT_NEUTRAL_LENGTH_DIST <- paste0('<LengthDistributionDefinition modificationRestricted="false">',
+  "<DistributionAllowed>false</DistributionAllowed><DistributionCategory>Number of logs</DistributionCategory>",
+  "<MAXDeviation>0</MAXDeviation><DistributionWithinProduct>true</DistributionWithinProduct>",
+  "</LengthDistributionDefinition>")
+EXPORT_MAX_TOP_NONE_MM <- 2000     # DiameterClassMAX is required: no max top diameter becomes 200 cm
+
+# Whole numbers per row that keep a row of shares at 100 (largest remainder);
+# a row that does not add up to 100 is rounded as it is.
+.round_shares <- function(x) {
+  out <- round(x)
+  ok <- !is.na(x)
+  if (any(ok) && abs(sum(x[ok]) - 100) < 1e-6) {
+    f <- floor(x[ok]); rem <- round(100 - sum(f))
+    if (rem > 0) { up <- order(-(x[ok] - f), seq_along(f))[seq_len(rem)]; f[up] <- f[up] + 1 }
+    out[ok] <- f
+  }
+  out
+}
+
 #' The ProductDefinition elements of a scenario.
 #'
 #' @param defs   Assortment table (ASSORTMENT_TABLE_COLS, with HprProductKey).
 #' @param pm     The scenario's price matrix (pm_minimal()).
 #' @param orig   Named list of the source file's classified ProductDefinition
-#'   texts (names = ProductKey).
+#'   texts (names = ProductKey): the fallback for an assortment that has no
+#'   stored SourceXml.
 #' @param groups data.frame(key, species): the header's species groups.
 #' @param used_keys All ProductKeys of the source file (numeric-looking ones
 #'   set the start of the new keys).
-#' @param style  "hpr" (default) or "pin" (Phase 5b): a .pin ProductDefinition has
-#'   a ProductUserID (`ids`, one per row of `defs`) instead of a ProductKey, no
-#'   metadata copied from a source product, no SpeciesGroupKey, a
-#'   SpeciesGroupUserID ("Spruce" / "Pine") and the permitted grades of the
-#'   assortment (only when it has some).
-#' @param ids    The ProductUserIDs of a .pin (style "pin").
+#' @param style  "hpr" (default) or "pin" (Phase 5b): a .pin ProductDefinition
+#'   has the ProductUserID first and a SpeciesGroupUserID last, no ProductKey
+#'   and no SpeciesGroupKey.
+#' @param now    The export time (ModificationDate of edited and new products).
+#' @param ids    Optional ProductUserIDs, one per row of `defs`, instead of the source's
+#'   or the name's (made unique).
+#' @details An imported product keeps its own ModificationDate, ProductUserID,
+#'   SpeciesGroupUserID, metadata, ManualFreeBuck, TopLogFreeBuck,
+#'   ProductCondition, CuttingWindowDefinition, PermittedGradesDefinition and
+#'   LimitationDefinition (hidden SourceXml); its ModificationDate is the
+#'   export time when its prices or targets differ from the imported ones
+#'   (SourceFingerprint). Products without a source get neutral values
+#'   (EXPORT_NEUTRAL_*), a ProductUserID made from the name (ASCII) and the
+#'   SpeciesGroupUserID of an imported product of the same species, else
+#'   "Spruce" / "Pine". ProductUserIDs are unique in the file (_2, _3, ...).
+#'   Prices and shares are whole numbers (the schema's type).
 #' @return list(xml (one text per assortment), keys (named by
-#'   assortment_table_keys(defs): the exported ProductKey)).
+#'   assortment_table_keys(defs): the exported ProductKey), ids (the exported
+#'   ProductUserIDs)).
 hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
-                                style = c("hpr", "pin"), ids = NULL) {
+                                style = c("hpr", "pin"), now = .pin_time(), ids = NULL) {
   style <- match.arg(style)
   pin <- identical(style, "pin")
   akeys <- assortment_table_keys(defs)
   lens  <- assortment_lengths(defs, pm)
   hk <- if ("HprProductKey" %in% names(defs)) as.character(defs$HprProductKey) else rep(NA_character_, nrow(defs))
   hk[!is.na(hk) & !hk %in% names(orig)] <- NA_character_      # not a product of this file
-  if (pin) hk[] <- NA_character_                              # a .pin copies nothing from a source
+  if (pin) hk[] <- NA_character_                              # a .pin copies nothing from a source file
   hk[duplicated(hk) & !is.na(hk)] <- NA_character_            # the first row keeps the key
   uk <- suppressWarnings(as.numeric(used_keys))
   top <- max(c(0, uk[!uk %in% HPR_UNCLASSIFIED_KEY]), na.rm = TRUE)    # 999999 is the unclassified product
   newk <- seq_len(sum(is.na(hk))) + top
   keys <- hk; keys[is.na(hk)] <- format(newk, scientific = FALSE, trim = TRUE)
-  pm <- pm_minimal(pm)            # keeps the hidden Distribution column
+  pm <- pm_minimal(pm)            # keeps the hidden Distribution and file class columns
   orig <- lapply(orig, function(s) { Encoding(s) <- "UTF-8"; s })   # files are UTF-8 (the caller checks)
+
+  # What each assortment keeps of its source: stored SourceXml, else (an .hpr
+  # export of an assortment of this file) the file's own product text.
+  has_src <- "SourceXml" %in% names(defs)
+  src <- vapply(seq_len(nrow(defs)), function(i) {
+    s <- if (has_src) defs$SourceXml[i] else NA_character_
+    if (is.na(s) && !is.na(hk[i])) s <- source_xml_build(orig[[hk[i]]])
+    s
+  }, "")
+  src[is.na(src)] <- NA_character_
+  fp_stored <- if ("SourceFingerprint" %in% names(defs)) as.character(defs$SourceFingerprint) else rep(NA_character_, nrow(defs))
+  fp_now <- vapply(akeys, function(k) product_fingerprint(pm, k), "")
+  has_md <- vapply(src, function(s) nzchar(source_xml_part(s, "md")), NA, USE.NAMES = FALSE)
+  unchanged <- !is.na(src) & has_md & !is.na(fp_stored) & fp_stored == fp_now
+
+  # ProductUserID (unique in the file) and SpeciesGroupUserID.
+  uid_el <- vapply(src, function(s) source_xml_part(s, "uid"), "", USE.NAMES = FALSE)
+  uid_txt <- vapply(uid_el, function(e) if (nzchar(e)) .hx_text(e, "ProductUserID") else NA_character_, "", USE.NAMES = FALSE)
+  uid_agency <- vapply(uid_el, function(e) {
+    m <- regmatches(e, regexec('agency="([^"]*)"', e, perl = TRUE))[[1L]]
+    if (length(m) > 1L) m[2L] else "Other"
+  }, "", USE.NAMES = FALSE)
+  nm_id <- ascii_id(defs$Name); nm_id[!nzchar(nm_id)] <- "product"
+  ids <- unique_ids(ifelse(is.na(uid_txt) | !nzchar(uid_txt), nm_id, vapply(uid_txt, function(x) { Encoding(x) <- "UTF-8"; x }, "")))
+  if (!is.null(ids)) ids <- unique_ids(ids)
+  sg_el <- vapply(src, function(s) source_xml_part(s, "sguid"), "", USE.NAMES = FALSE)
+  sg_by_species <- function(sp) { i <- which(nzchar(sg_el) & as.character(defs$Species) == sp); if (length(i)) sg_el[i[1L]] else NA_character_ }
+
   xml <- vapply(seq_len(nrow(defs)), function(i) {
     d <- defs[i, , drop = FALSE]
-    o <- if (!is.na(hk[i])) orig[[hk[i]]] else NA_character_
-    meta <- if (is.na(o)) {
-      grp <- switch(as.character(d$Type), sawlog = "Tømmer", pulpwood = "Massevirke", as.character(d$Type))
+    s <- src[i]
+    part <- function(tag) source_xml_part(s, tag)
+    meta <- if (nzchar(part("pre"))) part("pre") else {
+      grp <- switch(as.character(d$Type), sawlog = "T\u00f8mmer", pulpwood = "Massevirke", as.character(d$Type))
       sprintf("<ProductGroupName>%s</ProductGroupName>", .xesc(grp))
-    } else paste(stats::na.omit(vapply(HPR_EXPORT_META_BEFORE, function(t) .hx_elem(o, t), "")), collapse = "")
+    }
+    md <- if (unchanged[i]) part("md") else now
     rows <- pm[pm$ProductKey == akeys[i], , drop = FALSE]
     rows_dist <- if (PM_DISTRIBUTION_COL %in% names(rows)) rows[[PM_DISTRIBUTION_COL]] else rep(NA_real_, nrow(rows))
     matrix_priced <- identical(as.character(d$PriceType), "matrix")
     len_cm <- as.numeric(lens[[akeys[i]]])
     min_top <- as.numeric(d$MinTopDiameter_cm) * 10; max_top <- as.numeric(d$MaxTopDiameter_cm) * 10
     if (matrix_priced) {
-      dcl <- sort(unique(rows$PriceDiameterClass_cm[!is.na(rows$PriceDiameterClass_cm)])) * 10
+      # The file's own diameter classes where the rows have one (FileDiameterClass_mm),
+      # else one class per whole cm.
+      fc <- if (PM_FILE_CLASS_COL %in% names(rows)) rows[[PM_FILE_CLASS_COL]] else rep(NA_real_, nrow(rows))
+      cls_mm <- ifelse(is.na(fc), rows$PriceDiameterClass_cm * 10, fc)
+      dcl <- sort(unique(cls_mm[!is.na(cls_mm)]))
       lim <- price_lengths(d$PriceLengths_cm, len_cm)           # class lower limits (cm)
       cells <- expand.grid(dc = dcl, li = seq_along(len_cm), KEEP.OUT.ATTRS = FALSE)
-      hit <- match(paste(cells$dc / 10, len_cm[cells$li] / 10),
-                   paste(rows$PriceDiameterClass_cm, rows$LengthClass_dm))
+      hit <- match(paste(cells$dc, len_cm[cells$li] / 10), paste(cls_mm, rows$LengthClass_dm))
       pr <- rows$PriceNOKperM3[hit]
-      dist <- rows_dist[hit]        # one class per whole-cm row: each row's own stored value
+      dist <- rows_dist[hit]        # the first row of a class: the class's stored value
+      for (dc in dcl) { j <- cells$dc == dc; dist[j] <- .round_shares(dist[j]) }
     } else {
-      dcl <- max(0, floor(min_top))
+      dcl <- max(1, floor(min_top))
       lim <- len_cm
       cells <- expand.grid(dc = dcl, li = seq_along(len_cm), KEEP.OUT.ATTRS = FALSE)
       pr <- rep(rows$PriceNOKperM3[is.na(rows$LengthClass_dm)][1L], nrow(cells))
       dist <- rep(NA_real_, nrow(cells))
     }
+    dcl <- pmax(1, dcl)
     top_pos <- or_default(as.numeric(d$DiameterTopPosition_cm), 0)
     method <- as.character(d$VolumeDiameterCategory)
     if (identical(method, "Top cylinder")) method <- "Top"       # StanForD has no cylinder rule
     round_down <- !identical(volume_rounding(d$VolumeDiameterCategory), "None")
+    int <- function(x) format(round(as.numeric(x)), scientific = FALSE, trim = TRUE)
     items <- sprintf(
       paste0('<ProductMatrixItem diameterClassLowerLimit="%s" lengthClassLowerLimit="%s"><Price>%s</Price>',
              '<Distribution>%s</Distribution><Limitation>0</Limitation><BuckingCriteria>%s</BuckingCriteria>',
              '</ProductMatrixItem>'),
-      .fnum(cells$dc, 2L), .fnum(lim[cells$li], 2L), ifelse(is.na(pr), "0", .fnum(pr, 2L)),
-      ifelse(is.na(dist), "0", .fnum(dist, 4L)),     # stored target distribution (Phase 7a), 0 when none
+      int(pmax(1, cells$dc)), int(lim[cells$li]), ifelse(is.na(pr), "0", int(pr)),
+      ifelse(is.na(dist), "0", int(dist)),     # stored target distribution (Phase 7a), 0 when none
       ifelse(is.na(pr), HPR_FORBIDDEN, "No limit"))
     gk <- groups$key[groups$species == as.character(d$Species)]
+    grades <- if (nzchar(part("grades"))) part("grades") else {
+      g <- if ("PermittedGrades" %in% names(d)) permitted_grades_set(d$PermittedGrades) else numeric(0)
+      paste0('<PermittedGradesDefinition modificationRestricted="false">',
+             if (length(g)) paste0("<PermittedGradeNumber>", format(g, scientific = FALSE, trim = TRUE), "</PermittedGradeNumber>", collapse = ""),
+             "</PermittedGradesDefinition>")
+    }
+    uid <- sprintf('<ProductUserID agency="%s">%s</ProductUserID>', uid_agency[i], .xesc(ids[i]))
+    sg <- if (nzchar(sg_el[i])) sg_el[i] else {
+      o <- sg_by_species(as.character(d$Species))
+      if (!is.na(o)) o else paste0('<SpeciesGroupUserID agency="Other">',
+                                   if (identical(as.character(d$Species), "pine")) "Pine" else "Spruce", "</SpeciesGroupUserID>")
+    }
     paste0(
-      if (pin) paste0("<ProductDefinition><ProductUserID>", .xesc(ids[i]), "</ProductUserID><ClassifiedProductDefinition>")
-      else paste0("<ProductDefinition><ProductKey>", keys[i], "</ProductKey><ClassifiedProductDefinition>"),
-      "<ProductName>", .xesc(d$Name), "</ProductName>", meta,
+      "<ProductDefinition>",
+      if (pin) paste0(uid, "<ClassifiedProductDefinition>") else paste0("<ProductKey>", keys[i], "</ProductKey><ClassifiedProductDefinition>"),
+      "<ProductName>", .xesc(d$Name), "</ProductName>",
+      "<ModificationDate>", md, "</ModificationDate>", meta,
       '<DiameterDefinition modificationRestricted="false"><DiameterClasses diameterClassCategory="Top">',
-      paste0("<DiameterClass><DiameterClassLowerLimit>", .fnum(dcl, 2L),
+      paste0("<DiameterClass><DiameterClassLowerLimit>", int(dcl),
              "</DiameterClassLowerLimit><DiameterClassName/></DiameterClass>", collapse = ""),
-      if (is.finite(max_top)) paste0("<DiameterClassMAX>", .fnum(max_top, 2L), "</DiameterClassMAX>"),
+      "<DiameterClassMAX>", int(if (is.finite(max_top)) max_top else EXPORT_MAX_TOP_NONE_MM), "</DiameterClassMAX>",
       "<DiameterClassAdjustment>DiameterClassAdjustment1</DiameterClassAdjustment>",
       "<DiameterUnderBark>true</DiameterUnderBark></DiameterClasses>",
-      "<DiameterMINTop>", .fnum(min_top, 2L), "</DiameterMINTop>",
+      "<DiameterMINTop>", int(min_top), "</DiameterMINTop>",
       if (is.finite(as.numeric(d$MaxButtDiameter_cm)))
-        paste0("<DiameterMAXButt>", .fnum(as.numeric(d$MaxButtDiameter_cm) * 10, 2L), "</DiameterMAXButt>"),
-      "<DiameterTopPosition>", .fnum(top_pos, 2L), "</DiameterTopPosition></DiameterDefinition>",
+        paste0("<DiameterMAXButt>", int(as.numeric(d$MaxButtDiameter_cm) * 10), "</DiameterMAXButt>"),
+      "<DiameterTopPosition>", int(top_pos), "</DiameterTopPosition></DiameterDefinition>",
       '<LengthDefinition modificationRestricted="false"><LengthClassAdjustment>LengthClassAdjustment1</LengthClassAdjustment>',
-      paste0("<LengthClass><LengthClassLowerLimit>", .fnum(lim, 2L),
+      paste0("<LengthClass><LengthClassLowerLimit>", int(lim),
              "</LengthClassLowerLimit><LengthClassMargin>0</LengthClassMargin></LengthClass>", collapse = ""),
-      "<LengthClassMAX>", .fnum(max(len_cm), 2L), "</LengthClassMAX></LengthDefinition>",
+      "<LengthClassMAX>", int(max(len_cm)), "</LengthClassMAX></LengthDefinition>",
       '<PriceDefinition modificationRestricted="false"><VolumeDiameterAdjustment>',
       if (round_down) VOLUME_ROUND_DOWN_CM else "Measured diameter in mm", "</VolumeDiameterAdjustment>",
       sprintf('<VolumeDiameterCategory volumeDiameterTopPosition="%s">%s</VolumeDiameterCategory>',
-              .fnum(top_pos, 2L), .xesc(method)),
+              int(top_pos), .xesc(method)),
       "<VolumeLengthCategory>",
       if (matrix_priced && !identical(method, "All diameters (solid volume)"))
         "Length as defined in LengthClasses" else "Physical length cm",
       "</VolumeLengthCategory><VolumeUnderBark>true</VolumeUnderBark></PriceDefinition>",
-      if (pin) {
-        g <- if ("PermittedGrades" %in% names(d)) permitted_grades_set(d$PermittedGrades) else numeric(0)
-        if (length(g)) paste0('<PermittedGradesDefinition modificationRestricted="false">',
-                              paste0("<PermittedGradeNumber>", format(g, scientific = FALSE, trim = TRUE), "</PermittedGradeNumber>", collapse = ""),
-                              "</PermittedGradesDefinition>")
-      } else if (!is.na(o)) { g <- .hx_elem(o, "PermittedGradesDefinition"); if (!is.na(g)) g },
-      # LengthDistributionDefinition (Phase 7a): where the source files have it, after
-      # PermittedGradesDefinition and before the matrices; only when the assortment has stored values.
-      .hpr_export_length_distribution(d),
-      "<ProductMatrixes>", paste(items, collapse = ""), "</ProductMatrixes>",
-      if (!pin && !is.na(o)) { u <- .hx_elem(o, "ProductUserID"); if (!is.na(u)) u },
-      if (pin) paste0('<SpeciesGroupUserID agency="Other">', if (identical(as.character(d$Species), "pine")) "Pine" else "Spruce",
-                      "</SpeciesGroupUserID>")
-      else if (length(gk)) paste0("<SpeciesGroupKey>", gk, "</SpeciesGroupKey>", collapse = ""),
+      if (nzchar(part("mid"))) part("mid") else EXPORT_NEUTRAL_MID,
+      grades,
+      # LengthDistributionDefinition (Phase 7a): the stored fields, else a neutral one (the element is required).
+      or_default(.hpr_export_length_distribution(d), EXPORT_NEUTRAL_LENGTH_DIST),
+      if (nzchar(part("limit"))) part("limit") else EXPORT_NEUTRAL_LIMIT,
+      '<ProductMatrixes modificationRestrictedPrice="false" modificationRestrictedDistribution="false" ',
+      'modificationRestrictedLimitation="false" modificationRestrictedBuckingCriteria="false" ',
+      'modificationRestrictedLogColorMarking="false">', paste(items, collapse = ""), "</ProductMatrixes>",
+      part("post"),
+      if (pin) sg else paste0(uid, if (length(gk)) paste0("<SpeciesGroupKey>", gk, "</SpeciesGroupKey>", collapse = "")),
       "</ClassifiedProductDefinition></ProductDefinition>")
   }, "")
-  list(xml = xml, keys = setNames(keys, akeys))
+  list(xml = xml, keys = setNames(keys, akeys), ids = ids)
 }
 
 

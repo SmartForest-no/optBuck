@@ -100,20 +100,16 @@ read_hpr_stem_files_async <- function(paths, filenames) {
   promises::promise_all(.list = ps)
 }
 
-#' Run a job asynchronously.
+#' Prepare a job asynchronously: the first step of run_job_async(), also used
+#' by the Price tuning tab (R4 D7), which then runs its own loop on the job.
 #'
-#' @param spec list(src = "nfi" or "list", params (NFI), tl (prepared tree
-#'   list), list_params (tree list), stems and species_map (.hpr stems:
-#'   read_hpr_stems() result and the confirmed map), path, pd, lc (the run's
-#'   prices and products; NULL pd/lc = defaults), scenario = NULL or list(
-#'   price_matrix_path, products, length_classes)).
-#' @param progress function(done, total, what) for the progress display.
-#' @return A promise of the backend result (with $scenario for a comparison).
-run_job_async <- function(spec, progress = function(done, total, what) NULL) {
+#' @param spec,progress As for run_job_async().
+#' @return A promise of the prepared job (prepare_*_job()).
+prepare_job_async <- function(spec, progress = function(done, total, what) NULL) {
   workers <- apter_workers()
   .ensure_plan(workers)
 
-  p_job <- if (identical(spec$src, "list")) {
+  if (identical(spec$src, "list")) {
     td <- tree_list_tree_data(spec$tl)
     gl <- .taper_chunk_globals(td, workers)
     n_done <- 0L
@@ -137,6 +133,20 @@ run_job_async <- function(spec, progress = function(done, total, what) NULL) {
     .backend_promise("prepare_sampled_job",
                      list(spec$params, spec$path, ROOT, spec$pd, spec$lc, spec$scenario))
   }
+}
+
+#' Run a job asynchronously.
+#'
+#' @param spec list(src = "nfi" or "list", params (NFI), tl (prepared tree
+#'   list), list_params (tree list), stems and species_map (.hpr stems:
+#'   read_hpr_stems() result and the confirmed map), path, pd, lc (the run's
+#'   prices and products; NULL pd/lc = defaults), scenario = NULL or list(
+#'   price_matrix_path, products, length_classes)).
+#' @param progress function(done, total, what) for the progress display.
+#' @return A promise of the backend result (with $scenario for a comparison).
+run_job_async <- function(spec, progress = function(done, total, what) NULL) {
+  workers <- apter_workers()
+  p_job <- prepare_job_async(spec, progress)
 
   promises::then(p_job, function(job) {
     gl <- .buck_chunk_globals(job, workers)

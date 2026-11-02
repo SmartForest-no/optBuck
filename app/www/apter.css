@@ -326,3 +326,9 @@ details.apter-card { margin-bottom: 16px; }
 .tn-top .reactable { max-width: 100%; }
 
 .summary-sentence { color: #1F1F1F; margin: 0 0 12px; font-size: 0.95rem; }
+
+.tn-unavailable { margin: 4px 0 12px; }
+.tn-off { color: var(--apter-label); }
+.tn-off input { margin-right: 8px; }
+.tn-reason { color: var(--apter-muted); margin-left: 8px; }
+.tn-scope { margin: 16px 0 8px; }

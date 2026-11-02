@@ -462,12 +462,25 @@ pre_phase4c_limits <- function(pd) {
 DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
                            "DistributionWithinProduct", "MAXDeviation")
 
+# Two more hidden fields keep what the StanForD export needs of an imported
+# product (R4 D6): SourceXml, the source product's own elements that Apter does
+# not edit (ProductUserID, SpeciesGroupUserID, ModificationDate, ManualFreeBuck,
+# TopLogFreeBuck, ProductCondition, CuttingWindowDefinition, LimitationDefinition, ...;
+# R/helpers_hpr_export.R, source_xml_parts()), and SourceFingerprint, a hash of
+# the product's imported price and Distribution cells (product_fingerprint()):
+# a product whose current prices or targets differ gets a new ModificationDate
+# on export. NA for every other assortment. Kept on edits, copies and in scenario
+# files; never in run data, not compared between A and B.
+
+#' The hidden source fields of the assortment table.
+SOURCE_DEF_COLS <- c("SourceXml", "SourceFingerprint")
+
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
-  "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS)
+  "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)
 
 # "TRUE"/"true"/TRUE -> TRUE, "FALSE"/... -> FALSE, anything else NA.
 .dist_logical <- function(x) {
@@ -533,7 +546,7 @@ assortment_table_keys <- function(defs) {
                                           "PriceType", "PriceLengths_cm", "PermittedGrades",
                                           "ReferenceGrades", "HprProductKey",
                                           "DistributionAllowed", "DistributionCategory",
-                                          "DistributionWithinProduct"))
+                                          "DistributionWithinProduct", SOURCE_DEF_COLS))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
   # Tables without the hidden price lengths (all but hpr imports): none.
@@ -555,6 +568,11 @@ assortment_table_keys <- function(defs) {
   d$DistributionWithinProduct <- .dist_logical(d$DistributionWithinProduct)
   dc <- trimws(as.character(d$DistributionCategory))
   d$DistributionCategory <- ifelse(is.na(dc) | !nzchar(dc) | dc == "NA", NA_character_, dc)
+  # The hidden source fields (hpr/pin imports): NA otherwise.
+  for (n in SOURCE_DEF_COLS) {
+    if (!n %in% names(d)) d[[n]] <- rep(NA_character_, nrow(d))
+    v <- as.character(d[[n]]); d[[n]] <- ifelse(is.na(v) | !nzchar(trimws(v)) | v == "NA", NA_character_, v)
+  }
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))

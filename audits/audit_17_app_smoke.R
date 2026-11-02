@@ -549,6 +549,7 @@ browser_checks <- c(
   "Check 45: No scenario names: no name fields, titles and headers say Scenario A/B, the scenario xlsx has no name",
   "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
   "Check 47: Stems panel of the built-in source (R4 D2): the intro, Use this selection builds the species table (equal to the live counts) and two density plots, and any setting change clears it",
+  "Check 49: Price tuning on the built-in stems (R4 D7), in Norsk: all sawlog assortments are listed (those without a target greyed with the reason), an Even target on the spruce sawlog makes it tunable, and a tuning on the default selection ends with a result or the too-few-logs message and no error",
   "Check 48: Empty states and Help (R4 D1), in Norsk: a tree list with nothing loaded gives the message in Simulator and Pristilpasning and hides the run button; the Help tab has its three sections")
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -1884,7 +1885,7 @@ if (!browser_ok) {
       grepl("Imported 2 assortments from pin_full_synthetic.pin into Scenario A.", c42$msg, fixed = TRUE) &&
       grepl("pine pulpwood full", tolower(c42$a_rows), fixed = TRUE) && identical(c42$b_after, c42$b_before) &&
       identical(c42$kept_after, c42$kept_before) && !grepl("pin_full", or_default(c42$kept_after, ""), fixed = TRUE) &&
-      grepl("<ProductInstruction", c42$pin, fixed = TRUE) && grepl("<ProductUserID>Pine_Pulpwood_Full</ProductUserID>", c42$pin, fixed = TRUE) &&
+      grepl("<ProductInstruction", c42$pin, fixed = TRUE) && grepl('<ProductUserID agency="Other">PULP_Pine</ProductUserID>', c42$pin, fixed = TRUE)   # the source's own ID (R4 D6) &&
       !grepl("Latitude|Longitude|Coordinate", c42$pin) && identical(c42$nerr, 0L)
     rec(browser_checks[38], if (ok42) PASS else FAIL,
         sprintf("button '%s', title '%s' | species %s, Replace enabled %s | after Replace: dialog open %s, '%s' | A rows: %s | B unchanged %s | kept .hpr unchanged %s | download: %d bytes, ProductInstruction %s | error notifications %s%s",
@@ -1907,7 +1908,8 @@ if (!browser_ok) {
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
       c43$msg <- txt(app, "#tn_main")
-      c43$extra <- js(app, "document.querySelectorAll('#tn_main select, #tn_main input, #tn_run').length")
+      c43$extra <- js(app, "document.querySelectorAll('#tn_main input:not([disabled]):not([name=tn_side]), #tn_run').length")
+      c43$off <- js(app, "document.querySelectorAll('#tn_main .tn-off input[disabled]').length")
       app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(hs_upload = fx43)
@@ -1929,16 +1931,20 @@ if (!browser_ok) {
       c43$boxes <- js(app, "Array.from(document.querySelectorAll('input[name=tn_products]')).map(function(e){ return e.value + (e.checked ? '+' : '-'); }).join(',')")
       c43$radio <- js(app, "document.querySelectorAll('input[name=tn_target]').length")
       app$click("tn_run")
-      app$wait_for_js("!!document.querySelector('#tn_tbl .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr') && !!document.querySelector('#tn_plot img')",
+      app$wait_for_js("!!document.querySelector('#tn_tbl_hits .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr') && !!document.querySelector('#tn_plot img')",
                       timeout = 240 * 1000)
       app$wait_for_idle()
-      c43$rows <- js(app, "Array.from(document.querySelectorAll('#tn_tbl .rt-tbody .rt-tr')).map(function(r){ return r.innerText.replace(/\\s+/g, ' ').trim(); }).join(' | ')")
-      c43$cols <- headers_of(app, "tn_tbl")
+      c43$rows <- js(app, "Array.from(document.querySelectorAll('#tn_tbl_hits .rt-tbody .rt-tr')).map(function(r){ return r.innerText.replace(/\\s+/g, ' ').trim(); }).join(' | ')")
+      c43$cols <- headers_of(app, "tn_tbl_hits")
+      c43$cost <- js(app, "Array.from(document.querySelectorAll('#tn_tbl_cost .rt-tbody .rt-tr')).map(function(r){ return Array.from(r.querySelectorAll('.rt-td')).map(function(c){ return c.innerText.trim(); }).join(' ; '); }).join(' | ')")
+      c43$cost_cols <- headers_of(app, "tn_tbl_cost")
+      c43$scope <- txt(app, "#tn_results .tn-scope")
       c43$plot_w <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().width")
       c43$plot_h <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().height")
       # the four matrix views of the assortment
       for (v in c("target", "orig", "tuned", "change")) {
         app$set_inputs(tn_matrix_view = v, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(0.5)
+        if (v == "change") c43$change_note <- trimws(txt(app, "#tn_matrix_note"))
         c43$views[[v]] <- list(hdr = headers_of(app, "tn_matrix"),
                                cells = js(app, "Array.from(document.querySelectorAll('#tn_matrix .rt-tbody .rt-td')).filter(function(c){ return /^-?[0-9]+$/.test(c.innerText.trim()); }).length"))
       }
@@ -1951,7 +1957,7 @@ if (!browser_ok) {
       app$click("tn_use_ok"); app$wait_for_idle()
       c43$open <- js(app, "document.querySelectorAll('.modal.show').length")
       # R3.5: applying the tuned prices to the other scenario keeps the results visible
-      c43$kept <- isTRUE(js(app, "!!document.querySelector('#tn_tbl .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr')"))
+      c43$kept <- isTRUE(js(app, "!!document.querySelector('#tn_tbl_hits .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr')"))
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       b43 <- pm_minimal(scen_of(app, "b")$pm); a43 <- pm_minimal(scen_of(app, "a")$pm)
       b43 <- b43[b43$ProductKey == key43 & !is.na(b43$LengthClass_dm), ]; a43 <- a43[a43$ProductKey == key43 & !is.na(a43$LengthClass_dm), ]
@@ -1966,18 +1972,24 @@ if (!browser_ok) {
       app$click("dt_a_long"); app$wait_for_idle()
       app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
-      c43$cleared <- !isTRUE(js(app, "!!document.querySelector('#tn_tbl .rt-tr')"))
+      c43$cleared <- !isTRUE(js(app, "!!document.querySelector('#tn_tbl_hits .rt-tr')"))
       c43$nerr <- n_err_notif(app)
     })
-    ok43 <- !nzchar(e43) && identical(trimws(c43$msg), "Price tuning needs .hpr stems as tree source.") && identical(c43$extra, 0L) &&
+    ok43 <- !nzchar(e43) && grepl("no target distribution (enter one under 2 Assortments and prices)", c43$msg, fixed = TRUE) &&
+      grepl("Spruce \u2013 ", c43$msg, fixed = TRUE) && identical(c43$extra, 0L) && isTRUE(c43$off >= 1L) &&
       grepl(paste0(key43, "+"), c43$boxes, fixed = TRUE) && !grepl("-", c43$boxes, fixed = TRUE) && identical(c43$radio, 0L) &&
-      grepl("Fordelingsgrad \\(%\\):", c43$rows) && grepl("Value at original prices \\(NOK\\)", c43$rows) &&
-      grepl("Product volume", c43$rows, fixed = TRUE) && grepl("Sawlog volume", c43$rows, fixed = TRUE) &&
-      identical(c43$cols, "|Original prices|Tuned prices|Change") &&
-      isTRUE(abs(c43$plot_w - 420) < 4) && isTRUE(abs(c43$plot_h - 220) < 4) &&
+      grepl("^Prices were tuned on [0-9,]+ of [0-9,]+ stems; the figures below are for all [0-9,]+ stems\\.$", trimws(c43$scope)) &&
+      grepl("Tuned", c43$rows, fixed = TRUE) && grepl(" \u2013 ", c43$rows, fixed = TRUE) && !grepl("sca sagt", c43$rows, fixed = TRUE) &&
+      all(vapply(c("Before tuning", "After tuning", "Assortment", "Logs", "Degree of fit (%)", "Volume (m\u00b3)"),
+                 function(w) grepl(w, c43$cols, fixed = TRUE), NA)) &&
+      grepl("Value of all stems (NOK)", c43$cost, fixed = TRUE) && grepl("Sawlog volume", c43$cost, fixed = TRUE) &&
+      identical(c43$cost_cols, "|Before|After|Change") &&
+      isTRUE(abs(c43$plot_w - 700) < 4) && isTRUE(abs(c43$plot_h - 320) < 4) &&
       all(vapply(c43$views, function(v) isTRUE(v$cells >= 1L), logical(1))) && length(c43$views) == 4L &&
-      grepl("FG", c43$views$orig$hdr, fixed = TRUE) && grepl("FG", c43$views$tuned$hdr, fixed = TRUE) &&
-      !grepl("FG", c43$views$target$hdr, fixed = TRUE) && !grepl("FG", c43$views$change$hdr, fixed = TRUE) &&
+      all(vapply(c43$views, function(v) grepl("Diameter class (mm)", v$hdr, fixed = TRUE) && grepl("Length class (cm)", v$hdr, fixed = TRUE), NA)) &&
+      grepl("Degree of fit (%)", c43$views$orig$hdr, fixed = TRUE) && grepl("Degree of fit (%)", c43$views$tuned$hdr, fixed = TRUE) &&
+      !grepl("Degree of fit", c43$views$target$hdr, fixed = TRUE) && !grepl("Degree of fit", c43$views$change$hdr, fixed = TRUE) &&
+      grepl("not adjusted", c43$change_note, fixed = TRUE) &&
       identical(c43$use, "Use tuned prices in scenario B") &&
       grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&
       isTRUE(c43$kept) && isTRUE(c43$cleared) &&
@@ -1986,7 +1998,10 @@ if (!browser_ok) {
         sprintf("message '%s' (inputs %s) | assortments %s, target radio %s | rows: %s | columns '%s' | figure %sx%s px | matrix views (cells): %s | button '%s' | dialog '%s', open after OK %s | results kept after applying to B %s | B cells %s equal to the tuned prices %s, changed against A %s | cleared by a change in A %s | error notifications %s%s",
                 c43$msg, c43$extra, c43$boxes, c43$radio, substr(or_default(c43$rows, ""), 1, 120), c43$cols, round(or_default(c43$plot_w, NA)), round(or_default(c43$plot_h, NA)),
                 paste(vapply(names(c43$views), function(n) sprintf("%s %s", n, c43$views[[n]]$cells), ""), collapse = ", "),
-                c43$use, c43$q, c43$open, c43$kept, c43$cells, c43$equal, c43$changed, c43$cleared, c43$nerr, err_txt(e43)))
+                c43$use, c43$q, c43$open, c43$kept, c43$cells, c43$equal, c43$changed, c43$cleared, c43$nerr,
+                paste0(err_txt(e43), " | scope '", trimws(or_default(c43$scope, "")), "' | cost '", or_default(c43$cost, ""), "' cols '", or_default(c43$cost_cols, ""),
+                       "' | change note '", or_default(c43$change_note, ""), "' | view headers: ",
+                       paste(vapply(names(c43$views), function(n) sprintf("%s '%s'", n, c43$views[[n]]$hdr), ""), collapse = "; "))))
     # 44. Stems and scenarios are independent (restructure R1.4, R1.5). The
     # tuning fixture's 120 stems are loaded (check 43) and Scenario A holds
     # its assortments.
@@ -2256,6 +2271,40 @@ if (!browser_ok) {
                   substr(or_default(c34$row1, ""), 1, 40), c34$state_en, c34$nav_en, c34$run_en,
                   substr(or_default(c34$hdr_en, ""), 1, 60), c34$state_back,
                   identical(c34$hdr_back, c34$hdr), c34$marker, err_txt(e34)))
+
+      # 49. Tuning on the built-in stems (R4 D7), in the fresh Norsk session.
+      c49 <- list()
+      e49 <- try_drv({
+        app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
+        app$wait_for_js("!!document.querySelector('#tn_main .tn-off')", timeout = 30 * 1000)
+        c49$off_before <- js(app, "Array.from(document.querySelectorAll('#tn_main .tn-off')).map(function(e){ return e.innerText.replace(/[ \\t\\r\\n]+/g, ' ').trim(); }).join(' | ')")
+        c49$run_before <- js(app, "document.querySelectorAll('#tn_run').length")
+        app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+        pick(app, "a", "spruce_sawlog"); app$wait_for_idle()
+        app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
+        app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)
+        app$click("dt_a_even"); app$wait_for_idle()
+        app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
+        app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
+        app$wait_for_js("!!document.getElementById('tn_run')", timeout = 30 * 1000)
+        c49$boxes <- js(app, "Array.from(document.querySelectorAll('input[name=tn_products]')).map(function(e){ return e.value + (e.checked ? '+' : '-'); }).join(',')")
+        c49$label <- js(app, "Array.from(document.querySelectorAll('#tn_products .checkbox')).map(function(e){ return e.innerText.trim(); }).join(' | ')")
+        app$click("tn_run")
+        app$wait_for_js("!!document.querySelector('#tn_tbl_hits .rt-tr') || !!document.querySelector('#tn_results .pm-msg-error')", timeout = 300 * 1000)
+        app$wait_for_idle()
+        c49$result <- if (isTRUE(js(app, "!!document.querySelector('#tn_tbl_hits .rt-tr')"))) "table" else trimws(txt(app, "#tn_results"))
+        c49$scope <- txt(app, "#tn_results .tn-scope")
+        shoot(app, "49_tuning_builtin")
+        c49$nerr <- n_err_notif(app)
+        app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      })
+      ok49 <- !nzchar(e49) && grepl("Gran \u2013 ", c49$off_before, fixed = TRUE) && grepl("ingen \u00f8nsket fordeling (legg inn under 2 Sortiment og priser)", c49$off_before, fixed = TRUE) &&
+        identical(c49$run_before, 0L) && grepl("spruce_sawlog+", c49$boxes, fixed = TRUE) &&
+        (identical(c49$result, "table") || grepl("F\u00e5 stokker|F\u00e5 for|For f\u00e5 stokker", c49$result)) && identical(c49$nerr, 0L)
+        rec(grep("^Check 49:", browser_checks, value = TRUE), if (ok49) PASS else FAIL,
+            sprintf("greyed before: '%s' (run buttons %s) | after the Even target: %s '%s' | result: '%s' %s | error notifications %s%s",
+                    substr(or_default(c49$off_before, ""), 1, 150), c49$run_before, or_default(c49$boxes, ""), or_default(c49$label, ""),
+                    substr(or_default(c49$result, ""), 1, 80), trimws(or_default(c49$scope, "")), c49$nerr, err_txt(e49)))
 
       # 48. Empty states and the Help tab (R4 D1), in a fresh Norsk session.
       c48 <- list()

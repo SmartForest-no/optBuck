@@ -187,7 +187,15 @@ v_u <- tuning_matrix_view(by16, "tuned"); v_c <- tuning_matrix_view(by16, "chang
 ok16 <- identical(dim(v_t$m), c(2L, 3L)) && identical(rownames(v_t$m), c("142", "150")) && identical(colnames(v_t$m), c("370", "430", "490")) &&
   identical(unname(v_t$m[1, ]), c(20, 30, 50)) && identical(unname(v_t$m[2, ]), c(33, NA, 67)) && is.null(v_t$fg) &&
   identical(unname(v_o$m[1, ]), c(10, 40, 50)) && identical(v_o$fg, c(90, 66.6667)) && identical(v_u$fg, c(100, 100)) &&
-  identical(unname(v_c$m[1, ]), c(-3, 0, 4)) && all(is.na(v_c$m[2, ])) && is.null(v_c$fg)    # class 150 is not eligible: nothing steered
+  identical(unname(v_c$m[1, ]), c(-3, NA, 4)) && all(is.na(v_c$m[2, ])) && is.null(v_c$fg) &&   # class 150 is not eligible: nothing steered
+  # R4 D5: unchanged priced cells (the 0 change of class 142, the whole non-steered class 150) are dash cells; changed cells are not
+  identical(unname(v_c$dash[1, ]), c(FALSE, TRUE, FALSE)) && identical(unname(v_c$dash[2, ]), c(TRUE, FALSE, TRUE)) &&
+  !any(v_t$dash) && !any(v_o$dash)
+# R4 D5: classes without logs: their priced cells are dash cells and their fordelingsgrad is empty (outcome views only)
+by16b <- c(by16, list(n_orig = c(`142` = 30, `150` = 0), n_tuned = c(`142` = 30, `150` = 12)))
+v_ob <- tuning_matrix_view(by16b, "orig"); v_ub <- tuning_matrix_view(by16b, "tuned")
+ok16 <- ok16 && identical(unname(v_ob$dash[2, ]), c(TRUE, FALSE, TRUE)) && !any(v_ob$dash[1, ]) && is.na(v_ob$fg[2]) && !is.na(v_ob$fg[1]) &&
+  !any(v_ub$dash) && !anyNA(v_ub$fg) && all(is.na(v_ob$m[2, ]))
 rec("Check 16: tuning_matrix_view(): classes in rows and lengths (cm) in columns; target and outcome shares in whole percent (NA where there is no price); FG per class for the outcome views only; price change for the steered cells only",
     ok(ok16), sprintf("target %s | outcome %s | change %s", paste(v_t$m, collapse = ","), paste(v_o$m, collapse = ","), paste(v_c$m, collapse = ",")))
 

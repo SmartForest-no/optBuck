@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .pin import and export (Phase 5b)
-  Run: 2026-10-30 15:09:21.299744
+  Run: 2026-11-02 13:41:13.994874
 ============================================================= 
 
 --- 01. Both layouts import ---
@@ -25,10 +25,10 @@
   [PASS  ] Check 07: Export -> import reproduces assortments, classes and prices (Top cylinder is written as Top) | minimal: defs TRUE prices TRUE | full: defs TRUE prices TRUE | default scenario: defs TRUE prices TRUE 
 
 --- 08. The exported file ---
-  [PASS  ] Check 08: The export has no waste rows, unique ProductUserIDs, grades only when present, SpeciesGroupUserID and a fixed minimal header | ids Pine_Pulpwood_Full,Spruce_Sawlog_Full | header SenderApplication/CreationDate/ModificationDate | grade blocks 2 (full) / 0 (minimal) | species Pine/Spruce | duplicates Same_name,Same_name_2
+  [PASS  ] Check 08: The export has no waste rows, unique ProductUserIDs (the source's own), grades only when present, SpeciesGroupUserID, the source's metadata and a fixed header with the elements the schema requires | ids PULP_Pine,SAW_Spruce | header SenderApplication/CreationDate/ModificationDate/ApplicationVersionCreated/ApplicationVersionModified/CountryCode | grade blocks 2 (full) / 4 (minimal) | species SE1_Tall_SoundKnot/SE1_Gran_Sound | duplicates Same_name,Same_name_2
 
 --- 09. Privacy ---
-  [PASS  ] Check 09: Invented coordinates in an input .pin reach no output; the scan deletes an export with a coordinate element | import equals the plain import TRUE | export holds coordinates or the buyer ID: FALSE | scan failure removes the file TRUE (Coordinates found in the export; the file was not written.) | scan finds a coordinate element TRUE, none in the export TRUE
+  [PASS  ] Check 09: Invented header coordinates in an input .pin reach no output (a product's own metadata is kept); the scan deletes an export with a coordinate element | import equals the plain import TRUE | export holds coordinates: FALSE | scan failure removes the file TRUE (Coordinates found in the export; the file was not written.) | scan finds a coordinate element TRUE, none in the export TRUE
 
 --- 10. Dispatcher and app wiring ---
   [PASS  ] Check 10: The root element decides; a .pin is not kept for the .hpr stems source (audit 17 check 42 drives the app) | kinds: pin pin, pin as .hpr pin, hpr hpr, hpr as .pin hpr | app: pin branch present TRUE, hpr_imported gone TRUE
@@ -40,7 +40,7 @@
   [PASS  ] Check 12: An .hpr is still read by ProductKey and its assortments keep HprProductKey | 8 product keys, all numeric TRUE
 
 --- 13. Files under 512 bytes ---
-  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: filee3946800be2.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
+  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: file2581c3859f.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

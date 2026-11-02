@@ -363,7 +363,24 @@ server <- function(input, output, session) {
 
   # ---- Assortments and prices (server_scenarios.R) ---------------------------
   sc <- scenario_server(input, output, session, lang)
-  tuning_server(input, output, session, lang, sc, hs_stems, hs_map, stems_ready)
+  # The stem source as the Simulator reads it (R4 D7): what a job is prepared from, and
+  # an identity that changes when the stems do (Price tuning clears its results then).
+  stem_spec <- function() {
+    src <- if (input$tree_source %in% c("list", "hpr")) input$tree_source else "nfi"
+    tl <- if (src == "list") tl_prepared() else NULL
+    hs <- if (src == "hpr") tryCatch(hs_check(), error = function(e) NULL)
+    sp <- list(src = src, params = if (src == "nfi") build_run_params(input) else list(), tl = tl,
+               list_params = list(file = if (src == "hpr") (if (is.na(hs$file)) NULL else hs$file) else tl$file))
+    if (src == "hpr") { sp$stems <- hs_stems(); sp$species_map <- hs_map() }
+    sp
+  }
+  stem_id <- reactive({
+    switch(or_default(input$tree_source, "nfi"),
+           hpr  = list("hpr", hs_stems()$read_id, hs_map()),
+           list = list("list", tl_prepared()$file, NROW(tl_prepared()$trees)),
+           list("nfi", tryCatch(build_run_params(input), error = function(e) NULL)))
+  })
+  tuning_server(input, output, session, lang, sc, stem_spec, stem_id, stems_ready)
 
 
   # ---- Runs as background tasks (helpers_jobs.R) ---------------------------

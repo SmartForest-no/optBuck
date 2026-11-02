@@ -1,17 +1,19 @@
 # app/tuning.R
 #
 # Purpose : The "Price tuning" tab (roadmap 7, session 3, 2026-10-30; restructure
-#           R3, 2026-10-30). Tunes the prices of the sawlog assortments of
-#           Scenario A or B that have a target distribution (set in the target
-#           view of Assortments and prices, or read from an .hpr/.pin file),
-#           several at once, on the .hpr stems, and offers the tuned prices as
-#           the other scenario (R/helpers_price_tuning.R).
+#           R3, 2026-10-30; R4 D5/D7, 2026-11-02). Tunes the prices of the sawlog
+#           assortments of Scenario A or B that have a target distribution (set in
+#           the target view of Assortments and prices, or read from an .hpr/.pin
+#           file), several at once, on the stems of the chosen source (the built-in
+#           selection, a tree list or .hpr stems), and offers the tuned prices as the
+#           other scenario (R/helpers_price_tuning.R). All sawlog assortments are
+#           listed; those that cannot be tuned are greyed with the reason.
 #
-# Method  : the stems are the ones the Simulator reads (hs_stems(), hs_map());
-#           the job is prepared on a worker like a run (profiles, scenario's
-#           products, prices and grade options); the tuning loop then runs in
-#           this process (tune_prices() is synchronous and uses the workers for
-#           every bucking), so the session is busy while it runs (PLAN.md,
+# Method  : the stems are the ones the Simulator reads (stem_spec()); the job is
+#           prepared like a run's (prepare_job_async(): NFI profiles from the cache,
+#           taperNOR for a tree list, .hpr profiles on a worker); the tuning loop then
+#           runs in this process (tune_prices() is synchronous and uses the workers
+#           for every bucking), so the session is busy while it runs (PLAN.md,
 #           deployment). Seed 1, max_iter = getOption("apter.tune_max_iter", 30),
 #           early_stop = FALSE, targets always the assortments' own (R3.2).
 #           The results are cleared when the tuned scenario, the assortment
@@ -27,41 +29,56 @@ tuning_page <- nav_panel(
 
 #' @param sc The scenario_server() result (defs_a, pm_a, defs_b, pm_b, grade_opts,
 #'   replace_scenario).
-tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map, stems_ready) {
+tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, stems_ready) {
   L <- function(id, ...) tr(id, ..., lang = lang())
   other <- function(side) if (side == "A") "B" else "A"
   defs_of <- function(side) if (side == "A") sc$defs_a() else sc$defs_b()
   pm_of   <- function(side) pm_minimal(if (side == "A") sc$pm_a() else sc$pm_b())
-  is_hpr  <- reactive(identical(input$tree_source, "hpr") && isTRUE(hs_stems()$ok))
   side    <- reactive(or_default(input$tn_side, "A"))
 
   res  <- reactiveVal(NULL)       # the last tuning, or list(too_few = TRUE)
   busy <- reactiveVal(FALSE)
 
-  # The assortments of the scenario that can be tuned and have a target.
-  prods <- reactive({
-    req(is_hpr())
-    p <- tuning_products(defs_of(side()), pm_of(side()))
-    p[p$has_file_target, , drop = FALSE]
+  # Every sawlog assortment of the scenario with the reason it cannot be tuned (R4 D5);
+  # the tunable ones (with a target) are the checkboxes.
+  status <- reactive({
+    req(stems_ready())
+    tuning_sawlog_status(defs_of(side()), pm_of(side()))
   })
+  prods <- reactive({ st <- status(); st[st$reason == "ok", , drop = FALSE] })
+  # "Gran – REDACTED25": the species and the assortment's name in the viewer's language.
+  disp_name <- function(species, name, l = lang())
+    sprintf("%s – %s", tr_value(tools::toTitleCase(as.character(species)), l), tr_value(as.character(name), l))
+  disp_key <- function(r, k, l = lang()) {
+    i <- match(k, assortment_table_keys(r$defs))
+    disp_name(r$defs$Species[i], r$defs$Name[i], l)
+  }
 
   output$tn_main <- renderUI({
     if (!isTRUE(stems_ready())) return(div(class = "note-muted", L("need_stems")))
-    if (!is_hpr()) return(div(class = "note-muted", L("tn_need_hpr")))
     div(class = "tally-controls",
       radioButtons("tn_side", L("tn_scenario"), c("A", "B"), selected = isolate(side()), inline = TRUE),
       uiOutput("tn_products_ui"))
   })
 
   output$tn_products_ui <- renderUI({
-    p <- prods(); l <- lang()
-    if (nrow(p) == 0L) return(div(class = "note-muted", L("tn_none")))
-    lbl <- sprintf("%s – %s", tr_value(tools::toTitleCase(p$species), l), tr_value(p$name, l))
-    cur <- intersect(isolate(input$tn_products), p$product_id)
+    st <- status(); l <- lang()
+    if (nrow(st) == 0L) return(div(class = "note-muted", L("tn_none")))
+    ok <- st$reason == "ok"
+    lbl <- disp_name(st$species, st$name, l)
+    why <- c(no_target = L("tn_reason_no_target"), one_length = L("tn_reason_one_length"),
+             one_class = L("tn_reason_one_class"), flat = L("tn_reason_flat"))
+    cur <- intersect(isolate(input$tn_products), st$product_id[ok])
     tagList(
-      checkboxGroupInput("tn_products", L("tn_products"), setNames(p$product_id, lbl),
-                         selected = if (length(cur)) cur else p$product_id),
-      actionButton("tn_run", L("tn_run"), class = "btn-primary"))
+      if (any(ok))
+        checkboxGroupInput("tn_products", L("tn_products"), setNames(st$product_id[ok], lbl[ok]),
+                           selected = if (length(cur)) cur else st$product_id[ok])
+      else div(class = "note-muted", L("tn_none")),
+      if (any(!ok))
+        div(class = "tn-unavailable", lapply(which(!ok), function(i)
+          div(class = "tn-off", tags$input(type = "checkbox", disabled = "disabled"), tags$span(lbl[i]),
+              tags$span(class = "tn-reason", why[[st$reason[i]]])))),
+      if (any(ok)) actionButton("tn_run", L("tn_run"), class = "btn-primary"))
   })
 
   # Results stay until the tuned scenario (its assortments and prices), the
@@ -71,14 +88,13 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map, st
     same <- identical(input$tn_side, r$side) &&
       identical(sort(or_default(input$tn_products, character(0))), sort(r$requested)) &&
       identical(defs_of(r$side), r$defs) && identical(pm_of(r$side), r$pm) &&
-      identical(hs_stems()$read_id, r$read_id) && identical(hs_map(), r$map) &&
-      identical(input$tree_source, "hpr")
+      identical(stem_id(), r$stem_id)
     if (!same) res(NULL)
   })
 
   # ---- the run ---------------------------------------------------------------------------
   observeEvent(input$tn_run, {
-    req(is_hpr(), !busy(), length(input$tn_products) > 0L)
+    req(stems_ready(), !busy(), length(input$tn_products) > 0L)
     s <- side(); d <- defs_of(s); pm <- pm_of(s)
     ids <- intersect(prods()$product_id, input$tn_products)
     req(length(ids) > 0L)
@@ -88,20 +104,22 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map, st
     path <- write_price_file(pm_prices(pm))
     max_iter <- as.integer(getOption("apter.tune_max_iter", 30L))
     l <- isolate(lang())
-    map <- hs_map(); read_id <- hs_stems()$read_id; requested <- input$tn_products
+    spec <- stem_spec(); sid <- stem_id(); requested <- input$tn_products
+    spec$path <- path; spec$pd <- pr$pd; spec$lc <- pr$lc; spec$scenario <- NULL
+    if (identical(spec$src, "hpr")) { spec$list_params <- list(); spec$grade_opts <- gopts }
     prog <- shiny::Progress$new(session, min = 0, max = 1)
     prog$set(message = tr_value("Preparing stem profiles", l), value = 0)
     busy(TRUE); res(NULL)
     done <- function() { prog$close(); busy(FALSE); unlink(path) }
 
-    p <- .backend_promise("prepare_hpr_stems_job",
-                          list(hs_stems(), map, path, ROOT, pr$pd, pr$lc, list(), NULL, gopts))
+    p <- prepare_job_async(spec, progress = function(done, total, what)
+      prog$set(message = tr_value(what, l), value = if (is.na(total) || total == 0L) 0 else done / total))
     p <- promises::then(p, function(job) {
       out <- tuning_run(job, products, d, ids, max_iter, gopts,
                         on_iter = function(r, m, fg)
                           prog$set(message = tr("tn_iter_progress", r, m, lang = l), value = r / m))
       out$side <- s; out$defs <- d; out$pm <- pm; out$requested <- requested
-      out$read_id <- read_id; out$map <- map
+      out$stem_id <- sid
       res(out)
     })
     p <- promises::catch(p, function(e)
@@ -111,79 +129,117 @@ tuning_server <- function(input, output, session, lang, sc, hs_stems, hs_map, st
     NULL
   })
 
-  # ---- results -----------------------------------------------------------------------------
+  # ---- results ----------------------------------------------------------------------------
   fmt1 <- function(x) fmt_num(x, 1L, lang())
-  asm_name <- function(r, k) tr_value(r$by[[k]]$name, lang())
   output$tn_results <- renderUI({
     r <- res(); if (is.null(r)) return(NULL)
     if (isTRUE(r$too_few)) return(div(class = "pm-msg-error", L("tn_too_few")))
     views <- c(target = L("tn_view_target"), orig = L("tn_view_orig"), tuned = L("tn_view_tuned"),
                change = L("tn_price_change"))
     div(class = "tn-block",
-      div(class = "tn-top",
-        reactable::reactableOutput("tn_tbl"),
-        plotOutput("tn_plot", width = "420px", height = "220px")),
-      if (length(r$skipped))
-        div(class = "pm-msg-warn", L("tn_skipped", paste(vapply(r$skipped, function(k) asm_name(r, k), ""), collapse = ", "))),
+      p(class = "tn-scope", L("tn_scope", fmt_num(r$n, 0L, lang()), fmt_num(r$N, 0L, lang()), fmt_num(r$N, 0L, lang()))),
+      div(class = "tn-hdr", L("tn_hdr_hits")),
+      reactable::reactableOutput("tn_tbl_hits"),
+      p(class = "note-muted", L("tn_fg_def")),
+      div(class = "tn-hdr", L("tn_hdr_cost")),
+      reactable::reactableOutput("tn_tbl_cost"),
+      p(class = "note-muted", L("tn_cost_caption")),
+      plotOutput("tn_plot", width = "700px", height = "320px"),
+      p(class = "note-muted", L("tn_fig_caption")),
       div(class = "tn-hdr", L("tn_matrices")),
       div(class = "tally-controls",
-        selectInput("tn_matrix_product", L("lbl_assortment"), setNames(r$ids, vapply(r$ids, function(k) asm_name(r, k), "")),
+        selectInput("tn_matrix_product", L("col_assortment"), setNames(r$ids, vapply(r$ids, function(k) disp_key(r, k), "")),
                     selected = isolate(input$tn_matrix_product), width = "320px"),
         radioButtons("tn_matrix_view", NULL, setNames(names(views), views), inline = TRUE,
                      selected = or_default(isolate(input$tn_matrix_view), "target"))),
-      div(class = "tn-axis", L("tn_col_class_mm")),
       reactable::reactableOutput("tn_matrix"),
+      uiOutput("tn_matrix_note"),
       div(class = "tally-downloads",
           actionButton("tn_use", L("tn_use", other(r$side)), class = "btn-secondary btn-sm")))
   })
-  output$tn_tbl <- reactable::renderReactable({
+  # Hits per assortment: logs, degree of fit and volume before / after, status.
+  output$tn_tbl_hits <- reactable::renderReactable({
     r <- res(); req(r, !isTRUE(r$too_few)); l <- lang()
-    pct <- if (r$orig$value != 0) sprintf(" (%s %%)", fmt_num(100 * (r$tuned$value - r$orig$value) / r$orig$value, 1L, l)) else ""
-    nm <- function(k) asm_name(r, k)
-    rows <- c(lapply(r$ids, function(k) list(a = sprintf("%s: %s", L("tn_row_fg"), nm(k)),
-                       o = fmt1(r$by[[k]]$fg_o), t = fmt1(r$by[[k]]$fg_t), d = fmt1(r$by[[k]]$fg_t - r$by[[k]]$fg_o))),
-              list(list(a = L("tn_row_value"), o = fmt_num(r$orig$value, 0L, l), t = fmt_num(r$tuned$value, 0L, l),
-                        d = paste0(fmt_num(r$tuned$value - r$orig$value, 0L, l), pct)),
-                   list(a = L("tn_row_saw_vol"), o = fmt1(r$orig$saw_vol), t = fmt1(r$tuned$saw_vol),
-                        d = fmt1(r$tuned$saw_vol - r$orig$saw_vol))),
-              lapply(r$ids, function(k) list(a = sprintf("%s: %s", L("tn_row_prod_vol"), nm(k)),
-                       o = fmt1(r$by[[k]]$vol_o), t = fmt1(r$by[[k]]$vol_t), d = fmt1(r$by[[k]]$vol_t - r$by[[k]]$vol_o))))
-    tbl <- data.frame(a = vapply(rows, `[[`, "", "a"), b = vapply(rows, `[[`, "", "o"),
-                      c = vapply(rows, `[[`, "", "t"), d = vapply(rows, `[[`, "", "d"), stringsAsFactors = FALSE)
-    names(tbl) <- c(" ", L("tn_col_orig"), L("tn_col_tuned"), L("tn_col_change"))
-    apter_reactable(tbl, sortable = FALSE, pagination = FALSE, lang = l)
+    by <- r$by
+    df <- data.frame(
+      a = vapply(r$ids, function(k) disp_key(r, k), ""),
+      n = fmt_num(r$n_logs[r$ids], 0L, l),
+      fg1 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_o, 0)), v1 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_o, 0)),
+      fg2 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_t, 0)), v2 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_t, 0)),
+      st = vapply(r$ids, function(k) if (k %in% r$used) L("tn_status_ok") else L("tn_status_few", fmt_num(r$n_logs[[k]], 0L, l)), ""),
+      stringsAsFactors = FALSE)
+    cols <- list(a = reactable::colDef(name = L("col_assortment"), width = 260),
+                 n = reactable::colDef(name = L("col_logs"), width = 90, align = "right"),
+                 fg1 = reactable::colDef(name = L("tn_col_fg"), width = 120, align = "right"),
+                 v1 = reactable::colDef(name = L("tn_col_vol"), width = 100, align = "right"),
+                 fg2 = reactable::colDef(name = L("tn_col_fg"), width = 120, align = "right"),
+                 v2 = reactable::colDef(name = L("tn_col_vol"), width = 100, align = "right"),
+                 st = reactable::colDef(name = " ", minWidth = 420))
+    apter_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
+                    column_groups = list(reactable::colGroup(L("tn_grp_before"), c("fg1", "v1")),
+                                         reactable::colGroup(L("tn_grp_after"), c("fg2", "v2"))))
   })
-  # One thin line per assortment (FG by iteration), the best iteration marked.
-  output$tn_plot <- renderPlot(width = 420, height = 220, res = 96, {
-    r <- res(); req(r, !isTRUE(r$too_few)); tr_ <- r$trace
-    op <- par(mar = c(3.4, 3.8, 0.6, 0.6), mgp = c(2.2, 0.7, 0), cex = 0.8); on.exit(par(op))
-    ks <- r$used
-    ys <- lapply(ks, function(k) r$by[[k]]$fg_iter)
-    plot(NA, xlim = range(tr_$r), ylim = range(unlist(ys), na.rm = TRUE), xlab = L("tn_iteration"), ylab = L("tn_row_fg"),
-         xaxt = "n", bty = "l", las = 1)
-    at <- pretty(tr_$r); axis(1, at = at[at == round(at) & at >= 1 & at <= max(tr_$r)])
-    for (i in seq_along(ks)) {
-      lines(tr_$r, ys[[i]], lty = i, lwd = 1)
-      points(r$best_iter, ys[[i]][r$best_iter], pch = 19, cex = 0.9)
+  # Cost for the whole harvest: value at the original prices and sawlog volume.
+  output$tn_tbl_cost <- reactable::renderReactable({
+    r <- res(); req(r, !isTRUE(r$too_few)); l <- lang()
+    chg <- function(a, b, digits) {
+      p <- if (a != 0) sprintf(" (%s %%)", fmt_num(100 * (b - a) / a, 1L, l, big = FALSE)) else ""
+      paste0(fmt_num(b - a, digits, l), p)
     }
-    if (length(ks) > 1L)
-      legend("bottomright", bty = "n", lty = seq_along(ks), lwd = 1, cex = 0.7,
-             legend = vapply(ks, function(k) asm_name(r, k), ""))
+    df <- data.frame(
+      a = c(L("tn_row_value"), L("tn_row_saw_vol")),
+      b = c(fmt_num(r$orig$value, 0L, l), fmt1(r$orig$saw_vol)),
+      c = c(fmt_num(r$tuned$value, 0L, l), fmt1(r$tuned$saw_vol)),
+      d = c(chg(r$orig$value, r$tuned$value, 0L), chg(r$orig$saw_vol, r$tuned$saw_vol, 1L)),
+      stringsAsFactors = FALSE)
+    names(df) <- c(" ", L("tn_col_before"), L("tn_col_after"), L("tn_col_change"))
+    apter_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
   })
-  # The matrix of the chosen assortment in the chosen view: shares in whole
-  # percent per file diameter class (rows) and length (columns); the outcome
-  # views have FG per class as an extra column.
+  # One line per tuned assortment (degree of fit by iteration), the best iteration marked.
+  # Colours are the app's chart colours (the first is the primary green); with more
+  # assortments than colours the line type changes.
+  output$tn_plot <- renderPlot(width = 700, height = 320, res = 96, {
+    r <- res(); req(r, !isTRUE(r$too_few)); l <- lang()
+    ks <- r$used; lab <- vapply(ks, function(k) disp_key(r, k, l), "")
+    d <- do.call(rbind, lapply(seq_along(ks), function(i)
+      data.frame(it = r$trace$r, fg = r$by[[ks[i]]]$fg_iter, a = lab[i], stringsAsFactors = FALSE)))
+    d$a <- factor(d$a, levels = lab)
+    pal <- c(APTER_CHART$series1, APTER_CHART$series2, APTER_CHART$other, APTER_CHART$neutral)
+    lt <- c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
+    col <- setNames(rep_len(pal, length(ks)), lab)
+    lty <- setNames(lt[((seq_along(ks) - 1L) %/% length(pal)) %% length(lt) + 1L], lab)
+    best <- d[d$it == r$best_iter, , drop = FALSE]
+    ggplot2::ggplot(d, ggplot2::aes(x = it, y = fg, colour = a, linetype = a)) +
+      ggplot2::geom_line(linewidth = 0.6, na.rm = TRUE) +
+      ggplot2::geom_point(data = best, size = 2.4, na.rm = TRUE) +
+      ggplot2::scale_colour_manual(values = col) + ggplot2::scale_linetype_manual(values = lty) +
+      ggplot2::scale_x_continuous(breaks = function(x) { b <- pretty(x); b[b == round(b)] }) +
+      ggplot2::labs(x = L("tn_iteration"), y = L("tn_col_fg"), title = L("tn_fig_title"), colour = NULL, linetype = NULL) +
+      theme_apter() + ggplot2::theme(legend.position = "bottom")
+  })
+  # The matrix of the chosen assortment in the chosen view: shares in whole percent per
+  # file diameter class (rows) and length class (columns); the outcome views have the
+  # degree of fit per class as an extra column. "–": classes without logs, unchanged prices.
   output$tn_matrix <- reactable::renderReactable({
     r <- res(); req(r, !isTRUE(r$too_few)); l <- lang()
     k <- or_default(input$tn_matrix_product, r$ids[1L]); req(k %in% r$ids)
     v <- or_default(input$tn_matrix_view, "target")
     mv <- tuning_matrix_view(r$by[[k]], v)
-    cell <- ifelse(is.na(mv$m), "", fmt_num(mv$m, 0L, l, na = "", big = FALSE))
-    df <- as.data.frame(matrix(cell, nrow(mv$m), ncol(mv$m)), stringsAsFactors = FALSE)
-    names(df) <- fmt_num(mv$lengths_cm, 0L, l, big = FALSE)
-    df <- cbind(setNames(data.frame(fmt_num(mv$classes, 0L, l, big = FALSE), stringsAsFactors = FALSE), " "), df)
-    if (!is.null(mv$fg)) df[[L("tn_col_fg")]] <- ifelse(is.na(mv$fg), "", fmt1(mv$fg))
-    apter_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
+    cell <- ifelse(mv$dash, "–", ifelse(is.na(mv$m), "", fmt_num(mv$m, 0L, l, na = "", big = FALSE)))
+    nl <- ncol(mv$m); lc <- paste0("L", seq_len(nl))
+    df <- data.frame(cls = fmt_num(mv$classes, 0L, l, big = FALSE), stringsAsFactors = FALSE)
+    for (j in seq_len(nl)) df[[lc[j]]] <- cell[, j]
+    cols <- list(cls = reactable::colDef(name = L("tn_col_class_mm"), width = 150))
+    for (j in seq_len(nl)) cols[[lc[j]]] <- reactable::colDef(name = fmt_num(mv$lengths_cm[j], 0L, l, big = FALSE), width = 64, align = "right")
+    if (!is.null(mv$fg)) {
+      df$fg <- ifelse(is.na(mv$fg), "", fmt1(mv$fg))
+      cols$fg <- reactable::colDef(name = L("tn_col_fg"), width = 150, align = "right")
+    }
+    apter_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
+                    column_groups = list(reactable::colGroup(L("tn_col_length_cm"), lc)))
+  })
+  output$tn_matrix_note <- renderUI({
+    if (identical(or_default(input$tn_matrix_view, "target"), "change")) p(class = "note-muted", L("tn_change_caption"))
   })
 
   # Test mode only (shinytest2): the tuned grids, so audit 17 can compare them with scenario B.
@@ -256,11 +312,12 @@ tuning_run <- function(job, products, defs, ids, max_iter, grade_opts, on_iter =
     g <- grids[[k]]
     list(name = products$pd$ProductName[match(k, products$pd$ProductKey)], grid = g, W = Ws[[k]], P1 = P1[[k]], Pb = Pb[[k]],
          eligible = if (k %in% used) tn$by_product[[k]]$eligible else setNames(rep(FALSE, ncol(P1[[k]])), colnames(P1[[k]])),
+         n_orig = colSums(o$tal[[k]]$n), n_tuned = colSums(t2$tal[[k]]$n),
          S_orig = o$fg[[k]]$S, S_tuned = t2$fg[[k]]$S, fg_orig = o$fg[[k]]$by_class, fg_tuned = t2$fg[[k]]$by_class,
          fg_o = o$fg[[k]]$overall, fg_t = t2$fg[[k]]$overall, vol_o = sum(o$tal[[k]]$v), vol_t = sum(t2$tal[[k]]$v),
          fg_iter = if (k %in% used) tn$by_product[[k]]$fg else NULL)
   })
   list(ids = ids, used = used, skipped = ids[!ok], by = by,
        orig = list(value = o$value, saw_vol = o$saw_vol), tuned = list(value = t2$value, saw_vol = t2$saw_vol),
-       trace = tn$trace, best_iter = tn$best_iter, n = n, n_logs = n_logs)
+       trace = tn$trace, best_iter = tn$best_iter, n = n, N = length(job$pvs), n_logs = n_logs)
 }

@@ -33,16 +33,13 @@ PIN_SENDER_APPLICATION <- "optBuck"
 #' ProductUserIDs of assortment names: spaces become underscores; a repeated
 #' ID gets _2, _3, ... (the first keeps its name).
 pin_product_ids <- function(names) {
-  id <- gsub("[[:space:]]+", "_", trimws(as.character(names)))
+  id <- ascii_id(gsub("[[:space:]]+", "_", trimws(as.character(names))))
   id[!nzchar(id)] <- "product"
-  out <- character(length(id))
-  for (i in seq_along(id)) {
-    cand <- id[i]; n <- 1L
-    while (cand %in% out[seq_len(i - 1L)]) { n <- n + 1L; cand <- paste0(id[i], "_", n) }
-    out[i] <- cand
-  }
-  out
+  unique_ids(id)
 }
+
+#' CountryCode of an exported .pin (the header requires one): 578, Norway.
+PIN_COUNTRY_CODE <- "578"
 
 # ISO 8601 time with the offset as +hh:mm.
 .pin_time <- function(t = Sys.time()) {
@@ -60,18 +57,21 @@ pin_export_scenario <- function(defs, pm, path) {
   defs <- defs[as.character(defs$Type) != "waste", , drop = FALSE]
   if (nrow(defs) == 0L) return(fail("The scenario has no assortments to export (waste is not exported)."))
   rownames(defs) <- NULL
-  ids <- pin_product_ids(defs$Name)
+  now <- .pin_time()
   prod <- tryCatch(hpr_export_products(defs, pm, orig = list(), groups = NULL, used_keys = character(0),
-                                       style = "pin", ids = ids),
+                                       style = "pin", now = now),
                    error = function(e) conditionMessage(e))
   if (is.character(prod)) return(fail(prod))
-  now <- .pin_time()
+  ids <- prod$ids
   txt <- paste0(
     '<?xml version="1.0" encoding="utf-8"?>\n',
-    '<ProductInstruction messageType="pin" diameterUnit="mm" lengthUnit="cm" version="3.3" ',
-    'versionDate="2017-02-06" xmlns="urn:skogforsk:stanford2010">\n',
+    '<ProductInstruction messageType="pin" areaUnit="ha" diameterUnit="mm" lengthUnit="cm" volumeUnit="m3" ',
+    'weightUnit="kg" version="3.3" versionDate="2017-02-06" xmlns="urn:skogforsk:stanford2010">\n',
     "<ProductInstructionHeader><SenderApplication>", .xesc(PIN_SENDER_APPLICATION), "</SenderApplication>",
     "<CreationDate>", now, "</CreationDate><ModificationDate>", now, "</ModificationDate>",
+    "<ApplicationVersionCreated>", .xesc(PIN_SENDER_APPLICATION), "</ApplicationVersionCreated>",
+    "<ApplicationVersionModified>", .xesc(PIN_SENDER_APPLICATION), "</ApplicationVersionModified>",
+    "<CountryCode>", PIN_COUNTRY_CODE, "</CountryCode>",
     "</ProductInstructionHeader>\n",
     paste0(prod$xml, collapse = "\n"), "\n</ProductInstruction>\n")
   con <- file(path, "wb")

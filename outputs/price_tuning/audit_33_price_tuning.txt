@@ -9,7 +9,7 @@
   [PASS  ] Check 9: tuning_sample_size 10200/7598 -> 1343; 7283/1469 -> 4958; 7283/800 -> 7283; 100/0 -> 100; at least 1, at most n_stems | 1343, 4958, 100
 
 --- 16. tuning_matrix_view() ---
-  [PASS  ] Check 16: tuning_matrix_view(): classes in rows and lengths (cm) in columns; target and outcome shares in whole percent (NA where there is no price); FG per class for the outcome views only; price change for the steered cells only | target 20,33,30,NA,50,67 | outcome 10,0,40,NA,50,100 | change -3,NA,0,NA,4,NA
+  [PASS  ] Check 16: tuning_matrix_view(): classes in rows and lengths (cm) in columns; target and outcome shares in whole percent (NA where there is no price); FG per class for the outcome views only; price change for the steered cells only | target 20,33,30,NA,50,67 | outcome 10,0,40,NA,50,100 | change -3,NA,NA,NA,4,NA
 
 --- Setup: file5 products, grid and the original-price run of all stems ---
 

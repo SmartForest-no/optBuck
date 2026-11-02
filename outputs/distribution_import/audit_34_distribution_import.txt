@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: distribution import and export (Phase 7a)
-  Run: 2026-10-30 15:13:13.919638
+  Run: 2026-11-02 13:41:14.040247
 ============================================================= 
 
 --- 01. Import: Distribution per cell and the four product fields ---
@@ -22,7 +22,7 @@
   [PASS  ] Check 06: write_price_file() on a pm with Distribution is byte-identical to the same pm without it; the backend loader drops the column | price file identical TRUE | backend pm identical TRUE
 
 --- 07. Export: element position and order, <Distribution> per cell ---
-  [PASS  ] Check 07: LengthDistributionDefinition after PriceDefinition and before ProductMatrixes in the source order, only with stored values; <Distribution> per cell | position/order TRUE | product without values: no element, 0 per cell TRUE | cell values TRUE | .pin TRUE
+  [PASS  ] Check 07: LengthDistributionDefinition after PriceDefinition and before ProductMatrixes in the source order (the stored values, else the neutral element the schema requires); <Distribution> per cell of the file's own classes | position/order TRUE | product without values: neutral element, 0 per cell TRUE | cell values TRUE | .pin TRUE
 
 --- 08. No effect on comparison or highlighting ---
   [PASS  ] Check 08: Distribution-only differences do not highlight or trigger a comparison | no comparison/highlight TRUE

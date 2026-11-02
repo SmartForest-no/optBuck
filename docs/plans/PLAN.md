@@ -276,7 +276,7 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 3. **Kept through edits.** `pm_minimal()` keeps the column, `pm_bind()` fills it with NA where one side lacks it, `pm_from_grid()` keeps a cell's value when its price changes, new cells have none, `pm_prices()` gives the four price columns that `write_price_file()` and the backend price loader use (the column never reaches a run). Not compared between A and B (`scenarios_differ()`, `assortment_diff()`).
 4. **Export.** `<Distribution>` per cell is the stored value (0 when none). `LengthDistributionDefinition` is written when the assortment has stored fields, after `PriceDefinition`/`PermittedGradesDefinition` and before `ProductMatrixes`, children in the order of the source files (DistributionAllowed, DistributionCategory, MAXDeviation, DistributionWithinProduct).
 5. **Tests.** Audit 34 (fixtures `distribution_synthetic.hpr/.pin` from `scripts/make_distribution_fixture.R`; checks 20-28 read the private files and are skipped when missing).
-6. **Known limitation.** Distribution, the four distribution fields and `FileDiameterClass_mm` (hidden price-matrix column, added 2026-10-30 for price tuning: the lower limit in mm of the file diameter class a whole-cm row was spread from) are kept in copy A/B, edits, the scenario xlsx (since restructure R2.5: assortment columns, sheets target_<n> and file_classes) and the .hpr/.pin round trip. Exported .hpr/.pin write whole-cm diameter classes, so re-importing an exported file gives whole-cm classes instead of the original file classes. An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
+6. **Known limitation.** Distribution, the four distribution fields and `FileDiameterClass_mm` (hidden price-matrix column, added 2026-10-30 for price tuning: the lower limit in mm of the file diameter class a whole-cm row was spread from) are kept in copy A/B, edits, the scenario xlsx (since restructure R2.5: assortment columns, sheets target_<n> and file_classes) and the .hpr/.pin round trip. Exported .hpr/.pin write the original file diameter classes (R4 D6). A file class narrower than one whole cm, or above the product's max top diameter, has no whole-cm row at import and is therefore not exported. An uploaded price file for an assortment replaces its cells, so those cells have no Distribution.
 
 ## Phase 6: stem profile import (not scheduled in the 2026-10-27 roadmap)
 
@@ -323,22 +323,34 @@ Open questions: none. Blocked items: none.
 Rules, design and answers copied verbatim from Lennart's task (2026-11-02). After any context compaction re-read **this whole section** and `git log -15`. Short entries such as "as in the design" always mean the verbatim text below.
 
 ### Progress checklist (tick + commit hash)
-- [ ] 0. This section (commit)
-- [ ] 1. D3 Sortiment og priser
-- [ ] 2. D1 Guidance (tabs, intros, empty states, Help tab)
-- [ ] 3. D2 Stammer tab
-- [ ] 4. D4 Simulator > Sammendrag
-- [ ] 5. D6 StanForD exports (+ audit 35)
-- [ ] 6. D5 Pristilpasning presentation
-- [ ] 7. D7 Tuning on all stem sources
+- [x] 0. This section (2956090)
+- [x] 1. D3 Sortiment og priser (2495c2a)
+- [x] 2. D1 Guidance (tabs, intros, empty states, Help tab) (14150ca, one commit with D2 and D4)
+- [x] 3. D2 Stammer tab (14150ca)
+- [x] 4. D4 Simulator > Sammendrag (14150ca)
+- [x] 5. D6 StanForD exports (+ audit 35) (commit "D5, D6, D7")
+- [x] 6. D5 Pristilpasning presentation (same commit)
+- [x] 7. D7 Tuning on all stem sources (same commit)
 - [ ] 8. Full suite, manual check, screenshots, CLAUDE.md/PLAN.md, final report
 
 ### Decisions made
 (what, choice, alternatives, why — appended after each step)
 - XSD files live in `C:/apter_private/stanford_xsd/` (`v31/`, `v33/`), never committed (no licence text in the page or the files). Audit 35 gives REVIEW if they are missing. `.pin` is written as version 3.3 (as real.pin); an `.hpr` export keeps the source file's version (file5: 3.1) and is validated against the matching XSD.
 
+- D3: scenario names were removed completely (inputs, `scenario_label()`, `scenario_file_tag()`, xlsx `scenario` sheet; the app's `nm()` now returns A/B, file names use A/B). An older xlsx with a `scenario` sheet imports unchanged and ignores it. Audit 24 check 12 and audit 17 check 45 were rewritten to assert the absence of names (design intends it).
+- D1: the built-in source is always "ready"; the empty state hides the run button and the result tabs (`output.stems_ready`) instead of the explanatory panels. The prices tab keeps its own intro (`page_intro`). Audit 17 checks 6, 34, 39 (tab labels) updated; check 47 (Stems panel) and 48 (empty states and Help, in the Norsk session) added.
+- D2: `fig_distributions` moved from Simulator > Trees to the Stems panel (`fig_stem_dists`); the Trees tab keeps the DBH-class figure, trees table and stem diagram. Audit 17 checks 15 (figs), 27, 37 (3 figures instead of 4) updated. The species table is `uiOutput("stem_summary")` (a reactable inside), so an empty result really clears it (a silent error left the old table).
+- D4: comparison Summary = sentence + `tbl_summary_cmp` + run-info tiles + `bar_value_by_type` (value per type group, A/B, theme colours). The per-scenario cards (`.summary-scen`) are gone; audit 17 check 16 updated (labels list, no grid, new table/sentence/figure assertion) and check 45 (the sentence says "scenario A" in lower case). Sawlog share = sawlog commercial volume / all commercial volume (`summary_comparison()` in `R/helpers_result_tables.R`).
+- D6 (so far): hidden assortment fields `SourceXml` (the source product's own elements: ModificationDate, metadata, ManualFreeBuck .. CuttingWindowDefinition, PermittedGradesDefinition, LimitationDefinition, LongLogButtHeight, ProductUserID, SpeciesGroupUserID; built from the product's text by `source_xml_build()`) and `SourceFingerprint` (md5 of the price and Distribution cells, `product_fingerprint()`), `SOURCE_DEF_COLS`, handled like the Distribution fields (kept on edits/copies/xlsx, ignored by `assortment_diff()`). `hpr_export_products()` rewritten to write the schema order (ProductName, ModificationDate, metadata, ..., ProductMatrixes with its five required attributes, SpeciesGroupUserID / ProductUserID + SpeciesGroupKey), integer prices and shares (the schema's type; shares per diameter class by largest remainder, so a row that adds up to 100 still does), a required `DiameterClassMAX` (no max top = 2000 mm, i.e. 200 cm, after a round trip), neutral values for Apter-made products (ManualFreeBuck/TopLogFreeBuck false, ProductCondition "Buck always", LimitationDefinition "No limitation / No action", LengthDistributionDefinition "false / Number of logs / 0 / true", empty PermittedGradesDefinition), ProductUserID from the name in ASCII (æ ae, ø o, å aa, Æ Ae, Ø O, Å Aa; unique with _2, _3), SpeciesGroupUserID of an imported product of the same species in the scenario else Spruce/Pine, ModificationDate = export time unless the fingerprint matches, the header of a .pin with areaUnit/volumeUnit/weightUnit, ApplicationVersionCreated/Modified and CountryCode 578. Original diameter classes are written from `FileDiameterClass_mm` (one class per distinct file class; the price/target of its first whole-cm row). Price edits in the grid set every row of the same file class (`pm_from_grid(by_class = TRUE)`, only the interactive grid edit; bulk edits, reset and tuning unchanged).
+
+- D5: the hits table has the column groups "Før/Etter tilpasning" each holding Fordelingsgrad and Volum (so the order is Sortiment, Stokker, FG før, Volum før, FG etter, Volum etter, Status, not FG før/etter then Volum før/etter). Flat-priced sawlog assortments are listed greyed with the extra reason "fast pris, ingen prismatrise" (`tn_reason_flat`; the task names three reasons only). Per-class log counts (`n_orig`, `n_tuned`) and the stem count `N` were added to the `tuning_run()` result (numbers unchanged: audit 33 and performance_check pass). The old "not tuned (too few logs)" warning was replaced by the Status column. Audit 33 check 16 and audit 17 check 43 updated (change view shows "–" for unchanged cells; new table ids tn_tbl_hits / tn_tbl_cost).
+- D7: `prepare_job_async()` (app/helpers_jobs.R) is the first half of `run_job_async()`; Price tuning prepares its job from `stem_spec()` (built-in params, tree list, .hpr stems) and clears its results when `stem_id()` changes. Audit 17 check 49 added (built-in tuning in Norsk).
+- D6 side effects (expectations changed on purpose): audit 32 checks 8-9 (source ProductUserID/SpeciesGroupUserID and metadata are kept, the header has the required elements, grades element always present), audit 34 checks 3, 7, 28 (the file's own classes; neutral LengthDistributionDefinition where none stored), audit 17 check 42 (ProductUserID of the source).
+
 ### Open questions for Lennart
-(none yet)
+- Help-tab definitions drafted from the code (please review): *salgbart volum* = under-bark volume (m3fub) of the non-waste logs, summed over 10 cm sections with the diameter at the top of each section, excluding stump, waste and the top above the last log; *oppgjorsvolum* = the volume a log is paid for, by each assortment's own volume rule (top diameter, mid diameter, solid volume ...); *stammekvaliteter* = quality grades along a stem in .hpr files ("Use stem grades": a log only gets products that permit the grades it covers; "Cut at grade changes": cut at every change); *sortiment* = a product with species, diameter limits, lengths, volume rule and price (sawlog, pulpwood, waste or own); *prismatrise* = prices in NOK/m3 by top diameter class (rows) and log length (columns).
+- D6: an .hpr/.pin source product with `agency="Sample"` (hand.pin) stays as in the source; it is not valid against the schema and is not changed (no action needed per the task).
+- D6: the schema's Price/Distribution are integers, so a price such as 430.5 is exported as 431 (and shares rounded to whole percent); importing an export back gives the rounded values.
 
 ### Blocked items
 (none yet)

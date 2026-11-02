@@ -344,7 +344,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     }
     rows$PermittedGrades <- if (!is.null(old_row)) old_row$PermittedGrades else NA_character_   # hidden; kept on edits
     rows$ReferenceGrades <- if (!is.null(old_row)) old_row$ReferenceGrades else NA_character_
-    for (n in DISTRIBUTION_DEF_COLS)   # hidden distribution fields (Phase 7a); kept on edits
+    for (n in c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS))   # hidden fields (Phase 7a, R4 D6); kept on edits
       rows[[n]] <- if (!is.null(old_row)) old_row[[n]] else rows[[n]][NA_integer_]
     errs <- list(); start <- NULL
     if (!same_pricing) {
@@ -744,7 +744,7 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
       say(side, "error", T_("err_negative_price"))
       redraw(); return()
     }
-    sc[[side]]$pm(pm_from_grid(g, id, isolate(prices(side))))
+    sc[[side]]$pm(pm_from_grid(g, id, isolate(prices(side)), by_class = TRUE))
     redraw()                                          # the other side's highlighting
   }
   observeEvent(input$pm_a, apply_grid_edit(input$pm_a, "A"))

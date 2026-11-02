@@ -451,6 +451,29 @@ tuning_hpr_info <- function(defs, pm, product_id) {
   list(cells = cells, category = cat_)
 }
 
+#' Every sawlog assortment of a scenario with the reason it cannot be tuned (R4 D5):
+#' "ok" (tunable and has a target), "no_target", "one_length" (fewer than two priced
+#' lengths), "one_class" (fewer than two diameter classes) or "flat" (a flat price,
+#' no matrix).
+#' @return data.frame(product_id, name, species, reason).
+tuning_sawlog_status <- function(defs, pm) {
+  keys <- assortment_table_keys(defs)
+  tunable <- tuning_products(defs, pm)
+  out <- lapply(which(as.character(defs$Type) == "sawlog"), function(i) {
+    reason <- if (!identical(as.character(defs$PriceType[i]), "matrix")) "flat" else {
+      rows <- .tg_rows(pm, keys[i]); ok <- rows[!is.na(rows$PriceNOKperM3), , drop = FALSE]
+      if (nrow(ok) == 0L || length(unique(ok$LengthClass_dm)) < 2L) "one_length"
+      else if (!keys[i] %in% tunable$product_id) "one_class"
+      else if (!isTRUE(tunable$has_file_target[match(keys[i], tunable$product_id)])) "no_target"
+      else "ok"
+    }
+    data.frame(product_id = keys[i], name = as.character(defs$Name[i]), species = as.character(defs$Species[i]),
+               reason = reason, stringsAsFactors = FALSE)
+  })
+  if (length(out)) do.call(rbind, out)
+  else data.frame(product_id = character(0), name = character(0), species = character(0), reason = character(0))
+}
+
 #' The products of a scenario that can be tuned: sawlog type, matrix-priced, more
 #' than one priced length class and more than one diameter class (the derived
 #' file classes with a price).
@@ -496,8 +519,22 @@ tuning_matrix_view <- function(by, view = c("target", "orig", "tuned", "change")
     change = { steer <- !is.na(by$W) & !is.na(by$P1) & matrix(by$eligible, nrow(by$P1), ncol(by$P1), byrow = TRUE)
                d <- by$Pb - by$P1; d[!steer] <- NA_real_; d })
   m <- round(t(m))
-  m[t(is.na(g$price))] <- NA_real_                           # a cell without a price has no value
+  priced <- !t(is.na(g$price))
+  m[!priced] <- NA_real_                                     # a cell without a price has no value
   dimnames(m) <- list(cls, lens)
   fg <- switch(view, orig = by$fg_orig, tuned = by$fg_tuned, NULL)
-  list(m = m, fg = if (is.null(fg)) NULL else unname(fg[as.character(cls)]), classes = cls, lengths_cm = lens)
+  fg <- if (is.null(fg)) NULL else unname(fg[as.character(cls)])
+  # R4 D5: "dash" cells show "-": in the outcome views the priced cells of a diameter
+  # class without logs (and its fordelingsgrad is empty), in the price change view
+  # the priced cells that were not changed.
+  dash <- matrix(FALSE, nrow(m), ncol(m), dimnames = dimnames(m))
+  n_cls <- switch(view, orig = by$n_orig, tuned = by$n_tuned, NULL)
+  if (!is.null(n_cls)) {
+    empty <- !is.na(n_cls[as.character(cls)]) & n_cls[as.character(cls)] == 0
+    dash[empty, ] <- priced[empty, , drop = FALSE]
+    if (!is.null(fg)) fg[empty] <- NA_real_
+  }
+  if (identical(view, "change")) dash <- priced & (is.na(m) | m == 0)
+  m[dash] <- NA_real_
+  list(m = m, fg = fg, classes = cls, lengths_cm = lens, dash = dash)
 }

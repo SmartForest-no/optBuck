@@ -160,7 +160,13 @@ pm_drop_empty_cells <- function(long) {
 
 #' Write a grid back into a (minimal) long price matrix, replacing that
 #' matrix's rows. For the flat table only the products in the grid change.
-pm_from_grid <- function(grid, id, pm) {
+#'
+#' @param by_class TRUE for an edit in the grid (R4 D6): a price that differs
+#'   from the old one is set for every whole-cm row of the same length column
+#'   that has the same hidden file diameter class (FileDiameterClass_mm), as
+#'   a target edit does; a row without a file class changes alone. Bulk edits,
+#'   resets and tuning keep the default FALSE.
+pm_from_grid <- function(grid, id, pm, by_class = FALSE) {
   pm  <- pm_minimal(pm)
   new <- .grid_to_long(grid, id)
   drop <- if (identical(id, PM_FLAT_ID))
@@ -175,6 +181,15 @@ pm_from_grid <- function(grid, id, pm) {
     hit <- match(paste(new$ProductKey, new$LengthClass_dm, new$PriceDiameterClass_cm),
                  paste(old$ProductKey, old$LengthClass_dm, old$PriceDiameterClass_cm))
     for (h in hid) new[[h]] <- old[[h]][hit]
+    if (by_class && !identical(id, PM_FLAT_ID) && PM_FILE_CLASS_COL %in% hid) {
+      op <- old$PriceNOKperM3[hit]
+      edited <- !is.na(hit) & !mapply(.same_price, op, new$PriceNOKperM3) & !is.na(new[[PM_FILE_CLASS_COL]])
+      for (r in which(edited)) {
+        same <- !is.na(new[[PM_FILE_CLASS_COL]]) & new[[PM_FILE_CLASS_COL]] == new[[PM_FILE_CLASS_COL]][r] &
+          new$LengthClass_dm == new$LengthClass_dm[r]
+        new$PriceNOKperM3[same] <- new$PriceNOKperM3[r]
+      }
+    }
   }
   pm_minimal(rbind(pm[!drop, , drop = FALSE], new))
 }
@@ -412,6 +427,7 @@ scenario_export <- function(defs, pm, path) {
   # diameter row in cm, file diameter class in mm) for rows that have one.
   has_fields <- any(!is.na(unlist(defs[, DISTRIBUTION_DEF_COLS, drop = FALSE])))
   cols <- if (has_fields) ASSORTMENT_TABLE_COLS else setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS)
+  if (!any(!is.na(unlist(defs[, SOURCE_DEF_COLS, drop = FALSE])))) cols <- setdiff(cols, SOURCE_DEF_COLS)
   sheets <- c(list(assortments = defs[, cols, drop = FALSE]),
               .pm_wide_sheets(pm), .pm_target_sheets(pm), .pm_file_class_sheet(pm))
   writexl::write_xlsx(sheets, path)
@@ -428,7 +444,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS)), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]
@@ -512,7 +528,7 @@ check_price_set <- function(defs, pm) {
 #'   the other scenario).
 assortment_diff <- function(defs, other) {
   k <- assortment_table_keys(defs); ko <- assortment_table_keys(other)
-  cols <- setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS)   # hidden, no effect on runs
+  cols <- setdiff(ASSORTMENT_TABLE_COLS, c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS))   # hidden, no effect on runs
   diff <- matrix(FALSE, nrow(defs), length(cols), dimnames = list(k, cols))
   status <- rep("only", nrow(defs))
   for (i in seq_len(nrow(defs))) {

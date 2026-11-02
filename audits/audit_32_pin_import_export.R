@@ -276,17 +276,21 @@ dd <- dflt$defs
 dup <- rbind(dd[dd$Type != "waste", ][1:2, ], dd[dd$Type == "waste", ][1, ])
 dup$Name[1:2] <- "Same name"; dup$Species[2] <- "spruce"
 ids_dup <- pin_product_ids(dup$Name[dup$Type != "waste"])
-ok8 <- isTRUE(x8$ok) && x8$n_products == 2L && setequal(uids, c("Pine_Pulpwood_Full", "Spruce_Sawlog_Full")) &&
-  identical(hdr, c("SenderApplication", "CreationDate", "ModificationDate")) &&
+# R4 D6: an imported product keeps its own ProductUserID, SpeciesGroupUserID and metadata (buyer, Extension, ...);
+# the header is Apter's own with the elements the schema requires.
+ok8 <- isTRUE(x8$ok) && x8$n_products == 2L && setequal(uids, c("PULP_Pine", "SAW_Spruce")) &&
+  identical(hdr, c("SenderApplication", "CreationDate", "ModificationDate", "ApplicationVersionCreated",
+                   "ApplicationVersionModified", "CountryCode")) &&
   identical(xml2::xml_text(xml2::xml_find_first(d8, "//SenderApplication")), "optBuck") &&
   xml2::xml_attr(d8, "messageType") == "pin" &&
-  n_grades == 2L && length(xml2::xml_find_all(d8b, "//PermittedGradesDefinition")) == 0L &&
-  setequal(sg, c("Pine", "Spruce")) &&
-  !grepl("<ProductKey>|<SpeciesGroupKey>|<Extension>|<ProductBuyer>", txt8) &&
+  n_grades == 2L && length(xml2::xml_find_all(d8, "//PermittedGradeNumber")) > 0L &&
+  length(xml2::xml_find_all(d8b, "//PermittedGradeNumber")) == 0L &&   # the element is required; its grades only when present
+  setequal(sg, c("SE1_Tall_SoundKnot", "SE1_Gran_Sound")) &&   # the source's own SpeciesGroupUserIDs (R4 D6)
+  !grepl("<ProductKey>|<SpeciesGroupKey>", txt8) && grepl("<ProductBuyer>", txt8, fixed = TRUE) && grepl("<Extension>", txt8, fixed = TRUE) &&
   !any(grepl("^Waste", xml2::xml_text(xml2::xml_find_all(d8, "//ProductName")))) &&
   identical(ids_dup, c("Same_name", "Same_name_2")) &&
   identical(pin_product_ids(c("A b", "A_b", "A b")), c("A_b", "A_b_2", "A_b_3"))
-rec("Check 08: The export has no waste rows, unique ProductUserIDs, grades only when present, SpeciesGroupUserID and a fixed minimal header",
+rec("Check 08: The export has no waste rows, unique ProductUserIDs (the source's own), grades only when present, SpeciesGroupUserID, the source's metadata and a fixed header with the elements the schema requires",
     ok(ok8), sprintf("ids %s | header %s | grade blocks %d (full) / %d (minimal) | species %s | duplicates %s",
                      paste(uids, collapse = ","), paste(hdr, collapse = "/"), n_grades,
                      length(xml2::xml_find_all(d8b, "//PermittedGradesDefinition")), paste(sg, collapse = "/"),
@@ -304,8 +308,11 @@ coords <- variant(FULL, function(t) {
 ic <- import(coords)
 f9 <- tempfile(fileext = ".pin"); x9 <- pin_export_scenario(ic$s$defs, ic$s$pm, f9)
 t9 <- rd(f9)
-leak <- grepl(paste(c(LAT, LON, "Latitude", "Longitude", "Altitude", "CreationCoordinates", "INVENTED-BUYER-ID"), collapse = "|"), t9)
-same_as_plain <- identical(ic$s$defs, full$s$defs) && identical(ic$s$pm, full$s$pm)
+leak <- grepl(paste(c(LAT, LON, "Latitude", "Longitude", "Altitude", "CreationCoordinates"), collapse = "|"), t9)
+# The invented buyer ID sits in a product's own metadata, which an export keeps (R4 D6); the header is never read.
+keep_cols <- setdiff(names(full$s$defs), "SourceXml")
+same_as_plain <- identical(ic$s$defs[, keep_cols], full$s$defs[, keep_cols]) && identical(ic$s$pm, full$s$pm) &&
+  grepl("INVENTED-BUYER-ID", ic$s$defs$SourceXml[1L], fixed = TRUE)
 # The scan removes a file that holds a coordinate element.
 real_scan <- .hpr_export_has_coordinates
 assign(".hpr_export_has_coordinates", function(path, ...) TRUE, envir = globalenv())
@@ -314,8 +321,8 @@ assign(".hpr_export_has_coordinates", real_scan, envir = globalenv())
 scan_txt <- tempfile(fileext = ".pin"); writeLines("<A><Latitude>1</Latitude></A>", scan_txt)
 ok9 <- isTRUE(x9$ok) && !leak && same_as_plain && !isTRUE(x9b$ok) && !file.exists(f9b) &&
   real_scan(scan_txt) && !real_scan(f9)
-rec("Check 09: Invented coordinates in an input .pin reach no output; the scan deletes an export with a coordinate element",
-    ok(ok9), sprintf("import equals the plain import %s | export holds coordinates or the buyer ID: %s | scan failure removes the file %s (%s) | scan finds a coordinate element %s, none in the export %s",
+rec("Check 09: Invented header coordinates in an input .pin reach no output (a product's own metadata is kept); the scan deletes an export with a coordinate element",
+    ok(ok9), sprintf("import equals the plain import %s | export holds coordinates: %s | scan failure removes the file %s (%s) | scan finds a coordinate element %s, none in the export %s",
                      same_as_plain, leak, !file.exists(f9b), paste(x9b$errors, collapse = " "), real_scan(scan_txt), !real_scan(f9)))
 
 # ==============================================================================
