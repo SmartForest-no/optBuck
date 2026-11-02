@@ -48,11 +48,14 @@
 
 --- 12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5) ---
   [PASS  ] Check 12: tuning_hpr_info equals the file's classes (lengths, classes, cm_map, prices, Distribution, basis) and real targets for every tunable product (file1, 3, 4, 5) | 15 tunable products, 5 with a file target compared
+
+--- 17. Tuned prices are whole NOK and are the prices evaluated and applied (R4) ---
+  [PASS  ] Check 17: tuning_run() returns whole-NOK best prices; the prices applied to the other scenario equal them and re-bucking with them reproduces the reported tuned sawlog volume | too few: FALSE | prices whole: yes | cells applied 69
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 16
+1   PASS 17
 
   Verdict: PASS 
 ============================================================= 

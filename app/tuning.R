@@ -305,7 +305,9 @@ tuning_run <- function(job, products, defs, ids, max_iter, grade_opts, on_iter =
   tn <- tune_prices(job, products, used, "real", n = n, seed = 1, max_iter = max_iter,
                     hpr = if (length(used) > 1L) hp[used] else hp[[used]], early_stop = FALSE, on_iter = on_iter)
   Pb <- P1
-  for (k in used) Pb[[k]] <- tn$by_product[[k]]$best_price
+  # The best prices in whole NOK (R4): they are what the final all-stems evaluation uses, what "Use
+  # tuned prices" puts into the other scenario and what the .pin export writes (its prices are integers).
+  for (k in used) Pb[[k]] <- round(tn$by_product[[k]]$best_price)
   cur <- products
   for (k in used) cur <- apply_grid_prices(cur, grids[[k]], Pb[[k]])
   t2 <- measure(swap_job_prices(job, cur), Pb)

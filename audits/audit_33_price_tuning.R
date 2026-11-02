@@ -448,5 +448,39 @@ if (!all(file.exists(paths12))) {
               if (length(diffs)) paste0(" | DIFFERENCES: ", paste(diffs, collapse = " ;; ")) else ""))
 }
 
+# ==============================================================================
+section("17. Tuned prices are whole NOK and are the prices evaluated and applied (R4)")
+for (e in parse(file.path(root_dir, "app", "tuning.R"), keep.source = FALSE))
+  if (is.call(e) && identical(as.character(e[[1L]]), "<-") && as.character(e[[2L]]) %in% c("TUNE_MIN_LOGS", "tuning_run")) eval(e)
+FX17 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+h17 <- read_hpr(FX17); st17 <- read_hpr_stems(FX17)
+sc17 <- hpr_to_scenario(h17, setNames(guess_hpr_species(h17$species$name, h17$species$user_id), h17$species$key))
+pm17 <- pm_minimal(sc17$pm); d17 <- sc17$defs
+k17 <- assortment_table_keys(d17)[grep("140 SCA", d17$Name, fixed = TRUE)[1L]]
+pm17 <- dist_apply_target(pm17, k17, "neutral"); d17 <- dist_init_fields(dist_clear_fields(d17, k17), k17)
+pr17 <- products_from_defs(d17, pm17)
+prod17 <- list(pd = pr17$pd, lc = pr17$lc, pm = pm17)
+pp17 <- tempfile(fileext = ".csv"); pm_export(pm17, pp17)
+job17 <- prepare_hpr_stems_job(st17, setNames(guess_hpr_species(st17$species$name, st17$species$user_id), st17$species$key),
+                               price_matrix_path = pp17, products = pr17$pd, length_classes = pr17$lc)
+r17 <- tuning_run(job17, prod17, d17, k17, 3L, list(use_grades = FALSE, cut_at_changes = FALSE))
+ok17 <- !isTRUE(r17$too_few)
+if (ok17) {
+  Pb17 <- r17$by[[k17]]$Pb; g17 <- r17$by[[k17]]$grid
+  applied <- apply_grid_prices(prod17, g17, Pb17)$pm           # what "Use tuned prices" writes into the other scenario
+  ap <- applied[applied$ProductKey == k17 & !is.na(applied$LengthClass_dm) & !is.na(applied$PriceNOKperM3), , drop = FALSE]
+  want <- Pb17[cbind(match(ap$LengthClass_dm, g17$lengths), match(g17$cm_map[as.character(ap$PriceDiameterClass_cm)], g17$diam_classes))]
+  # the evaluation used the same prices: re-evaluating the job with the applied prices gives the reported value
+  cur17 <- apply_grid_prices(prod17, g17, Pb17)
+  res17 <- finish_job(swap_job_prices(job17, cur17), buck_job(swap_job_prices(job17, cur17)))
+  sl17 <- res17$selected_logs_all
+  ok17 <- all(Pb17[!is.na(Pb17)] == round(Pb17[!is.na(Pb17)])) && all(ap$PriceNOKperM3 == round(ap$PriceNOKperM3)) &&
+    nrow(ap) > 0L && !anyNA(want) && all(abs(ap$PriceNOKperM3 - want) < 1e-9) &&
+    abs(sum(sl17$price_volume_m3[as.character(sl17$ProductType) == "sawlog"]) - r17$tuned$saw_vol) < 1e-6
+}
+rec("Check 17: tuning_run() returns whole-NOK best prices; the prices applied to the other scenario equal them and re-bucking with them reproduces the reported tuned sawlog volume",
+    ok(ok17), sprintf("too few: %s | prices whole: %s | cells applied %s", isTRUE(r17$too_few),
+                      if (ok17) "yes" else "no", if (exists("ap")) nrow(ap) else NA))
+
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 33 complete.\n")
