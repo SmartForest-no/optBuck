@@ -305,7 +305,7 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 
 ## Restructure (done 2026-10-30)
 
-Four tabs (Stems, Assortments and prices, Simulator, Price tuning); stems and scenarios independent; one upload field per scenario (.xlsx, .csv, .hpr, .pin); scenario names; a target distribution editor per assortment (also in the scenario xlsx); price tuning of several assortments at once from their own targets. Tested and approved by Lennart; merged to main. Details are in CLAUDE.md (Stems tab, Scenario names, Distribution, Price tuning tab rows). Full suite: 22 PASS. file5 check (`scripts/restructure_manual_check.R`): 140 SCA alone FG 82.9 -> 94.1, value -0.17 %; with 148 (Even target) 98.5 / 35.1, value -0.60 %. R1.9 crash: not reproduced (`scripts/repro_tuning_crash.R`).
+Four tabs (Stems, Assortments and prices, Simulator, Price tuning); stems and scenarios independent; one upload field per scenario (.xlsx, .csv, .hpr, .pin); scenario names; a target distribution editor per assortment (also in the scenario xlsx); price tuning of several assortments at once from their own targets. Tested and approved by Lennart; merged to main. Details are in CLAUDE.md (Stems tab, Scenario names, Distribution, Price tuning tab rows). Full suite: 22 PASS. file5 check (`scripts/restructure_manual_check.R`): 140 SCA alone FG 82.9 -> 94.1, value -0.17 %; with 148 (Even target) 98.4 (after whole-NOK rounding of tuned prices, R4) / 35.1, value -0.60 %. R1.9 crash: not reproduced (`scripts/repro_tuning_crash.R`).
 
 ### Decisions made
 - Single-product tuning baseline lives in `outputs/restructure/` (gitignored), not in the repository (derived from a private buyer price list); audit 33 check 14 gives REVIEW without it.
@@ -319,7 +319,7 @@ Four tabs (Stems, Assortments and prices, Simulator, Price tuning); stems and sc
 
 Open questions: none. Blocked items: none.
 
-## Polish (in progress) — Phase R4 "practitioner polish", branch `polish`
+## Polish (done and merged 2026-11-03) — Phase R4 "practitioner polish", branch `polish`
 
 Rules, design and answers copied verbatim from Lennart's task (2026-11-02). After any context compaction re-read **this whole section** and `git log -15`. Short entries such as "as in the design" always mean the verbatim text below.
 
