@@ -146,6 +146,23 @@ dist_clear_fields <- function(defs, id) {
   defs
 }
 
+#' Set DistributionAllowed (the harvester also steers towards the target:
+#' apportionment bucking). Only written to exports; Apter's own bucking is pure
+#' value bucking.
+dist_set_allowed <- function(defs, id, allowed) {
+  defs$DistributionAllowed[.dist_def_row(defs, id)] <- isTRUE(allowed)
+  defs
+}
+
+#' Set MAXDeviation (the largest value loss, in percent, that apportionment
+#' bucking may accept).
+dist_set_maxdev <- function(defs, id, x) {
+  x <- suppressWarnings(as.numeric(x))
+  if (length(x) != 1L || is.na(x) || x < 0 || x > 100) stop("MAXDeviation is between 0 and 100 percent.")
+  defs$MAXDeviation[.dist_def_row(defs, id)] <- x
+  defs
+}
+
 #' Set DistributionCategory ("Number of logs" or "Volume of logs").
 dist_set_category <- function(defs, id, category) {
   if (!category %in% DIST_CATEGORIES) stop("DistributionCategory is 'Number of logs' or 'Volume of logs'.")

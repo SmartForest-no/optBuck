@@ -1924,6 +1924,9 @@ if (!browser_ok) {
       app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
       app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)
       app$click("dt_a_even"); app$wait_for_idle()
+      # apportionment bucking on with a maximum loss of 4 %: the tuning results carry a note
+      app$wait_for_js("!!document.getElementById('dt_a_maxdev')", timeout = 30 * 1000)
+      app$set_inputs(dt_a_maxdev = 4, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
       app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
       app$wait_for_js("!!document.getElementById('tn_run')", timeout = 30 * 1000)
@@ -1939,6 +1942,7 @@ if (!browser_ok) {
       c43$cost <- js(app, "Array.from(document.querySelectorAll('#tn_tbl_cost .rt-tbody .rt-tr')).map(function(r){ return Array.from(r.querySelectorAll('.rt-td')).map(function(c){ return c.innerText.trim(); }).join(' ; '); }).join(' | ')")
       c43$cost_cols <- headers_of(app, "tn_tbl_cost")
       c43$scope <- txt(app, "#tn_results .tn-scope")
+      c43$apport <- js(app, "Array.from(document.querySelectorAll('#tn_results p.note-muted')).map(function(e){ return e.innerText.replace(/\\s+/g, ' ').trim(); }).filter(function(t){ return /^Note:/.test(t); }).join(' | ')")
       c43$plot_w <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().width")
       c43$plot_h <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().height")
       # the four matrix views of the assortment
@@ -1979,6 +1983,7 @@ if (!browser_ok) {
       grepl("Spruce \u2013 ", c43$msg, fixed = TRUE) && identical(c43$extra, 0L) && isTRUE(c43$off >= 1L) &&
       grepl(paste0(key43, "+"), c43$boxes, fixed = TRUE) && !grepl("-", c43$boxes, fixed = TRUE) && identical(c43$radio, 0L) &&
       grepl("^Prices were tuned on [0-9,]+ of [0-9,]+ stems; the figures below are for all [0-9,]+ stems\\.$", trimws(c43$scope)) &&
+      grepl("has apportionment bucking switched on (maximum allowed loss of value 4 %)", c43$apport, fixed = TRUE) &&
       grepl("Tuned", c43$rows, fixed = TRUE) && grepl(" \u2013 ", c43$rows, fixed = TRUE) && !grepl("sca sagt", c43$rows, fixed = TRUE) &&
       all(vapply(c("Before tuning", "After tuning", "Assortment", "Logs", "Degree of fit (%)", "Volume (m\u00b3)"),
                  function(w) grepl(w, c43$cols, fixed = TRUE), NA)) &&
@@ -1999,7 +2004,7 @@ if (!browser_ok) {
                 c43$msg, c43$extra, c43$boxes, c43$radio, substr(or_default(c43$rows, ""), 1, 120), c43$cols, round(or_default(c43$plot_w, NA)), round(or_default(c43$plot_h, NA)),
                 paste(vapply(names(c43$views), function(n) sprintf("%s %s", n, c43$views[[n]]$cells), ""), collapse = ", "),
                 c43$use, c43$q, c43$open, c43$kept, c43$cells, c43$equal, c43$changed, c43$cleared, c43$nerr,
-                paste0(err_txt(e43), " | scope '", trimws(or_default(c43$scope, "")), "' | cost '", or_default(c43$cost, ""), "' cols '", or_default(c43$cost_cols, ""),
+                paste0(err_txt(e43), " | apportionment note '", or_default(c43$apport, ""), "'", " | scope '", trimws(or_default(c43$scope, "")), "' | cost '", or_default(c43$cost, ""), "' cols '", or_default(c43$cost_cols, ""),
                        "' | change note '", or_default(c43$change_note, ""), "' | view headers: ",
                        paste(vapply(names(c43$views), function(n) sprintf("%s '%s'", n, c43$views[[n]]$hdr), ""), collapse = "; "))))
     # 44. Stems and scenarios are independent (restructure R1.4, R1.5). The
@@ -2099,12 +2104,24 @@ if (!browser_ok) {
       app$run_js("HTMLWidgets.find('#dt_a').hot.setDataAtCell(0, 0, 20);"); app$wait_for_idle(); Sys.sleep(1)
       c46$edited <- cell(0, 0); c46$bold_after <- bold(0, 0); c46$sum_after <- cell(0, nc - 1L)
       c46$n_same <- js(app, "Array.from(document.querySelectorAll('#dt_a .ht_master tbody tr')).filter(function(r){ return r.querySelectorAll('td')[0].innerText.trim() === '20.00' || r.querySelectorAll('td')[0].innerText.trim() === '20'; }).length")
+      # apportionment bucking settings (polish task 4): checkbox ticked after the first target,
+      # the maximum loss only visible while it is ticked; edits reach the .pin and the scenario
+      vis <- function(id) isTRUE(js(app, sprintf("(function(){ var e = document.getElementById('%s'); return !!e && e.offsetParent !== null; })()", id)))
+      c46$ck_on <- isTRUE(js(app, "document.getElementById('dt_a_allowed').checked")); c46$dev_vis_on <- vis("dt_a_maxdev")
+      app$set_inputs(dt_a_maxdev = 7.5, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
+      app$set_inputs(dt_a_allowed = FALSE, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
+      c46$dev_vis_off <- vis("dt_a_maxdev")
+      c46$allowed_off <- scen_of(app, "a")$defs$DistributionAllowed[match(key46, assortment_table_keys(scen_of(app, "a")$defs))]
+      app$set_inputs(dt_a_allowed = TRUE, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
+      c46$dev_vis_back <- vis("dt_a_maxdev")
       shoot(app, "restructure_02_target_view")
       f46 <- app$get_download("dl_pin_a")
       c46$pin <- paste(readLines(f46, warn = FALSE, encoding = "UTF-8"), collapse = " ")
       x46 <- scen_of(app, "a"); pmx <- pm_minimal(x46$pm)
       c46$xlsx_cells <- sum(abs(pmx$Distribution - 20) < 1e-9, na.rm = TRUE)
       c46$xlsx_fields <- x46$defs$DistributionCategory[match(key46, assortment_table_keys(x46$defs))]
+      c46$maxdev <- x46$defs$MAXDeviation[match(key46, assortment_table_keys(x46$defs))]
+      c46$allowed <- x46$defs$DistributionAllowed[match(key46, assortment_table_keys(x46$defs))]
       c46$prices_same <- identical(pm_prices(pmx), pm_prices(pm_minimal(scen_of(app, "a")$pm)))
       app$click("dt_a_clear"); app$wait_for_idle(); Sys.sleep(1)
       c46$cleared <- cell(0, nc - 1L)
@@ -2117,12 +2134,16 @@ if (!browser_ok) {
       isTRUE(c46$n_same >= 1L) &&
       grepl("<Distribution>20(\\.0+)?</Distribution>", c46$pin) && !grepl("Latitude|Longitude|Coordinate", c46$pin) &&
       isTRUE(c46$xlsx_cells >= 1L) && identical(c46$xlsx_fields, "Volume of logs") &&
+      isTRUE(c46$ck_on) && isTRUE(c46$dev_vis_on) && !isTRUE(c46$dev_vis_off) && identical(c46$allowed_off, FALSE) &&
+      isTRUE(c46$dev_vis_back) && isTRUE(c46$allowed) && isTRUE(c46$maxdev == 7.5) &&
+      grepl("<MAXDeviation>7\\.5</MAXDeviation>", c46$pin) &&
       grepl("^0(\\.00)?$", c46$cleared) && identical(c46$nerr, 0L)
     rec(grep("^Check 46:", browser_checks, value = TRUE), if (ok46) PASS else FAIL,
-        sprintf("buttons '%s', price controls hidden %s | Even: sum '%s' (bold %s) | after editing a cell to 20: '%s', rows with 20 in that column %s, sum '%s' (bold %s) | .pin has <Distribution>20 %s | xlsx: %s cells = 20, category '%s' | after Clear: sum '%s' | error notifications %s%s",
+        sprintf("buttons '%s', price controls hidden %s | Even: sum '%s' (bold %s) | after editing a cell to 20: '%s', rows with 20 in that column %s, sum '%s' (bold %s) | .pin has <Distribution>20 %s | xlsx: %s cells = 20, category '%s' | after Clear: sum '%s' | apportionment checkbox ticked %s, loss field visible %s / hidden when unticked %s / back %s, allowed after unticking %s, xlsx allowed %s maxdev %s | error notifications %s%s",
                 c46$buttons, c46$bulk_hidden, c46$sum_even, c46$bold_even, c46$edited, c46$n_same, c46$sum_after, c46$bold_after,
                 grepl("<Distribution>20(\\.0+)?</Distribution>", or_default(c46$pin, "")), c46$xlsx_cells, c46$xlsx_fields,
-                c46$cleared, c46$nerr, err_txt(e46)))
+                c46$cleared, c46$ck_on, c46$dev_vis_on, !isTRUE(c46$dev_vis_off), c46$dev_vis_back, c46$allowed_off, c46$allowed, c46$maxdev,
+                c46$nerr, err_txt(e46)))
     # 47. The Stems panel of the built-in source (R4 D2).
     c47 <- list()
     vis_rows <- function(app, id) js(app, sprintf("Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr-group')).filter(function(e){ return e.offsetParent !== null; }).length", id))

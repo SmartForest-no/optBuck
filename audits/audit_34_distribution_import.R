@@ -50,6 +50,9 @@
 # 34.  Scenario xlsx round trip: Distribution, FileDiameterClass_mm and the four
 #      fields identical after download and upload (sheets target_<n> and
 #      file_classes); no extra sheets without data
+# 35.  Apportionment bucking fields (polish): DistributionAllowed and MAXDeviation
+#      are editable (range 0-100 enforced) and survive copy A/B and the
+#      scenario xlsx
 #  20-29. Private files (see above)
 #
 # Verdict : PASS / FAIL (helpers_audit.R)
@@ -686,6 +689,26 @@ rec("Check 34: Scenario xlsx round trip: Distribution, FileDiameterClass_mm and 
     sprintf("cells + file classes %s | fields %s | sheets %s (%s) | editor target %s | no data, no extra sheets %s | prices %s",
             ok34a, ok34b, ok34c, paste(sh34, collapse = ","), ok34d, ok34e, ok34f))
 unlink(c(x34, x34e, x34n))
+
+# ==============================================================================
+section("35. Apportionment bucking fields")
+d35 <- dist_init_fields(dist_clear_fields(hpr$s$defs, saw_k), saw_k); j35 <- match(saw_k, assortment_table_keys(d35))
+e35 <- dist_set_maxdev(dist_set_allowed(d35, saw_k, FALSE), saw_k, 4.5)
+ok35a <- identical(e35$DistributionAllowed[j35], FALSE) && identical(e35$MAXDeviation[j35], 4.5) &&
+  identical(dist_set_allowed(e35, saw_k, TRUE)$DistributionAllowed[j35], TRUE) &&
+  inherits(tryCatch(dist_set_maxdev(e35, saw_k, -1), error = function(e) e), "error") &&
+  inherits(tryCatch(dist_set_maxdev(e35, saw_k, 101), error = function(e) e), "error") &&
+  inherits(tryCatch(dist_set_maxdev(e35, saw_k, NA), error = function(e) e), "error")
+pm35 <- pm_minimal(hpr$s$pm)
+cp35 <- copy_assortment(e35, pm35, hpr$s$defs, pm35, saw_k)               # copy A -> B
+jc <- match(saw_k, assortment_table_keys(cp35$defs))
+ok35b <- identical(cp35$defs$DistributionAllowed[jc], FALSE) && identical(cp35$defs$MAXDeviation[jc], 4.5)
+x35 <- tempfile(fileext = ".xlsx"); scenario_export(e35, pm35, x35); r35 <- scenario_import(x35)
+jr <- match(saw_k, assortment_table_keys(r35$defs))
+ok35c <- isTRUE(r35$ok) && identical(r35$defs$DistributionAllowed[jr], FALSE) && identical(r35$defs$MAXDeviation[jr], 4.5)
+rec("Check 35: Apportionment fields: DistributionAllowed and MAXDeviation (0-100) can be set; they survive copy A -> B and the scenario xlsx",
+    ok(ok35a && ok35b && ok35c), sprintf("setters %s | copy %s | xlsx %s", ok35a, ok35b, ok35c))
+unlink(x35)
 
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 34 complete.\n")

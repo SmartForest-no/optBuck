@@ -857,6 +857,32 @@ function(instance, td, row, col, prop, value, cellProperties) {
       selectInput(paste0(p, "_cat"), L("lbl_dist_category"), width = "190px", selected = cat_,
                   choices = setNames(DIST_CATEGORIES, c(L("dist_cat_number"), L("dist_cat_volume"))))
     })
+    # Apportionment bucking (exports only): DistributionAllowed and MAXDeviation, for an
+    # assortment that has a target.
+    output[[paste0(p, "_app_ui")]] <- renderUI({
+      pm_tick(); lang(); id <- selected(); req(id, sel_state(side) == "matrix")
+      d <- isolate(defs(side)); i <- match(id, keys_of(d))
+      req(!is.na(d$DistributionAllowed[i]))
+      ck <- paste0(p, "_allowed")
+      tagList(
+        checkboxInput(ck, L("lbl_dist_apportion"), value = isTRUE(d$DistributionAllowed[i]), width = "100%"),
+        conditionalPanel(sprintf("input.%s", ck),
+          numericInput(paste0(p, "_maxdev"), L("lbl_dist_maxdev"), value = d$MAXDeviation[i], min = 0, max = 100,
+                       step = 0.5, width = "190px")))
+    })
+    observeEvent(input[[paste0(p, "_allowed")]], {
+      id <- isolate(selected()); v <- input[[paste0(p, "_allowed")]]
+      d <- isolate(defs(side)); i <- match(id, keys_of(d))
+      if (is.na(i) || is.na(d$DistributionAllowed[i]) || identical(d$DistributionAllowed[i], isTRUE(v))) return()
+      sc[[side]]$defs(dist_set_allowed(d, id, v)); msgs[[side]](NULL)
+    })
+    observeEvent(input[[paste0(p, "_maxdev")]], {
+      id <- isolate(selected()); v <- input[[paste0(p, "_maxdev")]]
+      d <- isolate(defs(side)); i <- match(id, keys_of(d))
+      if (is.na(i) || is.na(d$DistributionAllowed[i]) || is.null(v) || is.na(v) || v < 0 || v > 100 ||
+          isTRUE(d$MAXDeviation[i] == v)) return()
+      sc[[side]]$defs(dist_set_maxdev(d, id, v)); msgs[[side]](NULL)
+    })
     observeEvent(input[[paste0(p, "_cat")]], {
       id <- isolate(selected()); v <- input[[paste0(p, "_cat")]]
       d <- isolate(defs(side)); i <- match(id, keys_of(d))

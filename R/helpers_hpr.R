@@ -160,7 +160,40 @@ guess_hpr_species <- function(name, user_id = NA) {
       price = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Price")))),
       criteria = trimws(xml2::xml_text(xml2::xml_find_first(items, "./BuckingCriteria"))),
       dist  = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Distribution")))),
+      limit = suppressWarnings(as.numeric(xml2::xml_text(xml2::xml_find_first(items, "./Limitation")))),
       stringsAsFactors = FALSE))
+}
+
+# The hidden SourceCells text (R4 polish): the cells of the source diameter classes
+# that have no whole-cm row in Apter (two classes inside one cm, classes below the
+# min or above the max top diameter), so an export can write every class of the
+# source. One row per cell "d_mm|l_cm|price|dist|limit|criteria" joined by ";"
+# (criteria percent-encoded); a class without cells gets one row with empty fields
+# after d_mm. NA when every class has a row.
+source_cells_build <- function(p, mapped_mm) {
+  cl <- sort(unique(c(p$dia_classes, p$cells$d_mm))); cl <- cl[!is.na(cl)]
+  un <- setdiff(cl, mapped_mm)
+  if (length(un) == 0L) return(NA_character_)
+  num <- function(x) ifelse(is.na(x), "", format(x, digits = 15, trim = TRUE, scientific = FALSE))
+  rows <- unlist(lapply(un, function(d) {
+    c <- p$cells[!is.na(p$cells$d_mm) & p$cells$d_mm == d & !is.na(p$cells$l_cm), , drop = FALSE]
+    if (nrow(c) == 0L) return(paste0(num(d), "|||||"))
+    paste(num(c$d_mm), num(c$l_cm), num(c$price), num(c$dist), num(c$limit),
+          vapply(ifelse(is.na(c$criteria), "", c$criteria), utils::URLencode, "", reserved = TRUE), sep = "|")
+  }))
+  paste(rows, collapse = ";")
+}
+
+# SourceCells text -> data.frame(d_mm, l_cm, price, dist, limit, criteria) (empty when NA).
+source_cells_parse <- function(x) {
+  if (length(x) != 1L || is.na(x) || !nzchar(x))
+    return(data.frame(d_mm = numeric(0), l_cm = numeric(0), price = numeric(0), dist = numeric(0),
+                      limit = numeric(0), criteria = character(0), stringsAsFactors = FALSE))
+  f <- strsplit(strsplit(x, ";", fixed = TRUE)[[1L]], "|", fixed = TRUE)
+  g <- function(i) vapply(f, function(r) if (length(r) >= i) r[i] else "", "")
+  n <- function(i) suppressWarnings(as.numeric(g(i)))
+  data.frame(d_mm = n(1), l_cm = n(2), price = n(3), dist = n(4), limit = n(5),
+             criteria = vapply(g(6), utils::URLdecode, "", USE.NAMES = FALSE), stringsAsFactors = FALSE)
 }
 
 # ---- reading -------------------------------------------------------------------------
@@ -707,6 +740,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
         DistributionWithinProduct = p$dist_within, MAXDeviation = p$dist_maxdev,
         # R4 D6: the source product's own elements (ProductUserID, SpeciesGroupUserID,
         # ModificationDate, ...); the fingerprint of its prices and targets is set below.
+        SourceCells = source_cells_build(p, unique(grid$pm[[PM_FILE_CLASS_COL]])),
         SourceXml = source_xml_build(p$src_cp, p$src_uid, {
           if (identical(hpr$kind, "pin")) p$src_sg else {
             gk <- p$species_keys[species_map[p$species_keys] == sp][1L]

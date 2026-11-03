@@ -42,6 +42,11 @@
 #      ProductUserIDs (REVIEW without file5)
 # 11.  file5: the exported .pin has the same diameter classes and the same number
 #      of matrix cells per product as the source file (REVIEW without file5)
+# 12.  A stored ModificationDate that is not an xs:dateTime ("vasket", as in the
+#      anonymised test files) is replaced by the export time; the export is valid
+# 13.  file5 import -> .pin export: every product has exactly the source's diameter
+#      class lower limits (also classes without a whole-cm row), and the file is valid
+#      (REVIEW without file5)
 #
 # Verdict : PASS / ACCEPTED WITH REVIEW / FAIL (helpers_audit.R)
 #
@@ -283,12 +288,24 @@ rec("Check 08: The exported diameter classes are the file's own classes (a class
                      paste(vapply(cls_out, paste, "", collapse = "/"), collapse = " ; ")))
 
 # ==============================================================================
+section("12. An invalid ModificationDate")
+defs12 <- defs3; i12 <- match(k_s, assortment_table_keys(defs12))
+defs12$SourceXml[i12] <- sub("<src>", "<src><md>vasket</md>", defs12$SourceXml[i12], fixed = TRUE)
+t0 <- Sys.time(); x12 <- pin_of(defs12, pm3); t1 <- Sys.time()
+md12 <- by_name(doc_of(x12$path), "ModificationDate"); v12 <- xsd_check(x12$path, XSD_PIN)
+ok12 <- now_ok(md12[["Spruce Sawlog Full"]], t0, t1) && md12[["Pine Pulpwood Full"]] == src_md[["Pine Pulpwood Full"]] &&
+  !any(grepl("vasket", readLines(x12$path, warn = FALSE)))
+with_xsd("Check 12: A stored ModificationDate that is not a valid xs:dateTime ('vasket') is replaced by the export time; the export is valid",
+         ok12, v12, sprintf("dates %s | XSD errors %s %s", paste(md12, collapse = " / "), v12$n, v12$first))
+
+# ==============================================================================
 # Private file5
 skip5 <- function(n, what) rec(sprintf("Check %d: %s", n, what), REVIEW, sprintf("skipped: file5 (%s) is not available", F5))
 if (!have5) {
   skip5(9, "file5 import -> .pin -> import is identical, valid, IDs and dates survive")
   skip5(10, "file5 .hpr export is valid and keeps ProductUserIDs")
   skip5(11, "file5 .pin has the file's diameter classes and cell counts")
+  skip5(13, "file5 .pin has exactly the source's diameter classes")
 } else {
   h5 <- read_hpr(F5); st5 <- read_hpr_stems(F5)
   map5 <- setNames(guess_hpr_species(st5$species$name, st5$species$user_id), st5$species$key)
@@ -380,6 +397,18 @@ if (!have5) {
   rec("Check 11: The exported file5 .pin has the file's own diameter classes (all classes with a priced cell, none that the file lacks) and a cell for every class and length",
       ok(length(common) >= 15L && all(eq_cls) && all(full)),
       sprintf("%d products compared by ProductUserID, same classes %d, a cell per class and length %d", length(common), sum(eq_cls), sum(full)))
+}
+
+if (have5) {
+  # 13. every source diameter class is written (also those without a whole-cm row), none else
+  src13 <- lapply(h5$products, function(p) sort(unique(c(p$dia_classes, p$cells$d_mm[!is.na(p$cells$d_mm)]))))
+  names(src13) <- vapply(h5$products, function(p) { x <- .hx_text(p$src_uid, "ProductUserID"); Encoding(x) <- "UTF-8"; x }, "")
+  com13 <- intersect(names(src13)[!duplicated(names(src13))], names(out_cls))
+  eq13 <- vapply(com13, function(n) identical(as.numeric(src13[[n]]), as.numeric(sort(out_cls[[n]]))), NA)
+  rec("Check 13: The exported file5 .pin has exactly the source's diameter class lower limits for every product (also classes without a whole-cm row); valid",
+      if (!length(com13) || !all(eq13)) FAIL else if (is.na(v9$ok)) REVIEW else ok(v9$ok),
+      sprintf("%d products compared, equal %d | %s | XSD errors %s %s", length(com13), sum(eq13),
+              if (all(eq13)) "all equal" else paste("different:", paste(names(eq13)[!eq13], collapse = ", ")), v9$n, v9$first))
 }
 
 write_audit_outputs(E$results, audit_csv, audit_txt)

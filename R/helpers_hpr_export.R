@@ -187,6 +187,28 @@ source_xml_part <- function(src, tag) {
   Encoding(v) <- "UTF-8"; v
 }
 
+# TRUE for a valid xs:dateTime ("2026-11-03T10:15:00", optional fraction and zone).
+.valid_datetime <- function(x) {
+  x <- as.character(x)
+  !is.na(x) & grepl("^-?[0-9]{4,}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})?$", trimws(x))
+}
+
+# Every CreationDate / ModificationDate element of `txt` whose text is not a valid
+# xs:dateTime (anonymised files hold e.g. "vasket") gets `now`.
+.fix_datetimes <- function(txt, now) {
+  re <- "<(CreationDate|ModificationDate)>([^<]*)</\\1>"
+  m <- gregexpr(re, txt, perl = TRUE, useBytes = TRUE)
+  if (m[[1L]][1L] < 0L) return(txt)
+  hit <- regmatches(txt, m)[[1L]]
+  inner <- sub(re, "\\2", hit, perl = TRUE, useBytes = TRUE)
+  bad <- !.valid_datetime(inner)
+  if (!any(bad)) return(txt)
+  tag <- sub(re, "\\1", hit, perl = TRUE, useBytes = TRUE)
+  hit[bad] <- sprintf("<%1$s>%2$s</%1$s>", tag[bad], now)
+  regmatches(txt, m) <- list(hit)
+  txt
+}
+
 # Neutral values for what a product created in Apter has no source for (R4 D6).
 EXPORT_NEUTRAL_MID <- paste0("<ManualFreeBuck>false</ManualFreeBuck><TopLogFreeBuck>false</TopLogFreeBuck>",
                              "<ProductCondition>Buck always</ProductCondition>")
@@ -293,7 +315,7 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
       grp <- switch(as.character(d$Type), sawlog = "T\u00f8mmer", pulpwood = "Massevirke", as.character(d$Type))
       sprintf("<ProductGroupName>%s</ProductGroupName>", .xesc(grp))
     }
-    md <- if (unchanged[i]) part("md") else now
+    md <- if (unchanged[i] && .valid_datetime(part("md"))) part("md") else now
     rows <- pm[pm$ProductKey == akeys[i], , drop = FALSE]
     rows_dist <- if (PM_DISTRIBUTION_COL %in% names(rows)) rows[[PM_DISTRIBUTION_COL]] else rep(NA_real_, nrow(rows))
     matrix_priced <- identical(as.character(d$PriceType), "matrix")
@@ -311,12 +333,29 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
       pr <- rows$PriceNOKperM3[hit]
       dist <- rows_dist[hit]        # the first row of a class: the class's stored value
       for (dc in dcl) { j <- cells$dc == dc; dist[j] <- .round_shares(dist[j]) }
+      # Source classes without a whole-cm row (SourceCells) are written as they were in the file.
+      sc <- source_cells_parse(if ("SourceCells" %in% names(d)) d$SourceCells else NA_character_)
+      un_cl <- setdiff(unique(sc$d_mm), cls_mm)
+      lm_v <- rep(0, nrow(cells)); cr_v <- ifelse(is.na(pr), HPR_FORBIDDEN, "No limit")
+      if (length(un_cl)) {
+        ex <- expand.grid(dc = un_cl, li = seq_along(len_cm), KEEP.OUT.ATTRS = FALSE)
+        # a source length class is the assortment's cut length rounded up to whole dm (as in the import)
+        m <- match(paste(ex$dc, len_cm[ex$li]), paste(sc$d_mm, ceiling(sc$l_cm / 10) * 10))
+        e_pr <- sc$price[m]; e_cr <- sc$criteria[m]
+        e_cr[is.na(e_cr) | !nzchar(e_cr)] <- ifelse(is.na(e_pr[is.na(e_cr) | !nzchar(e_cr)]), HPR_FORBIDDEN, "No limit")
+        cells <- rbind(cells, ex); pr <- c(pr, e_pr); dist <- c(dist, sc$dist[m])
+        lm_v <- c(lm_v, ifelse(is.na(sc$limit[m]), 0, sc$limit[m])); cr_v <- c(cr_v, e_cr)
+        dcl <- sort(unique(c(dcl, un_cl)))
+        o <- order(cells$li, cells$dc)             # the order of the matrix items: length, then diameter
+        cells <- cells[o, , drop = FALSE]; pr <- pr[o]; dist <- dist[o]; lm_v <- lm_v[o]; cr_v <- cr_v[o]
+      }
     } else {
       dcl <- max(1, floor(min_top))
       lim <- len_cm
       cells <- expand.grid(dc = dcl, li = seq_along(len_cm), KEEP.OUT.ATTRS = FALSE)
       pr <- rep(rows$PriceNOKperM3[is.na(rows$LengthClass_dm)][1L], nrow(cells))
       dist <- rep(NA_real_, nrow(cells))
+      lm_v <- rep(0, nrow(cells)); cr_v <- ifelse(is.na(pr), HPR_FORBIDDEN, "No limit")
     }
     dcl <- pmax(1, dcl)
     top_pos <- or_default(as.numeric(d$DiameterTopPosition_cm), 0)
@@ -326,11 +365,11 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
     int <- function(x) format(round(as.numeric(x)), scientific = FALSE, trim = TRUE)
     items <- sprintf(
       paste0('<ProductMatrixItem diameterClassLowerLimit="%s" lengthClassLowerLimit="%s"><Price>%s</Price>',
-             '<Distribution>%s</Distribution><Limitation>0</Limitation><BuckingCriteria>%s</BuckingCriteria>',
+             '<Distribution>%s</Distribution><Limitation>%s</Limitation><BuckingCriteria>%s</BuckingCriteria>',
              '</ProductMatrixItem>'),
       int(pmax(1, cells$dc)), int(lim[cells$li]), ifelse(is.na(pr), "0", int(pr)),
       ifelse(is.na(dist), "0", int(dist)),     # stored target distribution (Phase 7a), 0 when none
-      ifelse(is.na(pr), HPR_FORBIDDEN, "No limit"))
+      int(lm_v), .xesc(cr_v))
     gk <- groups$key[groups$species == as.character(d$Species)]
     grades <- if (nzchar(part("grades"))) part("grades") else {
       g <- if ("PermittedGrades" %in% names(d)) permitted_grades_set(d$PermittedGrades) else numeric(0)
@@ -525,6 +564,7 @@ hpr_export_result <- function(path, sources, species_by_name, result, defs, pm) 
                   substring(txt, last + 1L, nchar(txt, type = "bytes")))
   }
   txt <- .hx_strip(txt, HPR_EXPORT_COORD_TAGS)
+  txt <- .fix_datetimes(txt, .pin_time())          # an invalid stored date (e.g. "vasket") becomes the export time
 
   con <- file(path, "wb"); open_con <- TRUE
   on.exit(if (open_con) close(con), add = TRUE)

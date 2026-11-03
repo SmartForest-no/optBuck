@@ -131,6 +131,18 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
 
   # ---- results ----------------------------------------------------------------------------
   fmt1 <- function(x) fmt_num(x, 1L, lang())
+  # One line for each tuned assortment whose scenario has apportionment bucking switched on
+  # (DistributionAllowed with MAXDeviation > 0): the tuned prices assume pure value bucking.
+  apportion_notes <- function(r) {
+    d <- r$defs; k <- assortment_table_keys(d)
+    lines <- lapply(r$used, function(id) {
+      i <- match(id, k)
+      if (is.na(i) || !isTRUE(d$DistributionAllowed[i]) || !isTRUE(d$MAXDeviation[i] > 0)) return(NULL)
+      x <- d$MAXDeviation[i]
+      p(class = "note-muted", L("tn_apportion_note", disp_key(r, id), fmt_num(x, if (x == round(x)) 0L else 1L, lang())))
+    })
+    tagList(Filter(Negate(is.null), lines))
+  }
   output$tn_results <- renderUI({
     r <- res(); if (is.null(r)) return(NULL)
     if (isTRUE(r$too_few)) return(div(class = "pm-msg-error", L("tn_too_few")))
@@ -146,6 +158,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       p(class = "note-muted", L("tn_cost_caption")),
       plotOutput("tn_plot", width = "700px", height = "320px"),
       p(class = "note-muted", L("tn_fig_caption")),
+      apportion_notes(r),
       div(class = "tn-hdr", L("tn_matrices")),
       div(class = "tally-controls",
         selectInput("tn_matrix_product", L("col_assortment"), setNames(r$ids, vapply(r$ids, function(k) disp_key(r, k), "")),

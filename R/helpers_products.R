@@ -473,7 +473,7 @@ DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
 # files; never in run data, not compared between A and B.
 
 #' The hidden source fields of the assortment table.
-SOURCE_DEF_COLS <- c("SourceXml", "SourceFingerprint")
+SOURCE_DEF_COLS <- c("SourceXml", "SourceFingerprint", "SourceCells")   # SourceCells: cells of source diameter classes without a whole-cm row
 
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
