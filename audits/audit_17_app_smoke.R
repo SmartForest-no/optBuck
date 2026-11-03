@@ -803,9 +803,9 @@ if (!browser_ok) {
                 bs_ver, isTRUE(inter_loaded), n_gfonts))
     # 08. assortment table
     asm_txt <- txt(app, "#tbl_asm_a")
-    hdr <- c("Assortment", "Species", "Top Ø (cm)", "Max butt Ø (cm)", "Length (cm)",
+    hdr <- c("Assortment", "Type", "Species", "Top Ø (cm)", "Max butt Ø (cm)", "Length (cm)",
              "Volume method")
-    gone8 <- c("Type", "Length step", "Diameter rounding")
+    gone8 <- c("Length step", "Diameter rounding")   # R5: Type is a visible column (dropdown)
     hdr_ok <- all(vapply(hdr, grepl, logical(1), x = asm_txt, fixed = TRUE)) &&
       !any(vapply(gone8, grepl, logical(1), x = asm_txt, fixed = TRUE))
     n_asm0 <- n_tbl_rows(app, "tbl_asm_a")
@@ -818,13 +818,22 @@ if (!browser_ok) {
     copy1 <- js(app, paste0("['asm_copy_one_a','asm_copy_one_b'].map(function(i){",
                             " var b = document.getElementById(i); return b ? b.textContent.trim() : ''; }).join('|')"))
     n_eq8 <- js(app, "Array.from(document.querySelectorAll('button')).filter(function(b){ return /^Make [AB] equal to [AB]$|^Make matrix equal/.test(b.textContent.trim()); }).length")
-    ok8 <- hdr_ok && identical(n_asm0, 6L) && grepl("–", asm_txt, fixed = TRUE) &&
+    # R5: the Type dropdown of the first row (spruce sawlog) changes the type and comes back.
+    sel8 <- function(v) { js(app, sprintf(paste0("(function(){ var s = document.querySelector('#tbl_asm_a select.asm-type-select');",
+      " var set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(s, '%s');",
+      " s.dispatchEvent(new Event('change', {bubbles: true})); })()"), v)); app$wait_for_idle() }
+    types8 <- function() js(app, paste0("Array.from(document.querySelectorAll('#tbl_asm_a select.asm-type-select'))",
+                                         ".map(function(s){ return s.value; }).join(',')"))
+    t8_0 <- types8(); sel8("pulpwood"); t8_1 <- types8(); sel8("sawlog"); t8_2 <- types8()
+    ok8t <- identical(t8_0, "sawlog,pulpwood,sawlog,pulpwood") && identical(t8_1, "pulpwood,pulpwood,sawlog,pulpwood") &&
+      identical(t8_2, t8_0)
+    ok8 <- ok8t && hdr_ok && identical(n_asm0, 6L) && grepl("–", asm_txt, fixed = TRUE) &&
       !grepl("Inf", asm_txt, fixed = TRUE) && identical(sortable8, 0L) && identical(copy8, 0L) &&
       identical(copy1, "Make assortment equal to B|Make assortment equal to A") &&
       identical(n_eq8, 0L)
     rec(browser_checks[4], if (ok8) PASS else FAIL,
-        sprintf("rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | copy buttons: '%s' (removed controls present: %s, 'Make A/B equal to' / 'Make matrix equal' buttons: %s)",
-                n_asm0, hdr_ok, grepl("–", asm_txt, fixed = TRUE),
+        sprintf("Type dropdown %s -> %s -> %s | rows %s | all visible columns: %s | '–' shown: %s | 'Inf' shown: %s | sortable headers: %s | copy buttons: '%s' (removed controls present: %s, 'Make A/B equal to' / 'Make matrix equal' buttons: %s)",
+                t8_0, t8_1, t8_2, n_asm0, hdr_ok, grepl("–", asm_txt, fixed = TRUE),
                 grepl("Inf", asm_txt, fixed = TRUE), sortable8, copy1, copy8, n_eq8))
     shoot(app, "01_assortments_and_prices")
     # 09. Both scenarios editable (Handsontable marks read-only cells
@@ -848,7 +857,7 @@ if (!browser_ok) {
       "(function(){ var e = document.querySelector('%s'); return !!e && e.offsetParent !== null; })()", sel)))
     sel_rows <- function(app) js(app, paste0(
       "['a','b'].map(function(s){ return Array.from(document.querySelectorAll('#tbl_asm_' + s + ' .asm-selected'))",
-      ".map(function(r){ return r.querySelector('.rt-td').textContent.trim() + ' ' + r.querySelectorAll('.rt-td')[1].textContent.trim(); }).join(','); }).join('|')"))
+      ".map(function(r){ return r.querySelector('.rt-td').textContent.trim() + ' ' + r.querySelectorAll('.rt-td')[2].textContent.trim(); }).join(','); }).join('|')"))
     flat_of <- function(sc, key) { if (is.null(sc)) return(NA); p <- sc$pm
       p$PriceNOKperM3[p$ProductKey == key & is.na(p$LengthClass_dm)][1] }
     c25 <- list()
@@ -1279,7 +1288,7 @@ if (!browser_ok) {
       # selected (in A), B shows no detail panel and no row for it.
       pick(app, "a", "spruce_pulpwood")
       missing17 <- list(panel_b = isTRUE(js(app, "document.getElementById('asm_detail_b').offsetParent === null")),
-                        row_b = grepl("Pulpwood\\s+Spruce", txt(app, "#tbl_asm_b")),
+                        row_b = grepl("Pulpwood\\s+(Sawlog\\s*Pulpwood\\s*Other\\s+)?Spruce", txt(app, "#tbl_asm_b")),
                         struck = js(app, "document.querySelectorAll('.asm-none').length"))
       st17 <- paste("B products:", paste(unique(scen_of(app, "b")$pm$ProductKey), collapse = ","))
       app$set_inputs(main_nav = "simulator"); run(app)
@@ -1518,7 +1527,7 @@ if (!browser_ok) {
       n24$struck <- js(app, "document.querySelectorAll('.asm-none').length")
       rows_of <- function(id) js(app, sprintf(paste0(
         "Array.from(document.querySelectorAll('#%s .rt-tbody .rt-tr')).map(function(r){",
-        " var c = r.querySelectorAll('.rt-td'); return c[0].textContent.trim() + ' ' + c[1].textContent.trim(); }).join('|')"), id))
+        " var c = r.querySelectorAll('.rt-td'); return c[0].textContent.trim() + ' ' + c[2].textContent.trim(); }).join('|')"), id))
       n24$rows_a <- rows_of("tbl_asm_a"); n24$rows_b <- rows_of("tbl_asm_b")
       shoot(app, "08_scenarios_A_and_B")
       app$set_inputs(main_nav = "stems")
@@ -1824,14 +1833,19 @@ if (!browser_ok) {
       c41$off <- !any(unlist(app$get_values(input = c("grade_use_a", "grade_cut_a", "grade_use_b", "grade_cut_b"))$input))
       c41$labels <- js(app, paste0("['grade_use_a', 'grade_cut_a'].map(function(id){ ",
                                    "return document.getElementById(id).closest('.checkbox, .form-check').innerText.trim(); }).join(' | ')"))
-      app$set_inputs(grade_use_a = TRUE, grade_cut_a = TRUE, wait_ = FALSE); app$wait_for_idle()
-      app$run_js("document.getElementById('grade_use_a').scrollIntoView({block: 'center'});")
-      shoot(app, "phase6_01_grade_options")
       app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$upload_file(hs_upload = fx41)
       app$wait_for_js("document.querySelector('#hs_validation') && /5 stems read/.test(document.querySelector('#hs_validation').innerText)",
                       timeout = 60 * 1000)
       app$wait_for_idle()
+      # R5: grades are used only when the assortments come from the stems' own instruction, so
+      # Scenario A takes the file's assortments first (a default scenario would disable the box).
+      app$click("stems_use_a"); app$wait_for_idle(); app$click("hpr_apply"); app$wait_for_idle()
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(grade_use_a = TRUE, grade_cut_a = TRUE, wait_ = FALSE); app$wait_for_idle()
+      app$run_js("document.getElementById('grade_use_a').scrollIntoView({block: 'center'});")
+      shoot(app, "phase6_01_grade_options")
+      app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       run(app)
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
       c41$cmp <- compared_now(app)
@@ -2281,10 +2295,10 @@ if (!browser_ok) {
       })
       ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortiment og priser|3 Simulator|4 Pristilpasning|Hjelp") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
-        grepl("^Sortiment\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
-        grepl("Sagtømmer;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
+        grepl("^Sortiment\\|Type\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
+        grepl("Sagtømmer;SagtømmerMassevirkeAnnet;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
         identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help") &&
-        identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
+        identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Type\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
       rec(browser_checks[30], if (ok34) PASS else FAIL,

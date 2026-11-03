@@ -466,7 +466,7 @@ Order in Stage C: D3 -> D1 -> D2 -> D4 -> D6 -> D5 -> D7, one commit per finishe
 - Export builds diameter classes from whole cm x 10 (`R/helpers_hpr_export.R:156`); `FileDiameterClass_mm` survives `pm_minimal()`.
 - Summary numbers all available (`per_m3_summary` Total, `selected_logs_all`, `assortment_summary()`, `compare_by_type()`).
 
-## R5 Kvalitetskoder og sortimenttyper (in progress) — branch `grades`
+## R5 Kvalitetskoder og sortimenttyper (done, ready for review, not merged) — branch `grades`
 
 After any context compaction re-read **this section** and `git log -15`. Rules: one git command per call (no &&), push only `git push origin grades`, never merge; every UI text in translations.csv (EN + NO); affected audits after each step, full suite at the end; private files in C:/apter_private/hpr/ never committed (REDACTED45 = file1, Gobakken = file3, file5 = REDACTED39).
 
@@ -506,4 +506,5 @@ After any context compaction re-read **this section** and `git log -15`. Rules: 
 - [x] 3. Part 2 grade rule (audit 30 checks 12a-l; browser behaviour checked by audit 17 at the end)
 - [x] 4. Part 3 audits (audit 30 checks 12-13: 44 PASS)
 - [x] 5. Part 4 manual checks (table above; a, b, f equal main; c equals both off)
-- [ ] 6. Part 5 finish
+- [x] 6. Part 5 finish: full suite 23 PASS, 0 REVIEW, 0 FAIL (audit 17 re-run after updating its expectations); performance_check matches main; noise outputs restored.
+- Audit 17 expectations changed on purpose (Type is now a visible column with a dropdown): checks 08 (columns, plus a new Type dropdown test), 24, 25, 34 (column index / header text), and 41 (Scenario A first takes the stems file's assortments, because a default scenario has no file products and the box would be disabled).
