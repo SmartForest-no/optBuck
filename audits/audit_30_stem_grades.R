@@ -25,6 +25,10 @@
 #  11  Grade mismatch warning (R4 polish): hpr_grade_lengths() equals the bucking's
 #      grade grid; grade_mismatch_check() warns when a sawlog product permits the
 #      grades of under half of a species' length; the texts in both languages.
+#  12  Same instruction (R5): grades are used only for stems whose file has the
+#      scenario's instruction (ProductKey and name); the "not used" note with its
+#      share; copies, price edits, .pin round trip, two stem files.
+#  13  Assortment type (R5): .hpr_type() prefixes, the user's choice, copy and xlsx.
 #
 # Outputs : outputs/stem_grades/audit_30_stem_grades.{csv,txt}
 # Usage   : Rscript audits/audit_30_stem_grades.R
@@ -327,6 +331,159 @@ ok11c <- identical(txt_en, paste0("Grade 3 covers 90 % of the spruce stem length
                            "Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder."))
 rec("Check 11c: the warning text in English and Norsk (checkbox label, species word, product name, grade, share, permitted grades)",
     ok(ok11c), paste(txt_en, "|", txt_no))
+
+# ---- 12. same instruction (R5, 2026-11-03) -----------------------------------------------------
+section("12. Grades only with the same instruction")
+MAPN <- c("445" = "pine", "446" = "spruce", "447" = "none", "448" = "none")
+same0 <- hpr_same_instruction(st$instruction, MAPN, sc$defs, files = 1L)
+ok12a <- all(same0$same) && nrow(same0) == 2L && is.null(grade_files_of(same0, FALSE)) &&
+  identical(grade_files_of(same0, TRUE), list(spruce = 1L, pine = 1L))
+rec("Check 12a: scenario and stems from the same fixture file: same instruction for spruce and pine; grade files all (1), none when the box is off",
+    ok(ok12a), paste(same0$species, same0$same, collapse = ", "))
+nt0 <- grade_unused_notes(hpr_grade_lengths(st, MAP), same0)
+rec("Check 12b: the same file gives no note", ok(nrow(nt0) == 0L), sprintf("%d notes", nrow(nt0)))
+
+# Different ProductKeys: grades are not used, the note has the share of the stem length off the start grade.
+d_other <- sc$defs; d_other$HprProductKey <- ifelse(is.na(d_other$HprProductKey), NA, paste0("x", d_other$HprProductKey))
+same1 <- hpr_same_instruction(st$instruction, MAPN, d_other, files = 1L)
+dl1 <- hpr_grade_lengths(st, MAP)
+sg <- setNames(hp$species$start_grade, hp$species$key)
+# By hand from the fixture: spruce stems 101 (7 x 30 cells, rest 2), 102 (3 x 30), 103 (none), 104 (7 x 151); 181 cells each.
+exp_sp <- 100 * (30 + 30 + 0 + 151) / (4 * 181)
+nt1 <- grade_unused_notes(dl1, same1)
+exp_pine <- 0   # stem 105 is pine with grade 1 from 0; the pine StartGrade decides
+pine_cells <- dl1[dl1$species == "pine", ]
+exp_pine <- 100 * sum(pine_cells$cells[pine_cells$grade != pine_cells$start]) / sum(pine_cells$cells)
+fmt_share <- function(p) if (p > 0 && p < 0.5) "<1" else as.character(floor(p + 0.5))
+ok12c <- !any(same1$same) && identical(nt1$species, c("spruce", "pine")) &&
+  identical(nt1$share[1L], fmt_share(exp_sp)) && identical(nt1$share[2L], fmt_share(exp_pine)) && fmt_share(exp_sp) == "29"
+rec("Check 12c: different ProductKeys: no file has the same instruction (the box would be disabled); a note per species with the share of stem length off the start grade (spruce 211 of 724 cells = 29 %, pine by the file's start grade)",
+    ok(ok12c), sprintf("spruce %s (by hand %.2f), pine %s (by hand %.2f)", nt1$share[1L], exp_sp, nt1$share[2L], exp_pine))
+
+# Not used = bucked as a stem without grade data (the options off); used = grades decide.
+GF_NONE <- list(spruce = integer(0), pine = integer(0))
+rUall <- run(pr, USE, OFF)
+rUnone <- run(pr, c(USE, list(grade_files = GF_NONE)), OFF)
+rBnone <- run(pr, c(BOTH, list(grade_files = GF_NONE)), OFF)
+rCnone <- run(pr, c(CUT, list(grade_files = GF_NONE)), OFF)        # cut alone, no file matches
+rCall  <- run(pr, CUT, OFF)
+rOFF <- run(pr, OFF, OFF)
+ok12d <- identical(logs_of(rUnone), logs_of(rOFF)) && identical(logs_of(rBnone), logs_of(rOFF)) &&
+  identical(logs_of(rCnone), logs_of(rOFF)) && !identical(logs_of(rCall), logs_of(rOFF)) &&
+  !identical(logs_of(rUall), logs_of(rOFF))
+rec("Check 12d: with no file's grades used, 'Use stem grades', 'Cut at grade changes' (alone or both) give exactly the result of both options off; with grades used the results differ (not vacuous)",
+    ok(ok12d), sprintf("logs: off %d, use-all %d, use-none %d", nrow(logs_of(rOFF)), nrow(logs_of(rUall)), nrow(logs_of(rUnone))))
+
+# Copy A to B with a price edit: still the same instruction.
+pm_edit <- sc$pm; i_e <- which(!is.na(pm_edit$PriceNOKperM3))[1L]; pm_edit$PriceNOKperM3[i_e] <- pm_edit$PriceNOKperM3[i_e] + 25
+cp <- copy_assortment(sc$defs, pm_edit, sc$defs, sc$pm, assortment_table_keys(sc$defs)[1L])
+same_cp <- hpr_same_instruction(st$instruction, MAPN, cp$defs, files = 1L)
+rec("Check 12e: a copy of the scenario with an edited price (and an assortment the user added) keeps the same instruction; user-added products are ignored in the test",
+    ok(all(same_cp$same) &&
+       all(hpr_same_instruction(st$instruction, MAPN,
+             rbind(sc$defs, defs_from_products(load_products())[1L, ]), files = 1L)$same)))
+
+# A renamed product no longer matches; a scenario without any file product has no same instruction.
+d_ren <- sc$defs; d_ren$Name[match("spruce_140_sca_sagt_mmer", assortment_table_keys(sc$defs))] <- "Something else"
+same_ren <- hpr_same_instruction(st$instruction, MAPN, d_ren, files = 1L)
+same_base <- hpr_same_instruction(st$instruction, MAPN, defs_from_products(load_products()), files = 1L)
+rec("Check 12f: a renamed file product breaks the match for its species only (spruce FALSE, pine TRUE); the base assortments (no file product) match no file",
+    ok(identical(same_ren$same, c(FALSE, TRUE)) && !any(same_base$same)),
+    sprintf("renamed: %s | base: %s", paste(same_ren$same, collapse = "/"), paste(same_base$same, collapse = "/")))
+
+# An exported .pin read back as a scenario keeps the instruction (names and ProductUserIDs).
+pin_path <- tempfile(fileext = ".pin")
+pe <- pin_export_scenario(sc$defs, sc$pm, pin_path)
+hp_pin <- read_pin(pin_path)
+sc_pin <- hpr_to_scenario(hp_pin, setNames(guess_hpr_species(hp_pin$species$name, hp_pin$species$user_id), hp_pin$species$key))
+same_pin <- hpr_same_instruction(st$instruction, MAPN, sc_pin$defs, files = 1L)
+rec("Check 12g: an exported .pin read back as a scenario has the same instruction as the stem file it came from",
+    ok(isTRUE(pe$ok) && isTRUE(sc_pin$ok) && all(same_pin$same)),
+    sprintf("export ok %s, import ok %s, same %s", isTRUE(pe$ok), isTRUE(sc_pin$ok), paste(same_pin$same, collapse = "/")))
+unlink(pin_path)
+
+# Two stem files, the scenario matches one: grades used for that file's stems only.
+txt_n <- gsub("<StemKey>10(\\d)</StemKey>", "<StemKey>20\\1</StemKey>", txt)
+txt_n <- gsub("<ProductName>", "<ProductName>Z ", txt_n, fixed = TRUE)
+f_n <- tempfile(fileext = ".hpr"); writeLines(txt_n, f_n, useBytes = TRUE)
+two_n <- read_hpr_stem_files(c(FIXTURE, f_n), c("a.hpr", "b.hpr"))
+map_n <- setNames(c("pine", "spruce", "none", "none", "pine", "spruce", "none", "none"), two_n$species$key)
+same_n <- hpr_same_instruction(two_n$instruction, map_n, sc$defs, files = c(1L, 2L))
+pr_n <- hpr_stem_profiles(two_n, map_n, grades = TRUE)
+gf_n <- grade_files_of(same_n, TRUE)
+r_mixed <- run(pr_n, c(USE, list(grade_files = gf_n)), OFF)
+r_all   <- run(pr_n, USE, OFF)
+r_zero  <- run(pr_n, OFF, OFF)
+lg <- function(r, ids) { l <- logs_of(r); l <- l[l$treid %in% ids, ]; rownames(l) <- NULL; l }
+f1 <- as.character(101:105); f2s <- as.character(201:205)
+ok12h <- identical(same_n$same, c(TRUE, TRUE, FALSE, FALSE)) && identical(gf_n, list(spruce = 1L, pine = 1L)) &&
+  identical(lg(r_mixed, f1), lg(r_all, f1)) && identical(lg(r_mixed, f2s), lg(r_zero, f2s)) &&
+  !identical(lg(r_all, f2s), lg(r_zero, f2s))
+rec("Check 12h: two stem files, the scenario from the first: file 1's stems are bucked with their grades, file 2's like stems without grade data (equal to the run with the options off); the second file's grades would have mattered",
+    ok(ok12h), sprintf("same %s | grade files spruce %s", paste(same_n$same, collapse = "/"), paste(gf_n$spruce, collapse = ",")))
+nt_n <- grade_unused_notes(hpr_grade_lengths(two_n, map_n), same_n)
+rec("Check 12i: the note covers only the stems of the file whose grades are not used (spruce 29 %, as for the single file)",
+    ok(identical(nt_n$share[nt_n$species == "spruce"], "29")), paste(nt_n$species, nt_n$share, collapse = ", "))
+unlink(f_n)
+
+# Share formatting: whole percent, "<1" above 0 and below 0.5, 0 when none.
+shr <- function(off, tot) grade_unused_notes(data.frame(species = "spruce", file = 1L, grade = c(2, 3), start = 2,
+                                                         cells = c(tot - off, off)), data.frame(file = 1L, species = "spruce", same = FALSE))$share
+ok12j <- identical(shr(10, 100), "10") && identical(shr(1, 1000), "<1") && identical(shr(4, 1000), "<1") &&
+  identical(shr(5, 1000), "1") && identical(shr(0, 100), "0") && identical(shr(1, 100), "1") && identical(shr(149, 1000), "15")
+rec("Check 12j: share formatting: 10 of 100 -> 10; 1 or 4 of 1000 -> <1; 5 of 1000 (0.5 %) -> 1; none -> 0; 14.9 % -> 15",
+    ok(ok12j), paste(shr(10, 100), shr(1, 1000), shr(4, 1000), shr(5, 1000), shr(0, 100), shr(149, 1000)))
+nt90 <- grade_unused_notes(data.frame(species = "spruce", file = 1L, grade = c(2, 3), start = 2, cells = c(90, 10)),
+                           data.frame(file = 1L, species = "spruce", same = FALSE))
+rec("Check 12k: 90 % start grade gives 10 in the texts (English and Norsk, as specified)",
+    ok(identical(grade_unused_text(nt90, "A", "en"),
+                 paste0("The grade codes in the stem file are not used for spruce because the assortments in scenario A come from a different instruction. ",
+                        "10 % of the stem length was marked with a grade other than the start grade; these markings, for example rot, are therefore ignored.")) &&
+       identical(grade_unused_text(nt90, "B", "no"),
+                 paste0("Kvalitetskodene i stammefila brukes ikke for gran fordi sortimentene i scenario B kommer fra en annen instruks. ",
+                        "10 % av stammelengden var merket med en annen kvalitet enn startkvaliteten; disse merkingene, for eksempel råte, blir derfor ikke tatt hensyn til."))))
+
+# The mismatch warning is evaluated over the stems whose grades are used only.
+dl_two <- hpr_grade_lengths(two_n, map_n)
+w_used <- grade_mismatch_check(grade_dist_by_grade(dl_two, list(spruce = 1L, pine = 1L)), sc$defs, TRUE)
+w_none <- grade_mismatch_check(grade_dist_by_grade(dl_two, list(spruce = integer(0), pine = integer(0))), sc$defs, TRUE)
+rec("Check 12l: the grade mismatch warning looks only at the stems whose grades are used (no stems used: no warning)",
+    ok(nrow(w_none) == 0L && is.data.frame(w_used)))
+
+# ---- 13. assortment type (R5) ----------------------------------------------------------------
+section("13. Assortment type")
+ty <- function(g, n) .hpr_type(g, n)
+ok13a <- identical(ty("FRISK", "MASSE FRISK"), "pulpwood") && identical(ty("0-20%", "RMASSE 0-20%"), "pulpwood") &&
+  identical(ty("TØRR", "TØRRGRAN - Fallende"), "pulpwood") && identical(ty("FRISK", "SAG - REDACTED35"), "sawlog") &&
+  identical(ty("Tømmer", "REDACTED25"), "sawlog") && identical(ty("Massevirke", "200 Massevirke"), "pulpwood") &&
+  identical(type_choice(ty("0-20%", "RMB 0-20%")), "other") && identical(type_choice(ty("MASSE", "BJØRK")), "other") &&
+  identical(ty("MASSE", "MASSE - REDACTED54"), "pulpwood")
+rec("Check 13a: .hpr_type(): MASSE FRISK, RMASSE 0-20%, TØRRGRAN - Fallende and 200 Massevirke are pulpwood; SAG - REDACTED35 and REDACTED25 sawlog; RMB 0-20% and BJØRK (group MASSE) custom",
+    ok(ok13a))
+dT <- sc$defs; kT <- "spruce_140_sca_sagt_mmer"
+dT2 <- set_assortment_type(dT, kT, "pulpwood")
+iT <- match(kT, assortment_table_keys(dT2))
+dT3 <- set_assortment_type(dT, kT, "other")
+dW <- defs_from_products(load_products()); dW2 <- set_assortment_type(dW, "spruce_waste", "sawlog")
+ok13b <- dT2$Type[iT] == "pulpwood" && isTRUE(dT2$TypeUser[iT]) && !any(dT2$TypeUser[-iT]) &&
+  type_choice(dT3$Type[iT]) == "other" && isTRUE(dT3$TypeUser[iT]) && !dT3$Type[iT] %in% c("sawlog", "pulpwood", "waste") &&
+  identical(dW2$Type, dW$Type) && identical(products_from_defs(dT2, sc$pm)$pd$ProductType[iT], "pulpwood")
+rec("Check 13b: set_assortment_type(): the user's choice is stored in Type and flagged (TypeUser), reaches ProductData, 'other' is a custom type apart from sawlog/pulpwood/waste, and a waste row cannot be changed",
+    ok(ok13b), paste(dT2$Type[iT], dT3$Type[iT]))
+cpT <- copy_assortment(dT2, sc$pm, dT, sc$pm, kT)
+xl <- tempfile(fileext = ".xlsx"); scenario_export(dT2, sc$pm, xl); imp <- scenario_import(xl)
+ok13c <- cpT$defs$Type[match(kT, assortment_table_keys(cpT$defs))] == "pulpwood" && isTRUE(cpT$defs$TypeUser[match(kT, assortment_table_keys(cpT$defs))]) &&
+  isTRUE(imp$ok) && imp$defs$Type[match(kT, assortment_table_keys(imp$defs))] == "pulpwood" &&
+  isTRUE(imp$defs$TypeUser[match(kT, assortment_table_keys(imp$defs))]) &&
+  !scenarios_differ(dT2, sc$pm, cpT$defs, sc$pm) && scenarios_differ(dT, sc$pm, dT2, sc$pm)
+rec("Check 13c: the chosen type survives copy A to B and the scenario xlsx round trip; a different type makes the scenarios differ, a price edit does not touch it",
+    ok(ok13c))
+ok13d <- identical(type_group(c("sawlog", "pulpwood", "waste", "mymassa", "pulpwood")), c("Sawlog", "Pulpwood", NA, "Other", "Pulpwood")) &&
+  identical(type_group(dT2$Type[iT]), "Pulpwood")
+rec("Check 13d: the type groups of the result tables and the value-by-type chart follow the field (a sawlog changed to pulpwood is Pulpwood, a custom type Other)",
+    ok(ok13d))
+unlink(xl)
+
 
 # ==============================================================================
 write_audit_outputs(E$results, audit_csv, audit_txt)

@@ -695,3 +695,7 @@
 "type_pulpwood","ui","Pulpwood","Massevirke","R5"
 "type_other","ui","Other","Annet","R5"
 "type_waste","ui","Waste","Vrak","R5"
+"grade_disabled","ui","Grade codes can only be used when the assortments come from the same instruction as the stems (the same file or a copy of it).","Kvalitetskodene kan bare brukes når sortimentene kommer fra samme instruks som stammene (samme fil eller en kopi av den).","R5 2.3"
+"grade_unused","ui","The grade codes in the stem file are not used for %1$s because the assortments in scenario %2$s come from a different instruction. %3$s %% of the stem length was marked with a grade other than the start grade; these markings, for example rot, are therefore ignored.","Kvalitetskodene i stammefila brukes ikke for %1$s fordi sortimentene i scenario %2$s kommer fra en annen instruks. %3$s %% av stammelengden var merket med en annen kvalitet enn startkvaliteten; disse merkingene, for eksempel råte, blir derfor ikke tatt hensyn til.","R5 2.4: %1 species, %2 A/B, %3 share"
+"sp_spruce_lc","ui","spruce","gran","R5"
+"sp_pine_lc","ui","pine","furu","R5"

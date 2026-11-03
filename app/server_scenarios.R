@@ -45,16 +45,43 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
 
   # Stem-grade options of a scenario (Phase 6): the two checkboxes, in effect
   # only for .hpr stems (otherwise both off, so they never change a run).
+  #
+  # R5: grades are used only for stems whose file has the same instruction as the scenario
+  # (hpr_same_instruction(), per species). `grade_dist()` is list(dist, instr, map) from the
+  # Stems panel (NULL: no .hpr stems read). With no matching file for any species the box is
+  # disabled (and off).
+  grade_same <- function(side) {
+    gi <- grade_dist()
+    if (!identical(input$tree_source, "hpr") || is.null(gi) || NROW(gi$dist) == 0L) return(NULL)
+    hpr_same_instruction(gi$instr, gi$map, defs(side), files = sort(unique(gi$dist$file)))
+  }
+  grade_disabled <- function(side) {
+    sm <- grade_same(side)
+    !is.null(sm) && !any(sm$same)
+  }
   grade_opts <- function(side) {
     if (!identical(input$tree_source, "hpr")) return(GRADE_OPTS_OFF)
     s <- low(side)
-    list(use_grades = isTRUE(input[[paste0("grade_use_", s)]]),
-         cut_at_changes = isTRUE(input[[paste0("grade_cut_", s)]]))
+    use <- isTRUE(input[[paste0("grade_use_", s)]]) && !grade_disabled(side)
+    o <- list(use_grades = use, cut_at_changes = isTRUE(input[[paste0("grade_cut_", s)]]))
+    # Either option works only on the stems of files with the scenario's instruction (R5).
+    if ((use || o$cut_at_changes) && !is.null(grade_same(side))) o$grade_files <- grade_files_of(grade_same(side), TRUE)
+    o
   }
   # Grade mismatch warnings of a scenario (R4 polish): sawlog products that permit the grades of
-  # less than half of a species' stem length, with "Use stem grades" on (.hpr stems only).
-  grade_warnings <- function(side)
-    grade_mismatch_check(grade_dist(), defs(side), grade_opts(side)$use_grades)
+  # less than half of a species' stem length, with "Use stem grades" on (.hpr stems only); only
+  # over the stems whose grades are used (R5).
+  grade_warnings <- function(side) {
+    o <- grade_opts(side)
+    grade_mismatch_check(grade_dist_by_grade(grade_dist()$dist, o$grade_files), defs(side), o$use_grades)
+  }
+  # The note for species whose grades are not used (R5): shown with the box on, or disabled.
+  grade_notes <- function(side) {
+    sm <- grade_same(side)
+    none <- grade_unused_notes(NULL, NULL)
+    if (is.null(sm) || !(isTRUE(input[[paste0("grade_use_", low(side))]]) || grade_disabled(side))) return(none)
+    grade_unused_notes(grade_dist()$dist, sm)
+  }
   differ   <- reactive(scenarios_differ(defs("A"), prices("A"), defs("B"), prices("B"),
                                         grade_opts("A"), grade_opts("B")))
   # Everything that changes a run; a run stores it to detect stale results.
@@ -1085,18 +1112,29 @@ function(instance, td, row, col, prop, value, cellProperties) {
   })
 
   for (side in c("A", "B")) local({
-    side <- side
-    output[[paste0("grade_warn_", low(side))]] <- renderUI({
-      l <- lang(); w <- grade_warnings(side)
-      if (nrow(w) == 0L) return(NULL)
-      div(class = "pm-msg-warn", paste(grade_warning_text(w, function(k) key_label(k, l), l), collapse = "
-"))
+    side <- side; s <- low(side)
+    output[[paste0("grade_warn_", s)]] <- renderUI({
+      l <- lang(); w <- grade_warnings(side); n <- grade_notes(side)
+      dis <- grade_disabled(side)
+      tagList(
+        if (dis) div(class = "note-muted", tr("grade_disabled", lang = l)),
+        if (nrow(n)) div(class = "pm-msg-warn", paste(grade_unused_text(n, side, l), collapse = "
+")),
+        if (nrow(w)) div(class = "pm-msg-warn", paste(grade_warning_text(w, function(k) key_label(k, l), l), collapse = "
+")))
+    })
+    # The box is disabled (and unticked) when no stem file has the scenario's instruction.
+    observe({
+      dis <- grade_disabled(side)
+      session$sendCustomMessage("apter-disable", list(id = paste0("grade_use_", s), disabled = dis))
+      if (dis && isTRUE(isolate(input[[paste0("grade_use_", s)]])))
+        updateCheckboxInput(session, paste0("grade_use_", s), value = FALSE)
     })
   })
 
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
        differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
-       grade_warnings = grade_warnings,
+       grade_warnings = grade_warnings, grade_notes = grade_notes,
        replace_scenario = replace_scenario,
        open_hpr_import = open_hpr_import)  # opens the import dialog for a file (Stems tab)
 }

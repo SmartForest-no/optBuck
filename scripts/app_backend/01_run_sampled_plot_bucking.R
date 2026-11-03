@@ -747,7 +747,7 @@ prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
   # Stem-grade options (Phase 6): A's, and the scenario's own (B).
   pps[[1L]]$grade_opts <- normalize_grade_opts(grade_opts)
   if (length(pps) > 1L) pps[[2L]]$grade_opts <- normalize_grade_opts(scenario$grade_opts)
-  if (any(unlist(lapply(pps, function(pp) pp$grade_opts))) && is.null(prepared$profiles$grade))
+  if (any(unlist(lapply(pps, function(pp) grade_flags(pp$grade_opts)))) && is.null(prepared$profiles$grade))
     stop("Stem-grade options need profiles from hpr_stem_profiles(grades = TRUE).")
   t0_conv <- proc.time()
   pvs <- profiles_to_profile_vectors(prepared$profiles)
@@ -773,7 +773,7 @@ prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "defau
                                   length_classes = NULL, params = list(), scenario = NULL,
                                   grade_opts = NULL) {
   # The profiles carry the stem grades only when a scenario uses them.
-  grades <- any(unlist(c(normalize_grade_opts(grade_opts), normalize_grade_opts(scenario$grade_opts))))
+  grades <- any(grade_flags(grade_opts), grade_flags(scenario$grade_opts))
   prepare_hpr_job(hpr_stem_profiles(stems, species_map, grades = grades), price_matrix_path, root,
                   products, length_classes, params, scenario, grade_opts)
 }

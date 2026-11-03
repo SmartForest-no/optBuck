@@ -480,6 +480,22 @@ After any context compaction re-read **this section** and `git log -15`. Rules: 
 - 1.2: the existing `Type` field of the assortment table is the one field everything reads; the hidden `TypeUser` (logical) only records that the user chose it. Choice "Annet" stores `type_from_choice()` = slug of the name (kept apart from the reserved sawlog / pulpwood / waste). Waste rows are read-only text. The dropdown sits **in the table's Type column** (reactable cell renderer `type_select_js()`, input `asm_type_a/b`), not in the Edit form. `TypeUser` is not compared between A and B (the Type itself is). It is a column of the scenario xlsx assortments sheet (optional on import, so older files load).
 - 1.2 **uses of the type** (all read `defs$Type` / ProductData `ProductType`, so they follow the user's choice): `asm_order()` (row order); `products_from_defs()` -> `ProductType` / `derived_priority()` (waste 99); `type_group()` in `R/helpers_comparison.R` (value-by-type chart `bar_value_by_type`, `compare_by_type()`, `.per_m3_by_type()`, Total per-m3 scope); `summary_comparison()` and `assortment_summary()` sawlog share (`R/helpers_result_tables.R`); `commercial_volume` (waste excluded); `tuning_products()` / `tuning_sawlog_status()` (sawlog type, `R/helpers_price_tuning.R`); the tuning price floor (`pd$ProductType == "pulpwood"`, `R/helpers_price_tuning.R`); the MAXDeviation note (tunable assortments); `grade_mismatch_check()` (sawlog products); `hpr_export_products()` product group for Apter-made products; `.pin` export skipping waste; `app/tuning.R` saw_vol; `stem_compare` colours (`helpers_ui.R`).
 
+- 2.1 matching: a scenario product "came from a file" when it has a `HprProductKey` or a `SourceXml` (a .pin product has no ProductKey: it is matched by the ProductUserID kept in its SourceXml, or by name alone when the file product has none). ProductKey proved reliable in all five private files and the fixtures, so the fallback to name + group name was not needed. A renamed duplicate "Name (GROUP)" / "Name <key>" counts as its original.
+- 2.2 **"Kapp ved kvalitetsskifte"**: the per-file switch (`grade_files`) is set when either option is on, so with a mismatch the cut is not applied even when "Use stem grades" is off (a cut-only scenario with a matching file works as before). Found by case c: with the box disabled and the cut ticked the result differed from both-options-off until the switch also covered the cut.
+- 2.3 the box is disabled by a custom message `apter-disable` (apter.js) and set to FALSE by the server; the disabled text and the notes share the existing `grade_warn_<s>` output.
+- 2.4 the Summary shows the notes (stored as `grade_note` with the run) above the grade mismatch warning; the tuning tab shows them above its results (stored with the tuning result). Share = cells whose grade differs from the group's StartGrade (cells without a grade count as equal) over the unused files' stems of the species; pine StartGrade is the pine group's.
+- 2.5 `grade_mismatch_check()` is given only the stems whose grades are used (`grade_dist_by_grade(dist, grade_files)`). `hpr_grade_lengths()` now returns (species, file, grade, start, cells); `grade_mismatch_check()` aggregates to (species, grade) itself so older callers are unchanged.
+
+### Part 4 manual checks (scripts/grades_manual_check.R, private files in place)
+| Case | Value (NOK) | Sawlog % | Notes |
+|---|---|---|---|
+| a. REDACTED45 stems + REDACTED45 assortments, both options on | 1 010 936 | 70.1 | none, box enabled |
+| b. Gobakken + Gobakken | 532 369 | 50.5 | none |
+| c. REDACTED45 stems + Gobakken assortments | 1 119 923 (= both off) | 75.6 | box disabled; spruce 9 %, pine 3 % |
+| d. Gobakken stems + REDACTED45 assortments | 612 581 (= both off) | 66.9 | box disabled; spruce 12 %, pine 21 %; MASSE products are Massevirke |
+| e. REDACTED45 + REDACTED45, SAG - REDACTED35 fixed 400 (B) | 746 782 | 70.8 | grades used, none |
+| f. file5 tuning, 140 SCA alone | FG 82.9 -> 94.1, value -0.17 % | | n 7 598 |
+
 ### Known limitations
 - The user-chosen Type is not written to .pin/.hpr exports (imported products keep their source product group; an Apter-made product is written with a group from its Type as before). A re-imported file gets the automatic type again.
 
@@ -487,7 +503,7 @@ After any context compaction re-read **this section** and `git log -15`. Rules: 
 - [x] 0. This section
 - [x] 1. Part 1.1 types (audits 25, 32 pass)
 - [x] 2. Part 1.2 editable Type column (audits 23, 24, 28, 34 pass; browser check in audit 17 at the end)
-- [ ] 3. Part 2 grade rule
-- [ ] 4. Part 3 audits
-- [ ] 5. Part 4 manual checks
+- [x] 3. Part 2 grade rule (audit 30 checks 12a-l; browser behaviour checked by audit 17 at the end)
+- [x] 4. Part 3 audits (audit 30 checks 12-13: 44 PASS)
+- [x] 5. Part 4 manual checks (table above; a, b, f equal main; c equals both off)
 - [ ] 6. Part 5 finish

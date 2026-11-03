@@ -104,9 +104,17 @@ products_for_species <- function(species_group, ProductData = NULL) {
 #' (the default) changes nothing.
 GRADE_OPTS_OFF <- list(use_grades = FALSE, cut_at_changes = FALSE)
 
-#' The options as the two flags, whatever the input (NULL = both off).
-normalize_grade_opts <- function(o)
-  list(use_grades = isTRUE(o$use_grades), cut_at_changes = isTRUE(o$cut_at_changes))
+#' The options as the two flags, whatever the input (NULL = both off), plus `grade_files`
+#' (R5, only when given): a named list species -> the stem files whose grades the run uses
+#' (NULL = every file). A stem of another file is bucked like a stem without grade data.
+normalize_grade_opts <- function(o) {
+  out <- list(use_grades = isTRUE(o$use_grades), cut_at_changes = isTRUE(o$cut_at_changes))
+  if (!is.null(o$grade_files)) out$grade_files <- lapply(o$grade_files, as.integer)
+  out
+}
+
+#' The two flags of grade options (for tests that ask whether any option is on).
+grade_flags <- function(o) unlist(normalize_grade_opts(o)[c("use_grades", "cut_at_changes")])
 
 #' Candidate-generation parameters for one species: its products (in
 #' ProductData order) with their limits, volume method and allowed lengths
@@ -167,6 +175,9 @@ normalize_grade_opts <- function(o)
   })
   list(species_group = species_group, pks = pks, products = products,
        use_grades = grade_opts$use_grades, cut_at_changes = grade_opts$cut_at_changes,
+       # files whose grades this species uses (R5); NULL = all
+       grade_files = if (!is.null(grade_opts$grade_files))
+         as.integer(grade_opts$grade_files[[species_group]]) else NULL,
        all_lengths = lc_sp$LogLength,
        needs_ub = "DiameterUnderBark" %in% names(pd_sp) &&
          any(as.logical(pd_sp$DiameterUnderBark) %in% TRUE))
@@ -265,7 +276,9 @@ price_len_of <- function(p, log_len)
   # covers cells lo..hi. bad_cum counts cells whose grade a product does not
   # permit, chg_cum the cells that start a new grade.
   gg <- NULL
-  if ((isTRUE(plan$use_grades) || isTRUE(plan$cut_at_changes)) && !is.null(pv$grade)) {
+  # R5: a stem of a file whose instruction differs from the scenario's has its grades ignored.
+  grades_here <- is.null(plan$grade_files) || (if (is.null(pv$file)) 1L else pv$file) %in% plan$grade_files
+  if ((isTRUE(plan$use_grades) || isTRUE(plan$cut_at_changes)) && !is.null(pv$grade) && grades_here) {
     gg <- as.numeric(pv$grade)[pmax(findInterval(grid, diam_pos), 1L)]
     n_cells <- length(gg)
     chg_cum <- c(0L, cumsum(c(FALSE, !is.na(gg[-1L]) & !is.na(gg[-n_cells]) & gg[-1L] != gg[-n_cells])))

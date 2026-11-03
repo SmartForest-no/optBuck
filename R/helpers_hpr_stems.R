@@ -251,6 +251,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
             "Recorded logs are not read; the stems are bucked from their profiles.")
   list(ok = length(errors) == 0L, errors = errors, warnings = c(defs$warnings, src$warnings),
        info = info, file = filename, species = sp, stems = stems,
+       instruction = hpr_instruction_table(defs),
        idx = x$idx, pos = x$pos, d = x$d, gidx = x$gidx, gpos = x$gpos, gval = x$gval,
        seconds = as.numeric(difftime(Sys.time(), t0, units = "secs")))
 }
@@ -476,8 +477,11 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE) {
                              sesong = rep(NA, length(use)), species_group = ck$species[use],
                              dbh_cm = dbh_mm / 10, height_m = height_m,
                              height_source = rep("Measured profile", length(use)), stringsAsFactors = FALSE)
-  if (grades)
+  if (grades) {
     ck$profiles$grade <- unlist(lapply(prof, `[[`, "grade"), use.names = FALSE)
+    # The stem's file (R5): which files' grades a scenario uses is decided per file (grade_files).
+    ck$profiles$file <- rep(if (is.null(s$file)) rep(1L, nrow(s))[use] else s$file[use], ng)
+  }
   if (!is.null(s$file)) ck$tree_data$file <- s$file[use]     # the file's position in the upload
   dropped <- which(!is.na(ck$reason))
   ck$excluded <- data.frame(treid = s$stem_key[dropped], species_group_name = ck$group[dropped],
@@ -543,7 +547,14 @@ combine_hpr_stems <- function(reads, filenames = vapply(reads, function(r) or_de
     s$key <- paste0(i, ":", s$key); s$file <- rep(i, nrow(s)); s
   }))
   sp$name_id <- tolower(trimws(sp$name))
-  list(ok = TRUE, errors = character(0), warnings = warnings,
+  # The files' product definitions (R5): group keys get the same "<n>:" prefix as the species.
+  instr <- do.call(rbind, lapply(good, function(i) {
+    x <- reads[[i]]$instruction
+    if (is.null(x) || nrow(x) == 0L) return(NULL)
+    x$groups <- vapply(strsplit(x$groups, "|", fixed = TRUE), function(g) paste0(i, ":", g, collapse = "|"), "")
+    x$file <- rep(i, nrow(x)); x
+  }))
+  list(ok = TRUE, errors = character(0), warnings = warnings, instruction = instr,
        info = "Recorded logs are not read; the stems are bucked from their profiles.",
        file = NA_character_, n_files = length(good), failed = failed,
        species = sp, stems = stems,
@@ -593,14 +604,19 @@ hpr_grade_lengths <- function(st, species_map, ck = hpr_stem_checks(st, species_
   gr <- lapply(ck$use, function(i)
     hpr_grade_grid(seq(0, floor(ck$last[i] / step) * step, by = step),
                    st$gpos[grows[[i]]], st$gval[grows[[i]]], sgrade[i]))
-  d <- data.frame(species = rep(ck$species[ck$use], lengths(gr)), grade = unlist(gr, use.names = FALSE),
-                  stringsAsFactors = FALSE)
+  file <- if (is.null(s$file)) rep(1L, nrow(s)) else s$file
+  d <- data.frame(species = rep(ck$species[ck$use], lengths(gr)), file = rep(file[ck$use], lengths(gr)),
+                  grade = unlist(gr, use.names = FALSE),
+                  start = rep(sgrade[ck$use], lengths(gr)), stringsAsFactors = FALSE)
   d <- d[d$species %in% c("spruce", "pine"), , drop = FALSE]
   if (nrow(d) == 0L) return(NULL)
-  tab <- as.data.frame(table(species = d$species, grade = d$grade, useNA = "ifany"), stringsAsFactors = FALSE)
+  tab <- as.data.frame(table(species = d$species, file = d$file, grade = d$grade, start = d$start, useNA = "ifany"),
+                       stringsAsFactors = FALSE)
   tab <- tab[tab$Freq > 0L, , drop = FALSE]
-  data.frame(species = tab$species, grade = suppressWarnings(as.numeric(tab$grade)), cells = tab$Freq,
-             stringsAsFactors = FALSE)
+  # (species, file, grade, start): the stem length per grade and file; `start` = the group's StartGrade
+  data.frame(species = tab$species, file = suppressWarnings(as.integer(tab$file)),
+             grade = suppressWarnings(as.numeric(tab$grade)), start = suppressWarnings(as.numeric(tab$start)),
+             cells = tab$Freq, stringsAsFactors = FALSE)
 }
 
 #' Grade numbers as text: consecutive numbers "1–2", otherwise "1, 3, 5".
@@ -624,6 +640,8 @@ grade_mismatch_check <- function(dist, defs, use_grades, threshold = 0.5) {
   none <- data.frame(key = character(0), species = character(0), grade = numeric(0),
                      share = numeric(0), permitted = character(0), stringsAsFactors = FALSE)
   if (!isTRUE(use_grades) || is.null(dist) || NROW(dist) == 0L || NROW(defs) == 0L) return(none)
+  if ("file" %in% names(dist)) dist <- grade_dist_by_grade(dist)    # per species and grade
+  if (is.null(dist)) return(none)
   keys <- assortment_table_keys(defs)
   rows <- lapply(which(defs$Type == "sawlog" & defs$Species %in% dist$species), function(i) {
     perm <- permitted_grades_set(defs$PermittedGrades[i])
@@ -647,4 +665,134 @@ grade_warning_text <- function(w, label, lang = "en") {
     tr("grade_mismatch", format(w$grade[i], trim = TRUE), format(w$share[i], trim = TRUE),
        if (identical(w$species[i], "pine")) tr("gm_species_pine", lang = lang) else tr("gm_species_spruce", lang = lang),
        label(w$key[i]), w$permitted[i], tr("lbl_use_grades", lang = lang), lang = lang), "")
+}
+
+
+# ---- same instruction (R5, 2026-11-03) ------------------------------------------------------
+# Grade numbers mean different things in different buyers' instructions, so a stem file's grades
+# are used for a scenario only when the scenario's assortments come from the same instruction as
+# the file: every scenario product of the species that came from a file matches a product of that
+# species in the stem file by ProductKey (or, for a .pin product, ProductUserID) AND product name.
+
+#' The product definitions of a read_hpr() result for the comparison with a scenario.
+#' @return data.frame(key, name, uid, groups): ProductKey, ProductName, ProductUserID (NA if none) and
+#'   the product's species group keys joined by "|".
+hpr_instruction_table <- function(h) {
+  p <- h$products
+  if (length(p) == 0L) return(data.frame(key = character(0), name = character(0), uid = character(0),
+                                         groups = character(0), stringsAsFactors = FALSE))
+  one <- function(f) vapply(p, f, "", USE.NAMES = FALSE)
+  data.frame(key = one(function(x) as.character(or_default(x$key, NA_character_))),
+             name = one(function(x) trimws(as.character(or_default(x$name, "")))),
+             uid = one(function(x) as.character(or_default(x$src_uid, NA_character_))),
+             groups = one(function(x) paste(x$species_keys, collapse = "|")),
+             stringsAsFactors = FALSE)
+}
+
+# The ProductUserID in SourceXml strings (NA if none).
+.source_uid <- function(xml) {
+  m <- regmatches(xml, regexec("<ProductUserID[^>]*>([^<]*)</ProductUserID>", xml))
+  vapply(m, function(x) if (length(x) == 2L && nzchar(x[2L])) x[2L] else NA_character_, "")
+}
+
+# TRUE when scenario name `nm` is the file product name `n`, or its renamed duplicate
+# ("Name (GROUP)" or "Name <ProductKey>", hpr_to_scenario()).
+.same_product_name <- function(nm, n, key) {
+  nm <- trimws(nm)
+  identical(nm, n) || startsWith(nm, paste0(n, " (")) && endsWith(nm, ")") || nm == paste(n, key)
+}
+
+#' Whether the scenario has the same instruction as each stem file, per species.
+#'
+#' A scenario product counts when it came from a file (a HprProductKey or a SourceXml); products
+#' the user added are ignored. For a species the scenario has the same instruction as a file when
+#' there is at least one such product and every one matches a product of that species in the file:
+#' same ProductKey (a .pin product without key: same ProductUserID, or any when the file product
+#' has none) and same product name (a renamed duplicate "Name (GROUP)" counts as its original).
+#'
+#' @param instr       hpr_instruction_table() rows of all files, with `file` (default 1).
+#' @param species_map Named character: species group key -> "spruce", "pine" or "none".
+#' @param defs        The scenario's assortment table.
+#' @param files       File numbers to answer for (default: those in `instr`).
+#' @return data.frame(file, species, same).
+hpr_same_instruction <- function(instr, species_map, defs, files = NULL) {
+  if (is.null(instr)) instr <- data.frame(key = character(0), name = character(0), uid = character(0),
+                                          groups = character(0), file = integer(0))
+  if (is.null(instr$file)) instr$file <- rep(1L, nrow(instr))
+  if (is.null(files)) files <- sort(unique(instr$file))
+  from_file <- if (NROW(defs)) !is.na(defs$HprProductKey) | !is.na(defs$SourceXml) else logical(0)
+  uid <- if (NROW(defs)) .source_uid(defs$SourceXml) else character(0)
+  prod_sp <- lapply(strsplit(instr$groups, "|", fixed = TRUE), function(g) unique(unname(species_map[g])))
+  out <- lapply(files, function(f) {
+    sp_rows <- lapply(PRODUCT_SPECIES, function(sp) {
+      rows <- which(from_file & defs$Species == sp)
+      in_sp <- instr$file == f & vapply(prod_sp, function(m) sp %in% m, NA)
+      fp <- instr[in_sp, , drop = FALSE]
+      ok <- length(rows) > 0L && nrow(fp) > 0L && all(vapply(rows, function(i) {
+        name_ok <- vapply(seq_len(nrow(fp)), function(j) .same_product_name(defs$Name[i], fp$name[j], fp$key[j]), NA)
+        id_ok <- if (!is.na(defs$HprProductKey[i])) fp$key == defs$HprProductKey[i]
+                 else if (!is.na(uid[i])) is.na(fp$uid) | fp$uid == uid[i]
+                 else rep(TRUE, nrow(fp))
+        any(name_ok & id_ok)
+      }, NA))
+      data.frame(file = f, species = sp, same = isTRUE(ok), stringsAsFactors = FALSE)
+    })
+    do.call(rbind, sp_rows)
+  })
+  do.call(rbind, out)
+}
+
+#' Per species, the files whose grades a scenario uses (the files with its instruction). The
+#' caller asks only when "Use stem grades" or "Cut at grade changes" is on; with `on` FALSE it is
+#' NULL (all files, as before).
+grade_files_of <- function(same, on) {
+  if (!isTRUE(on)) return(NULL)
+  setNames(lapply(PRODUCT_SPECIES, function(sp) same$file[same$species == sp & same$same]), PRODUCT_SPECIES)
+}
+
+#' `hpr_grade_lengths()` rows summed to species and grade, over the given files only (R5).
+#'
+#' @param dist  hpr_grade_lengths() result.
+#' @param files NULL (all files) or a named list species -> file numbers to keep.
+#' @return data.frame(species, grade, cells) as the grade mismatch check reads it; NULL if empty.
+grade_dist_by_grade <- function(dist, files = NULL) {
+  if (is.null(dist) || NROW(dist) == 0L) return(NULL)
+  if (!is.null(files))
+    dist <- dist[vapply(seq_len(nrow(dist)), function(i) dist$file[i] %in% files[[dist$species[i]]], NA), , drop = FALSE]
+  if (nrow(dist) == 0L) return(NULL)
+  key <- paste(dist$species, dist$grade)
+  first <- !duplicated(key)
+  data.frame(species = dist$species[first], grade = dist$grade[first],
+             cells = as.integer(tapply(dist$cells, factor(key, levels = key[first]), sum)),
+             stringsAsFactors = FALSE)
+}
+
+#' The share (text) of the stem length with a grade other than the start grade, per species, over
+#' the stems of files whose grades are not used (R5). Whole percent, "<1" between 0 and 0.5.
+#'
+#' @param dist hpr_grade_lengths() result.
+#' @param same hpr_same_instruction() result.
+#' @return data.frame(species, share) for species with grade information in an unused file.
+grade_unused_notes <- function(dist, same) {
+  none <- data.frame(species = character(0), share = character(0), stringsAsFactors = FALSE)
+  if (is.null(dist) || NROW(dist) == 0L || !"file" %in% names(dist)) return(none)
+  rows <- lapply(PRODUCT_SPECIES, function(sp) {
+    ok_files <- same$file[same$species == sp & same$same]
+    d <- dist[dist$species == sp & !dist$file %in% ok_files, , drop = FALSE]
+    if (nrow(d) == 0L || !any(!is.na(d$grade))) return(NULL)
+    p <- 100 * sum(d$cells[!is.na(d$grade) & !is.na(d$start) & d$grade != d$start]) / sum(d$cells)
+    data.frame(species = sp, share = if (p > 0 && p < 0.5) "<1" else format(floor(p + 0.5), trim = TRUE),
+               stringsAsFactors = FALSE)
+  })
+  rows <- rows[!vapply(rows, is.null, NA)]
+  if (length(rows)) do.call(rbind, rows) else none
+}
+
+#' The note texts of grade_unused_notes() for scenario `side` in `lang`.
+grade_unused_text <- function(notes, side, lang = "en") {
+  if (NROW(notes) == 0L) return(character(0))
+  vapply(seq_len(nrow(notes)), function(i)
+    tr("grade_unused",
+       tr(if (identical(notes$species[i], "pine")) "sp_pine_lc" else "sp_spruce_lc", lang = lang),
+       side, notes$share[i], lang = lang), "")
 }

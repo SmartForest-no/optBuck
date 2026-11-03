@@ -367,7 +367,7 @@ server <- function(input, output, session) {
     req(identical(input$tree_source, "hpr"))
     st <- hs_stems(); req(isTRUE(st$ok))
     ck <- hs_check(); req(isTRUE(ck$ok))
-    hpr_grade_lengths(st, hs_map(), ck)
+    list(dist = hpr_grade_lengths(st, hs_map(), ck), instr = st$instruction, map = hs_map())
   })
   sc <- scenario_server(input, output, session, lang, grade_dist = function() tryCatch(hs_grade_dist(), error = function(e) NULL))
   # The stem source as the Simulator reads it (R4 D7): what a job is prepared from, and
@@ -491,6 +491,7 @@ server <- function(input, output, session) {
                                state = sc$pm_state(), t_click = t_click,
                                grade_warn = list(A = sc$grade_warnings("A"),
                                                  B = if (compare) sc$grade_warnings("B")),
+                               grade_note = list(A = sc$grade_notes("A"), B = if (compare) sc$grade_notes("B")),
                                grade_defs = list(A = d, B = if (compare) b$defs)))
   })
 
@@ -623,8 +624,13 @@ server <- function(input, output, session) {
       if (NROW(gw[[s]]) == 0L) return(NULL)
       paste0(if (!is.null(r$scenario)) paste0(s, ": "), grade_warning_text(gw[[s]], lab(s), l))
     }))
-    if (length(lines)) div(class = "pm-msg-warn", paste(lines, collapse = "
-"))
+    # R5: stems whose grades are not used (above the sentence)
+    notes <- unlist(lapply(c("A", "B"), function(s) grade_unused_text(r$grade_note[[s]], s, l)))
+    tagList(
+      if (length(notes)) div(class = "pm-msg-warn", paste(notes, collapse = "
+")),
+      if (length(lines)) div(class = "pm-msg-warn", paste(lines, collapse = "
+")))
   }
   output$summary_cards <- renderUI({
     if (input$run_btn == 0L) return(div(class = "note-muted", L("no_run_yet")))

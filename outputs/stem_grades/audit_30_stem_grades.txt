@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: stem grades and cut at grade changes (Phase 6)
-  Run: 2026-11-03 12:01:09.182998
+  Run: 2026-11-03 14:36:56.541403
 ============================================================= 
 
 --- 1. Grades read and put on the grid ---
@@ -50,11 +50,31 @@
   [PASS  ] Check 11a: hpr_grade_lengths() counts the same 10 cm cells by species and grade as the bucking's grade grid (profiles) | 905 cells, species/grade combinations 4
   [PASS  ] Check 11b: 90 % grade 3 with a sawlog product permitting 1-2 gives exactly one warning (grade 3, share 90, permitted '1-2'); permitting 1-3, option off, no .hpr stems, or no permitted grades give none; non-consecutive grades read '1, 3, 5' | 1-2: 1 | 1-3: 0 | off: 0 | no stems: 0 | no grades: 0 | 1,3,5: '1, 3, 5'
   [PASS  ] Check 11c: the warning text in English and Norsk (checkbox label, species word, product name, grade, share, permitted grades) | Grade 3 covers 90 % of the spruce stem length, but Spruce REDACTED25 only permits grade 1–2. With "Use stem grades" ticked, little Spruce REDACTED25 will be produced. The stems and assortments probably come from different jobs with different grade codes. | Kvalitet 3 dekker 90 % av lengden på granstammene, men Gran REDACTED25 tillater bare kvalitet 1–2. Med «Bruk stammekvalitet» blir det derfor lite Gran REDACTED25. Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder.
+
+--- 12. Grades only with the same instruction ---
+  [PASS  ] Check 12a: scenario and stems from the same fixture file: same instruction for spruce and pine; grade files all (1), none when the box is off | spruce TRUE, pine TRUE
+  [PASS  ] Check 12b: the same file gives no note | 0 notes
+  [PASS  ] Check 12c: different ProductKeys: no file has the same instruction (the box would be disabled); a note per species with the share of stem length off the start grade (spruce 211 of 724 cells = 29 %, pine by the file's start grade) | spruce 29 (by hand 29.14), pine 100 (by hand 100.00)
+  [PASS  ] Check 12d: with no file's grades used, 'Use stem grades', 'Cut at grade changes' (alone or both) give exactly the result of both options off; with grades used the results differ (not vacuous) | logs: off 20, use-all 22, use-none 20
+  [PASS  ] Check 12e: a copy of the scenario with an edited price (and an assortment the user added) keeps the same instruction; user-added products are ignored in the test
+  [PASS  ] Check 12f: a renamed file product breaks the match for its species only (spruce FALSE, pine TRUE); the base assortments (no file product) match no file | renamed: FALSE/TRUE | base: FALSE/FALSE
+  [PASS  ] Check 12g: an exported .pin read back as a scenario has the same instruction as the stem file it came from | export ok TRUE, import ok TRUE, same TRUE/TRUE
+  [PASS  ] Check 12h: two stem files, the scenario from the first: file 1's stems are bucked with their grades, file 2's like stems without grade data (equal to the run with the options off); the second file's grades would have mattered | same TRUE/TRUE/FALSE/FALSE | grade files spruce 1
+  [PASS  ] Check 12i: the note covers only the stems of the file whose grades are not used (spruce 29 %, as for the single file) | spruce 29, pine 100
+  [PASS  ] Check 12j: share formatting: 10 of 100 -> 10; 1 or 4 of 1000 -> <1; 5 of 1000 (0.5 %) -> 1; none -> 0; 14.9 % -> 15 | 10 <1 <1 1 0 15
+  [PASS  ] Check 12k: 90 % start grade gives 10 in the texts (English and Norsk, as specified)
+  [PASS  ] Check 12l: the grade mismatch warning looks only at the stems whose grades are used (no stems used: no warning)
+
+--- 13. Assortment type ---
+  [PASS  ] Check 13a: .hpr_type(): MASSE FRISK, RMASSE 0-20%, TØRRGRAN - Fallende and 200 Massevirke are pulpwood; SAG - REDACTED35 and REDACTED25 sawlog; RMB 0-20% and BJØRK (group MASSE) custom
+  [PASS  ] Check 13b: set_assortment_type(): the user's choice is stored in Type and flagged (TypeUser), reaches ProductData, 'other' is a custom type apart from sawlog/pulpwood/waste, and a waste row cannot be changed | pulpwood 140_sca_sagt_mmer
+  [PASS  ] Check 13c: the chosen type survives copy A to B and the scenario xlsx round trip; a different type makes the scenarios differ, a price edit does not touch it
+  [PASS  ] Check 13d: the type groups of the result tables and the value-by-type chart follow the field (a sawlog changed to pulpwood is Pulpwood, a custom type Other)
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 28
+1   PASS 44
 
   Verdict: PASS 
 ============================================================= 

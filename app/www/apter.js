@@ -111,3 +111,15 @@
                         {priority: 'event'});
   });
 })();
+
+// Disable or enable an input by id (R5: "Use stem grades" when no stem file has the scenario's instruction).
+(function() {
+  var register = function() {
+    Shiny.addCustomMessageHandler("apter-disable", function(m) {
+      var el = document.getElementById(m.id);
+      if (el) { el.disabled = !!m.disabled; }
+    });
+  };
+  if (window.Shiny && Shiny.addCustomMessageHandler) register();
+  else $(document).one("shiny:connected", register);
+})();

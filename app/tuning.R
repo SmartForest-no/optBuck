@@ -100,6 +100,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     req(length(ids) > 0L)
     gopts <- sc$grade_opts(s)
     gwarn <- sc$grade_warnings(s)
+    gnote <- sc$grade_notes(s)
     pr <- products_from_defs(d, pm)
     products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
     path <- write_price_file(pm_prices(pm))
@@ -120,7 +121,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
                         on_iter = function(r, m, fg)
                           prog$set(message = tr("tn_iter_progress", r, m, lang = l), value = r / m))
       out$side <- s; out$defs <- d; out$pm <- pm; out$requested <- requested
-      out$stem_id <- sid; out$grade_warn <- gwarn
+      out$stem_id <- sid; out$grade_warn <- gwarn; out$grade_note <- gnote
       res(out)
     })
     p <- promises::catch(p, function(e)
@@ -149,7 +150,10 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     if (isTRUE(r$too_few)) return(div(class = "pm-msg-error", L("tn_too_few")))
     views <- c(target = L("tn_view_target"), orig = L("tn_view_orig"), tuned = L("tn_view_tuned"),
                change = L("tn_price_change"))
+    notes <- grade_unused_text(r$grade_note, r$side, lang())   # R5: stems whose grades are not used
     div(class = "tn-block",
+      if (length(notes)) div(class = "pm-msg-warn", paste(notes, collapse = "
+")),
       p(class = "tn-scope", L("tn_scope", fmt_num(r$n, 0L, lang()), fmt_num(r$N, 0L, lang()), fmt_num(r$N, 0L, lang()))),
       div(class = "tn-hdr", L("tn_hdr_hits")),
       reactable::reactableOutput("tn_tbl_hits"),
