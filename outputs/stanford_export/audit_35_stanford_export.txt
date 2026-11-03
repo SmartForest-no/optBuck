@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: StanForD exports (R4 D6)
-  Run: 2026-11-02 13:26:53.020626
+  Run: 2026-11-03 10:05:16.963019
 ============================================================= 
 
 --- 01. The schemas ---
@@ -16,7 +16,7 @@
   [PASS  ] Check 04: A copied assortment (same ProductUserID) gets _2; the original keeps its ID; all IDs are unique and the file is valid | ids PULP_Pine,SAW_Spruce,PULP_Pine_2 | XSD errors 0 
 
 --- 05. ModificationDate ---
-  [PASS  ] Check 05: Unchanged products keep the source ModificationDate; an edited price, an edited target or a missing fingerprint gives the export time | source 2025-10-22T17:56:46.413+02:00 / 2025-01-02T03:04:05.000+01:00 | price edited: 2026-11-02T13:26:55+01:00 / 2025-01-02T03:04:05.000+01:00 | target edited: 2025-10-22T17:56:46.413+02:00 / 2026-11-02T13:26:55+01:00 | no fingerprint: 2026-11-02T13:26:55+01:00 / 2026-11-02T13:26:55+01:00
+  [PASS  ] Check 05: Unchanged products keep the source ModificationDate; an edited price, an edited target or a missing fingerprint gives the export time | source 2025-10-22T17:56:46.413+02:00 / 2025-01-02T03:04:05.000+01:00 | price edited: 2026-11-03T10:05:19+01:00 / 2025-01-02T03:04:05.000+01:00 | target edited: 2025-10-22T17:56:46.413+02:00 / 2026-11-03T10:05:19+01:00 | no fingerprint: 2026-11-03T10:05:19+01:00 / 2026-11-03T10:05:19+01:00
 
 --- 06. The hidden source fields travel ---
   [PASS  ] Check 06: SourceXml and SourceFingerprint survive copy assortment, the scenario xlsx and a price edit; the copy exports the source ProductUserID | copied scenario ids Sawlog,Pulpwood,Sawlog_2,Pulpwood_2,SAW_Spruce | xlsx round trip TRUE | fingerprint after an unchanged grid write TRUE
@@ -26,14 +26,18 @@
 
 --- 08. The file's own diameter classes ---
   [PASS  ] Check 08: The exported diameter classes are the file's own classes (a class wider than 1 cm stays one class) | source 30/50/70 ; 180/250/320 | exported 30/50/70 ; 180/250/320
+
+--- 12. An invalid ModificationDate ---
+  [PASS  ] Check 12: A stored ModificationDate that is not a valid xs:dateTime ('vasket') is replaced by the export time; the export is valid | dates 2025-10-22T17:56:46.413+02:00 / 2026-11-03T10:05:20+01:00 | XSD errors 0 
   [PASS  ] Check 09: file5 import -> .pin export -> import gives identical prices, targets, classes and definitions; the .pin is valid; ProductUserIDs and ModificationDates survive | 21 assortments, identical cells 21, identical definitions 21 | ids from the source TRUE, unique | dates unchanged TRUE | XSD errors 0 
   [PASS  ] Check 10: A file5 run's .hpr export is valid against the .hpr schema and keeps the ProductUserIDs | 10200 stems, 22142 logs | 23 ProductUserIDs, the 21 imported products' IDs all there TRUE, unique TRUE | XSD errors 0 
   [PASS  ] Check 11: The exported file5 .pin has the file's own diameter classes (all classes with a priced cell, none that the file lacks) and a cell for every class and length | 21 products compared by ProductUserID, same classes 21, a cell per class and length 21
+  [PASS  ] Check 13: The exported file5 .pin has exactly the source's diameter class lower limits for every product (also classes without a whole-cm row); valid | 21 products compared, equal 21 | all equal | XSD errors 0 
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 11
+1   PASS 13
 
   Verdict: PASS 
 ============================================================= 
