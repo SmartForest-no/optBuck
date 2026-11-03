@@ -690,3 +690,8 @@
 "tn_reason_one_length","ui","only one length class","bare én lengdeklasse",""
 "tn_reason_one_class","ui","only one diameter class","bare én diameterklasse",""
 "tn_reason_flat","ui","flat price, no price matrix","fast pris, ingen prismatrise",""
+"col_type","ui","Type","Type","R5: assortment type"
+"type_sawlog","ui","Sawlog","Sagtømmer","R5"
+"type_pulpwood","ui","Pulpwood","Massevirke","R5"
+"type_other","ui","Other","Annet","R5"
+"type_waste","ui","Waste","Vrak","R5"

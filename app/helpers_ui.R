@@ -560,3 +560,27 @@ apter_log_length_figure <- function(a, b = NULL, lang = "en", names = c("A", "B"
   if (!is.null(b)) p <- p + ggplot2::facet_wrap(ggplot2::vars(Scenario), ncol = 1L)
   p
 }
+
+#' Cell renderer of the Type column in the assortment table (R5): a dropdown
+#' Sawlog / Pulpwood / Other per row; the reserved waste rows show plain text.
+#' A change sets the Shiny input `asm_type_<side>` (key, type).
+#'
+#' @param side "a" or "b".
+#' @param keys Assortment keys in table row order (reactable's row index).
+#' @param lang Language of the labels.
+type_select_js <- function(side, keys, lang) {
+  lab <- list(sawlog = tr("type_sawlog", lang = lang), pulpwood = tr("type_pulpwood", lang = lang),
+              other = tr("type_other", lang = lang), waste = tr("type_waste", lang = lang))
+  reactable::JS(sprintf("function(cellInfo) {
+    var lab = %s, keys = %s, v = cellInfo.value;
+    if (v === 'waste') return lab.waste;
+    var opts = ['sawlog', 'pulpwood', 'other'].map(function(o) {
+      return React.createElement('option', {key: o, value: o}, lab[o]); });
+    return React.createElement('select', {
+      className: 'asm-type-select', value: v,
+      onClick: function(e) { e.stopPropagation(); },
+      onChange: function(e) {
+        Shiny.setInputValue('asm_type_%s', {key: keys[cellInfo.index], type: e.target.value}, {priority: 'event'}); }
+    }, opts);
+  }", jsonlite::toJSON(lab, auto_unbox = TRUE), jsonlite::toJSON(as.character(keys)), side))
+}

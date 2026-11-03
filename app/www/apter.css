@@ -332,3 +332,4 @@ details.apter-card { margin-bottom: 16px; }
 .tn-off input { margin-right: 8px; }
 .tn-reason { color: var(--apter-muted); margin-left: 8px; }
 .tn-scope { margin: 16px 0 8px; }
+.asm-type-select { font: inherit; padding: 1px 4px; border: 1px solid var(--apter-border, #E6E6E6); border-radius: 4px; background: var(--apter-input, #F3F4F3); }

@@ -465,3 +465,29 @@ Order in Stage C: D3 -> D1 -> D2 -> D4 -> D6 -> D5 -> D7, one commit per finishe
 - Import keeps only `HprProductKey`; ProductUserID/SpeciesGroupUserID are lost (pin writes `200_Massevirke`, file5 has `200_Massevirke_FURU`; species `NO1_FURU`, `NO2_Gran`, ...).
 - Export builds diameter classes from whole cm x 10 (`R/helpers_hpr_export.R:156`); `FileDiameterClass_mm` survives `pm_minimal()`.
 - Summary numbers all available (`per_m3_summary` Total, `selected_logs_all`, `assortment_summary()`, `compare_by_type()`).
+
+## R5 Kvalitetskoder og sortimenttyper (in progress) — branch `grades`
+
+After any context compaction re-read **this section** and `git log -15`. Rules: one git command per call (no &&), push only `git push origin grades`, never merge; every UI text in translations.csv (EN + NO); affected audits after each step, full suite at the end; private files in C:/apter_private/hpr/ never committed (REDACTED45 = file1, Gobakken = file3, file5 = REDACTED39).
+
+### Design (from Lennart's task, 2026-11-03)
+- **Part 1** `.hpr_type()` gets pulpwood prefixes `masse`, `rmasse`, `tørr`, `torr` (order of checks unchanged). The assortment table gets a visible, editable column Type (Sagtømmer / Massevirke / Annet; waste rows read-only). The automatic type is the default, a user choice overrides it (field `Type` is the one field every use reads; hidden flag `TypeUser`). Carried by copy A/B, price edits and the scenario xlsx; not written to .pin/.hpr (re-import gives the automatic type again: known limitation).
+- **Part 2** Grades are used for a stem only when "Bruk stammekvalitet" is on AND the stem's file has the *same instruction* as the scenario for the stem's species: every scenario product of that species with a file origin matches a product of that species in the file by ProductKey AND name, and at least one exists. Otherwise the stem is bucked like a stem without grade data and "Kapp ved kvalitetsskifte" is not applied to it. Checkbox disabled (with text) when no loaded file matches for any species; note per scenario and species when grades are not used (text and share as specified).
+- **Part 3** audit 30 fixture checks, audit 28. **Part 4** manual checks a-f on the private files. **Part 5** full suite, noise restore, performance_check = main.
+
+### Decisions
+- 1.1: the new pulpwood prefixes (`masse`, `rmasse`, `tørr`, `torr`) are read from the **product name only** (`HPR_PULPWOOD_NAME_TOKENS`). Applied to the group name too, REDACTED45's BJØRK (group "MASSE") would become pulpwood, but the expected list has it as custom. Check order otherwise unchanged. REDACTED45 now: sawlog SAG - REDACTED48, EMBA - REDACTED47, SAG - REDACTED35; pulpwood ENERGI 50-90%, BIOVIRKE, MASSE - REDACTED54, MASSE FRISK, RMASSE 0-20%, RMASSE 21-49%, TØRRGRAN - Fallende; custom RMB 0-20%, RMB 21-49%, ENB 50-90%, BJØRK. Gobakken, file5, REDACTED50, Test2 unchanged (checked with `read_hpr()`).
+- 1.2: the existing `Type` field of the assortment table is the one field everything reads; the hidden `TypeUser` (logical) only records that the user chose it. Choice "Annet" stores `type_from_choice()` = slug of the name (kept apart from the reserved sawlog / pulpwood / waste). Waste rows are read-only text. The dropdown sits **in the table's Type column** (reactable cell renderer `type_select_js()`, input `asm_type_a/b`), not in the Edit form. `TypeUser` is not compared between A and B (the Type itself is). It is a column of the scenario xlsx assortments sheet (optional on import, so older files load).
+- 1.2 **uses of the type** (all read `defs$Type` / ProductData `ProductType`, so they follow the user's choice): `asm_order()` (row order); `products_from_defs()` -> `ProductType` / `derived_priority()` (waste 99); `type_group()` in `R/helpers_comparison.R` (value-by-type chart `bar_value_by_type`, `compare_by_type()`, `.per_m3_by_type()`, Total per-m3 scope); `summary_comparison()` and `assortment_summary()` sawlog share (`R/helpers_result_tables.R`); `commercial_volume` (waste excluded); `tuning_products()` / `tuning_sawlog_status()` (sawlog type, `R/helpers_price_tuning.R`); the tuning price floor (`pd$ProductType == "pulpwood"`, `R/helpers_price_tuning.R`); the MAXDeviation note (tunable assortments); `grade_mismatch_check()` (sawlog products); `hpr_export_products()` product group for Apter-made products; `.pin` export skipping waste; `app/tuning.R` saw_vol; `stem_compare` colours (`helpers_ui.R`).
+
+### Known limitations
+- The user-chosen Type is not written to .pin/.hpr exports (imported products keep their source product group; an Apter-made product is written with a group from its Type as before). A re-imported file gets the automatic type again.
+
+### Progress log
+- [x] 0. This section
+- [x] 1. Part 1.1 types (audits 25, 32 pass)
+- [x] 2. Part 1.2 editable Type column (audits 23, 24, 28, 34 pass; browser check in audit 17 at the end)
+- [ ] 3. Part 2 grade rule
+- [ ] 4. Part 3 audits
+- [ ] 5. Part 4 manual checks
+- [ ] 6. Part 5 finish

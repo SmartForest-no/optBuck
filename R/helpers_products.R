@@ -477,7 +477,7 @@ SOURCE_DEF_COLS <- c("SourceXml", "SourceFingerprint", "SourceCells")   # Source
 
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
-  "Name", "Type", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
+  "Name", "Type", "TypeUser", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
   "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)
@@ -527,6 +527,32 @@ custom_type <- function(name) {
   ifelse(s == "waste", "waste_commercial", s)
 }
 
+#' The type of an assortment as the user sees it (R5): "sawlog", "pulpwood",
+#' "waste" (the reserved base waste rows) or "other" (any custom type).
+type_choice <- function(type) {
+  t <- as.character(type)
+  ifelse(t %in% c("sawlog", "pulpwood", "waste"), t, "other")
+}
+
+#' The Type value stored for the user's choice "sawlog" / "pulpwood" / "other"
+#' (R5). "other" is the slug of the name, kept apart from the reserved types.
+type_from_choice <- function(choice, name) {
+  if (choice %in% c("sawlog", "pulpwood")) return(choice)
+  s <- custom_type(name)
+  if (s %in% c("sawlog", "pulpwood", "waste")) paste0(s, "_other") else s
+}
+
+#' The assortment table with row `key`'s type set by the user (R5): Type
+#' becomes the choice and TypeUser TRUE. Waste rows (reserved) and unknown
+#' keys are left alone.
+set_assortment_type <- function(defs, key, choice) {
+  i <- match(key, assortment_table_keys(defs))
+  if (is.na(i) || identical(as.character(defs$Type[i]), "waste") ||
+      !choice %in% c("sawlog", "pulpwood", "other")) return(defs)
+  defs$Type[i] <- type_from_choice(choice, defs$Name[i]); defs$TypeUser[i] <- TRUE
+  defs
+}
+
 #' Priority in ties, derived from pricing and type.
 derived_priority <- function(price_type, product_type) {
   ifelse(as.character(product_type) == "waste", 99,
@@ -542,13 +568,16 @@ assortment_table_keys <- function(defs) {
 
 # Column types of an assortment table.
 .type_assortment_table <- function(d) {
-  num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "Species", "VolumeDiameterCategory",
+  num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "TypeUser", "Species", "VolumeDiameterCategory",
                                           "PriceType", "PriceLengths_cm", "PermittedGrades",
                                           "ReferenceGrades", "HprProductKey",
                                           "DistributionAllowed", "DistributionCategory",
                                           "DistributionWithinProduct", SOURCE_DEF_COLS))
   # Files without the hidden Type: rows are user assortments (commercial).
   if (!"Type" %in% names(d)) d$Type <- rep(NA_character_, nrow(d))
+  # TypeUser (R5): TRUE when the user chose the Type; files without it: automatic.
+  if (!"TypeUser" %in% names(d)) d$TypeUser <- rep(FALSE, nrow(d))
+  d$TypeUser <- .dist_logical(d$TypeUser); d$TypeUser[is.na(d$TypeUser)] <- FALSE
   # Tables without the hidden price lengths (all but hpr imports): none.
   if (!"PriceLengths_cm" %in% names(d)) d$PriceLengths_cm <- rep(NA_character_, nrow(d))
   pl <- trimws(as.character(d$PriceLengths_cm))
@@ -576,7 +605,7 @@ assortment_table_keys <- function(defs) {
   no_type <- is.na(d$Type) | !nzchar(trimws(as.character(d$Type)))
   d$Type[no_type] <- custom_type(d$Name[no_type])
   for (n in num) d[[n]] <- suppressWarnings(as.numeric(d[[n]]))
-  for (n in setdiff(ASSORTMENT_TABLE_COLS, c(num, "DistributionAllowed", "DistributionWithinProduct")))
+  for (n in setdiff(ASSORTMENT_TABLE_COLS, c(num, "DistributionAllowed", "DistributionWithinProduct", "TypeUser")))
     d[[n]] <- as.character(d[[n]])
   d <- d[, ASSORTMENT_TABLE_COLS, drop = FALSE]
   rownames(d) <- NULL

@@ -57,6 +57,9 @@ PIN_DEFAULT_VOLUME_METHOD <- "Top cylinder"
 #' Product group / name tokens of sawlogs and pulpwood (the hidden Type).
 HPR_SAWLOG_TOKENS   <- c("tømmer", "tommer", "sag", "timber", "saw", "kubb", "stock")
 HPR_PULPWOOD_TOKENS <- c("massevirke", "massa", "pulp", "energi", "energy", "bio")
+#' Extra pulpwood prefixes read from the product name only (R5): a product group "MASSE" also
+#' holds a birch product that stays a custom type.
+HPR_PULPWOOD_NAME_TOKENS <- c("masse", "rmasse", "tørr", "torr")
 
 # Text (trimmed) / number / attribute of the first node matching `xpath`
 # under one node, NA if none; all matching texts.
@@ -97,7 +100,7 @@ guess_hpr_species <- function(name, user_id = NA) {
   if (has(tg, HPR_SAWLOG_TOKENS)) return("sawlog")
   if (has(tg, HPR_PULPWOOD_TOKENS)) return("pulpwood")
   if (has(tn, HPR_SAWLOG_TOKENS)) return("sawlog")
-  if (has(tn, HPR_PULPWOOD_TOKENS)) return("pulpwood")
+  if (has(tn, c(HPR_PULPWOOD_TOKENS, HPR_PULPWOOD_NAME_TOKENS))) return("pulpwood")
   custom_type(name)
 }
 

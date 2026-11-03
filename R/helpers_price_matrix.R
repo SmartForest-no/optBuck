@@ -444,7 +444,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "TypeUser", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]
@@ -528,7 +528,7 @@ check_price_set <- function(defs, pm) {
 #'   the other scenario).
 assortment_diff <- function(defs, other) {
   k <- assortment_table_keys(defs); ko <- assortment_table_keys(other)
-  cols <- setdiff(ASSORTMENT_TABLE_COLS, c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS))   # hidden, no effect on runs
+  cols <- setdiff(ASSORTMENT_TABLE_COLS, c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS, "TypeUser"))   # hidden, no effect on runs
   diff <- matrix(FALSE, nrow(defs), length(cols), dimnames = list(k, cols))
   status <- rep("only", nrow(defs))
   for (i in seq_len(nrow(defs))) {

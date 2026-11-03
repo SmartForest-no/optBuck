@@ -138,7 +138,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   asm_display <- function(d, pm) {
     p <- products_from_defs(d, pm)$pd
     data.frame(
-      name = d$Name, species = tools::toTitleCase(d$Species),
+      name = d$Name, type = type_choice(d$Type), species = tools::toTitleCase(d$Species),
       top = rng(d$MinTopDiameter_cm, d$MaxTopDiameter_cm),
       butt = dash(d$MaxButtDiameter_cm),
       length = rng(p$MinLength, p$MaxLength),
@@ -147,7 +147,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       stringsAsFactors = FALSE)
   }
   # Field -> column title (text id).
-  ASM_COL_IDS <- c(name = "col_assortment", species = "col_species", top = "col_top_d_cm",
+  ASM_COL_IDS <- c(name = "col_assortment", type = "col_type", species = "col_species", top = "col_top_d_cm",
                    butt = "col_max_butt_d_cm", length = "col_length_cm",
                    method = "col_volume_method", pricing = "col_pricing")
   # Display values: names, species, volume methods and pricing in `l`; the
@@ -197,6 +197,11 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       class = function(value, index) if (isTRUE(cell[index, n])) "asm-diff")), names(disp))
     # Hidden key column: a row click selects that assortment on both sides.
     disp$.key <- keys_of(all_rows)[ord]
+    # Type (R5): a dropdown per row (Sawlog / Pulpwood / Other); the reserved waste rows are text.
+    tcol <- tr("col_type", lang = l)
+    cols[[tcol]] <- reactable::colDef(
+      class = function(value, index) if (isTRUE(cell[index, tcol])) "asm-diff",
+      cell = type_select_js(tolower(side), disp$.key, l))
     cls <- paste(cls, ifelse(disp$.key == or_default(selected(), ""), "asm-selected", ""))
     cols$.key <- reactable::colDef(show = FALSE)
     apter_reactable(disp, page_size = 20L, columns = cols, sortable = FALSE,
@@ -207,6 +212,19 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   })
   output$tbl_asm_a <- render_asm("A")
   output$tbl_asm_b <- render_asm("B")
+
+  # The user's choice of an assortment's type (R5): written to that scenario's table
+  # (Type and TypeUser), prices untouched.
+  for (side in c("A", "B")) local({
+    side <- side
+    observeEvent(input[[paste0("asm_type_", low(side))]], {
+      e <- input[[paste0("asm_type_", low(side))]]
+      d <- defs(side); i <- match(e$key, keys_of(d))
+      if (is.na(i) || identical(type_choice(d$Type[i]), e$type)) return()
+      d2 <- set_assortment_type(d, e$key, e$type)
+      if (commit(side, d2, prices(side))) redraw()
+    })
+  })
 
   # The detail panel's header: the selected assortment's name, its rules in
   # one line (fields that differ from the other scenario highlighted) and
@@ -339,6 +357,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       VolumeDiameterCategory = input$asm_method, PriceType = ptype,
       stringsAsFactors = FALSE))
     rows$HprProductKey <- if (is.null(old_row)) NA_character_ else old_row$HprProductKey   # hidden; kept on edits
+    rows$TypeUser <- if (is.null(old_row)) FALSE else old_row$TypeUser
     same_pricing <- !is.null(old_row) && identical(old_row$PriceType, ptype)
     if (same_pricing && ptype == "matrix") {   # lengths stay the matrix columns
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm
