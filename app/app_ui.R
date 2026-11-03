@@ -169,7 +169,7 @@ stems_page <- nav_panel(
       apter_card(t_("hdr_trees"), stems_inputs),
       apter_card(t_("hdr_stem_summary"),
         uiOutput("stem_summary"),
-        plotOutput("fig_stem_dists", height = "300px"),
+        plotOutput("fig_stem_dists", height = "320px", fill = FALSE),
         uiOutput("stems_use_ui"))))
 )
 
