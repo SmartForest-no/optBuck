@@ -22,6 +22,9 @@
 #      .prepare_runs() groups runs by options (and by grade sets only when
 #      grades are used); scenarios_differ() sees the options.
 #   9  Several files: the grades of the second file are its own.
+#  11  Grade mismatch warning (R4 polish): hpr_grade_lengths() equals the bucking's
+#      grade grid; grade_mismatch_check() warns when a sawlog product permits the
+#      grades of under half of a species' length; the texts in both languages.
 #
 # Outputs : outputs/stem_grades/audit_30_stem_grades.{csv,txt}
 # Usage   : Rscript audits/audit_30_stem_grades.R
@@ -289,6 +292,41 @@ rec("Check 9: two files: 10 stems with each file's own grades (stems 102 and 202
        identical(g_of("204"), runs_of(pr, "104")) && identical(g_of("103"), g_of("203")) && length(two$gval) == 16L),
     sprintf("stems %d, grades %d", nrow(pr2$tree_data), length(two$gval)))
 unlink(c(f2, f3, fn))
+
+# ---- 11. grade mismatch warning (R4 polish) -------------------------------------------------
+section("11. Grade mismatch warning")
+dl <- hpr_grade_lengths(st, MAP)
+cells_run <- table(pr$profiles$species_group, pr$profiles$grade, useNA = "ifany")
+cells_fun <- tapply(dl$cells, list(dl$species, dl$grade), sum)
+ok11a <- sum(dl$cells) == nrow(pr$profiles) &&
+  all(vapply(rownames(cells_run), function(sp) all(vapply(colnames(cells_run), function(g)
+    (if (is.na(cells_fun[sp, g])) 0L else cells_fun[sp, g]) == cells_run[sp, g], NA)), NA))
+rec("Check 11a: hpr_grade_lengths() counts the same 10 cm cells by species and grade as the bucking's grade grid (profiles)",
+    ok(ok11a), sprintf("%d cells, species/grade combinations %d", sum(dl$cells), nrow(dl)))
+d90 <- data.frame(species = c("spruce", "spruce", "pine", "pine"), grade = c(3, 2, 3, 7), cells = c(900, 100, 970, 30))
+sdefs <- sc$defs[match("spruce_140_sca_sagt_mmer", assortment_table_keys(sc$defs)), ]; i_s <- 1L   # the one sawlog product
+with_perm <- function(v) { x <- sdefs; x$PermittedGrades[i_s] <- v; x }
+w12 <- grade_mismatch_check(d90, with_perm("1;2"), TRUE)
+w123 <- grade_mismatch_check(d90, with_perm("1;2;3"), TRUE)
+w_off <- grade_mismatch_check(d90, with_perm("1;2"), FALSE)
+w_non <- grade_mismatch_check(NULL, with_perm("1;2"), TRUE)
+w_all <- grade_mismatch_check(d90, with_perm(NA_character_), TRUE)
+w135 <- grade_mismatch_check(data.frame(species = "spruce", grade = c(2, 4), cells = c(800, 200)), with_perm("1;3;5"), TRUE)
+ok11b <- nrow(w12) == 1L && w12$key == "spruce_140_sca_sagt_mmer" && w12$grade == 3 && w12$share == 90 && w12$permitted == "1–2" &&
+  nrow(w123) == 0L && nrow(w_off) == 0L && nrow(w_non) == 0L && nrow(w_all) == 0L &&
+  nrow(w135) == 1L && w135$permitted == "1, 3, 5" && w135$grade == 2
+rec("Check 11b: 90 % grade 3 with a sawlog product permitting 1-2 gives exactly one warning (grade 3, share 90, permitted '1-2'); permitting 1-3, option off, no .hpr stems, or no permitted grades give none; non-consecutive grades read '1, 3, 5'",
+    ok(ok11b), sprintf("1-2: %d | 1-3: %d | off: %d | no stems: %d | no grades: %d | 1,3,5: '%s'", nrow(w12), nrow(w123), nrow(w_off), nrow(w_non), nrow(w_all), w135$permitted))
+txt_en <- grade_warning_text(w12, function(k) "Spruce REDACTED25", "en")
+txt_no <- grade_warning_text(w12, function(k) "Gran REDACTED25", "no")
+ok11c <- identical(txt_en, paste0("Grade 3 covers 90 % of the spruce stem length, but Spruce REDACTED25 only permits grade 1–2. ",
+                                  "With \"Use stem grades\" ticked, little Spruce REDACTED25 will be produced. ",
+                                  "The stems and assortments probably come from different jobs with different grade codes.")) &&
+  identical(txt_no, paste0("Kvalitet 3 dekker 90 % av lengden på granstammene, men Gran REDACTED25 tillater bare kvalitet 1–2. ",
+                           "Med «Bruk stammekvalitet» blir det derfor lite Gran REDACTED25. ",
+                           "Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder."))
+rec("Check 11c: the warning text in English and Norsk (checkbox label, species word, product name, grade, share, permitted grades)",
+    ok(ok11c), paste(txt_en, "|", txt_no))
 
 # ==============================================================================
 write_audit_outputs(E$results, audit_csv, audit_txt)

@@ -222,6 +222,7 @@ Replaces the roadmap of 2026-10-22. The phases come in this order. Each phase ge
    - Outputs: the value under the target, the value loss compared with value bucking, and optimized price matrices from the shadow prices, which can be loaded as Scenario B.
    - Starts with a method note for Lennart's approval.
 8. **Merge with optBuck.**
+   - Grade mapping per scenario: a table mapping stem grade numbers to product grade numbers (default identity), so stems and assortments from different jobs can be combined. Also: new targets start with DistributionAllowed unticked.
 9. **Deployment on the NIBIO server.**
    - Price tuning (the "Price tuning" tab) runs synchronously in the main R process and blocks that process for up to several minutes. On a multi-user server it needs a separate process or a queue.
 10. **JOSS paper.**
@@ -354,6 +355,11 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 - Exports keep every source diameter class: hidden assortment field `SourceCells` (`source_cells_build()` / `source_cells_parse()`, `R/helpers_hpr.R`; in `SOURCE_DEF_COLS`, kept like SourceXml) holds price, Distribution, Limitation and BuckingCriteria of the source classes with no whole-cm row; `hpr_export_products()` writes them with the lengths of the assortment (a source length class matches the cut length rounded up to whole dm). Mapped classes are unchanged. `scripts/export_classes_check.R` (output outputs/polish/export_classes.txt, not committed): 63 products of file1-file5, real.pin and hand.pin, source classes = written classes for every product. Audit 35 check 13 (file5).
 
 - Follow-up status (2026-11-03): ready for Lennart's test. Full suite 23 PASS, 0 REVIEW, 0 FAIL; performance_check matches main; file5 manual check unchanged (140 SCA alone 82.9 -> 94.1, value -0.17 %).
+
+### Grade mismatch diagnosis and warning (2026-11-03)
+- Diagnosis (REDACTED45 stems = "Test4.hpr", Gobakken assortments = "Test3.hpr"; scripts/diag_grades.R, deleted): with "Use stem grades" the sawlog share fell from 70 % to 0.5 % of the volume. Grade numbers are compared by code only (`.candidate_columns()`, `gg %in% p$grades`; names are never read), and the same number means another quality in another job's file: 91 % of REDACTED45's spruce length is grade 3 (its StartGrade, permitted by its own sawlog products 1-3), while Gobakken's 140 SCA permits grades 1-2 only. No bug; a real mismatch.
+- Warning (no change to any result): `hpr_grade_lengths()` (stem length per species and grade on the bucking's grade grid) and `grade_mismatch_check()` / `grade_warning_text()` (`R/helpers_hpr_stems.R`): with "Use stem grades" on, every sawlog product that permits the grades of under 50 % of its species' length gets one warning (dominant grade, its share, permitted grades; products without permitted grades never). Shown under the "Use stem grades" checkbox on 2 Sortiment og priser (`grade_warn_a/b`), above the Summary sentence ("A: " / "B: " in a comparison; the warnings are stored with the run), and after the "Not tuned" reason in the Price tuning hits table. Audit 30 check 11 (and audit 28 for the texts).
+- Manual check: REDACTED45 stems + Gobakken assortments: spruce 140 SCA (grade 3, 91 %, permitted 1-2) and pine REDACTED23 (grade 3, 97 %, permitted 1-2); REDACTED45 stems + REDACTED45 assortments: no warning.
 
 ### Known limitations
 - Apter simulates and tunes prices at whole-cm diameter-class resolution; source classes without a whole-cm row are kept unchanged in exports but not simulated separately.

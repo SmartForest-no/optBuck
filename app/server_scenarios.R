@@ -22,7 +22,7 @@
 #           stay as they are: the assortment table is translated only for
 #           display (base names, species, volume methods).
 
-scenario_server <- function(input, output, session, lang = reactive("en")) {
+scenario_server <- function(input, output, session, lang = reactive("en"), grade_dist = reactive(NULL)) {
   L <- function(id, ...) tr(id, ..., lang = lang())
   keys_of <- assortment_table_keys
   sc <- list(A = list(defs = reactiveVal(APP_DEFS), pm = reactiveVal(APP_PM_DEFAULT)),
@@ -51,6 +51,10 @@ scenario_server <- function(input, output, session, lang = reactive("en")) {
     list(use_grades = isTRUE(input[[paste0("grade_use_", s)]]),
          cut_at_changes = isTRUE(input[[paste0("grade_cut_", s)]]))
   }
+  # Grade mismatch warnings of a scenario (R4 polish): sawlog products that permit the grades of
+  # less than half of a species' stem length, with "Use stem grades" on (.hpr stems only).
+  grade_warnings <- function(side)
+    grade_mismatch_check(grade_dist(), defs(side), grade_opts(side)$use_grades)
   differ   <- reactive(scenarios_differ(defs("A"), prices("A"), defs("B"), prices("B"),
                                         grade_opts("A"), grade_opts("B")))
   # Everything that changes a run; a run stores it to detect stale results.
@@ -1063,8 +1067,19 @@ function(instance, td, row, col, prop, value, cellProperties) {
       content = function(file) pm_export(sel_prices(), file))
   })
 
+  for (side in c("A", "B")) local({
+    side <- side
+    output[[paste0("grade_warn_", low(side))]] <- renderUI({
+      l <- lang(); w <- grade_warnings(side)
+      if (nrow(w) == 0L) return(NULL)
+      div(class = "pm-msg-warn", paste(grade_warning_text(w, function(k) key_label(k, l), l), collapse = "
+"))
+    })
+  })
+
   list(defs_a = sc$A$defs, pm_a = sc$A$pm, defs_b = sc$B$defs, pm_b = sc$B$pm,
        differ = differ, pm_state = pm_state, key_label = key_label, grade_opts = grade_opts,
+       grade_warnings = grade_warnings,
        replace_scenario = replace_scenario,
        open_hpr_import = open_hpr_import)  # opens the import dialog for a file (Stems tab)
 }

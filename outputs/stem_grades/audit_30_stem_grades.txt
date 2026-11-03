@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: stem grades and cut at grade changes (Phase 6)
-  Run: 2026-10-28 14:59:15.065652
+  Run: 2026-11-03 12:01:09.182998
 ============================================================= 
 
 --- 1. Grades read and put on the grid ---
@@ -45,11 +45,16 @@
 
 --- 9. Several files ---
   [PASS  ] Check 9: two files: 10 stems with each file's own grades (stems 102 and 202 give the same runs; 104 and 204 snap alike); grade starts of file 2 are not attached to file 1's stems | stems 10, grades 16
+
+--- 11. Grade mismatch warning ---
+  [PASS  ] Check 11a: hpr_grade_lengths() counts the same 10 cm cells by species and grade as the bucking's grade grid (profiles) | 905 cells, species/grade combinations 4
+  [PASS  ] Check 11b: 90 % grade 3 with a sawlog product permitting 1-2 gives exactly one warning (grade 3, share 90, permitted '1-2'); permitting 1-3, option off, no .hpr stems, or no permitted grades give none; non-consecutive grades read '1, 3, 5' | 1-2: 1 | 1-3: 0 | off: 0 | no stems: 0 | no grades: 0 | 1,3,5: '1, 3, 5'
+  [PASS  ] Check 11c: the warning text in English and Norsk (checkbox label, species word, product name, grade, share, permitted grades) | Grade 3 covers 90 % of the spruce stem length, but Spruce REDACTED25 only permits grade 1–2. With "Use stem grades" ticked, little Spruce REDACTED25 will be produced. The stems and assortments probably come from different jobs with different grade codes. | Kvalitet 3 dekker 90 % av lengden på granstammene, men Gran REDACTED25 tillater bare kvalitet 1–2. Med «Bruk stammekvalitet» blir det derfor lite Gran REDACTED25. Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder.
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 25
+1   PASS 28
 
   Verdict: PASS 
 ============================================================= 

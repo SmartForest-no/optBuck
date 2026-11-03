@@ -99,6 +99,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     ids <- intersect(prods()$product_id, input$tn_products)
     req(length(ids) > 0L)
     gopts <- sc$grade_opts(s)
+    gwarn <- sc$grade_warnings(s)
     pr <- products_from_defs(d, pm)
     products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
     path <- write_price_file(pm_prices(pm))
@@ -119,7 +120,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
                         on_iter = function(r, m, fg)
                           prog$set(message = tr("tn_iter_progress", r, m, lang = l), value = r / m))
       out$side <- s; out$defs <- d; out$pm <- pm; out$requested <- requested
-      out$stem_id <- sid
+      out$stem_id <- sid; out$grade_warn <- gwarn
       res(out)
     })
     p <- promises::catch(p, function(e)
@@ -179,7 +180,12 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       n = fmt_num(r$n_logs[r$ids], 0L, l),
       fg1 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_o, 0)), v1 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_o, 0)),
       fg2 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_t, 0)), v2 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_t, 0)),
-      st = vapply(r$ids, function(k) if (k %in% r$used) L("tn_status_ok") else L("tn_status_few", fmt_num(r$n_logs[[k]], 0L, l)), ""),
+      st = vapply(r$ids, function(k) if (k %in% r$used) L("tn_status_ok") else {
+        s <- L("tn_status_few", fmt_num(r$n_logs[[k]], 0L, l))
+        # the grade mismatch warning of the assortment, after the reason
+        w <- r$grade_warn[r$grade_warn$key == k, , drop = FALSE]
+        if (NROW(w)) paste(s, grade_warning_text(w, function(x) disp_key(r, x, l), l)) else s
+      }, ""),
       stringsAsFactors = FALSE)
     rownames(df) <- NULL   # the named vapply() results would show as a row-name column
     cols <- list(a = reactable::colDef(name = L("col_assortment"), width = 260),

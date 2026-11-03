@@ -570,3 +570,81 @@ read_hpr_stem_files <- function(paths, filenames = basename(paths)) {
                              warnings = character(0)))
   combine_hpr_stems(reads, filenames)
 }
+
+
+# ---- grade mismatch warning (R4 polish, 2026-11-03) -----------------------------------------
+# Stem grades and product grades are compared by number only, and the same number can mean
+# another quality in another job's file. With "Use stem grades" on, a sawlog product that permits
+# the grades of less than half of a species' stem length gets a warning.
+
+#' Length of the stems by species and grade on the grade grid the bucking uses: one 10 cm cell
+#' per grid point of each stem still bucked (hpr_stem_checks()), the grade of a cell as in
+#' hpr_stem_profiles(grades = TRUE) (a stem without grades has its group's StartGrade; NA =
+#' grade-free).
+#'
+#' @param st,species_map As hpr_stem_checks().
+#' @param ck  hpr_stem_checks(st, species_map) (default: computed).
+#' @return data.frame(species, grade, cells) (cells = number of 10 cm cells); NULL without stems.
+hpr_grade_lengths <- function(st, species_map, ck = hpr_stem_checks(st, species_map)) {
+  if (!isTRUE(ck$ok) || is.null(st$gpos) || length(ck$use) == 0L) return(NULL)
+  s <- st$stems; sp <- st$species; step <- HPR_PROFILE_STEP_CM
+  grows <- split(seq_along(st$gpos), factor(st$gidx, levels = seq_len(nrow(s))))
+  sgrade <- sp$start_grade[match(s$species_key, sp$key)]
+  gr <- lapply(ck$use, function(i)
+    hpr_grade_grid(seq(0, floor(ck$last[i] / step) * step, by = step),
+                   st$gpos[grows[[i]]], st$gval[grows[[i]]], sgrade[i]))
+  d <- data.frame(species = rep(ck$species[ck$use], lengths(gr)), grade = unlist(gr, use.names = FALSE),
+                  stringsAsFactors = FALSE)
+  d <- d[d$species %in% c("spruce", "pine"), , drop = FALSE]
+  if (nrow(d) == 0L) return(NULL)
+  tab <- as.data.frame(table(species = d$species, grade = d$grade, useNA = "ifany"), stringsAsFactors = FALSE)
+  tab <- tab[tab$Freq > 0L, , drop = FALSE]
+  data.frame(species = tab$species, grade = suppressWarnings(as.numeric(tab$grade)), cells = tab$Freq,
+             stringsAsFactors = FALSE)
+}
+
+#' Grade numbers as text: consecutive numbers "1–2", otherwise "1, 3, 5".
+format_grades <- function(g) {
+  g <- sort(unique(g[!is.na(g)]))
+  if (length(g) >= 2L && all(diff(g) == 1)) return(sprintf("%g\u2013%g", min(g), max(g)))
+  paste(format(g, trim = TRUE, scientific = FALSE), collapse = ", ")
+}
+
+#' The grade mismatch check: with "Use stem grades" on, every sawlog product whose permitted
+#' grades cover less than half of its species' stem length (cells without a grade count as
+#' permitted).
+#'
+#' @param dist       hpr_grade_lengths() result (NULL: no .hpr stems).
+#' @param defs       The scenario's assortment table.
+#' @param use_grades The scenario's "Use stem grades" option.
+#' @param threshold  Warn below this permitted share (0.5).
+#' @return data.frame(key, species, grade (the species' dominant grade), share (whole percent of
+#'   the species' length), permitted (text)); no rows when nothing applies.
+grade_mismatch_check <- function(dist, defs, use_grades, threshold = 0.5) {
+  none <- data.frame(key = character(0), species = character(0), grade = numeric(0),
+                     share = numeric(0), permitted = character(0), stringsAsFactors = FALSE)
+  if (!isTRUE(use_grades) || is.null(dist) || NROW(dist) == 0L || NROW(defs) == 0L) return(none)
+  keys <- assortment_table_keys(defs)
+  rows <- lapply(which(defs$Type == "sawlog" & defs$Species %in% dist$species), function(i) {
+    perm <- permitted_grades_set(defs$PermittedGrades[i])
+    if (length(perm) == 0L) return(NULL)                      # no grade restriction
+    d <- dist[dist$species == defs$Species[i], , drop = FALSE]
+    tot <- sum(d$cells)
+    if (sum(d$cells[is.na(d$grade) | d$grade %in% perm]) / tot >= threshold) return(NULL)
+    g <- d[!is.na(d$grade), , drop = FALSE]; top <- g[which.max(g$cells), ]
+    data.frame(key = keys[i], species = defs$Species[i], grade = top$grade,
+               share = round(100 * top$cells / tot), permitted = format_grades(perm), stringsAsFactors = FALSE)
+  })
+  rows <- rows[!vapply(rows, is.null, NA)]
+  if (length(rows) == 0L) none else do.call(rbind, rows)
+}
+
+#' The warning texts (one per row of grade_mismatch_check()) in `lang`.
+#' @param label Function: assortment key -> display name.
+grade_warning_text <- function(w, label, lang = "en") {
+  if (NROW(w) == 0L) return(character(0))
+  vapply(seq_len(nrow(w)), function(i)
+    tr("grade_mismatch", format(w$grade[i], trim = TRUE), format(w$share[i], trim = TRUE),
+       if (identical(w$species[i], "pine")) tr("gm_species_pine", lang = lang) else tr("gm_species_spruce", lang = lang),
+       label(w$key[i]), w$permitted[i], tr("lbl_use_grades", lang = lang), lang = lang), "")
+}

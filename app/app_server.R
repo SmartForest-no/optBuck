@@ -362,7 +362,14 @@ server <- function(input, output, session) {
 
 
   # ---- Assortments and prices (server_scenarios.R) ---------------------------
-  sc <- scenario_server(input, output, session, lang)
+  # Length of the stems by species and grade (grade mismatch warnings); only .hpr stems.
+  hs_grade_dist <- reactive({
+    req(identical(input$tree_source, "hpr"))
+    st <- hs_stems(); req(isTRUE(st$ok))
+    ck <- hs_check(); req(isTRUE(ck$ok))
+    hpr_grade_lengths(st, hs_map(), ck)
+  })
+  sc <- scenario_server(input, output, session, lang, grade_dist = function() tryCatch(hs_grade_dist(), error = function(e) NULL))
   # The stem source as the Simulator reads it (R4 D7): what a job is prepared from, and
   # an identity that changes when the stems do (Price tuning clears its results then).
   stem_spec <- function() {
@@ -481,7 +488,10 @@ server <- function(input, output, session) {
     run_task$invoke(spec, list(hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
                                keys = list(A = assortment_table_keys(d),
                                            B = if (compare) assortment_table_keys(b$defs)),
-                               state = sc$pm_state(), t_click = t_click))
+                               state = sc$pm_state(), t_click = t_click,
+                               grade_warn = list(A = sc$grade_warnings("A"),
+                                                 B = if (compare) sc$grade_warnings("B")),
+                               grade_defs = list(A = d, B = if (compare) b$defs)))
   })
 
   result <- reactive({
@@ -601,6 +611,22 @@ server <- function(input, output, session) {
 
 
   # ---- Summary ----------------------------------------------------------------
+  # Grade mismatch warnings of the run (stored when it started): "A: ..." / "B: ..." above the
+  # sentence, only when one applies.
+  grade_warn_ui <- function(r) {
+    l <- lang(); gw <- r$grade_warn; gd <- r$grade_defs
+    if (is.null(gw)) return(NULL)
+    lab <- function(side) function(k) {
+      d <- gd[[side]]; i <- match(k, assortment_table_keys(d)); nm <- tr_value(d$Name[i], l)
+      sprintf("%s %s", tr_value(tools::toTitleCase(d$Species[i]), l), paste0(tolower(substring(nm, 1, 1)), substring(nm, 2)))
+    }
+    lines <- unlist(lapply(c("A", "B"), function(s) {
+      if (NROW(gw[[s]]) == 0L) return(NULL)
+      paste0(if (!is.null(r$scenario)) paste0(s, ": "), grade_warning_text(gw[[s]], lab(s), l))
+    }))
+    if (length(lines)) div(class = "pm-msg-warn", paste(lines, collapse = "
+"))
+  }
   output$summary_cards <- renderUI({
     if (input$run_btn == 0L) return(div(class = "note-muted", L("no_run_yet")))
     req(has_result()); r <- result(); l <- lang()
@@ -613,7 +639,7 @@ server <- function(input, output, session) {
       fmt_num(or_default(r$elapsed_total_seconds, r$elapsed_seconds), 1L, l, big = FALSE)))
     plots <- if (!isTRUE(is_hpr())) ro_field(L("lbl_plots"), fmt_int(r$n_plots_sampled))
     if (!compared())
-      return(ro_field_row(
+      return(tagList(grade_warn_ui(r), ro_field_row(
         run_time,
         plots,
         ro_field(L(unit_id("lbl_trees")), fmt_int(r$n_trees_total)),
@@ -622,7 +648,7 @@ server <- function(input, output, session) {
         ro_field(L("lbl_commercial_volume"), vol(r)),
         ro_field(L("lbl_total_value"), value(r)),
         ro_field(L("lbl_nok_per_m3"), nok(r)),
-        ro_field(L("lbl_price_volume"), pvol(r))))
+        ro_field(L("lbl_price_volume"), pvol(r)))))
     # A comparison (R4 D4): one sentence, the A / B table, the run info as
     # small tiles and the value by assortment type.
     cmp <- summary_comparison(r, result_b())
@@ -631,6 +657,7 @@ server <- function(input, output, session) {
                 else L(if (dv > 0) "sum_higher" else "sum_lower", fmt_int(abs(dv)),
                        fmt_num(abs(or_default(pv, 0)), 1L, l, big = FALSE))
     tagList(
+      grade_warn_ui(r),
       p(class = "summary-sentence", sentence),
       reactableOutput("tbl_summary_cmp"),
       ro_field_row(

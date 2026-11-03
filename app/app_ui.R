@@ -87,6 +87,7 @@ scenario_column <- function(s) {
     conditionalPanel("input.tree_source == 'hpr'",
       div(class = "section-hdr", t_("hdr_stem_grades")),
       checkboxInput(paste0("grade_use_", s), t_("lbl_use_grades"), FALSE),
+      uiOutput(paste0("grade_warn_", s)),
       checkboxInput(paste0("grade_cut_", s), t_("lbl_cut_at_changes"), FALSE))
   )
 }
