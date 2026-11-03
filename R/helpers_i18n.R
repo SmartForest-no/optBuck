@@ -97,6 +97,19 @@ tr_value <- function(x, lang = "en") {
   y
 }
 
+#' The display name of an assortment: the species ("Spruce" / "Gran") and the name. A product
+#' name from a file is shown exactly as written (case unchanged); only the base names
+#' (Sawlog, Pulpwood, Waste), which Apter translates, start in lower case ("Spruce sawlog",
+#' "Gran sagtømmer").
+#' @param species "spruce" / "pine"; @param name the assortment's Name; @param lang "en" / "no".
+assortment_display_name <- function(species, name, lang = "en") {
+  name <- as.character(name)
+  nm <- tr_value(name, lang)
+  base <- name %in% c("Sawlog", "Pulpwood", "Waste")
+  nm[base] <- paste0(tolower(substring(nm[base], 1, 1)), substring(nm[base], 2))
+  sprintf("%s %s", tr_value(tools::toTitleCase(as.character(species)), lang), nm)
+}
+
 #' English backend text to `lang`: exact match first, then the message
 #' templates (most specific first). Captured arguments are translated in
 #' turn (a reason inside "3 stems dropped: <reason>."), numbers get the

@@ -1413,18 +1413,19 @@ if (!browser_ok) {
     n_asm_rm <- n_tbl_rows(app, "tbl_asm_a")
     n_asm_rm_b <- n_tbl_rows(app, "tbl_asm_b")
     ok20 <- !nzchar(paste0(e20, e20b, e20c, e20d, e20e)) &&
-      grepl("Added Spruce poles", msg20a, fixed = TRUE) && identical(n_asm1, 7L) &&
+      # (names are shown as written, R4 polish: "Spruce Poles", not "Spruce poles")
+      grepl("Added Spruce Poles", msg20a, fixed = TRUE) && identical(n_asm1, 7L) &&
       identical(method20, "Mid") &&
-      identical(pm_opts, "Spruce poles grid") &&
-      grepl("Saved Spruce poles", msg20b, fixed = TRUE) && kept &&
-      grepl("Spruce poles", prod20, fixed = TRUE) &&
+      identical(pm_opts, "Spruce Poles grid") &&
+      grepl("Saved Spruce Poles", msg20b, fixed = TRUE) && kept &&
+      grepl("Spruce Poles", prod20, fixed = TRUE) &&
       identical(n_asm_reset, 7L) && base_back && identical(n_asm_rm, 6L) &&
       identical(n_asm_rm_b, n_b0) && identical(form20, 0L) && identical(blur20, "none") &&
       identical(n_err_notif(app), 0L)
     rec(browser_checks[16], if (ok20) PASS else FAIL,
         sprintf("form: removed fields present %s, backdrop filter '%s' | add: '%s', volume method %s, rows %s, selected: %s | edit: '%s', prices kept %s | selected in run: %s | reset: rows %s, base prices back %s | remove from both: rows A %s, B %s (before: %s)%s",
                 form20, blur20, trimws(msg20a), method20, n_asm1, pm_opts, trimws(msg20b), kept,
-                grepl("Spruce poles", prod20, fixed = TRUE), n_asm_reset, base_back, n_asm_rm, n_asm_rm_b, n_b0,
+                grepl("Spruce Poles", prod20, fixed = TRUE), n_asm_reset, base_back, n_asm_rm, n_asm_rm_b, n_b0,
                 err_txt(e20, e20b, e20c, e20d, e20e)))
     # 21. uploaded tree list (template)
     tl_csv <- tempfile(fileext = ".csv")
@@ -1544,13 +1545,13 @@ if (!browser_ok) {
       identical(n24$only_b, 0L) && identical(n24$a_rows, 6L) && identical(n24$struck, 0L) && cmp24 &&
       identical(n24$rows_a, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Sawlog Pine|Pulpwood Pine|Waste Pine") &&
       identical(n24$rows_b, "Sawlog Spruce|Pulpwood Spruce|Waste Spruce|Poles Spruce|Sawlog Pine|Waste Pine") &&
-      grepl("Spruce poles", prod24, fixed = TRUE) &&
+      grepl("Spruce Poles", prod24, fixed = TRUE) &&
       grepl("Value A", prod24, fixed = TRUE) && grepl("Spruce sawlog is equal to Scenario B", msg24, fixed = TRUE) &&
       identical(n24$end, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[20], if (ok24) PASS else FAIL,
         sprintf("rows A: %s | rows B: %s | start marks %s | B rule highlighted: A %s, B %s | B-only row highlighted (expected 0): %s (A rows %s) | struck rows %s | compared %s, poles in products %s | Make assortment equal to B (spruce sawlog): '%s' | after Scenario A downloaded and uploaded to B: %s marks%s",
                 n24$rows_a, n24$rows_b, n24$start, n24$diff_a, n24$diff_b, n24$only_b, n24$a_rows, n24$struck,
-                cmp24, grepl("Spruce poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
+                cmp24, grepl("Spruce Poles", prod24, fixed = TRUE), substr(trimws(msg24), 1, 120),
                 n24$end, err_txt(e24, e24b)))
     # 27. figures (images with a width) for the single run and the comparison
     ok27 <- !nzchar(e27) && all(vapply(c27[c("logs1", "trees1", "logs2", "trees2", "len1", "len2")],

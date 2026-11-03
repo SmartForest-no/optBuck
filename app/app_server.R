@@ -561,7 +561,7 @@ server <- function(input, output, session) {
   # ---- readable labels ----------------------------------------------------------
   # "spruce_sawlog" -> "Spruce sawlog"; assortment classes ("sawlog") -> "Sawlog".
   # From the assortment's own name where a scenario has it ("Spruce 140 SCA
-  # Sagtømmer"; only the name's first letter lowercased, so "Spruce
+  # Sagtømmer", file names as written; only the base names start in lower case, "Spruce
   # sawlog"), else from the key (2026-10-22: keys drop ø, å and capitals).
   # In Norsk the species and the base names (Sawlog, Pulpwood, Waste) are
   # translated ("Gran sagtømmer"); other names are the user's own.
@@ -572,8 +572,7 @@ server <- function(input, output, session) {
     out <- ifelse(grepl("_", k), paste(tr_value(tools::toTitleCase(sp), l), rest), k)
     d <- isolate(rbind(sc$defs_a(), sc$defs_b())); dk <- assortment_table_keys(d)
     i <- match(k, dk)
-    nm <- tr_value(d$Name[i], l); nm <- paste0(tolower(substring(nm, 1, 1)), substring(nm, 2))
-    ifelse(is.na(i), out, paste(tr_value(tools::toTitleCase(d$Species[i]), l), nm))
+    ifelse(is.na(i), out, assortment_display_name(d$Species[i], d$Name[i], l))
   }
   scope_label <- function(s) tr_value(ifelse(s == "Total", "Total", tools::toTitleCase(as.character(s))), lang())
 
@@ -617,8 +616,8 @@ server <- function(input, output, session) {
     l <- lang(); gw <- r$grade_warn; gd <- r$grade_defs
     if (is.null(gw)) return(NULL)
     lab <- function(side) function(k) {
-      d <- gd[[side]]; i <- match(k, assortment_table_keys(d)); nm <- tr_value(d$Name[i], l)
-      sprintf("%s %s", tr_value(tools::toTitleCase(d$Species[i]), l), paste0(tolower(substring(nm, 1, 1)), substring(nm, 2)))
+      d <- gd[[side]]; i <- match(k, assortment_table_keys(d))
+      assortment_display_name(d$Species[i], d$Name[i], l)
     }
     lines <- unlist(lapply(c("A", "B"), function(s) {
       if (NROW(gw[[s]]) == 0L) return(NULL)

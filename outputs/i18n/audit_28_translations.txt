@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: translations (Norsk / English)
-  Run: 2026-11-03 12:09:41.996483
+  Run: 2026-11-03 13:41:28.288263
 ============================================================= 
 
 --- 01. The table ---
@@ -10,7 +10,7 @@
   [PASS  ] Check 02: every id the code uses exists; no ui id unused | 371 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE
 
 --- 03. No English text left in the app code ---
-  [PASS  ] Check 03: no untranslated English string literals in app/*.R | 1924 string literals, 27 prose-like, 26 translated at display | left: none
+  [PASS  ] Check 03: no untranslated English string literals in app/*.R | 1922 string literals, 27 prose-like, 26 translated at display | left: none
 
 --- 04. Templates round-trip ---
   [PASS  ] Check 04: every message template round-trips; English unchanged; unknown values pass through | 107 templates | failed: none | misses: none | English unchanged TRUE | pass-through TRUE
@@ -23,11 +23,14 @@
 
 --- 07. Display helpers ---
   [PASS  ] Check 07: tree_counts() in English as before Phase 1 and inflected in Norsk; fmt_num() | 6 tree-count cases, wrong: none | fmt_num TRUE
+
+--- 08. Product names from files keep their case ---
+  [PASS  ] Check 08: a product name from a file is shown as written ('SAG - REDACTED35' -> 'Gran SAG - ...' / 'Spruce SAG - ...', 'REDACTED25' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case | Gran SAG - REDACTED35 | Spruce SAG - REDACTED35 | Gran sagtømmer
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result n
-1   PASS 7
+1   PASS 8
 
   Verdict: PASS 
 ============================================================= 
