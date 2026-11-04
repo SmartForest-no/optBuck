@@ -513,7 +513,7 @@ After any context compaction re-read **this section** and `git log -15`. Rules: 
 
 After any context compaction re-read **this section** and `git log -15`. Rules (from Lennart's task, 2026-11-04): Stage A investigate + questions, STOP; Stage B plan, STOP for review; Stage C implement unattended. One git command per call, push only `git push origin optbuck-merge`, never merge. All UI texts in translations.csv (EN + NO), plain UI, product names exactly as in the file. Affected audits after each step, full suite at the end, `performance_check.R` must keep matching main. Private files never committed: `C:/apter_private/hpr/` (file1 REDACTED45, file2 REDACTED50 logs only, file3 Gobakken, file4 REDACTED38, file5 REDACTED39), `pin/`, `stanford_xsd/`; derived material under `C:/apter_private/` too. Keep StanForD names (StemKey, LogKey, ProductKey, GradeNumber, CuttingCategory ...). Ported code is rewritten (vectorised, no repeated XML parsing) but keeps its results unless a result is a documented bug.
 
-Status: **Stage A done 2026-11-04, waiting for Lennart's answers to the questions at the end.** Setup done: old optBuck backup copied to `C:/apter_private/optBuck_old/` (HEAD `bc21411`), installed only into `C:/apter_private/optbuck_old_lib` (`R CMD INSTALL --library`; the default library is untouched). Reference runs: `C:/apter_private/optbuck_reference/run_old.R` (one process per file, checkpoints `ck_*.rds`), results in `C:/apter_private/optbuck_reference/file<n>/`.
+Status: **Stage A done and answered 2026-11-04; Stage B (plan) written 2026-11-04, waiting for Lennart's review. Stage C not started.** Setup done: old optBuck backup copied to `C:/apter_private/optBuck_old/` (HEAD `bc21411`), installed only into `C:/apter_private/optbuck_old_lib` (`R CMD INSTALL --library`; the default library is untouched). Reference runs: `C:/apter_private/optbuck_reference/run_old.R` (one process per file, checkpoints `ck_*.rds`), results in `C:/apter_private/optbuck_reference/file<n>/`.
 
 ### A1 Inventory of old optBuck (HEAD bc21411, version 0.1.0)
 
@@ -700,3 +700,230 @@ Measured now (machine under load from the five reference runs): `read_hpr()` 1.0
 12. **SmartForest logo and Inter/Source Serif fonts.** Fonts are OFL (fine, notices stay). Is the logo free to publish with an MIT repo? *Recommendation:* keep the logo but state in README that logo and name are not covered by MIT.
 13. **Package name and version.** `optBuck` as requested; the app already shows that name. Version: **0.3.0** (current VERSION 0.2.0). OK?
 14. **Tab 5 and `ProductCondition` ("Buck butt-log only", used by 2 products in file5).** The optimiser ignores it (old optBuck too). *Recommendation:* **implement it as a start-position rule, active in tab 5 only** so the simulator results stay identical; list it as a known limitation otherwise.
+
+
+## Roadmap 8, Stage B: the plan (2026-11-04) — STOP for Lennart's review before Stage C
+
+### B0 Decisions from Lennart (answers to the Stage A questions, 2026-11-04)
+
+1. Copyright holder **NIBIO**. DESCRIPTION `Authors@R`: Lennart Noordermeer (`aut`, `cre`, ORCID placeholder `0000-0000-0000-0000` that Lennart fills in), NIBIO (`cph`), SFI SmartForest (`fnd`). `LICENSE` = MIT template (`YEAR: 2026`, `COPYRIGHT HOLDER: NIBIO`), `LICENSE.md` full text "Copyright (c) 2026 NIBIO".
+2. Old public optBuck repo: Lennart renames it `optBuck-legacy` and makes it private after a local backup. The new repo is this repo, transferred to SmartForest-no and renamed `optBuck`, **with its own full history**. Nothing is copied from the old repo (no harvester file, no workspace image). Exact admin steps: B8.
+3. Dropped: `predictStemprofile()`, `getHarvestedArea()`, coordinate/date reading of `getStems()`, `strSplits()`, `plotBucking()`.
+4. The optimum **respects the waste logs the operator cut as rot** (grade -1 rule of old optBuck). One figure only (no second figure without the rule).
+5. Manual cut = every `CuttingReason` except "Automatic" and "Spinning" (the standard, literally).
+6. "Share of stems within MAXDeviation" dropped. Kept: fördelningsgrad and limitation text (a); the text says MAXDeviation is the harvester's allowed value loss per product and shows its value where set.
+7. Recorded logs are valued with this repo's own rules (the same price lookup as the optimum). The harvester's recorded volume (`m3 (price)`) is a control column; the difference is reported per file.
+8. NFI: ship only the NFI tree table. Stem profiles are built on first use into `tools::R_user_dir("optBuck", "cache")`, **only when NFI stems are used** (never at package load, app start, or for .hpr/tree-list stems), with a progress text; a script builds the cache once for a server. Measured first-build time: B3 step 6 (**about 3 min on one core for all 101,156 trees, so building is chosen, no download**).
+9. NFI table: `treid` replaced by a random permutation (fixed seed); coordinates and plot IDs removed unless the app uses them. Data licence CC BY 4.0, attribution "Landsskogtakseringen, NIBIO", in README and a licence file next to the data. No history rewrite for `treid`.
+10. The three price spreadsheets in `inputs/price_matrix_sources` may be public. 11. Oracle alias and user name removed from current files; no history rewrite; open item for Lennart (ask NIBIO IT) with `git filter-repo` instructions (B8). 12. Logo may be published. 13. Version **0.3.0**.
+14. "Buck butt-log only" / "Do not buck butt log": implemented **in the shared bucking engine** (simulator, tuning and tab 5), an intended computational change: before/after reports for all test files, expected values and the `performance_check` baseline updated deliberately and logged; the flag is shown read-only in the assortment table of tab 2.
+
+**What the app uses of the NFI table** (checked in the code, Stage B): `plot_id_github` (plot counts, the Plot column, comparison keys), `treid` (tree identity, bucking order), `sesong` (carried through the taper pass), `tilstand` (filter), `trehoyde`/`beregnet_hoyde`, `dbh_cm`, `species_group`, `hoh` (plot filter, 50 m steps), `fylnr`, `abonitet`, `hogstkl`. **Not used:** `volm`, `volu`, `plot_area_m2` (always 250). No coordinates exist. So: drop `volm`, `volu`, `plot_area_m2`; replace `treid` by a random permutation of 1..N; **re-draw `plot_id_github` by a random permutation too** (the current P000001... numbers were assigned in the sorted order of the original NFI plot IDs, so their rank still carries information about the original IDs); keep `fylnr`, `hoh` (whole metres, needed for the 50 m filter without changing results), `sesong`, `hogstkl`, `abonitet`. The mapping old -> new is kept only in `C:/apter_private/nfi_id_map.rds`.
+
+### B1 Target architecture (what exists after Stage C)
+
+```
+optBuck/ (this repo, branch optbuck-merge, version 0.3.0)
+  DESCRIPTION  NAMESPACE  LICENSE  LICENSE.md  NEWS.md  README.md  CITATION.cff  .Rbuildignore
+  R/        all current helpers (names kept) + new: helpers_hpr_logs.R, helpers_check.R, helpers_check_tables.R,
+            helpers_nfi_cache.R, run_bucking.R (the three runners from scripts/app_backend/01_*), api.R (exports), zzz.R
+  inst/app/ app.R + app files (+ new check.R) + www/;  inst/extdata/ inputs, i18n, NFI table (+ LICENSE-data.md), fixtures
+  man/  tests/testthat/  audits/ scripts/ docs/ (top level, in .Rbuildignore)
+```
+**Exported API (documented with roxygen, examples run on the synthetic fixtures):** `run_app()`, `read_hpr()` (definitions incl. permitted grades with grade names), `read_hpr_stems()`, `read_hpr_logs()`, `hpr_permitted_grades()`, `buck_hpr()` (optimal bucking of the stems of a file under a given or the file's own instruction), `buck_stem()` (one profile), `bucking_check()` (tab 5 engine), `write_hpr()`, `write_pin()`, `build_nfi_cache()`. Everything else internal (`optBuck:::` in audits).
+
+**Data structures (new).**
+- `read_hpr_logs(path)` -> `data.frame` one row per recorded log: `file`, `StemKey`, `LogKey`, `ProductKey`, `StartPos` (cm; recorded or cumulative if the file has none), `LogLength`, `StopPos`, `CuttingReason`, `manual` (logical), `m3_price`, `m3sob`, `m3sub`, `estimated` (logical, `...Estimated` volumes), `TopUb`, `TopOb`, `ButtOb` (mm, as recorded). No names, dates or coordinates are read (same whitelist rule as the stem reader; audit 26-style leak test).
+- Profile vector (`pv`, existing) gets `pv$reject` (logical per 10 cm cell, TRUE = inside a recorded waste log: whole cells within `[ceil(Start/10)*10, +floor(L/10)*10)`; this is exactly the old rule, translated to this repo's cell convention) and the product plan gets `butt` ("only" / "not" / NA).
+- Engine options (`grade_opts`, existing mechanism): new `reject_zones` (default FALSE; only tab 5 and `buck_hpr(reject_zones = TRUE)` turn it on, so simulator/tuning with it off are bit-identical to today apart from step 3).
+- `bucking_check()` returns a list: `file` (name by position only, size, machine/object **not** read), `overview` (species groups, products with limits, permitted grades with `GradeName`, flag "not permitted in any sawlog product"), `stems` (one row: StemKey, species, status/reason, n_logs, `actual_value`, `optimal_value`, `apteringsgrad`, `actual_m3`, `optimal_m3`, `n_manual`, `has_manual`, `defect_share_*`, top diameters), `logs` (both sources, column `source` = recorded/best possible, product, positions, length, top ub, price volume, price, value, manual, harvester `m3_price` control), `assortments`, `length_dist`, `manual`, `defect`, `top`, `excluded` (StemKey, reason), `control` (Apter vs harvester volume per file), `info`/`warnings` (translated by `tr_msg()`).
+
+### B2 Tab 5 "5 Kontroll av aptering" (EN "5 Bucking check")
+
+Position: after "4 Pristilpasning", before "Hjelp". Intro sentence like the other tabs. File rule: first file under **1 Stammer** (`hs_files`), else the file imported as assortments into scenario A, then B (`hpr_imported`), else a message; the name is shown before the run, with "Use another .hpr file for this tab only" (upload; "Use the file from the other tabs again" resets). Instruction = the file's own (`read_hpr()` -> `hpr_to_scenario()`, species from the guess of tab 1 or confirmed map), grades = the file's own, `use_grades = TRUE`, `cut_at_changes = FALSE`, `reject_zones = TRUE`, no scenario prices. "Run the check" button with progress steps (read; best bucking; value recorded; tables), runs as an `ExtendedTask` job like the other long tasks; the page keeps the result until file or species map change.
+
+Result sections (all headings and labels in the text table below): **(1)** file name and basic numbers (stems in file / checked / left out, logs, machine kind not shown); **(2)** overview: species groups, products (name as in the file, species, limits, permitted grades by number **and name**, flag for grades no sawlog product permits), recorded logs/volume per product; **(3)** bucking degree: key-figure table (total and per species: recorded value, best possible value, kr and kr per m³, value lost, apteringsgrad) and the per-stem figure (stems sorted ascending, 700 x 320 px, one line, chart colour `APTER_CHART`); **(4)** per assortment: logs, settlement volume and value, recorded vs best possible, sawlog share of volume (Type from R5); **(5)** length distribution per sawlog assortment, recorded vs best possible (bars by dm class), and where the product has a target (`Distribution` in the file) the fördelningsgrad of the recorded outcome (`tally_grid()` + `fg_grid()` of `R/helpers_price_tuning.R`, number or volume as the file's `DistributionCategory`) plus the product's MAXDeviation; **(6)** manual cuts: share of all logs, of sawlogs, of butt logs that are sawlogs; apteringsgrad of stems with and without manual cuts; **(7)** wood with quality defects (definition below); **(8)** top diameter under bark of the last log and the last sawlog, mean per species, recorded vs best possible; **(9)** stems left out or flagged with counts and reasons; **(10)** limitations text (a)-(d) shown with the results; **(11)** control against the harvester's volumes; downloads: per-stem and per-log tables (CSV, Norsk `;` + decimal comma + BOM like the existing downloads; the xlsx tally style is not repeated).
+
+**Files without stem diameter vectors (file2 type):** a clear message; sections 1, 2, 4 (recorded part only), 6 (shares only) and 9 are shown; no optimum, no apteringsgrad, no figure.
+
+**Definitions fixed here (review please).**
+- *Recorded log value* = engine price volume (`price_volume_m3()` with the product's own method, top/mid diameter from the profile **under bark by barkNOR**, `DiameterTopPosition`, price length rule) x price (`lookup_prices()`, whole-cm class capped at the product's largest class). Logs are valued even when outside the product's limits (counted in the control table as "outside the instruction"). Waste (the file's unclassified product, **found by definition, not by the number 999999**; file5 uses 2147483647) = 0.
+- *Optimum* = the engine's DP over the same candidates under the file's instruction (permitted grades, reject zones, product limits, butt condition), unallocated top allowed.
+- *Apteringsgrad* = sum recorded value / sum best possible value over the checked stems; per stem = ratio (no cap: a recorded outcome the optimiser cannot produce, e.g. a 378 cm log off the 10 cm grid, can exceed 100 %; the number of such stems is shown). Stems with optimum 0 are listed, not averaged.
+- *Manual cut* = `CuttingReason` not "Automatic" and not "Spinning". "Butt log" = the log that starts at the first cut (LogKey 1 / stump). "Sawlog" = product Type sawlog (R5 `.hpr_type()` and the user's Type choice).
+- *Defect wood (item 7)*: the volume (solid, under bark, 10 cm cells, `section_volume_fun()`) of 10 cm cells whose recorded grade is permitted by **no sawlog product of that species** in the file. Three shares: of the total volume of the checked stems up to the top of their last recorded log; of the volume in **sawlog dimensions** (cells whose under-bark diameter is at least the smallest minimum top diameter of the species' sawlog products); and of the **butt log** volume in sawlog dimensions (cells of the first recorded log). Cells inside recorded waste logs are reported on their own line ("cut as waste by the operator").
+- *Broken top (item 9)*: the under-bark diameter at the last measured point is at least the smallest minimum top diameter of the species' sawlog products -> stem left out (the bucking computer did not know about the break). The simulator's own rule (`HPR_CLEAN_BROKEN_TOP_MM`, keeps the stem) is unchanged. *Plateau/steep* stems: the existing cleaning rules (`hpr_clean_flags()`), left out here with their reasons. Others found in Stage A: multi-tree stems (239 in file3), species without a bark model (birch etc., excluded with reason), a recorded log ending above the measured profile (0 in files 1/3/4, flagged if it happens), duplicate stem keys, no recorded logs.
+
+### B2a All new UI texts (translations.csv, `kind = ui`; EN | NO Bokmål)
+
+| id | EN | NO |
+|---|---|---|
+| tab_check | 5 Bucking check | 5 Kontroll av aptering |
+| chk_intro | Compare how the harvester bucked each stem with the best possible bucking under the same instruction: the products, prices and quality codes of the file. | Sammenlign hvordan hogstmaskinen apterte hver stamme med best mulig aptering etter samme instruks: filens sortiment, priser og kvalitetskoder. |
+| chk_file_label | File to check | Fil som kontrolleres |
+| chk_file_stems | The first harvester file under 1 Stems: %s | Første hogstmaskinfil under 1 Stammer: %s |
+| chk_file_asm | The harvester file imported into scenario %s: %s | Hogstmaskinfilen importert til scenario %s: %s |
+| chk_file_own | Uploaded for this tab: %s | Lastet opp for denne fanen: %s |
+| chk_file_none | No harvester file is loaded. Load an .hpr file under 1 Stems, import one into a scenario, or upload one here. | Ingen hogstmaskinfil er lastet inn. Last inn en .hpr-fil under 1 Stammer, importer en til et scenario, eller last opp en her. |
+| chk_upload | Use another .hpr file for this tab only | Bruk en annen .hpr-fil bare i denne fanen |
+| chk_reset | Use the file from the other tabs again | Bruk filen fra de andre fanene igjen |
+| chk_run | Run the check | Kjør kontrollen |
+| chk_note_own | The file's own products, prices and quality codes are used, not the scenarios. | Filens egne sortiment, priser og kvalitetskoder brukes, ikke scenariene. |
+| chk_p_read | Reading stems and logs | Leser stammer og stokker |
+| chk_p_opt | Finding the best bucking | Finner beste aptering |
+| chk_p_val | Valuing the recorded logs | Verdsetter de registrerte stokkene |
+| chk_p_tab | Preparing the tables | Lager tabellene |
+| chk_no_profile | This file has no stem diameters, so the best bucking cannot be calculated. Only the overview and the manual-cut figures are shown. | Denne filen har ingen stammediametre, så beste aptering kan ikke beregnes. Bare oversikten og tallene for manuelle kapp vises. |
+| chk_summary | %s of %s stems checked. Bucking degree %s %% (recorded %s kr, best possible %s kr). | %s av %s stammer kontrollert. Apteringsgrad %s %% (registrert %s kr, best mulig %s kr). |
+| chk_h_file | File | Fil |
+| chk_h_overview | Overview | Oversikt |
+| chk_h_degree | Bucking degree | Apteringsgrad |
+| chk_h_assort | Per assortment | Per sortiment |
+| chk_h_length | Length distribution | Lengdefordeling |
+| chk_h_manual | Manual cuts | Manuelle kapp |
+| chk_h_defect | Wood with quality defects | Virke med kvalitetsfeil |
+| chk_h_top | Top diameter | Toppdiameter |
+| chk_h_excl | Stems left out or flagged | Stammer som er utelatt eller merket |
+| chk_h_limits | What the figures mean | Hva tallene betyr |
+| chk_h_control | Control against the harvester's own volumes | Kontroll mot hogstmaskinens egne volumer |
+| chk_k_stems_file | Stems in the file | Stammer i filen |
+| chk_k_stems_used | Stems checked | Stammer kontrollert |
+| chk_k_stems_out | Stems left out | Stammer utelatt |
+| chk_k_logs | Logs recorded | Registrerte stokker |
+| chk_c_species | Species group | Treslagsgruppe |
+| chk_c_product | Product | Sortiment |
+| chk_c_limits | Top diameter (cm) | Toppdiameter (cm) |
+| chk_c_grades | Permitted quality codes | Tillatte kvalitetskoder |
+| chk_c_grade | Quality code | Kvalitetskode |
+| chk_c_gradename | Name in the file | Navn i filen |
+| chk_c_nosaw | Not permitted in any sawlog product | Ikke tillatt i noe sagtømmersortiment |
+| chk_c_butt | Log position | Plassering på stammen |
+| chk_c_recorded | Recorded | Registrert |
+| chk_c_best | Best possible | Best mulig |
+| chk_c_value | Value (kr) | Verdi (kr) |
+| chk_c_value_m3 | Value per m³ (kr) | Verdi per m³ (kr) |
+| chk_c_lost | Value lost (kr) | Tapt verdi (kr) |
+| chk_c_degree | Bucking degree (%) | Apteringsgrad (%) |
+| chk_c_all | All species | Alle treslag |
+| chk_c_logs | Logs | Stokker |
+| chk_c_volume | Settlement volume (m³) | Oppgjørsvolum (m³) |
+| chk_c_sawshare | Sawlog share of volume (%) | Sagtømmerandel av volum (%) |
+| chk_fig_degree | Bucking degree per stem, lowest first | Apteringsgrad per stamme, laveste først |
+| chk_ax_stems | Stems, sorted | Stammer, sortert |
+| chk_ax_degree | Bucking degree (%) | Apteringsgrad (%) |
+| chk_ax_class | Length class (dm) | Lengdeklasse (dm) |
+| chk_ax_logs | Number of logs | Antall stokker |
+| chk_c_fit | Degree of fit, recorded (%) | Fordelingsgrad, registrert (%) |
+| chk_c_target | Target in the file | Mål i filen |
+| chk_c_maxdev | Allowed value loss (MAXDeviation, %) | Tillatt verditap (MAXDeviation, %) |
+| chk_m_all | Share of all logs cut manually (%) | Andel av alle stokker kappet manuelt (%) |
+| chk_m_saw | Share of sawlogs cut manually (%) | Andel av sagtømmerstokkene kappet manuelt (%) |
+| chk_m_butt | Share of butt logs that are sawlogs and were cut manually (%) | Andel av rotstokkene som er sagtømmer og ble kappet manuelt (%) |
+| chk_m_with | Bucking degree, stems with manual cuts (%) | Apteringsgrad, stammer med manuelle kapp (%) |
+| chk_m_without | Bucking degree, stems without manual cuts (%) | Apteringsgrad, stammer uten manuelle kapp (%) |
+| chk_d_total | Share of the volume (%) | Andel av volumet (%) |
+| chk_d_dim | Share of the volume in sawlog dimensions (%) | Andel av volumet i sagtømmerdimensjon (%) |
+| chk_d_butt | Share of the butt log volume in sawlog dimensions (%) | Andel av rotstokkvolumet i sagtømmerdimensjon (%) |
+| chk_d_waste | Volume cut as waste by the operator (%) | Volum kappet som vrak av føreren (%) |
+| chk_t_last | Last log | Siste stokk |
+| chk_t_sawlast | Last sawlog | Siste sagtømmerstokk |
+| chk_t_mean | Mean top diameter under bark (cm) | Gjennomsnittlig toppdiameter under bark (cm) |
+| chk_x_reason | Reason | Årsak |
+| chk_x_count | Stems | Stammer |
+| chk_x_nodiam | No stem diameters | Ingen stammediametre |
+| chk_x_multi | Multi-tree stem | Flertrestamme |
+| chk_x_species | Species without a bark model | Treslag uten barkmodell |
+| chk_x_broken | Broken top in sawlog dimension | Brukket topp i sagtømmerdimensjon |
+| chk_x_flat | Flat stem profile | Flat stammeprofil |
+| chk_x_steep | Too steep stem profile | For bratt stammeprofil |
+| chk_x_above | Recorded log above the measured profile | Registrert stokk over målt profil |
+| chk_x_nologs | No recorded logs | Ingen registrerte stokker |
+| chk_x_dup | Repeated stem number | Gjentatt stammenummer |
+| chk_x_outside | Stems with recorded logs outside the product limits (flagged, kept) | Stammer med registrerte stokker utenfor sortimentets grenser (merket, beholdt) |
+| chk_x_over | Stems where the recorded value is above the best possible (flagged, kept) | Stammer der registrert verdi er høyere enn best mulig (merket, beholdt) |
+| chk_lim_a | The best possible bucking is pure value bucking. For products bucked to a length distribution, part of the difference is the cost of following that distribution, which the harvester does on purpose. The degree of fit and the harvester's allowed value loss per product (MAXDeviation) are shown where the file has them. | Beste aptering er ren verdiaptering. For sortiment som aptres etter en lengdefordeling er en del av forskjellen kostnaden ved å følge fordelingen, som hogstmaskinen gjør med vilje. Fordelingsgraden og hogstmaskinens tillatte verditap per sortiment (MAXDeviation) vises der filen har dem. |
+| chk_lim_b | The harvester bucked on a predicted upper stem, but the best possible bucking uses the whole measured stem. The figure therefore measures the harvester's bucking computer including its prediction of the stem. | Hogstmaskinen apterte på en predikert øvre stamme, mens beste aptering bruker hele den målte stammen. Tallet måler derfor hogstmaskinens apteringsdatamaskin, inkludert dens prediksjon av stammen. |
+| chk_lim_c | Quality codes, rot zones (logs the operator cut as waste) and forced cuts recorded by the operator are taken as true. | Kvalitetskoder, råtesoner (stokker føreren kappet som vrak) og tvungne kapp registrert av føreren regnes som riktige. |
+| chk_lim_d | Only the harvester's own measurements are used; there are no control measurements. | Bare hogstmaskinens egne målinger brukes; det finnes ingen kontrollmålinger. |
+| chk_lim_e | A cut is counted as manual unless its cutting reason is "Automatic" or "Spinning". | Et kapp regnes som manuelt med mindre kappgrunnen er «Automatic» eller «Spinning». |
+| chk_lim_f | Recorded and best possible logs are priced in the same way, by whole centimetres of top diameter under bark, so the harvester's own price classes can differ slightly. | Registrerte og best mulige stokker prises på samme måte, etter hele centimeter toppdiameter under bark, så hogstmaskinens egne prisklasser kan avvike litt. |
+| chk_ctl_vol | Settlement volume: recorded by the harvester vs calculated here (m³) | Oppgjørsvolum: registrert av hogstmaskinen mot beregnet her (m³) |
+| chk_ctl_diff | Difference (%) | Avvik (%) |
+| chk_ctl_logs2 | Logs with a difference above 2 % (%) | Stokker med avvik over 2 % (%) |
+| chk_ctl_outside | Recorded logs outside the product limits | Registrerte stokker utenfor sortimentets grenser |
+| chk_dl_stems | Download stems (.csv) | Last ned stammer (.csv) |
+| chk_dl_logs | Download logs (.csv) | Last ned stokker (.csv) |
+| asm_c_butt | Log position | Plassering på stammen |
+| asm_butt_only | Butt log only | Bare rotstokk |
+| asm_butt_not | Not butt log | Ikke rotstokk |
+| asm_butt_any | Any | Alle |
+| nfi_build_title | Calculating stem profiles for the National Forest Inventory trees (first time only) | Beregner stammeprofiler for Landsskogtakseringens trær (første gang) |
+| nfi_build_detail | %s of %s trees, about %s min left | %s av %s trær, ca. %s min igjen |
+| nfi_build_done | The stem profiles are saved for later use. | Stammeprofilene er lagret til senere bruk. |
+| help_use_5 | 5 Bucking check: compare the harvester's recorded bucking in an .hpr file with the best possible bucking under the file's own instruction. | 5 Kontroll av aptering: sammenlign hogstmaskinens registrerte aptering i en .hpr-fil med best mulig aptering etter filens egen instruks. |
+| help_t_degree | Bucking degree: recorded value divided by best possible value. | Apteringsgrad: registrert verdi delt på best mulig verdi. |
+
+Existing ids reused unchanged: `lbl_dist_apportion`, `lbl_dist_maxdev`, product-name display, species names. Messages from the backend (`$warnings`, `$info`) get `msg` rows in the same table (one per message template, audit 28 check). Backend-created text stays English (CLAUDE.md rule).
+
+### B3 Steps (Stage C order; each step = one commit, pushed; affected audits after each step; PLAN progress log updated after each)
+
+Order is chosen so that the engine and data changes (which change numbers) come first and are verified in the current script layout, the package move (which changes paths, not numbers) comes last. Estimates are working hours including audits.
+
+| # | Step | Files / functions | Audits afterwards | h |
+|---|---|---|---|---|
+| 1 | **Leftovers A10 + R5.** Comments/headers naming the old tab 2 (app.R, app_ui.R x2, server_scenarios.R, tuning.R, apter.js, polish_screenshots.R) rewritten ("four tabs plus Hjelp", "2 Assortment specifications and prices"); `dist_init_fields()` sets `DistributionAllowed` FALSE, `MAXDeviation` stays 0 and is hidden until ticked (the existing `conditionalPanel`); texts unchanged. | `R/helpers_distribution_edit.R:133`, `app/server_scenarios.R`, audit expectations | 34 (checks 30-34), 28, 17 (distribution checks) | 1 |
+| 2 | **NFI table sanitation + data licence.** Script `scripts/sanitize_nfi_table.R`: read the committed parquet, drop `volm`, `volu`, `plot_area_m2`; `treid` and `plot_id_github` replaced by random permutations (`set.seed(20261104)`); write both parquets; map saved to `C:/apter_private/nfi_id_map.rds` (never committed); `data_processed_github/LICENSE-data.md` (CC BY 4.0, "Landsskogtakseringen, NIBIO"); update `sanitization_manifest.txt`; `scripts/98_*` and `scripts/app_backend/00_*` adapted to the new columns. The July taper cache is rebuilt in step 6 (until then the old cache is read through the private map by a one-off script, so `performance_check` can run on the new IDs). **`performance_check` baseline:** a one-off `scripts/translate_baseline_ids.R` rewrites the ids of `baseline_main_3fa0a9d.rds` into the new ids using the private map and writes `baseline_main_3fa0a9d_newids.rds`; `performance_check.R` reads that file; values must stay identical (the rule "results do not depend on tree order" makes the permutation invisible except for row order). Logged as a deliberate baseline change; the old baseline stays in history. | `scripts/*`, `data_processed_github/*`, `outputs/performance/*` | 14, 16, 17 (4e, 28), 21, 22, perf | 3 |
+| 3 | **ProductCondition in the shared engine (decision 14).** `.hpr_product()` reads `ProductCondition`; new hidden-then-visible assortment field `ButtCondition` ("Buck always" | "Buck butt-log only" | "Do not buck butt log", NA = always) in `ASSORTMENT_TABLE_COLS`, kept on edits/copies/scenario xlsx/exports (SourceXml wins on export); `.candidate_species_plan()` passes `butt` ("only"/"not"/NA); `.candidate_columns()`: `eligible &= start_pos == stump_height_cm` for "only", `!=` for "not" (butt log = the log that starts at the first cut); tab 2 shows the column read-only (texts `asm_c_butt`, `asm_butt_*`). **Before/after report** for all test material: simulator A/B and price tuning on file1-file5 (private) and all fixtures, value and sawlog volume, in `outputs/butt_condition/before_after.txt` and PLAN; only assortments with a non-default condition (file5: 2 of 23) can change. Default cases and `performance_check` are expected **unchanged** (no such products); if they change, stop (B7). Expected values in audits 25/30/32/33/17 that include such products are updated and listed. | `R/helpers_hpr.R`, `R/helpers_products.R`, `R/helpers_candidate_generation.R`, `R/helpers_bucking_core.R`, `app/server_scenarios.R`, translations | 20, 23, 24, 25, 30, 32, 33, 35, 17, 28, perf | 4 |
+| 4 | **Logs and checks, backend.** `read_hpr_logs()` (`R/helpers_hpr_logs.R`: regex whitelist in the chunk loop of `read_hpr_stems()`, shared `.hpr_stem_chunks()`; unclassified-product detection from the definitions; estimated volumes flagged; multi-file `file` column); `read_hpr()` also reads `Grade/GradeName` and `ProductCondition`; `hpr_permitted_grades()`; reject zones (`pv$reject`, `grade_opts$reject_zones`, filter in `.candidate_columns()`; zone rule above); `value_recorded_logs()` shares the column code of `.candidate_columns()` (no eligibility test) and `lookup_prices()`; `bucking_check()` and the table builders (`R/helpers_check.R`, `R/helpers_check_tables.R`: assortments, length distribution with `tally_grid()`/`fg_grid()`, manual cuts, defect wood, top diameters, exclusions, control); fixture `inputs/test_fixtures/hpr_check_synthetic.hpr` built by `scripts/make_hpr_check_fixture.R` (invented; checked by the same leak test as audit 26). | new `R/helpers_hpr_logs.R`, `helpers_check*.R`, edits of `helpers_hpr*.R`, `helpers_candidate_generation.R`, `helpers_bucking_core.R` | new audit 36; 25, 26, 30, 31 | 8 |
+| 5 | **Verification against old optBuck (R3).** `scripts/verify_vs_old_optbuck.R` (private files, reads only the saved RDS; REVIEW if absent): B5. Result table into PLAN; **stop condition** B7-2. | `scripts/verify_vs_old_optbuck.R`, `audits/audit_37_check_vs_old.R` | 37 | 6 |
+| 6 | **NFI stem profiles on demand.** `R/helpers_nfi_cache.R`: `nfi_profiles_dir()` (`tools::R_user_dir("optBuck", "cache")`), `nfi_profiles_ready()`, `ensure_nfi_profiles(progress)` (builds in chunks of 5,000 trees with the same `generate_taper_profiles_for_trees()`, on the future workers, writes the same partitioned parquet; progress callback gives "x of y trees, about z min left"), `build_nfi_cache()` (exported) and `scripts/build_nfi_cache.R` (server). Called only by `select_nfi_trees()`/NFI runners when the built-in source is used; in the app by "Use this selection" and Run with `shiny::withProgress` (texts `nfi_build_*`); never at load/start. **Measured now (Stage B): 1.6 ms per tree, 101,156 trees = about 2.7 min on one core (0.3 min on 8 workers) plus writing about 200 MB parquet, i.e. well under the 10 min limit: building, no release asset, no smaller default.** Equality check: new cache vs the July cache (through the private map), max abs diff of every diameter < 1e-9. | `R/helpers_nfi_cache.R`, `R/helpers_tree_selection.R`, `scripts/app_backend/01_*`, `app/app_server.R` | 16, 17 (NFI checks), 22, perf | 4 |
+| 7 | **Tab 5 UI/server.** `app/check.R` (like `tuning.R`): inputs `chk_file_info`, `chk_upload`, `chk_reset`, `chk_run`; `ExtendedTask` job (`bucking_check()` on a worker, progress texts); outputs for sections 1-11; downloads; navbar item after tab 4, before Hjelp (`app/app_ui.R`); help text (`app/help.R`, `help_use_5`, terms); `translations.csv` rows of B2a; the figure `apter_check_degree_figure()` and the length figure (`app/helpers_ui.R`, colours `APTER_CHART`); the species map of tab 1 reused; results cleared when file or map change. | `app/check.R`, `app/app_ui.R`, `app/app_server.R`, `app/app.R`, `app/help.R`, `app/helpers_ui.R`, `inputs/i18n/translations.csv`, `app/www/apter.js` (if needed) | 28, 17 (+ new checks 50-58), new audit 38 (texts/ids) | 7 |
+| 8 | **Package conversion.** DESCRIPTION/NAMESPACE (roxygen2)/LICENSE/LICENSE.md/NEWS/README/CITATION/.Rbuildignore; `R/` cleaned (no top-level `source()`, `sys.frame`), runners moved to `R/run_bucking.R`; `app/` -> `inst/app/`, `inputs/`, `data_processed_github/` (+ licence) -> `inst/extdata/`; `get_root_dir()`/`path_input()` -> `system.file()` with `options(optBuck.root=)` only for development; workers `loadNamespace("optBuck")`; `run_app()`; `api.R` exports + roxygen examples on the synthetic fixtures; `tests/testthat/` (reader, grades, check on the fixture, translations, ~1 min); Oracle alias and user name removed from the frozen prototype script (placeholders) and audit 14 checks 19-20 updated with the reason; audits switched to `pkgload::load_all()`; `scripts/run_audits.R` unchanged in use; `CLAUDE.md`/`docs/development.md` updated (names, layout). `R CMD INSTALL` and `R CMD check --no-manual` (errors 0; warnings/notes listed in PLAN). | many | all | 8 |
+| 9 | **Finish.** Full suite `Rscript scripts/run_audits.R`; restore noise-only tracked outputs (one `git restore` per file); `performance_check` against the translated baseline (must match, except the cases that contain butt-condition products if any); `R CMD check`; screenshots EN/NO of tab 5 on file5 and file1 (private, `outputs/app_smoke/review/optbuck-merge/`); manual runs of tab 5 on file1 and file5 (apteringsgrad total/per species, runtime); final report. | | all | 3 |
+
+Total about 44 h of work (about 34 h of unattended computing/coding blocks, the rest audits); steps 4-5 carry most of the risk.
+
+### B4 Audits
+
+- **Audit 36 `audit_36_bucking_check.R` (new; synthetic fixture, no private files).** Fixture stems (invented; tapers linear, products one sawlog + one pulpwood + waste, grades 1-3): (S1) recorded bucking = optimum -> apteringsgrad exactly 1.0000; (S2) recorded bucking cut one 10 cm step too long -> apteringsgrad < 1 and equal to the hand-computed ratio (computed in the audit from the price table: expected recorded value V_rec and optimum V_opt written as literals); (S3) a recorded waste log in the middle -> reject zone cells equal `[ceil(S/10)*10, +floor(L/10)*10)`, optimum puts waste exactly there (compared with the old rule on the same numbers), and with `reject_zones = FALSE` the optimum is strictly higher; (S4) a grade 3 section that no sawlog product permits -> `defect` share equals the volume of those cells / total; (S5) manual cuts (`Other manual`, `Automatic`, `Spinning`) -> shares 2/4, 1/3...; (S6) multi-tree stem and a stem whose profile ends at a diameter >= the smallest sawlog top limit -> in `excluded` with the right reasons; (S7) a logs-only stem set -> no optimum, message `chk_no_profile`; (S8) `ProductCondition` "Buck butt-log only": the product appears only as LogKey 1 in the optimum, "Do not buck butt log": never as LogKey 1; unclassified product with key 2147483647 recognised as waste; recorded `StartPos` missing -> cumulative; privacy: invented coordinates/dates/names never reach any output. Also: results independent of workers (1 vs 4); the recorded log valued exactly like the same log as a DP candidate (equal price volume, class and price to 1e-12); the FG of the recorded outcome equals `fg_grid()` on a hand tally.
+- **Audit 37 `audit_37_check_vs_old.R` (private files, REVIEW when absent):** the R3 verification below, with the numbers written to `outputs/check/audit_37_*.csv`.
+- **Audit 38 `audit_38_check_texts.R`:** every `chk_*`, `asm_c_butt`, `asm_butt_*`, `nfi_build_*`, `help_*5` id exists in EN and NO, no literal user text in `app/check.R` (extends audit 28 check 3), `msg` rows for every backend message of `bucking_check()`.
+- **Existing audits changed (expected values updated deliberately, each listed in the commit message):** 34 (R5: `DistributionAllowed` FALSE after the first target), 28 (new text rows), 17 (tab 5 checks 50-58: tab exists after tab 4 and before Hjelp, fixture run produces the key-figure table with the expected total, figure present, downloads, EN and NO; the NFI build message appears only when the cache is absent; distribution checks follow R5), 14 (frozen script checks 19-20: new checksum after removing the Oracle strings), and 25/30/32/33 only where a product with a butt condition is in their data.
+- **Package gates (step 8, `scripts/check_package.R`):** `R CMD INSTALL` into a temp library, `library(optBuck)`, `run_app()` smoke start, examples of all exports, `R CMD check` result recorded.
+
+### B5 Verification plan against old optBuck (R3, changed 2026-11-04: saved reference, never re-run)
+
+Reference = `C:/apter_private/optbuck_reference/file{1,3,4,5p}/` (actual value of **all** stems, optimum on the saved sample of 305-306 stems; file4 all 3,071; permitted grades `permitted_grades.csv`). File2: no comparison possible (error), only the overview and the manual-cut figures are checked against `getLogs` output.
+1. **Reader check ("old-rules mode").** The old actual value depends on bugs (spruce bark for every species, `max()` collapse, `Top ob` price column, millimetre classes). A 99 % match with the new valuation is therefore impossible by design. To prove that logs, positions, profiles and products are read correctly, the verification script contains a vectorised re-implementation of the **old** valuation (private script only, not in the package) applied to the **new** reader's data. Required: for each of file1/3/4/5 at least **99 % of stems equal the saved old actual value to 0.01 NOK** (multi-tree stems with stale values are listed separately: they cannot match by construction). This also reproduces the old waste-zone grades from the new reject cells (cell-for-cell equal to the old -1 points).
+2. **Attribution of the difference old -> new rules** by switching one rule at a time (ablation), table per file: (a) bark function (spruce for all -> barkNOR), (b) `Top ob` price column -> top under bark per product flag, (c) mm price classes -> whole-cm classes, (d) price volume by product method (old recomputation) -> engine `price_volume_m3()`, (e) rounding of lengths (nearest vs up). Each stem's remaining difference after (a)-(e) must be < 0.01 NOK; stems where it is not are listed with the reason found.
+3. **Optimum on the saved sample.** (i) New optimum >= new value of the saved **old optimal pattern** valued with the new rules, for every sampled stem whose old pattern is eligible under the new rules (a violation = bug in the new DP or candidate set -> stop); old patterns that are ineligible (over-bark diameters, off-class lengths) are counted and listed by cause. (ii) Apteringsgrad of the sample, old vs new, with the share explained by (a)-(e) and by old bug 1 (over-bark `Top_ub`, frustum volume). (iii) Stems with a recorded waste zone (up to 60 per sample): the new optimum respects the same zones as the old.
+4. **Permitted grade tables** (`hpr_permitted_grades()` vs `permitted_grades.csv`): identical per product, except: products without a definition (old: dropped, new: all grades), the old `999999` row (new: unclassified product, keys as in the file) and file5's 2147483647 key. Any other difference = stop.
+5. **Control columns:** per file, Apter price volume vs the harvester's `m3 (price)` (mean difference, share of logs above 2 %), reported in PLAN; file4 old values (median ratio birch 1.12 etc.) are the expected explanation for old vs harvester, the new difference should be small for spruce/pine.
+6. Output: table "R3 per file" in PLAN: stems compared, equal in old-rules mode (%), unexplained, ablation shares, sample apteringsgrad old vs new, sign test of 3(i).
+
+### B6 Package details to decide in Stage C without asking (logged)
+
+Options and env names: new `optBuck.workers`/`OPTBUCK_WORKERS`, with the old `apter.workers`/`APTER_WORKERS` still read (audits and scripts use them). Internal identifiers keep the `apter_` prefix (CLAUDE.md: repository, paths, code keep the old name; the package, DESCRIPTION, README and help use optBuck). `Imports`: xml2, future, stats, utils, tools; `Suggests`: the app stack (shiny, bslib, reactable, rhandsontable, ggplot2, ragg, systemfonts, promises, later, readxl, writexl, jsonlite, readr, dplyr, arrow), taperNOR, fieldPlot (both with `Remotes:` GitHub), testthat, pkgload, shinytest2, chromote, processx; `run_app()` and the NFI functions check their packages with a clear message. `Depends: R (>= 4.1)`. `Encoding: UTF-8`. `Config/testthat/edition: 3`. `URL`/`BugReports` placeholders `https://github.com/SmartForest-no/optBuck` (valid after the transfer). `inst/CITATION` and `CITATION.cff` rewritten (author, NIBIO, funding SFI SmartForest, Research Council of Norway project 309671 as in the old README); `inst/COPYRIGHTS` for the OFL fonts (Inter, Source Serif 4), the CC BY 4.0 data, and the logo (kept, "logo and name not covered by MIT"). Old optBuck credit: README and NEWS ("the bucking-check part derives from the optBuck 0.1.0 package by L. Noordermeer, NMBU/NIBIO, LGPL-3, relicensed by the author/holder"). The NFI table moves to `inst/extdata/nfi/`; cache default `tools::R_user_dir("optBuck", "cache")`, overridable by `options(optBuck.cache = )`.
+
+### B7 Stop conditions (Stage C stops and reports instead of going on)
+
+1. Any audit FAIL that is not explained by a deliberate change listed in B4, or `performance_check` differs in a case without butt-condition products (after the id translation) -> stop.
+2. Verification B5-1 below 99 % equal stems in old-rules mode for any of file1/3/4/5 (after removing stale-value multi-tree stems), or B5-3(i) violated -> stop (unexplained difference between old and new).
+3. Step 3 changes any number of a default (built-in) case or any fixture without a butt-condition product -> stop.
+4. A step needs a decision on licence, privacy or GitHub administration -> log in PLAN and continue with the safe default, never publish anything.
+5. `R CMD check` still has errors after two repair rounds -> report the list, keep the audits green, stop.
+6. Any output derived from private files would end up in a tracked path -> stop.
+
+### B8 Administration for Lennart, after roadmap 8 is merged (exact steps; nothing here is done by Claude)
+
+*Old repository (decision 2).* (1) Backup: `git clone --mirror https://github.com/SmartForest-no/optBuck optBuck-legacy-backup.git` and zip it (the mirror keeps all branches and the 111 MB of history). (2) On GitHub: repo `SmartForest-no/optBuck` -> Settings -> General -> Repository name -> `optBuck-legacy` -> Rename (old URLs redirect until a new repo takes the name). (3) Same page, Danger Zone -> Change visibility -> Make private. Note: **public forks are detached, not removed** — the one existing fork keeps the old history; ask the fork owner to delete it, and if it contains the personal data, use GitHub Support's "sensitive data removal" form for the cached views. (4) Check `Insights -> Forks` and `Settings -> Collaborators`.
+*This repo.* (5) Merge `optbuck-merge` into `main` (Lennart). (6) Repo Settings -> General -> Danger Zone -> **Transfer ownership** -> new owner `SmartForest-no` (needs owner rights in that organisation; keep the repo name `Apter` for the transfer), then rename to `optBuck` (works only after step 2). Stars, issues and the Actions history stay; the old URL redirects. (7) Make it public: Settings -> Change visibility -> Public, **only after** the Oracle question below is answered; before that enable secret scanning and push protection. (8) Set description, topics (`r`, `forestry`, `bucking`, `stanford2010`), website; enable Issues; add `SmartForest-no` team as admins; confirm `README` install line `remotes::install_github("SmartForest-no/optBuck")` works from a clean R session. (9) Update `URL`/`BugReports` in DESCRIPTION if the final URL differs.
+*Oracle alias and user name in history (decision 11; current files cleaned in step 8).* Ask NIBIO IT whether the strings `REDACTED41_medium` and `REDACTED42_pluss` must disappear from history. If yes, on a fresh clone: `git clone --mirror <repo> clean.git`, `cd clean.git`, create `replace.txt` with the lines `REDACTED41_medium==>ORACLE_SERVICE` and `REDACTED42_pluss==>ORACLE_USER`, run `git filter-repo --replace-text replace.txt` (needs git-filter-repo >= 2.38; also removes the same strings from the frozen prototype file in every commit, so audit 14's frozen-file hash must be regenerated afterwards), check with `git grep -I -e REDACTED41 -e REDACTED42 $(git rev-list --all)` (no output), `git push --force --mirror origin` (all branches and tags; every collaborator re-clones; forks and PR refs on GitHub keep the old objects until GitHub support purges them). Do this **before** making the repo public. `treid` in history: not rewritten (decision 9); the original NFI tree numbers remain in the first commit.
+
+### B9 Later (not in roadmap 8), open items and risks
+
+- **Later:** traffic-light thresholds for the apteringsgrad; comparing the harvester's instruction with a reference .pin; control-measured stems (.hqc); profiles from log diameters for logs-only files (dropped `predictStemprofile()`); a stricter manual-cut definition after asking Skogforsk; exact mm price classes (`FileDiameterClass_mm`) in the engine instead of whole-cm rows.
+- **Open for Lennart (not blocking Stage C):** the ORCID in DESCRIPTION; NIBIO IT's answer on the Oracle strings in history; the GitHub steps in B8; whether NMBU claims rights to the 2022-2026 optBuck code (the MIT relicensing of ported logic assumes not); the fork of the old repo.
+- **Risks:** (1) the old-rules reproduction (B5-1) needs the new reader to reproduce positions to the cm; the recorded `StartPos` differs from cumulative lengths by 1-9 cm in up to 16 % of the logs (file3/4): the plan uses the recorded value like old `getBucking` and falls back to cumulative lengths when absent (file5), and both are tested; (2) `ProductCondition` changes real results for file5 assortments (documented, decision 14); (3) moving to `inst/app` touches every path in the app and audit 17 (about 6 h of the package step are reserved for it); (4) `R CMD check` on a package with 12 k lines of script-style code will show many notes (undefined globals, non-ASCII); they are listed, not hidden; (5) first NFI build blocks one R session for 1-3 min (shown with progress), acceptable for a one-time step.
+
+*Stage B ends here. Waiting for Lennart's review before Stage C starts.*
