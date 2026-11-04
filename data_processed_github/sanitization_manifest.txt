@@ -66,8 +66,12 @@ Destination : S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/data_processed
   REPLACED : treid (original NFI tree number) -> random permutation of 1..N (integer), so a tree
              cannot be looked up in the NFI database. The old -> new map is kept only in a
              private location outside the repository.
-  KEPT     : plot_id_github as it is (synthetic sequential ID; the backend's seeded plot sample
-             draws from the sorted IDs, so relabelling would change published results).
+  REPLACED : plot_id_github -> random permutation of the 6348 plot numbers (P000001 ... P006348;
+             scripts/permute_plot_ids.R, set.seed(20261105)), because the sequential numbers followed
+             the alphabetical order of the original plot codes. The map is kept only in a private
+             location outside the repository. The backend's seeded plot sample (n_plots, seed) draws
+             from the sorted IDs and now picks other plots; the three sampled NFI baseline cases
+             were regenerated on purpose (PLAN.md, Roadmap 8). Runs with all plots are unchanged.
   Rows are no longer in the original tree order (sorted by plot, then new tree number).
   Licence  : CC BY 4.0, attribution "Landsskogtakseringen, NIBIO" (LICENSE-data.md).
-  Not rewritten: git history before this commit still holds the original tree numbers.
+  Not rewritten: git history before this commit still holds the original tree numbers and the sequential plot numbers.
