@@ -388,6 +388,7 @@ server <- function(input, output, session) {
            list("nfi", tryCatch(build_run_params(input), error = function(e) NULL)))
   })
   tuning_server(input, output, session, lang, sc, stem_spec, stem_id, stems_ready)
+  check_server(input, output, session, lang, hs_own, hs_map)
 
 
   # ---- Runs as background tasks (helpers_jobs.R) ---------------------------

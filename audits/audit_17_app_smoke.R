@@ -772,7 +772,7 @@ if (!browser_ok) {
     # collapsed menu or at most icon height).
     narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
     logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
-    ok6 <- identical(tabs, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|Help") &&
+    ok6 <- identical(tabs, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking check|Help") &&
       identical(active, "1 Stems") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
@@ -1940,6 +1940,9 @@ if (!browser_ok) {
       app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)
       app$click("dt_a_even"); app$wait_for_idle()
       # apportionment bucking on with a maximum loss of 4 %: the tuning results carry a note
+      # roadmap 8 R5: a new target starts with the box unticked: tick it, then the maximum shows
+      app$wait_for_js("!!document.getElementById('dt_a_allowed')", timeout = 30 * 1000)
+      app$set_inputs(dt_a_allowed = TRUE, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
       app$wait_for_js("!!document.getElementById('dt_a_maxdev')", timeout = 30 * 1000)
       app$set_inputs(dt_a_maxdev = 4, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
       app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
@@ -2297,11 +2300,11 @@ if (!browser_ok) {
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
         c34$marker <- js(app, "window.__apter17 === 1")
       })
-      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortimentskrav og priser|3 Simulator|4 Pristilpasning|Hjelp") &&
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortimentskrav og priser|3 Simulator|4 Pristilpasning|5 Kontroll av aptering|Hjelp") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
         grepl("^Sortiment\\|Type\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
         grepl("Sagtømmer;SagtømmerMassevirkeAnnet;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
-        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|Help") &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking check|Help") &&
         identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Type\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
@@ -2560,7 +2563,7 @@ if (!browser_ok) {
         identical(c39$flat_b, "420") &&
         grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
         identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
-        identical(c39$nav_reload, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|Help")
+        identical(c39$nav_reload, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking check|Help")
       t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
       rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
           sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",

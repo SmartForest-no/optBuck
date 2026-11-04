@@ -403,7 +403,7 @@ apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en", 
 #' @param height_m Tree height (m), for the x-axis extent.
 #' @param title    Plot title.
 #' @param lang     Language of the axis, legend and note.
-apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lang = "en", names = c("A", "B")) {
+apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lang = "en", names = c("A", "B"), labels = NULL) {
   ch  <- APTER_CHART
   # Custom assortment classes share the charcoal "other" fill (theme.R); their
   # label names the class.
@@ -418,7 +418,7 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lan
   graphics::axis(1, col = NA, col.ticks = NA)
   graphics::mtext(tr("fig_height_along_stem", lang = lang), side = 1, line = 2.2,
                   col = ch$muted, cex = 0.8)
-  sc <- tr("scenario_x", names, lang = lang)
+  sc <- if (!is.null(labels)) labels else tr("scenario_x", names, lang = lang)
   graphics::axis(2, at = if (two) c(2, 1) else 2, labels = if (two) sc else sc[1L],
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {

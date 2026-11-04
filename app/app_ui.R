@@ -273,6 +273,7 @@ ui <- page_navbar(
   prices_page,
   simulator_page,
   tuning_page,
+  check_page,
   help_page,
   nav_spacer(),
   nav_item(lang_switch()),

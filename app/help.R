@@ -11,7 +11,7 @@ help_page <- nav_panel(
   t_("tab_help"), value = "help",
   div(class = "apter-page help-page",
     apter_card(t_("help_h_use"),
-      p(t_("help_use_1")), p(t_("help_use_2")), p(t_("help_use_3")), p(t_("help_use_4"))),
+      p(t_("help_use_1")), p(t_("help_use_2")), p(t_("help_use_3")), p(t_("help_use_4")), p(t_("help_use_5"))),
     apter_card(t_("help_h_terms"),
       help_term(t_("help_t_scenario"), t_("help_d_scenario")),
       help_term(t_("help_t_target"), t_("help_d_target")),
