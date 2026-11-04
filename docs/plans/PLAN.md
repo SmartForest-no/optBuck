@@ -8,7 +8,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 
 - Apter is a general bucking simulator for Norway spruce and Scots pine, for industry partners: compare and improve price matrices and plan bucking. It is not an inventory or estimation tool, and NFI is not emphasised.
 - Tree sources: NFI data (all plots of a stratum), uploaded tree lists, stems from .hpr files (hpr Phase B) and (Phase 6) uploaded stem profiles. Results describe the selected trees only. No per-ha, plot-level or stratum outputs.
-- Assortments and prices: the base set, user-added assortments, scenario and price files, and (hpr Phase A) products and prices imported from .hpr files.
+- Assortment specifications and prices: the base set, user-added assortments, scenario and price files, and (hpr Phase A) products and prices imported from .hpr files.
 - Values are NOK per m³ of commercial solid volume under bark (definition in CLAUDE.md).
 - Deployment: NIBIO Linux server with many cores; testing on Lennart's remote desktop.
 
@@ -42,7 +42,7 @@ Working rules: one phase per session, plan mode first, show the plan to Lennart 
 
 Built on branch `scenarios-and-polish` after Phase 4c was merged. Results are identical to main except that NFI runs use all plots, and comparisons can use B's own assortments.
 
-1. **Scenarios A and B** cover assortments as well as prices. The Assortments and prices tab has two columns, Scenario A on the left and Scenario B on the right, which stack on narrow screens. Each column has a compact assortment table (Assortment, Species, Top Ø, Max butt Ø, Length, Volume method) with Add/Edit/Remove, and that scenario's price matrices below it.
+1. **Scenarios A and B** cover assortments as well as prices. The Assortment specifications and prices tab has two columns, Scenario A on the left and Scenario B on the right, which stack on narrow screens. Each column has a compact assortment table (Assortment, Species, Top Ø, Max butt Ø, Length, Volume method) with Add/Edit/Remove, and that scenario's price matrices below it.
    - The scenarios are independent (revised before merging): B starts as an exact copy of A, both sides are always editable, and nothing is greyed or linked. Differences are highlighted on both sides.
    - One copy button per section and side: "Make assortment equal to B/A" (Assortments) and "Make matrix equal to B/A" (Price matrices). A whole scenario is copied by downloading one side and uploading it to the other.
    - An assortment can be added to both scenarios or one, and removed from one scenario or both. Its price type (matrix or flat) is set per scenario. The matrix selectors are independent.
@@ -70,7 +70,7 @@ Appearance only: option 3 "Combination" of `docs/design_reference/optbuck_design
 
 Built on branch `layout-and-figures` and merged into main. Interface work; results are identical to main (`scripts/performance_check.R`: every case matches the main baseline).
 
-1. **Assortments and prices: one flow per scenario column.** The assortment table on top (click a row to select it), then a detail panel for the selected assortment (its rules in one line and Edit; its prices directly below, as the matrix grid with the row/column buttons or one flat price field; Remove, Make assortment equal to B/A, Reset prices, price upload and download for that assortment), then the scenario actions (Add assortment, Reset to defaults, Upload and Download scenario). The selection is shared by A and B; a side without the assortment shows "Not in this scenario" and "Add from A/B". The assortment and matrix dropdowns, the "Flat prices" table and "Make matrix equal to B/A" are gone. Upload scenario also takes a full price file. Differences stay highlighted in the table, the grid and the flat price field.
+1. **Assortment specifications and prices: one flow per scenario column.** The assortment table on top (click a row to select it), then a detail panel for the selected assortment (its rules in one line and Edit; its prices directly below, as the matrix grid with the row/column buttons or one flat price field; Remove, Make assortment equal to B/A, Reset prices, price upload and download for that assortment), then the scenario actions (Add assortment, Reset to defaults, Upload and Download scenario). The selection is shared by A and B; a side without the assortment shows "Not in this scenario" and "Add from A/B". The assortment and matrix dropdowns, the "Flat prices" table and "Make matrix equal to B/A" are gone. Upload scenario also takes a full price file. Differences stay highlighted in the table, the grid and the flat price field.
 2. **Live tree counts.** A box under the stratum inputs shows plots, trees per species and a rough run time, updated as the selection changes. It uses the run's own selection code: steps 3-5 of `prepare_sampled_job()` moved unchanged into `select_nfi_trees()` (`R/helpers_tree_selection.R`). Tree lists show the trees in taperNOR's range after upload. The note above 30,000 trees is replaced by this box.
 3. **Figures (ggplot2, Inter, white background, light grid).** Trees card: DBH and height density curves per species (spruce #3F6E58, pine #C9A97A; validated). Selected logs: number of logs per length class and commercial volume per top-diameter class, stacked bars by assortment, Scenario A and B as facets after a comparison.
 4. **Audits.** Audit 17 drives the new layout by row clicks and has new checks 4e (counts = the run's trees), 25 (selection and detail panel), 26 (live counts) and 27 (figures).
@@ -89,7 +89,7 @@ Built on branch `layout-and-figures` and merged into main. Interface work; resul
 Reverses the earlier "Reading StanForD .hpr files is out of scope". Decisions in CLAUDE.md (accepted assumptions "hpr …").
 
 1. **Parser.** `R/helpers_hpr.R` on xml2, ported from optBuck's getters (no dependency): species groups, classified products (limits, length and diameter classes, volume rules, permitted grades, price cells with BuckingCriteria). Reads only the part of the file before the first stem record (whole file only if that part lacks species groups or products); accepts .hpr, .hpr.gz and an .hpr inside a .zip (streamed); uploads up to 200 MB (configurable). Stems are not read. Never reads coordinates, dates, operators, object names or contacts.
-2. **Import from .hpr** per scenario (Assortments and prices tab): a dialog with the file's validation (errors block, warnings listed), a species table (Spruce / Pine / Not used, guessed from the group name and ID) and a product table (products without the best grade start unticked). "Replace Scenario A/B" replaces that scenario only; then one line ("Imported 5 assortments from …"), with warnings only when something is lost or replaced. The uploaded file is kept for the session (for Phase B).
+2. **Import from .hpr** per scenario (Assortment specifications and prices tab): a dialog with the file's validation (errors block, warnings listed), a species table (Spruce / Pine / Not used, guessed from the group name and ID) and a product table (products without the best grade start unticked). "Replace Scenario A/B" replaces that scenario only; then one line ("Imported 5 assortments from …"), with warnings only when something is lost or replaced. The uploaded file is kept for the session (for Phase B).
 3. **Mapping.** One matrix-priced assortment per product and species, plus Waste per species; limits from DiameterMINTop / DiameterClassMAX / DiameterMAXButt; length classes rounded up to whole dm; forbidden cells empty; whole-cm diameter rows; a fully forbidden inner diameter class stays as empty rows (never chosen; `pm_drop_empty_cells()` keeps whole empty classes in grids, scenario files and uploads).
 4. **Price length.** Products priced on "Length as defined in LengthClasses" use the class lower limit as price-volume length (hidden `PriceLengths_cm`; base tables unchanged).
 5. **Assortment tables.** Each scenario lists only its own assortments (the struck-through "Not in A/B" rows, "Not in this scenario" and "Add from A/B" were removed); cells that differ on assortments both scenarios have stay highlighted; assortments only one scenario has are not highlighted.
@@ -305,7 +305,7 @@ Export part of roadmap item 5 only (.pin import and export are not built). Decis
 
 ## Restructure (done 2026-10-30)
 
-Four tabs (Stems, Assortments and prices, Simulator, Price tuning); stems and scenarios independent; one upload field per scenario (.xlsx, .csv, .hpr, .pin); scenario names; a target distribution editor per assortment (also in the scenario xlsx); price tuning of several assortments at once from their own targets. Tested and approved by Lennart; merged to main. Details are in CLAUDE.md (Stems tab, Scenario names, Distribution, Price tuning tab rows). Full suite: 22 PASS. file5 check (`scripts/restructure_manual_check.R`): 140 SCA alone FG 82.9 -> 94.1, value -0.17 %; with 148 (Even target) 98.4 (after whole-NOK rounding of tuned prices, R4) / 35.1, value -0.60 %. R1.9 crash: not reproduced (`scripts/repro_tuning_crash.R`).
+Four tabs (Stems, Assortment specifications and prices, Simulator, Price tuning); stems and scenarios independent; one upload field per scenario (.xlsx, .csv, .hpr, .pin); scenario names; a target distribution editor per assortment (also in the scenario xlsx); price tuning of several assortments at once from their own targets. Tested and approved by Lennart; merged to main. Details are in CLAUDE.md (Stems tab, Scenario names, Distribution, Price tuning tab rows). Full suite: 22 PASS. file5 check (`scripts/restructure_manual_check.R`): 140 SCA alone FG 82.9 -> 94.1, value -0.17 %; with 148 (Even target) 98.4 (after whole-NOK rounding of tuned prices, R4) / 35.1, value -0.60 %. R1.9 crash: not reproduced (`scripts/repro_tuning_crash.R`).
 
 ### Decisions made
 - Single-product tuning baseline lives in `outputs/restructure/` (gitignored), not in the repository (derived from a private buyer price list); audit 33 check 14 gives REVIEW without it.
@@ -325,7 +325,7 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 
 ### Progress checklist (tick + commit hash)
 - [x] 0. This section (2956090)
-- [x] 1. D3 Sortiment og priser (2495c2a)
+- [x] 1. D3 Sortimentskrav og priser (2495c2a)
 - [x] 2. D1 Guidance (tabs, intros, empty states, Help tab) (14150ca, one commit with D2 and D4)
 - [x] 3. D2 Stammer tab (14150ca)
 - [x] 4. D4 Simulator > Sammendrag (14150ca)
@@ -358,7 +358,7 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 
 ### Grade mismatch diagnosis and warning (2026-11-03)
 - Diagnosis (REDACTED45 stems = "Test4.hpr", Gobakken assortments = "Test3.hpr"; scripts/diag_grades.R, deleted): with "Use stem grades" the sawlog share fell from 70 % to 0.5 % of the volume. Grade numbers are compared by code only (`.candidate_columns()`, `gg %in% p$grades`; names are never read), and the same number means another quality in another job's file: 91 % of REDACTED45's spruce length is grade 3 (its StartGrade, permitted by its own sawlog products 1-3), while Gobakken's 140 SCA permits grades 1-2 only. No bug; a real mismatch.
-- Warning (no change to any result): `hpr_grade_lengths()` (stem length per species and grade on the bucking's grade grid) and `grade_mismatch_check()` / `grade_warning_text()` (`R/helpers_hpr_stems.R`): with "Use stem grades" on, every sawlog product that permits the grades of under 50 % of its species' length gets one warning (dominant grade, its share, permitted grades; products without permitted grades never). Shown under the "Use stem grades" checkbox on 2 Sortiment og priser (`grade_warn_a/b`), above the Summary sentence ("A: " / "B: " in a comparison; the warnings are stored with the run), and after the "Not tuned" reason in the Price tuning hits table. Audit 30 check 11 (and audit 28 for the texts).
+- Warning (no change to any result): `hpr_grade_lengths()` (stem length per species and grade on the bucking's grade grid) and `grade_mismatch_check()` / `grade_warning_text()` (`R/helpers_hpr_stems.R`): with "Use stem grades" on, every sawlog product that permits the grades of under 50 % of its species' length gets one warning (dominant grade, its share, permitted grades; products without permitted grades never). Shown under the "Use stem grades" checkbox on 2 Sortimentskrav og priser (`grade_warn_a/b`), above the Summary sentence ("A: " / "B: " in a comparison; the warnings are stored with the run), and after the "Not tuned" reason in the Price tuning hits table. Audit 30 check 11 (and audit 28 for the texts).
 - Manual check: REDACTED45 stems + Gobakken assortments: spruce 140 SCA (grade 3, 91 %, permitted 1-2) and pine REDACTED23 (grade 3, 97 %, permitted 1-2); REDACTED45 stems + REDACTED45 assortments: no warning.
 
 ### Product name case (2026-11-03)
@@ -392,8 +392,8 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 
 ### DESIGN (decided; implement in Stage C)
 **D1 Guidance**
-- Numbered tab labels: "1 Stammer", "2 Sortiment og priser", "3 Simulator", "4 Pristilpasning" (EN "1 Stems", "2 Assortments and prices", "3 Simulator", "4 Price tuning"). A last unnumbered tab "Hjelp"/"Help".
-- One intro sentence at the top of each tab, in the same style as the existing one on Sortiment og priser:
+- Numbered tab labels: "1 Stammer", "2 Sortimentskrav og priser", "3 Simulator", "4 Pristilpasning" (EN "1 Stems", "2 Assortment specifications and prices", "3 Simulator", "4 Price tuning"). A last unnumbered tab "Hjelp"/"Help".
+- One intro sentence at the top of each tab, in the same style as the existing one on Sortimentskrav og priser:
   - Stammer: NO "Velg stammene optBuck skal kappe: et utvalg fra Landsskogtakseringen, en egen treliste eller stammer fra hogstmaskinens produksjonsfiler (.hpr)." EN "Choose the stems optBuck will buck: a selection from the National Forest Inventory, your own tree list, or stems from harvester production files (.hpr)."
   - Simulator: NO "optBuck finner den mest verdifulle kappingen av hver stamme med prisene i scenario A og B, og sammenligner resultatene." EN "optBuck finds the most valuable bucking of each stem with the prices in scenario A and B, and compares the results."
   - Pristilpasning: NO "Juster prisene i et scenario slik at kappingen gir lengdefordelingen sagbruket ønsker (ønsket fordeling), med minst mulig verditap." EN "Adjust the prices in a scenario so that bucking gives the length distribution the sawmill wants (target distribution), with the smallest possible loss of value."
@@ -413,7 +413,7 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 - Right-hand panel for every source: the existing species table plus two density plots, diameter at breast height (cm) and tree height (m), one line per species. Move them from Simulator > Trær and remove them there; if that tab is then empty, remove it (Stage A: the tab keeps the DBH-class figure, trees table and stem diagram, so it stays).
 - Keep the "Bruk sortimentene fra denne filen i scenario A/B" buttons.
 
-**D3 Sortiment og priser**
+**D3 Sortimentskrav og priser**
 - Upload label: NO "Last opp sortiment og priser: scenario (.xlsx), prisfil (.xlsx eller .csv) eller hogstmaskinfil (.hpr eller .pin)" / EN "Upload assortments and prices: scenario (.xlsx), price file (.xlsx or .csv) or harvester file (.hpr or .pin)".
 - Remove the scenario name inputs and every use of the names (results, legends, file names, xlsx metadata). Uploading an xlsx that still has a name sheet must work and ignore it.
 - Rediger > Fast pris: "Startpris (kr/m³)" becomes NO "Pris (kr/m³)" / EN "Price (NOK/m³)".
@@ -425,7 +425,7 @@ Rules, design and answers copied verbatim from Lennart's task (2026-11-02). Afte
 - One small bar chart, value per assortment type A vs B side by side in theme colours.
 
 **D5 Pristilpasning (presentation only; numbers unchanged)**
-- List all sawlog assortments of the chosen scenario. Tunable ones as checkboxes (checked by default). Non-tunable ones greyed and disabled, with the reason in grey after the name: NO "ingen ønsket fordeling (legg inn under 2 Sortiment og priser)" / "bare én lengdeklasse" / "bare én diameterklasse" (EN equivalents). Pulpwood is not listed.
+- List all sawlog assortments of the chosen scenario. Tunable ones as checkboxes (checked by default). Non-tunable ones greyed and disabled, with the reason in grey after the name: NO "ingen ønsket fordeling (legg inn under 2 Sortimentskrav og priser)" / "bare én lengdeklasse" / "bare én diameterklasse" (EN equivalents). Pulpwood is not listed.
 - Results, top to bottom:
   1. NO "Prisene ble tilpasset på {n} av {N} stammer; tallene under gjelder alle {N} stammene." (EN equivalent).
   2. Table NO "Treff per sortiment": one row per assortment: Sortiment | Stokker | Fordelingsgrad (%) før | etter | Volum (m³) før | etter | Status. Status NO "Tilpasset" or "Ikke tilpasset: bare {k} stokker; minst 20 stokker per diameterklasse trengs" (when no diameter class had at least 20 logs). Column groups NO "Før tilpasning" / "Etter tilpasning".

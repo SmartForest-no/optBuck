@@ -34,7 +34,7 @@ the simulator appears as **optBuck**.
 | **NFI data.** Spruce and pine from the Norwegian National Forest Inventory. The app takes every plot of the selected maturity class, site class, county and altitude range (metres above sea level, in 50 m steps) that has trees of the selected species, and bucks the trees of that species (spruce, pine or both) with a diameter at breast height of at least 5 cm and a height of at least 4.5 m. Other tree species are not included. Results describe the selected trees only. | Available |
 | **Tree lists.** Upload your own trees: tree ID, species and diameter, with heights where available. Missing heights are estimated (see below). | Available |
 | **Stem profiles.** Upload measured diameter-along-stem profiles, for example from harvester data, used directly without a taper model. | Planned |
-| **Harvester stems (.hpr).** Buck the stems a harvester measured, read from a StanForD 2010 .hpr file (see below). Products and prices can be imported from the same files; see *Assortments and prices*. | Available |
+| **Harvester stems (.hpr).** Buck the stems a harvester measured, read from a StanForD 2010 .hpr file (see below). Products and prices can be imported from the same files; see *Assortment specifications and prices*. | Available |
 
 ### Tree lists
 
@@ -117,9 +117,9 @@ no plots. The height column shows the measured length.
 
 ---
 
-## Assortments and prices
+## Assortment specifications and prices
 
-The app opens on *Assortments and prices*, with **Scenario A** and
+The app opens on *Assortment specifications and prices*, with **Scenario A** and
 **Scenario B** as two white cards side by side on a light grey page (one
 above the other on narrow screens). Each card runs from top to bottom: the
 assortment table, the selected assortment with its prices, and the

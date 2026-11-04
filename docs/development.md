@@ -56,9 +56,9 @@ app/                        Shiny app, files sourced explicitly by app.R
   helpers_upload.R          Price files for the runs; a price upload merged into one scenario
   helpers_jobs.R            Runs as background jobs: promise chain over the workers
                             (shiny::ExtendedTask), progress per chunk
-  app_ui.R                  `ui`: page_navbar with Assortments and prices, Simulator
+  app_ui.R                  `ui`: page_navbar with Assortment specifications and prices, Simulator
                             (not ui.R: Shiny treats ui.R + app.R as two app formats)
-  server_scenarios.R        scenario_server(): the Assortments and prices tab (Scenarios A and B)
+  server_scenarios.R        scenario_server(): the Assortment specifications and prices tab (Scenarios A and B)
   app_server.R              `server`: Simulator (tree sources, runs, results)
   www/
     apter.css               Component styles (option 3 "Combination" look)

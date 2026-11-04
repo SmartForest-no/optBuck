@@ -39,7 +39,7 @@
 #           count_eligible_plots() matches a direct filter; a plot with
 #           missing altitude (synthetic) counts at the full range only
 #  5.  AppDriver$new("app") starts without error (load timeout 60 s)
-#  6.  Layout: three tabs, "Assortments and prices" first and open, then
+#  6.  Layout: three tabs, "Assortment specifications and prices" first and open, then
 #      "Simulator"; no Home, tree-source tiles, AVAILABLE/PLANNED labels or
 #      release footer; no striped bar (removed in the restyle, option 3
 #      "Combination"); the look's main colours, read from the browser: light grey
@@ -772,7 +772,7 @@ if (!browser_ok) {
     # collapsed menu or at most icon height).
     narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
     logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
-    ok6 <- identical(tabs, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help") &&
+    ok6 <- identical(tabs, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|Help") &&
       identical(active, "1 Stems") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
@@ -1994,7 +1994,7 @@ if (!browser_ok) {
       c43$cleared <- !isTRUE(js(app, "!!document.querySelector('#tn_tbl_hits .rt-tr')"))
       c43$nerr <- n_err_notif(app)
     })
-    ok43 <- !nzchar(e43) && grepl("no target distribution (enter one under 2 Assortments and prices)", c43$msg, fixed = TRUE) &&
+    ok43 <- !nzchar(e43) && grepl("no target distribution (enter one under 2 Assortment specifications and prices)", c43$msg, fixed = TRUE) &&
       grepl("Spruce \u2013 ", c43$msg, fixed = TRUE) && identical(c43$extra, 0L) && isTRUE(c43$off >= 1L) &&
       grepl(paste0(key43, "+"), c43$boxes, fixed = TRUE) && !grepl("-", c43$boxes, fixed = TRUE) && identical(c43$radio, 0L) &&
       grepl("^Prices were tuned on [0-9,]+ of [0-9,]+ stems; the figures below are for all [0-9,]+ stems\\.$", trimws(c43$scope)) &&
@@ -2293,11 +2293,11 @@ if (!browser_ok) {
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
         c34$marker <- js(app, "window.__apter17 === 1")
       })
-      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortiment og priser|3 Simulator|4 Pristilpasning|Hjelp") &&
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortimentskrav og priser|3 Simulator|4 Pristilpasning|Hjelp") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
         grepl("^Sortiment\\|Type\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
         grepl("Sagtømmer;SagtømmerMassevirkeAnnet;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
-        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help") &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|Help") &&
         identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Type\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
@@ -2334,7 +2334,7 @@ if (!browser_ok) {
         c49$nerr <- n_err_notif(app)
         app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       })
-      ok49 <- !nzchar(e49) && grepl("Gran \u2013 ", c49$off_before, fixed = TRUE) && grepl("ingen \u00f8nsket fordeling (legg inn under 2 Sortiment og priser)", c49$off_before, fixed = TRUE) &&
+      ok49 <- !nzchar(e49) && grepl("Gran \u2013 ", c49$off_before, fixed = TRUE) && grepl("ingen \u00f8nsket fordeling (legg inn under 2 Sortimentskrav og priser)", c49$off_before, fixed = TRUE) &&
         identical(c49$run_before, 0L) && grepl("spruce_sawlog+", c49$boxes, fixed = TRUE) &&
         (identical(c49$result, "table") || grepl("F\u00e5 stokker|F\u00e5 for|For f\u00e5 stokker", c49$result)) && identical(c49$nerr, 0L)
         rec(grep("^Check 49:", browser_checks, value = TRUE), if (ok49) PASS else FAIL,
@@ -2556,7 +2556,7 @@ if (!browser_ok) {
         identical(c39$flat_b, "420") &&
         grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
         identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
-        identical(c39$nav_reload, "1 Stems|2 Assortments and prices|3 Simulator|4 Price tuning|Help")
+        identical(c39$nav_reload, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|Help")
       t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
       rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
           sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",
