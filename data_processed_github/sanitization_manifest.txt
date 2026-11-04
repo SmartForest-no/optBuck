@@ -59,3 +59,15 @@ Destination : S:/Prosjekter/52106_SFI_SmartForest/optBuck/nfiBuck/data_processed
   'komnr' absent from tree_plot output    : TRUE
   'komnr' absent from plots output        : TRUE
   'plot_id_github' present in both outputs: TRUE
+
+=== Second sanitisation step (roadmap 8, 2026-11-04) ===
+  Script   : scripts/sanitize_nfi_table.R (set.seed(20261104))
+  DROPPED  : volm, volu, plot_area_m2   (not read by the app; plot_area_m2 was always 250)
+  REPLACED : treid (original NFI tree number) -> random permutation of 1..N (integer), so a tree
+             cannot be looked up in the NFI database. The old -> new map is kept only in a
+             private location outside the repository.
+  KEPT     : plot_id_github as it is (synthetic sequential ID; the backend's seeded plot sample
+             draws from the sorted IDs, so relabelling would change published results).
+  Rows are no longer in the original tree order (sorted by plot, then new tree number).
+  Licence  : CC BY 4.0, attribution "Landsskogtakseringen, NIBIO" (LICENSE-data.md).
+  Not rewritten: git history before this commit still holds the original tree numbers.

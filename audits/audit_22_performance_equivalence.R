@@ -96,7 +96,10 @@ TABLES <- names(PERF_TABLE_KEYS)
 # so every case runs with the pre-Phase-4c base products (scripts/
 # phase4c_limits_change_report.R reports what the new limits change).
 cases  <- perf_cases(root_dir, limits = "pre_phase4c")
-base   <- readRDS(file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds"))
+# Roadmap 8: the baseline with the NFI tree numbers translated to the permuted ids (values untouched).
+base_f <- file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d_newids.rds")
+if (!file.exists(base_f)) base_f <- file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds")
+base   <- readRDS(base_f)
 
 # Result tables identical, unsorted; names of the tables that differ.
 differs <- function(a, b) TABLES[!vapply(TABLES, function(k) identical(a[[k]], b[[k]]), logical(1))]

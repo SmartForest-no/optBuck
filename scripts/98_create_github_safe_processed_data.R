@@ -1,4 +1,5 @@
 # ==============================================================================
+# NOTE (roadmap 8): after this script, scripts/sanitize_nfi_table.R drops unused columns and permutes treid.
 # scripts/98_create_github_safe_processed_data.R
 #
 # Purpose : Create a sanitized copy of selected data_processed/ files that

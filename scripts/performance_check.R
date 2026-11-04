@@ -36,7 +36,11 @@ source(file.path(root_dir, "scripts", "performance_cases.R"))
 args <- commandArgs(trailingOnly = TRUE)
 extra <- if (length(args) > 0L) list(workers = as.integer(args[1L])) else list()
 
-b <- readRDS(file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds"))
+# Roadmap 8 (2026-11-04): the NFI tree numbers were replaced by a random permutation; the
+# baseline with only those ids translated (scripts/translate_baseline_ids.R, values untouched).
+b_file <- file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d_newids.rds")
+if (!file.exists(b_file)) b_file <- file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds")
+b <- readRDS(b_file)
 cases <- perf_cases(root_dir, limits = "pre_phase4c")   # the baseline predates Phase 4c
 all_ok <- TRUE
 for (nm in names(cases)) {
