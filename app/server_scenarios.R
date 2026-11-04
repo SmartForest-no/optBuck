@@ -219,6 +219,9 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     ord <- asm_order(all_rows)
     disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
     rownames(disp) <- NULL
+    if (!any(!is.na(d$ButtCondition))) {   # the log position column only when this scenario has a condition
+      disp$position <- NULL; cell <- cell[, colnames(cell) != "position", drop = FALSE]
+    }
     disp <- show_values(disp, l)
     names(disp) <- colnames(cell) <- tr(unname(ASM_COL_IDS[names(disp)]), lang = l)
     cols <- setNames(lapply(names(disp), function(n) reactable::colDef(

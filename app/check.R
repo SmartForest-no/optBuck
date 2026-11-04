@@ -3,9 +3,9 @@
 # Purpose : The "5 Bucking check" tab (roadmap 8, 2026-11-04): how the harvester bucked the
 #           stems of an .hpr file compared with the best possible bucking under the file's own
 #           instruction (R/helpers_check.R, bucking_check()). The file is the first .hpr loaded
-#           under 1 Stems, or one uploaded here for this tab only. The check runs in this
-#           process (about 40 s for 10,000 stems on 15 workers; the session is busy meanwhile,
-#           with a progress bar), like the Price tuning loop.
+#           under 1 Stems, or one uploaded here for this tab only. The check runs as a background
+#           job (ExtendedTask, run_check_async() in helpers_jobs.R) with a progress bar; the app
+#           stays responsive (about 40-125 s for 3,000-10,000 stems on 15 workers).
 # Texts   : every text comes from inputs/i18n/translations.csv (ids chk_*).
 
 check_page <- nav_panel(
@@ -45,6 +45,8 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
       if (is.null(f)) div(class = "note-muted", L("chk_file_none"))
       else div(class = "chk-file", strong(L("chk_file_label")), ": ",
                L(if (f$src == "own") "chk_file_own" else "chk_file_stems", f$name)),
+      checkboxInput("chk_used_only", L("chk_used_only"), value = TRUE),
+      div(class = "note-muted", L("chk_used_only_note")),
       div(class = "pm-actions",
           fileInput("chk_upload", NULL, accept = c(".hpr", ".gz", ".zip"), buttonLabel = L("chk_upload"),
                     placeholder = "", width = "320px"),
@@ -52,18 +54,33 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
           if (!is.null(f)) actionButton("chk_run", L("chk_run"), class = "btn-primary")))
   })
 
+  # The check as a background job; the file name travels with the task so a late result is
+  # never shown for another file.
+  chk_prog <- reactiveVal(NULL)
+  chk_task <- ExtendedTask$new(function(spec) {
+    prog <- shiny::Progress$new(session, min = 0, max = 1)
+    l <- isolate(lang())
+    steps <- c(read = 0.05, opt = 0.15, val = 0.8, tab = 0.9)
+    texts <- c(read = "chk_p_read", opt = "chk_p_opt", val = "chk_p_val", tab = "chk_p_tab")
+    prog$set(message = tr("chk_p_read", lang = l), value = 0)
+    p <- run_check_async(spec, progress = function(step, done, total) {
+      v <- steps[[step]]
+      if (step == "opt" && !is.na(total) && total > 0L) v <- 0.15 + 0.65 * done / total
+      prog$set(message = tr(texts[[step]], lang = l), value = v)
+    })
+    p <- promises::then(p, function(r) { prog$set(message = tr("chk_p_tab", lang = l), value = 0.9); r$file_name <- spec$name; r })
+    p <- promises::catch(p, function(e)
+      list(ok = FALSE, errors = sprintf("The check failed: %s", conditionMessage(e)), warnings = character(0), file_name = spec$name))
+    promises::finally(p, function() prog$close())
+  })
+  observe(updateActionButton(session, "chk_run", disabled = chk_task$status() == "running"))
   observeEvent(input$chk_run, {
     f <- chk_file(); req(f)
     smap <- if (identical(f$src, "stems")) tryCatch(hs_map(), error = function(e) NULL) else NULL
-    withProgress(message = L("chk_p_read"), value = 0, {
-      steps <- c(read = 0.05, opt = 0.15, val = 0.8, tab = 0.9)
-      r <- tryCatch(bucking_check(f$path, species_map = smap, filename = f$name, progress = function(s) {
-        setProgress(value = steps[[s]], message = L(c(read = "chk_p_read", opt = "chk_p_opt", val = "chk_p_val", tab = "chk_p_tab")[[s]]))
-      }), error = function(e) list(ok = FALSE, errors = sprintf("The check failed: %s", conditionMessage(e)), warnings = character(0)))
-    })
-    r$file_name <- f$name
-    res(r)
+    res(NULL)
+    chk_task$invoke(list(path = f$path, name = f$name, species_map = smap, reject_zones = TRUE, used_only = isTRUE(input$chk_used_only)))
   })
+  observe({ r <- chk_task$result(); res(r) })
 
   num <- function(x, d = 0L) fmt_num(x, d, lang())
   pct <- function(x, d = 1L) ifelse(is.na(x), "–", fmt_num(100 * x, d, lang()))
@@ -78,6 +95,7 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
     msgs <- unique(c(r$warnings))
     sec <- function(id, ...) tagList(h5(class = "section-label", L(id)), ...)
     head <- tagList(
+      div(class = "note-muted", L(if (isTRUE(r$used_only)) "chk_mode_used" else "chk_mode_all", num(r$n_products))),
       if (length(msgs)) div(class = "note-warning", paste(vapply(msgs, tr_msg, "", lang = l), collapse = " ")),
       sec("chk_h_file",
           tbl(setNames(data.frame(num(r$n_stems_file), num(if (r$no_profile) 0 else sum(r$stems$use)),
@@ -112,7 +130,7 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
     kf <- r$key_figures; k0 <- kf[1L, ]
     summ <- p(class = "chk-summary", strong(L("chk_summary", num(k0$stems), num(sum(r$stems$use)), pct(k0$yield),
                                               num(k0$value_rec), num(k0$value_opt))))
-    kft <- data.frame(scope = ifelse(seq_len(nrow(kf)) == 1L, L("chk_c_all"), vapply(kf$scope, sp_name, "")),
+    kft <- data.frame(scope = ifelse(seq_len(nrow(kf)) == 1L, L("chk_c_all"), ifelse(kf$scope == "without_broken", L("chk_c_nobroken"), vapply(kf$scope, sp_name, ""))),
                       stems = num(kf$stems), rec = num(kf$value_rec), opt = num(kf$value_opt),
                       rec_m3 = num(kf$value_per_m3_rec), opt_m3 = num(kf$value_per_m3_opt), lost = num(kf$lost), yield = pct(kf$yield),
                       stringsAsFactors = FALSE)
@@ -165,7 +183,12 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
     ctl <- tagList(sec("chk_h_control", tbl(setNames(data.frame(num(ct$harvester_m3, 1L), num(ct$apter_m3, 1L), num(ct$diff_pct, 2L), num(ct$share_above_2pct, 1L),
                        num(ct$n_outside), num(ct$n_unpriced), stringsAsFactors = FALSE),
                        c(paste(L("chk_c_volume"), L("chk_c_recorded")), paste(L("chk_c_volume"), L("chk_ctl_calc")), L("chk_ctl_diff"), L("chk_ctl_logs2"),
-                         L("chk_ctl_outside"), L("chk_ctl_unpriced"))))))
+                         L("chk_ctl_outside"), L("chk_ctl_unpriced")))),
+      if (!is.null(ct$unpriced_by_product)) tagList(h6(L("chk_ctl_unp_h")),
+        tbl(setNames(data.frame(unname(vapply(r$pname[ct$unpriced_by_product$key], pname_t, "")), num(ct$unpriced_by_product$logs), num(ct$unpriced_by_product$m3, 1L),
+                                num(ct$unpriced_by_product$share_pct, 1L), stringsAsFactors = FALSE),
+                     c(L("chk_c_product"), L("chk_c_logs"), L("chk_c_volume"), L("chk_ctl_unp_share")))),
+        div(class = "note-muted", sprintf("%s: %s", L("chk_ctl_unp_total"), num(ct$unpriced_share_pct, 2L))))))
     dls <- div(class = "pm-actions", downloadButton("chk_dl_stems", L("chk_dl_stems"), class = "btn-secondary btn-sm"),
                downloadButton("chk_dl_logs", L("chk_dl_logs"), class = "btn-secondary btn-sm"))
     tagList(head, over, degree, asm, lens, man, dft, topt, exc, lim, ctl, dls)

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: custom assortments and volume methods
-  Run: 2026-10-27 16:38:51.001002
+  Run: 2026-11-04 16:09:08.221822
 ============================================================= 
 
 --- 01-03. Formula methods by hand ---
@@ -21,7 +21,7 @@
   [PASS  ] Check 07b: Poles outside their butt limit are never selected, even at 1e6 NOK/m3; optimizers agree | 10 500 spruce_sawlog; 1300 1700 spruce_pulpwood; 500 990 spruce_sawlog; 990 1300 spruce_sawlog
 
 --- 08. Default products unchanged ---
-  [PASS  ] Check 08a: Backend results for 3 strata identical to the pre-Phase-4b baseline | baseline from commit e8b1f05 | spruce: 765 logs; pine: 855 logs; both: 506 logs
+  [PASS  ] Check 08a: Backend results for 3 strata identical to the pre-Phase-4b baseline | baseline from commit e8b1f05 | spruce: 1547 logs; pine: 843 logs; both: 757 logs
   [PASS  ] Check 08b: Default sawlog candidate volumes equal the old top-cylinder formula (taperNOR spruce 30 cm / 22 m) | 1593 sawlog candidates, 1026 eligible
 
 --- 09. validate_price_matrix_against_products() with custom assortments ---
@@ -57,8 +57,8 @@
   [PASS  ] Check 12c: Re-pricing under a matrix ending at 60 cm uses that matrix's cap (65 and 75 -> 60) | prices 1060, 1060
 
 --- 13. Comparison, scenario-only assortment (backend runs) ---
-  [PASS  ] Check 13a: Every tree using the scenario-only assortment counts as changed | 46 trees use spruce_poles; 46 changed in total
-  [PASS  ] Check 13b: Per-m3 shows 'poles' in Total and 'spruce_poles' within spruce (and in the comparison, 0 in default) | Total poles share 0.814
+  [PASS  ] Check 13a: Every tree using the scenario-only assortment counts as changed | 74 trees use spruce_poles; 74 changed in total
+  [PASS  ] Check 13b: Per-m3 shows 'poles' in Total and 'spruce_poles' within spruce (and in the comparison, 0 in default) | Total poles share 0.619
   [PASS  ] Check 13c: Commercial volume of a fixed pattern does not depend on the volume method (price volumes do) | commercial 0.50954 m3; price volumes Top cylinder 0.33846, Top 0.41989, All diameters (solid volume) 0.50954, Calculated Norwegian mid 0.40989, Mid 0.50698
 
 --- 14. Editing an assortment keeps existing prices ---

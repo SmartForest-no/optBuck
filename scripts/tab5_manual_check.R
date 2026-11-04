@@ -46,7 +46,8 @@ cat(sprintf("%s: check finished in %.0f s; summary: %s\n", which_file, secs,
             app$get_js("(document.querySelector('.chk-summary')||{}).innerText || (document.querySelector('#chk_results')||{}).innerText")))
 Sys.sleep(3)
 app$run_js("document.querySelector('.chk-summary') && document.querySelector('.chk-summary').scrollIntoView();")
-app$get_screenshot(file.path(shots, sprintf("tab5_%s_%s.png", which_file, if (length(args) > 1L) args[2L] else "no")))
+shot <- function(f) { unlink(f); app$get_screenshot(f) }
+shot(file.path(shots, sprintf("tab5_%s_%s.png", which_file, if (length(args) > 1L) args[2L] else "no")))
 app$run_js("window.scrollTo(0, document.body.scrollHeight / 2);"); Sys.sleep(1)
-app$get_screenshot(file.path(shots, sprintf("tab5_%s_%s_b.png", which_file, if (length(args) > 1L) args[2L] else "no")))
+shot(file.path(shots, sprintf("tab5_%s_%s_b.png", which_file, if (length(args) > 1L) args[2L] else "no")))
 cat(sprintf("total %.0f s\n", as.numeric(difftime(Sys.time(), t_start, units = "secs"))))

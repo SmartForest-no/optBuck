@@ -74,7 +74,7 @@ for (.h in c("helpers_utils", "helpers_paths", "helpers_i18n", "helpers_volume_m
              "helpers_valuation",
              "helpers_taper", "helpers_bark", "helpers_commercial_volume",
              "helpers_candidate_generation", "helpers_dp_optimizer", "helpers_bucking_core",
-             "helpers_parallel",
+             "helpers_parallel", "helpers_nfi_cache",
              "helpers_price_matrix", "helpers_comparison", "helpers_heights",
              "helpers_tree_list", "helpers_tree_selection", "helpers_hpr", "helpers_hpr_stems",
              "helpers_hpr_export", "helpers_pin_export", "helpers_result_tables",
@@ -460,10 +460,12 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
   taper_cache_dir <- file.path(root, "outputs", "app_cache",
                                 "taper_profiles_by_plot_block_github")
 
-  if (!dir.exists(taper_cache_dir))
-    stop("Partitioned taper profile cache not found:\n  ", taper_cache_dir,
-         "\nRun this script first:\n  ",
-         "Rscript scripts/app_backend/00_precompute_taper_profiles_github.R")
+  # First use of the built-in NFI source: build the profile cache (roadmap 8, step 6). The app builds it
+  # on its workers before the job is prepared (app/helpers_jobs.R); a script or a worker builds it here.
+  if (!nfi_profiles_ready(root)) {
+    message("Building the NFI stem profiles (first use only, about 3 minutes) ...")
+    ensure_nfi_profiles(root)
+  }
 
   # Safety check on schema before reading.
   cache_ds      <- arrow::open_dataset(taper_cache_dir)

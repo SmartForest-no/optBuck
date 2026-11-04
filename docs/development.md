@@ -96,6 +96,9 @@ R/                          Core engine helpers
   helpers_hpr_stems.R       .hpr stems (hpr Phase B): streamed stem reader, checks, measured profiles (stump 0)
   helpers_hpr_export.R      .hpr export (Phase 5a): a scenario's result as a StanForD 2010 .hpr, copied from the source, no coordinates
   helpers_pin_export.R      .pin export (Phase 5b): a scenario as a StanForD 2010 .pin (fixed minimal header, no coordinates)
+  helpers_hpr_logs.R        Recorded logs of an .hpr file (bucking check, roadmap 8): chunked whitelist reader, permitted grades
+  helpers_check.R           Bucking check (tab 5): recorded logs valued like candidates, best possible bucking, the tables; bucking_check(stage = )
+  helpers_nfi_cache.R       NFI stem profiles built on first use (progress callback), same profiles as the precompute script
   helpers_result_tables.R   Log tally per price matrix (stocknota) and value by DBH class
   helpers_price_tuning.R    Price-matrix tuning (roadmap 7, no UI yet): grid, target, FG, price update, tune_prices()
   helpers_tree_selection.R  NFI trees of a run (stratum, plots, dbh/height filter): select_nfi_trees(),
@@ -120,6 +123,9 @@ audits/
   audit_31_hpr_export.R                      .hpr export (round trip, stems copied unchanged, no coordinates, product keys, two files, re-bucking)
   audit_32_pin_import_export.R               .pin import and export (both layouts, key fallbacks, BuckingCriteria, species guess, round trip, no coordinates, errors)
   audit_29_price_bulk_edit.R                 Bulk editing of price matrices (range +/- NOK or %, row price + length fill, empty cells, app)
+  audit_36_bucking_check.R                   Bucking check on the synthetic fixture (reader, valuation, waste zones, broken top, used products only, stages, NFI profiles on demand)
+  audit_37_check_vs_old.R                    Reader, profiles and permitted grades against the saved old optBuck output, private files (REVIEW when absent)
+  audit_38_check_texts.R                     Texts of tab 5 and of the NFI profile build in both languages
   audit_30_stem_grades.R                     .hpr stem grades and cut at grade changes (grade grid, StartGrade fallback, permitted grades, forced cuts, workers)
   prototype_reference/      Frozen audits 05–12
 
@@ -405,6 +411,9 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 28 — translations | `Rscript audits/audit_28_translations.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 30 — stem grades | `Rscript audits/audit_30_stem_grades.R` | xml2, writexl, readxl, taperNOR, future; `inputs/test_fixtures/hpr_grades_synthetic.hpr` |
 | 31 — hpr export | `Rscript audits/audit_31_hpr_export.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` (variants in tempfiles) |
+| 36 — bucking check | `Rscript audits/audit_36_bucking_check.R` | xml2, arrow, future, taperNOR; `inputs/test_fixtures/hpr_check_synthetic.hpr` (scripts/make_hpr_check_fixture.R) |
+| 37 — check vs old optBuck | `Rscript audits/audit_37_check_vs_old.R` | private files in `C:/apter_private/` (REVIEW without them) |
+| 38 — check texts | `Rscript audits/audit_38_check_texts.R` | none |
 | 32 — pin import and export | `Rscript audits/audit_32_pin_import_export.R` | xml2; `inputs/test_fixtures/pin_minimal_synthetic.pin`, `pin_full_synthetic.pin` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree

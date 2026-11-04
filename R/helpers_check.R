@@ -31,16 +31,19 @@
 #' @param logs    read_hpr_logs()$logs, restricted to the stems of the job.
 #' @param prodmap data.frame(HprProductKey, Species, key) mapping a file product + species to the
 #'   assortment key of the job's products.
+#' @param rec_prices NULL, or hpr_rec_prices(): the file's own price grid by length class (cm) and diameter row
+#'   (decided 2026-11-04: a recorded log in a "manual only" cell or in a length class the import drops is valued
+#'   with the file's price; the optimiser still cannot choose such cells). NULL: the job's price lookup.
 #' @return data.frame, one row per log of `logs` (same order): ProductKey (assortment key, NA for
 #'   waste or unknown), is_waste, unknown_product, StartPos, StopPos, LogLength, price_volume_m3,
 #'   PriceDiameterClass_cm, PriceNOKperM3, value_nok, commercial_volume_m3, TopUb_calc,
 #'   TopOb_calc, outside (outside the product's limits).
-value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL) {
+value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL, rec_prices = NULL) {
   run <- job$prep$runs[[1L]]; lookup <- run$lookup
   n <- nrow(logs)
   out <- data.frame(akey = rep(NA_character_, n), unknown_product = rep(FALSE, n),
                     price_volume_m3 = NA_real_, PriceDiameterClass_cm = NA_integer_,
-                    PriceNOKperM3 = NA_real_, value_nok = 0, commercial_volume_m3 = 0, class_dm = NA_real_,
+                    PriceNOKperM3 = NA_real_, value_nok = 0, commercial_volume_m3 = 0, class_dm = NA_real_, class_cm = NA_real_,
                     TopUb_calc = NA_real_, TopOb_calc = NA_real_, outside = FALSE,
                     stringsAsFactors = FALSE)
   by_stem <- split(seq_len(n), logs$stem_key)
@@ -78,14 +81,15 @@ value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL) {
         cls_dm <- if (length(lcl)) ceiling(max(lcl) / 10) else NA_real_
         allowed_dm <- p$lengths / 10
         if (!is.na(cls_dm) && !cls_dm %in% allowed_dm) { below <- allowed_dm[allowed_dm <= cls_dm]; cls_dm <- if (length(below)) max(below) else NA_real_ }
-        len_out <- is.na(cls_dm) || (!is.na(hp$len_class_max) && lk$LogLength > hp$len_class_max)
+        len_out <- !length(lcl) || (!is.na(hp$len_class_max) && lk$LogLength > hp$len_class_max)   # outside the FILE's length classes
       } else { cls_dm <- floor(lk$LogLength / 10); len_out <- lk$LogLength < p$min_len || lk$LogLength > p$max_len }
       out$class_dm[k] <- cls_dm
+      out$class_cm[k] <- if (!is.null(hp) && length(hp$len_classes)) (if (length(lcl)) max(lcl) else NA_real_) else floor(lk$LogLength / 10) * 10
       mid <- if (identical(p$method, "Mid")) ser((lk$StartPos + lk$StopPos) / 2)
       cum <- if (isTRUE(p$ub)) cum_ub else cum_ob
       pvol <- tryCatch(price_volume_m3(method = p$method, top_d_mm = top,
                                        length_cm = if (is.null(p$price_len) || is.na(cls_dm)) lk$LogLength else
-                                         p$price_len[match(cls_dm * 10, p$lengths)] %|NA|% lk$LogLength,
+                                         (if (length(lcl)) max(lcl) else NA_real_) %|NA|% lk$LogLength,   # class-priced: the class lower limit
                                        start_pos = lk$StartPos, stop_pos = lk$StopPos,
                                        solid_vol = function(a, b) cum(b) - cum(a),
                                        adjustment = p$adjustment, mid_d_mm = mid), error = function(e) NA_real_)
@@ -99,12 +103,37 @@ value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL) {
   if (any(has)) {
     df <- data.frame(ProductKey = out$akey[has], LengthClass_dm = as.integer(out$class_dm[has]),
                      PriceDiameterClass_cm_uncapped = out$PriceDiameterClass_cm[has], stringsAsFactors = FALSE)
-    pr <- lookup_prices(df, lookup)
+    pr <- if (is.null(rec_prices)) lookup_prices(df, lookup) else {
+      d <- pmin(out$PriceDiameterClass_cm[has], rec_prices$cap[out$akey[has]])
+      unname(rec_prices$price[paste(out$akey[has], out$class_cm[has], d)])
+    }
     out$PriceNOKperM3[has] <- pr
     v <- out$price_volume_m3[has] * pr
     out$value_nok[has] <- ifelse(is.na(v), 0, v)
   }
   out
+}
+
+#' The file's own price grid for valuing recorded logs (decided 2026-11-04): every priced cell of the product,
+#' also cells marked "Only logs bucked manually allowed" and file length classes the import drops (no whole-dm
+#' length inside the class), by the file's length class lower limit (cm) and whole-cm diameter row (the import's
+#' row rule). Forbidden cells and positions outside the matrix have no price. The optimiser never gets the extra cells.
+hpr_rec_prices <- function(h, defs) {
+  akeys <- assortment_table_keys(defs)
+  g <- do.call(rbind, lapply(seq_len(nrow(defs)), function(i) {
+    p <- h$products[[defs$HprProductKey[i]]]; if (is.null(p)) return(NULL)
+    cells <- p$cells[!is.na(p$cells$d_mm) & !is.na(p$cells$l_cm), , drop = FALSE]
+    ok <- cells[!is.na(cells$price) & !cells$criteria %in% HPR_FORBIDDEN, , drop = FALSE]
+    if (nrow(ok) == 0L) return(NULL)
+    D <- sort(unique(ok$d_mm)); D_all <- sort(unique(cells$d_mm)); L <- sort(unique(ok$l_cm))
+    rows_cm <- seq(floor(min(D) / 10), floor(max(D) / 10))
+    cls <- vapply(rows_cm, function(cc) { u <- D_all[D_all <= cc * 10 & D_all >= min(D)]; if (length(u)) max(u) else min(D) }, 0)
+    gg <- expand.grid(i = seq_along(rows_cm), j = seq_along(L), KEEP.OUT.ATTRS = FALSE)
+    data.frame(key = akeys[i], L_cm = L[gg$j], d_cm = rows_cm[gg$i],
+               price = ok$price[match(paste(cls[gg$i], L[gg$j]), paste(ok$d_mm, ok$l_cm))], stringsAsFactors = FALSE)
+  }))
+  if (is.null(g)) g <- data.frame(key = character(0), L_cm = numeric(0), d_cm = numeric(0), price = numeric(0))
+  list(price = setNames(g$price, paste(g$key, g$L_cm, g$d_cm)), cap = tapply(g$d_cm, g$key, max))
 }
 
 `%|NA|%` <- function(a, b) if (length(a) == 0L || is.na(a)) b else a
@@ -118,20 +147,31 @@ value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL) {
 #' @param species_map Named character (species group key -> "spruce"/"pine"/"none"); default: guessed.
 #' @param filename    Name for messages.
 #' @param reject_zones TRUE: recorded waste logs are defect zones (the decision of 2026-11-04).
+#' @param used_only  TRUE: the best possible bucking may use only the products the harvester used in this
+#'   file (a recorded log in them); FALSE (default): every product of the file's instruction.
+#' @param stage       "all" (default: prepare, buck, finish in this process); "prepare" returns a `check_prep`
+#'   object (or a final result when the file cannot be checked) without bucking; "finish" takes `prep` and the
+#'   chunk results `b` of buck_job() (the app runs the stages as background jobs: app/helpers_jobs.R).
 #' @param progress    NULL or function(step) called with "read", "opt", "val", "tab".
-#' @param broken_keep_share Above this share of stems a possible broken top is flagged, not excluded.
 #' @return list(ok, errors, warnings, info, no_profile, file, overview, stems, logs, key_figures,
 #'   assortments, length_dist, manual, defect, top, excluded, flagged, control, broken).
 bucking_check <- function(path, species_map = NULL, filename = basename(path), reject_zones = TRUE,
-                          progress = NULL, root = get_root_dir(), broken_keep_share = 0.05) {
+                          used_only = FALSE, progress = NULL, root = get_root_dir(),
+                          stage = "all", prep = NULL, b = NULL) {
   prog <- function(step) if (is.function(progress)) progress(step)
   fail <- function(e, w = character(0)) list(ok = FALSE, errors = e, warnings = w, info = character(0))
+  if (identical(stage, "finish")) {
+    .progress <- progress; .b <- b; list2env(unclass(prep), environment())   # everything prepare computed
+    progress <- .progress; b <- .b; stage <- "finish"
+    prog <- function(step) if (is.function(progress)) progress(step)
+  } else {
   prog("read")
   h <- read_hpr(path, filename); if (!isTRUE(h$ok)) return(fail(h$errors, h$warnings))
   smap <- if (is.null(species_map)) setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key) else species_map
-  sc <- hpr_to_scenario(h, smap); if (!isTRUE(sc$ok)) return(fail(sc$errors, sc$warnings))
-  pm <- pm_minimal(sc$pm); defs <- sc$defs; pr <- products_from_defs(defs, pm); pd <- pr$pd
   rl <- read_hpr_logs(path, filename, defs = h); if (!isTRUE(rl$ok)) return(fail(rl$errors))
+  keep <- if (used_only) unique(rl$logs$ProductKey[!rl$logs$waste]) else NULL
+  sc <- hpr_to_scenario(h, smap, keep = keep); if (!isTRUE(sc$ok)) return(fail(sc$errors, sc$warnings))
+  pm <- pm_minimal(sc$pm); defs <- sc$defs; pr <- products_from_defs(defs, pm); pd <- pr$pd
   lg <- rl$logs
   warnings <- c(h$warnings, sc$warnings, rl$warnings); info <- c(sc$info, rl$info)
   akeys <- assortment_table_keys(defs)
@@ -171,7 +211,8 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   n_stems_file <- length(unique(lg$stem_key))
   base <- list(ok = TRUE, errors = character(0), warnings = warnings, info = info, file = filename,
                overview = overview, n_logs = nrow(lg), n_stems_file = n_stems_file, no_profile = FALSE,
-               defs = defs, ptype = ptype, pname = pname)
+               defs = defs, ptype = ptype, pname = pname, used_only = used_only,
+               n_products = length(unique(defs$HprProductKey[!defs$Type %in% "waste"])))
 
   # ---- stems ----------------------------------------------------------------------------------------------
   st <- read_hpr_stems(path, filename, defs = h)
@@ -189,13 +230,15 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   opts <- list(use_grades = TRUE, cut_at_changes = FALSE, reject_zones = reject_zones)
   job <- prepare_hpr_stems_job(st, smap, price_matrix_path = price_path, root = root, products = pd,
                                length_classes = pr$lc, grade_opts = opts, reject = reject)
+  if (identical(stage, "prepare")) return(structure(as.list(environment()), class = "check_prep"))
+  }
   prog("opt")
-  res <- finish_job(job, buck_job(job))
+  res <- finish_job(job, if (is.null(b)) buck_job(job) else b)
   opt <- res$selected_logs_all; tsum <- res$tree_summary
   prog("val")
   in_job <- names(job$pvs)
   lgj <- lg[lg$stem_key %in% in_job, , drop = FALSE]
-  vr <- value_recorded_logs(job, lgj, prodmap, hpr_products = h$products)
+  vr <- value_recorded_logs(job, lgj, prodmap, hpr_products = h$products, rec_prices = hpr_rec_prices(h, defs))
   rec <- cbind(lgj, vr)
   rec$species_group <- vapply(rec$stem_key, function(k) job$pvs[[k]]$species_group, "")
   prog("tab")
@@ -217,12 +260,10 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   stems$possible_broken_top <- !is.na(mst) & last_ub >= mst
   n_broken <- sum(stems$possible_broken_top)
   broken <- list(n = n_broken, n_stems = nrow(stems), share = .share(n_broken, nrow(stems)),
-                 excluded = .share(n_broken, nrow(stems)) <= broken_keep_share)
+                 excluded = FALSE)   # never excluded on this rule, only flagged (decided 2026-11-04)
   stems$reason <- NA_character_
   stems$reason[stems$n_logs_rec == 0L] <- "no recorded logs"
   stems$reason[is.na(stems$reason) & stems$log_above_profile] <- "a recorded log ends above the measured profile"
-  if (isTRUE(broken$excluded))
-    stems$reason[is.na(stems$reason) & stems$possible_broken_top] <- "broken top in sawlog dimension"
   oks <- setNames(tsum$optimizer_status, as.character(tsum$treid))
   stems$opt_status <- unname(oks[stems$StemKey])
   stems$value_rec <- as.numeric(tapply(rec$value_nok, factor(rec$stem_key, levels = sk), sum))
@@ -244,7 +285,7 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
     data.frame(treid = as.character(job$meta$excluded$treid), reason = job$meta$excluded$excluded_reason, stringsAsFactors = FALSE),
     data.frame(treid = stems$StemKey[!stems$use], reason = stems$reason[!stems$use], stringsAsFactors = FALSE))
   flagged <- list(
-    broken_top = if (!isTRUE(broken$excluded)) stems$StemKey[stems$possible_broken_top] else character(0),
+    broken_top = stems$StemKey[stems$possible_broken_top],
     outside = stems$StemKey[stems$use & stems$outside], rec_gt_opt = stems$StemKey[stems$rec_gt_opt])
 
   recu <- rec[rec$stem_key %in% use_keys, , drop = FALSE]
@@ -254,16 +295,18 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   optu$stem_key <- as.character(optu$treid)
 
   # key figures per species and total
-  kf1 <- function(s) {
+  kf1 <- function(s, label = NULL, drop_broken = FALSE) {
     ii <- if (is.null(s)) rep(TRUE, nrow(stems)) else stems$species_group == s
     ii <- ii & stems$use & stems$value_opt > 0
+    if (drop_broken) ii <- ii & !stems$possible_broken_top
     v_r <- sum(stems$value_rec[ii]); v_o <- sum(stems$value_opt[ii])
-    data.frame(scope = if (is.null(s)) "All species" else s, stems = sum(ii), value_rec = v_r, value_opt = v_o,
+    data.frame(scope = if (!is.null(label)) label else if (is.null(s)) "All species" else s, stems = sum(ii), value_rec = v_r, value_opt = v_o,
                com_rec = sum(stems$com_rec[ii]), com_opt = sum(stems$com_opt[ii]),
                value_per_m3_rec = .share(v_r, sum(stems$com_rec[ii])), value_per_m3_opt = .share(v_o, sum(stems$com_opt[ii])),
                lost = v_o - v_r, yield = .share(v_r, v_o), stringsAsFactors = FALSE)
   }
-  key_figures <- do.call(rbind, c(list(kf1(NULL)), lapply(sort(unique(stems$species_group)), kf1)))
+  key_figures <- do.call(rbind, c(list(kf1(NULL)), lapply(sort(unique(stems$species_group)), kf1),
+                                   list(kf1(NULL, label = "without_broken", drop_broken = TRUE))))   # last row: yield index without the flagged stems
 
   list_out <- c(base, list(
     stems = stems, logs = list(recorded = rec, optimal = opt), key_figures = key_figures, broken = broken,
@@ -411,7 +454,14 @@ check_length_dist <- function(rec, opt, defs, pm, pr, ptype) {
 check_control <- function(rec) {
   r <- rec[!rec$waste & !is.na(rec$price_volume_m3) & !is.na(rec$m3_price) & rec$m3_price > 0, , drop = FALSE]
   d <- (r$price_volume_m3 - r$m3_price) / r$m3_price
-  list(n = nrow(r), harvester_m3 = sum(r$m3_price), apter_m3 = sum(r$price_volume_m3),
+  unp <- !rec$waste & !is.na(rec$akey) & is.na(rec$PriceNOKperM3)
+  nw <- !rec$waste
+  by_prod <- if (any(unp)) { f <- factor(rec$akey[unp])
+    tot <- tapply(ifelse(is.na(rec$m3_price[nw]), 0, rec$m3_price[nw]), factor(rec$akey[nw], levels = levels(f)), sum)
+    data.frame(key = levels(f), logs = as.integer(table(f)), m3 = as.numeric(tapply(ifelse(is.na(rec$m3_price[unp]), 0, rec$m3_price[unp]), f, sum)),
+               share_pct = 100 * as.numeric(tapply(ifelse(is.na(rec$m3_price[unp]), 0, rec$m3_price[unp]), f, sum)) / as.numeric(tot), stringsAsFactors = FALSE) } else NULL
+  list(unpriced_by_product = by_prod, unpriced_share_pct = 100 * .share(sum(ifelse(is.na(rec$m3_price[unp]), 0, rec$m3_price[unp])), sum(ifelse(is.na(rec$m3_price[nw]), 0, rec$m3_price[nw]))),
+       n = nrow(r), harvester_m3 = sum(r$m3_price), apter_m3 = sum(r$price_volume_m3),
        diff_pct = 100 * (sum(r$price_volume_m3) / sum(r$m3_price) - 1), share_above_2pct = 100 * mean(abs(d) > 0.02),
        mean_abs_pct = 100 * mean(abs(d)), n_outside = sum(rec$outside, na.rm = TRUE), n_unknown = sum(rec$unknown_product),
        n_unpriced = sum(!rec$waste & !is.na(rec$akey) & is.na(rec$PriceNOKperM3)))   # no price cell for the log's class: valued 0

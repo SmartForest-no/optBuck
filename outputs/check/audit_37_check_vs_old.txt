@@ -1,0 +1,18 @@
+============================================================= 
+  Audit: bucking check against the saved old optBuck output (R3)
+  Run: 2026-11-04 16:12:57.611852
+============================================================= 
+  [PASS  ] Check 01: Reader against the old getLogs() (>= 99.9 % per field; StartPos and file5's unclassified key named) | min share equal over the nine non-key fields 100.0000 % | StartPos named cause in TRUE | ProductKey named cause in TRUE | unmatched single-tree logs 0 | StartPos equal: file1 86.7 %, file3 85.3 %, file4 87.0 %, file5 100.0 %
+  [PASS  ] Check 02: Stem profiles equal the old getStemprofile() points | file1 identical 1.0000, file3 identical 1.0000, file4 identical 1.0000, file5 identical 1.0000
+  [PASS  ] Check 03: Permitted grades equal the old table except the unclassified product | file1 differs: 999999 | file3 differs: 999999 | file4 differs: 999999 | file5 differs: 999999
+  [PASS  ] Check 04: B5-3(i): the new optimum is never below the new value of an eligible old optimal pattern | file1: 6 of 287 old patterns eligible, 0 violations; file3: 50 of 297 old patterns eligible, 0 violations; file4: 487 of 3071 old patterns eligible, 0 violations; file5: 3 of 302 old patterns eligible, 0 violations
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result n
+1   PASS 4
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/check/audit_37_check_vs_old.csv

@@ -550,6 +550,7 @@ browser_checks <- c(
   "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
   "Check 47: Stems panel of the built-in source (R4 D2): the intro, Use this selection builds the species table (equal to the live counts) and two density plots, and any setting change clears it",
   "Check 49: Price tuning on the built-in stems (R4 D7), in Norsk: all sawlog assortments are listed (those without a target greyed with the reason), an Even target on the spruce sawlog makes it tunable, and a tuning on the default selection ends with a result or the too-few-logs message and no error",
+  "Check 50: Bucking check (tab 5, roadmap 8) as a background job, in Norsk: no run button before a file, the box for the products used is ticked, an upload for the tab and Run give the summary sentence (85,7 % on the synthetic file), the mode line, the stem figure and the two downloads; tab 2 shows no log position column when no assortment has a butt condition",
   "Check 48: Empty states and Help (R4 D1), in Norsk: a tree list with nothing loaded gives the message in Simulator and Pristilpasning and hides the run button; the Help tab has its three sections")
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -2350,6 +2351,35 @@ if (!browser_ok) {
             sprintf("greyed before: '%s' (run buttons %s) | after the Even target: %s '%s' | result: '%s' %s | error notifications %s%s",
                     substr(or_default(c49$off_before, ""), 1, 150), c49$run_before, or_default(c49$boxes, ""), or_default(c49$label, ""),
                     substr(or_default(c49$result, ""), 1, 80), trimws(or_default(c49$scope, "")), c49$nerr, err_txt(e49)))
+
+      # 50. Tab 5 on the synthetic fixture, in the fresh Norsk session (roadmap 8).
+      c50 <- list()
+      e50 <- try_drv({
+        app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+        c50$pos_col <- grepl("Plassering på stammen", txt(app, "#tbl_asm_a"), fixed = TRUE)
+        app$set_inputs(main_nav = "check", wait_ = FALSE); app$wait_for_idle()
+        app$wait_for_js("!!document.getElementById('chk_used_only')", timeout = 30 * 1000)
+        c50$run_before <- js(app, "document.querySelectorAll('#chk_run').length")
+        c50$used_box <- isTRUE(js(app, "document.getElementById('chk_used_only').checked"))
+        app$upload_file(chk_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_check_synthetic.hpr")); app$wait_for_idle()
+        app$wait_for_js("!!document.getElementById('chk_run')", timeout = 30 * 1000)
+        app$click("chk_run")
+        app$wait_for_js("!!document.querySelector('.chk-summary')", timeout = 180 * 1000)
+        c50$summary <- txt(app, ".chk-summary")
+        c50$mode <- txt(app, "#chk_results .note-muted")
+        c50$dl <- js(app, "document.querySelectorAll('#chk_dl_stems, #chk_dl_logs').length")
+        app$wait_for_js("!!document.querySelector('#chk_fig_degree img')", timeout = 30 * 1000)
+        c50$fig <- isTRUE(js(app, "!!document.querySelector('#chk_fig_degree img')"))
+        c50$nerr <- n_err_notif(app)
+        lshot(app, "50_check")
+      })
+      ok50 <- !nzchar(e50) && !c50$pos_col && identical(c50$run_before, 0L) && c50$used_box &&
+        grepl("Apteringsgrad 85,7", or_default(c50$summary, ""), fixed = TRUE) && grepl("bare de 3 sortimentene", or_default(c50$mode, ""), fixed = TRUE) &&
+        identical(c50$dl, 2L) && c50$fig && identical(c50$nerr, 0L)
+      rec(grep("^Check 50:", browser_checks, value = TRUE), if (ok50) PASS else FAIL,
+          sprintf("position column %s | run buttons before the file %s | used box %s | summary '%s' | mode '%s' | downloads %s | figure %s | error notifications %s%s",
+                  or_default(c50$pos_col, NA), c50$run_before, or_default(c50$used_box, NA), substr(or_default(c50$summary, ""), 1, 120),
+                  substr(or_default(c50$mode, ""), 1, 80), c50$dl, or_default(c50$fig, NA), c50$nerr, err_txt(e50)))
 
       # 48. Empty states and the Help tab (R4 D1), in a fresh Norsk session.
       c48 <- list()

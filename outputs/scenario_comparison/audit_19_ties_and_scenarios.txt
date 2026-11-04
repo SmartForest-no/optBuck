@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: tie-breaking and price-matrix scenarios
-  Run: 2026-10-27 16:38:08.654904
+  Run: 2026-11-04 16:07:22.126734
 ============================================================= 
 
 --- 01. Synthetic ties ---
@@ -43,7 +43,7 @@
   [PASS  ] Check 07: Tie-only difference not counted; value and volume changes counted | T1 changed=FALSE tie=TRUE | T2 changed=TRUE (gain 10.00) | T3 changed=TRUE (volume diff 0.010)
 
 --- 08. Backend scenario run ---
-  [PASS  ] Check 08: Scenario run re-prices exactly; changes have reasons; self-compare is 0 | 137 trees | changed 7, tie-only 0 | re-price max |diff| 0.0e+00 NOK | every change has a reason: TRUE | self-compare changed 0
+  [PASS  ] Check 08: Scenario run re-prices exactly; changes have reasons; self-compare is 0 | 278 trees | changed 9, tie-only 0 | re-price max |diff| 0.0e+00 NOK | every change has a reason: TRUE | self-compare changed 0
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

@@ -129,9 +129,28 @@ prepare_job_async <- function(spec, progress = function(done, total, what) NULL)
                      list(spec$stems, spec$species_map, spec$path, ROOT, spec$pd, spec$lc,
                           spec$list_params, spec$scenario, spec$grade_opts))
   } else {
-    progress(0L, NA_integer_, "Loading NFI data and taper profiles")
-    .backend_promise("prepare_sampled_job",
-                     list(spec$params, spec$path, ROOT, spec$pd, spec$lc, spec$scenario))
+    prepare_nfi <- function() {
+      progress(0L, NA_integer_, "Loading NFI data and taper profiles")
+      .backend_promise("prepare_sampled_job",
+                       list(spec$params, spec$path, ROOT, spec$pd, spec$lc, spec$scenario))
+    }
+    if (nfi_profiles_ready(ROOT)) return(prepare_nfi())
+    # First use of the built-in NFI source (roadmap 8, step 6): build the stem profile cache on the
+    # workers, with progress, then prepare the job. Never for tree lists or .hpr stems.
+    td <- nfi_cache_tree_data(ROOT)
+    gl <- .taper_chunk_globals(td, workers)
+    n_done <- 0L
+    progress(0L, nrow(td), "Building NFI stem profiles (first use only)")
+    promises::then(
+      .chunk_promises(.TAPER_CHUNK_EXPR, gl, function(i) {
+        n_done <<- n_done + nrow(gl[[i]]$td_c)
+        progress(n_done, nrow(td), "Building NFI stem profiles (first use only)")
+      }),
+      function(parts) {
+        progress(nrow(td), nrow(td), "Saving NFI stem profiles")
+        nfi_cache_write(.combine_taper(parts), nfi_cache_dir(ROOT))
+        prepare_nfi()
+      })
   }
 }
 
@@ -162,6 +181,39 @@ run_job_async <- function(spec, progress = function(done, total, what) NULL) {
         b <- .combine_chunks(outs)
         b$workers <- workers
         finish_job(job, b)
+      })
+  })
+}
+
+#' The bucking check of tab 5 as a background job (roadmap 8): bucking_check()'s three stages,
+#' prepare (read the file, build the job) on a worker, the best bucking in chunks on the workers
+#' (the same chunks as run_job_async()), finish (value the recorded logs, tables) on a worker.
+#'
+#' @param spec list(path, name, species_map (NULL = guessed), reject_zones, used_only).
+#' @param progress function(step, done, total), step "read", "opt", "val" or "tab".
+#' @return A promise of the bucking_check() result.
+run_check_async <- function(spec, progress = function(step, done, total) NULL) {
+  workers <- apter_workers()
+  .ensure_plan(workers)
+  progress("read", 0L, NA_integer_)
+  p0 <- .backend_promise("bucking_check", list(
+    path = spec$path, species_map = spec$species_map, filename = spec$name,
+    reject_zones = spec$reject_zones, used_only = spec$used_only, root = ROOT, stage = "prepare"))
+  promises::then(p0, function(prep) {
+    if (!inherits(prep, "check_prep")) return(prep)       # a final result: error, or no stem profiles
+    job <- prep$job
+    gl <- .buck_chunk_globals(job, workers)
+    n <- length(job$pvs); n_done <- 0L
+    progress("opt", 0L, n)
+    promises::then(
+      .chunk_promises(.BUCK_CHUNK_EXPR, gl, function(i) {
+        n_done <<- n_done + length(gl[[i]]$pv_c)
+        progress("opt", n_done, n)
+      }),
+      function(outs) {
+        progress("val", 0L, NA_integer_)
+        b <- .combine_chunks(outs); b$workers <- workers
+        .backend_promise("bucking_check", list(root = ROOT, stage = "finish", prep = prep, b = b))
       })
   })
 }
