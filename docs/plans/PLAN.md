@@ -513,7 +513,7 @@ After any context compaction re-read **this section** and `git log -15`. Rules: 
 
 After any context compaction re-read **this section** and `git log -15`. Rules (from Lennart's task, 2026-11-04): Stage A investigate + questions, STOP; Stage B plan, STOP for review; Stage C implement unattended. One git command per call, push only `git push origin optbuck-merge`, never merge. All UI texts in translations.csv (EN + NO), plain UI, product names exactly as in the file. Affected audits after each step, full suite at the end, `performance_check.R` must keep matching main. Private files never committed: `C:/apter_private/hpr/` (file1 REDACTED45, file2 REDACTED50 logs only, file3 Gobakken, file4 REDACTED38, file5 REDACTED39), `pin/`, `stanford_xsd/`; derived material under `C:/apter_private/` too. Keep StanForD names (StemKey, LogKey, ProductKey, GradeNumber, CuttingCategory ...). Ported code is rewritten (vectorised, no repeated XML parsing) but keeps its results unless a result is a documented bug.
 
-Status: **Stage A done and answered 2026-11-04; Stage B (plan) written 2026-11-04, waiting for Lennart's review. Stage C not started.** Setup done: old optBuck backup copied to `C:/apter_private/optBuck_old/` (HEAD `bc21411`), installed only into `C:/apter_private/optbuck_old_lib` (`R CMD INSTALL --library`; the default library is untouched). Reference runs: `C:/apter_private/optbuck_reference/run_old.R` (one process per file, checkpoints `ck_*.rds`), results in `C:/apter_private/optbuck_reference/file<n>/`.
+Status: **Stage A done and answered 2026-11-04; Stage B approved 2026-11-04 with changes (B10). **Stage C part 1 (steps 1-7) in progress**; part 2 (steps 8-9) only after Lennart's approval.** Setup done: old optBuck backup copied to `C:/apter_private/optBuck_old/` (HEAD `bc21411`), installed only into `C:/apter_private/optbuck_old_lib` (`R CMD INSTALL --library`; the default library is untouched). Reference runs: `C:/apter_private/optbuck_reference/run_old.R` (one process per file, checkpoints `ck_*.rds`), results in `C:/apter_private/optbuck_reference/file<n>/`.
 
 ### A1 Inventory of old optBuck (HEAD bc21411, version 0.1.0)
 
@@ -774,10 +774,10 @@ Result sections (all headings and labels in the text table below): **(1)** file 
 | chk_p_val | Valuing the recorded logs | Verdsetter de registrerte stokkene |
 | chk_p_tab | Preparing the tables | Lager tabellene |
 | chk_no_profile | This file has no stem diameters, so the best bucking cannot be calculated. Only the overview and the manual-cut figures are shown. | Denne filen har ingen stammediametre, så beste aptering kan ikke beregnes. Bare oversikten og tallene for manuelle kapp vises. |
-| chk_summary | %s of %s stems checked. Bucking degree %s %% (recorded %s kr, best possible %s kr). | %s av %s stammer kontrollert. Apteringsgrad %s %% (registrert %s kr, best mulig %s kr). |
+| chk_summary | %s of %s stems checked. Bucking yield index %s %% (recorded %s kr, best possible %s kr). | %s av %s stammer kontrollert. Apteringsgrad %s %% (registrert %s kr, best mulig %s kr). |
 | chk_h_file | File | Fil |
 | chk_h_overview | Overview | Oversikt |
-| chk_h_degree | Bucking degree | Apteringsgrad |
+| chk_h_degree | Bucking yield index | Apteringsgrad |
 | chk_h_assort | Per assortment | Per sortiment |
 | chk_h_length | Length distribution | Lengdefordeling |
 | chk_h_manual | Manual cuts | Manuelle kapp |
@@ -803,14 +803,14 @@ Result sections (all headings and labels in the text table below): **(1)** file 
 | chk_c_value | Value (kr) | Verdi (kr) |
 | chk_c_value_m3 | Value per m³ (kr) | Verdi per m³ (kr) |
 | chk_c_lost | Value lost (kr) | Tapt verdi (kr) |
-| chk_c_degree | Bucking degree (%) | Apteringsgrad (%) |
+| chk_c_degree | Bucking yield index (%) | Apteringsgrad (%) |
 | chk_c_all | All species | Alle treslag |
 | chk_c_logs | Logs | Stokker |
 | chk_c_volume | Settlement volume (m³) | Oppgjørsvolum (m³) |
 | chk_c_sawshare | Sawlog share of volume (%) | Sagtømmerandel av volum (%) |
-| chk_fig_degree | Bucking degree per stem, lowest first | Apteringsgrad per stamme, laveste først |
+| chk_fig_degree | Bucking yield index per stem, lowest first | Apteringsgrad per stamme, laveste først |
 | chk_ax_stems | Stems, sorted | Stammer, sortert |
-| chk_ax_degree | Bucking degree (%) | Apteringsgrad (%) |
+| chk_ax_degree | Bucking yield index (%) | Apteringsgrad (%) |
 | chk_ax_class | Length class (dm) | Lengdeklasse (dm) |
 | chk_ax_logs | Number of logs | Antall stokker |
 | chk_c_fit | Degree of fit, recorded (%) | Fordelingsgrad, registrert (%) |
@@ -819,8 +819,8 @@ Result sections (all headings and labels in the text table below): **(1)** file 
 | chk_m_all | Share of all logs cut manually (%) | Andel av alle stokker kappet manuelt (%) |
 | chk_m_saw | Share of sawlogs cut manually (%) | Andel av sagtømmerstokkene kappet manuelt (%) |
 | chk_m_butt | Share of butt logs that are sawlogs and were cut manually (%) | Andel av rotstokkene som er sagtømmer og ble kappet manuelt (%) |
-| chk_m_with | Bucking degree, stems with manual cuts (%) | Apteringsgrad, stammer med manuelle kapp (%) |
-| chk_m_without | Bucking degree, stems without manual cuts (%) | Apteringsgrad, stammer uten manuelle kapp (%) |
+| chk_m_with | Bucking yield index, stems with manual cuts (%) | Apteringsgrad, stammer med manuelle kapp (%) |
+| chk_m_without | Bucking yield index, stems without manual cuts (%) | Apteringsgrad, stammer uten manuelle kapp (%) |
 | chk_d_total | Share of the volume (%) | Andel av volumet (%) |
 | chk_d_dim | Share of the volume in sawlog dimensions (%) | Andel av volumet i sagtømmerdimensjon (%) |
 | chk_d_butt | Share of the butt log volume in sawlog dimensions (%) | Andel av rotstokkvolumet i sagtømmerdimensjon (%) |
@@ -831,21 +831,26 @@ Result sections (all headings and labels in the text table below): **(1)** file 
 | chk_x_reason | Reason | Årsak |
 | chk_x_count | Stems | Stammer |
 | chk_x_nodiam | No stem diameters | Ingen stammediametre |
-| chk_x_multi | Multi-tree stem | Flertrestamme |
+| chk_x_multi | Multi-tree stem | Stamme fra flertrehåndtering |
 | chk_x_species | Species without a bark model | Treslag uten barkmodell |
-| chk_x_broken | Broken top in sawlog dimension | Brukket topp i sagtømmerdimensjon |
+| chk_x_broken | Broken top in sawlog dimension | Toppbrudd i sagtømmerdimensjon |
 | chk_x_flat | Flat stem profile | Flat stammeprofil |
 | chk_x_steep | Too steep stem profile | For bratt stammeprofil |
 | chk_x_above | Recorded log above the measured profile | Registrert stokk over målt profil |
 | chk_x_nologs | No recorded logs | Ingen registrerte stokker |
 | chk_x_dup | Repeated stem number | Gjentatt stammenummer |
 | chk_x_outside | Stems with recorded logs outside the product limits (flagged, kept) | Stammer med registrerte stokker utenfor sortimentets grenser (merket, beholdt) |
+| chk_x_broken_kept | Possible broken top in sawlog dimension (flagged, kept) | Mulig toppbrudd i sagtømmerdimensjon (merket, beholdt) |
+| chk_stem_title | Selected stem: recorded and best possible bucking | Valgt stamme: registrert og best mulig aptering |
+| chk_stem_hint | Click a stem in the table to see its bucking. | Klikk på en stamme i tabellen for å se apteringen. |
+| chk_stem_recorded | Recorded | Registrert |
+| chk_stem_best | Best possible | Best mulig |
 | chk_x_over | Stems where the recorded value is above the best possible (flagged, kept) | Stammer der registrert verdi er høyere enn best mulig (merket, beholdt) |
-| chk_lim_a | The best possible bucking is pure value bucking. For products bucked to a length distribution, part of the difference is the cost of following that distribution, which the harvester does on purpose. The degree of fit and the harvester's allowed value loss per product (MAXDeviation) are shown where the file has them. | Beste aptering er ren verdiaptering. For sortiment som aptres etter en lengdefordeling er en del av forskjellen kostnaden ved å følge fordelingen, som hogstmaskinen gjør med vilje. Fordelingsgraden og hogstmaskinens tillatte verditap per sortiment (MAXDeviation) vises der filen har dem. |
-| chk_lim_b | The harvester bucked on a predicted upper stem, but the best possible bucking uses the whole measured stem. The figure therefore measures the harvester's bucking computer including its prediction of the stem. | Hogstmaskinen apterte på en predikert øvre stamme, mens beste aptering bruker hele den målte stammen. Tallet måler derfor hogstmaskinens apteringsdatamaskin, inkludert dens prediksjon av stammen. |
-| chk_lim_c | Quality codes, rot zones (logs the operator cut as waste) and forced cuts recorded by the operator are taken as true. | Kvalitetskoder, råtesoner (stokker føreren kappet som vrak) og tvungne kapp registrert av føreren regnes som riktige. |
+| chk_lim_a | The best possible bucking is pure value bucking. For products bucked to a length distribution, part of the difference is the cost of following that distribution, which the harvester does on purpose. The degree of fit and the harvester's allowed value loss per product (MAXDeviation) are shown where the file has them. | Beste aptering er ren verdiaptering. For sortiment som apteres etter en lengdefordeling er en del av forskjellen kostnaden ved å følge fordelingen, som hogstmaskinen gjør med vilje. Fordelingsgraden og hogstmaskinens tillatte verditap per sortiment (MAXDeviation) vises der filen har dem. |
+| chk_lim_b | The harvester bucked on a predicted upper stem, but the best possible bucking uses the whole measured stem. The figure therefore measures the harvester's bucking system, including its prediction of the stem. | Hogstmaskinen apterte på en prognostisert øvre del av stammen, mens beste aptering bruker hele den målte stammen. Tallet måler derfor hogstmaskinens apteringssystem, inkludert prognosen for stammen. |
+| chk_lim_c | Quality codes, rot zones (logs the operator cut as waste) and forced cuts recorded by the operator are taken as true. | Kvalitetskoder, råtesoner (stokker føreren kappet som vrak) og tvangskapp registrert av føreren regnes som riktige. |
 | chk_lim_d | Only the harvester's own measurements are used; there are no control measurements. | Bare hogstmaskinens egne målinger brukes; det finnes ingen kontrollmålinger. |
-| chk_lim_e | A cut is counted as manual unless its cutting reason is "Automatic" or "Spinning". | Et kapp regnes som manuelt med mindre kappgrunnen er «Automatic» eller «Spinning». |
+| chk_lim_e | A cut is counted as manual unless its cutting reason is "Automatic" or "Spinning". | Et kapp regnes som manuelt med mindre kappårsaken er «Automatic» eller «Spinning». |
 | chk_lim_f | Recorded and best possible logs are priced in the same way, by whole centimetres of top diameter under bark, so the harvester's own price classes can differ slightly. | Registrerte og best mulige stokker prises på samme måte, etter hele centimeter toppdiameter under bark, så hogstmaskinens egne prisklasser kan avvike litt. |
 | chk_ctl_vol | Settlement volume: recorded by the harvester vs calculated here (m³) | Oppgjørsvolum: registrert av hogstmaskinen mot beregnet her (m³) |
 | chk_ctl_diff | Difference (%) | Avvik (%) |
@@ -861,7 +866,7 @@ Result sections (all headings and labels in the text table below): **(1)** file 
 | nfi_build_detail | %s of %s trees, about %s min left | %s av %s trær, ca. %s min igjen |
 | nfi_build_done | The stem profiles are saved for later use. | Stammeprofilene er lagret til senere bruk. |
 | help_use_5 | 5 Bucking check: compare the harvester's recorded bucking in an .hpr file with the best possible bucking under the file's own instruction. | 5 Kontroll av aptering: sammenlign hogstmaskinens registrerte aptering i en .hpr-fil med best mulig aptering etter filens egen instruks. |
-| help_t_degree | Bucking degree: recorded value divided by best possible value. | Apteringsgrad: registrert verdi delt på best mulig verdi. |
+| help_t_degree | Bucking yield index: recorded value divided by best possible value. | Apteringsgrad: registrert verdi delt på best mulig verdi. |
 
 Existing ids reused unchanged: `lbl_dist_apportion`, `lbl_dist_maxdev`, product-name display, species names. Messages from the backend (`$warnings`, `$info`) get `msg` rows in the same table (one per message template, audit 28 check). Backend-created text stays English (CLAUDE.md rule).
 
@@ -927,3 +932,13 @@ Options and env names: new `optBuck.workers`/`OPTBUCK_WORKERS`, with the old `ap
 - **Risks:** (1) the old-rules reproduction (B5-1) needs the new reader to reproduce positions to the cm; the recorded `StartPos` differs from cumulative lengths by 1-9 cm in up to 16 % of the logs (file3/4): the plan uses the recorded value like old `getBucking` and falls back to cumulative lengths when absent (file5), and both are tested; (2) `ProductCondition` changes real results for file5 assortments (documented, decision 14); (3) moving to `inst/app` touches every path in the app and audit 17 (about 6 h of the package step are reserved for it); (4) `R CMD check` on a package with 12 k lines of script-style code will show many notes (undefined globals, non-ASCII); they are listed, not hidden; (5) first NFI build blocks one R session for 1-3 min (shown with progress), acceptable for a one-time step.
 
 *Stage B ends here. Waiting for Lennart's review before Stage C starts.*
+
+
+### B10 Changes approved by Lennart with the Stage B review (2026-11-04) — logged
+
+1. **Stage C runs in two parts.** Part 1 = steps 1-7. After step 7: affected audits plus audits 17, 28 and 36-38, push, and STOP with a report (commits, audits, the R3 table, tab 5 numbers for file1 and file5 with runtime, decisions) so Lennart can test tab 5. Part 2 = steps 8-9 (package conversion, finish) starts only after Lennart's approval. (B3 order unchanged.)
+2. **B7-2 changed.** Continue if, in old-rules mode, at least **95 %** of stems per file equal the old actual value to 0.01 NOK **and** every remaining difference is assigned to a named cause in the R3 table (StartPos rounding, multi-tree stale values, off-grid log ends, ...). Stop only for differences that cannot be explained. **B5-3(i) stays a hard stop** (new optimum below the new value of an eligible old optimal pattern).
+3. **Broken top (item 9, B2).** Before excluding, report per file the number and share of stems the rule would hit. If the share is above 5 % in any file the stems are **kept and flagged** ("Possible broken top in sawlog dimension", `chk_x_broken_kept`) and the numbers are logged for Lennart; at or below 5 % they are excluded as planned.
+4. **Step 2 (NFI permutation).** Simulator results must stay identical (translated baseline). Price tuning on NFI stems uses a seeded sample that depends on ID order, so its numbers may change: accepted, before/after for the default NFI tuning case is reported and logged; not a stop.
+5. **Tab 5 addition.** Clicking a stem in the per-stem table shows its recorded and best possible bucking side by side with the existing stem diagram (`apter_stem_compare()`), labels "Registrert" / "Best mulig" (EN "Recorded" / "Best possible"); text rows `chk_stem_*` added to B2a; audit 17 gets a check.
+6. **Text changes applied in B2a:** EN "Bucking degree" -> "Bucking yield index" everywhere (the Norwegian "apteringsgrad" stays); fördelningsgrad stays "Degree of fit" (the term the app already uses, `tn_col_fg`); NO "aptres" -> "apteres", "kappgrunnen" -> "kappårsaken", "tvungne kapp" -> "tvangskapp", `chk_x_broken` "Toppbrudd i sagtømmerdimensjon", `chk_x_multi` "Stamme fra flertrehåndtering", and the new wording of `chk_lim_b` in both languages.
