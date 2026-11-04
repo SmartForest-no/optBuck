@@ -397,7 +397,8 @@ read_hpr <- function(path, filename = basename(path)) {
        header = list(file = filename, version = unname(att["version"]),
                      read = how, mb_read = if (how == "prefix") round(length(pre$bytes) / 1048576, 2) else NA,
                     mb_file = round(file.size(path) / 1048576, 2)),
-       species = species, products = products)
+       species = species, products = products, unclassified_keys = unclassified_keys,
+       grade_names = grade_names)
 }
 
 
