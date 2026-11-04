@@ -466,7 +466,7 @@ Order in Stage C: D3 -> D1 -> D2 -> D4 -> D6 -> D5 -> D7, one commit per finishe
 - Export builds diameter classes from whole cm x 10 (`R/helpers_hpr_export.R:156`); `FileDiameterClass_mm` survives `pm_minimal()`.
 - Summary numbers all available (`per_m3_summary` Total, `selected_logs_all`, `assortment_summary()`, `compare_by_type()`).
 
-## R5 Kvalitetskoder og sortimenttyper (done, ready for review, not merged) — branch `grades`
+## R5 Kvalitetskoder og sortimenttyper (done and merged 2026-11-04) — branch `grades`
 
 After any context compaction re-read **this section** and `git log -15`. Rules: one git command per call (no &&), push only `git push origin grades`, never merge; every UI text in translations.csv (EN + NO); affected audits after each step, full suite at the end; private files in C:/apter_private/hpr/ never committed (REDACTED45 = file1, Gobakken = file3, file5 = REDACTED39).
 
