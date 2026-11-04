@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: distribution import and export (Phase 7a)
-  Run: 2026-11-03 09:53:40.104411
+  Run: 2026-11-04 11:06:11.738866
 ============================================================= 
 
 --- 01. Import: Distribution per cell and the four product fields ---
@@ -70,7 +70,7 @@
   [PASS  ] Check 32: Row sums; the flag is TRUE only for a sum that is neither 0 nor 100; a cell without a price and a value outside 0-100 are refused | sums TRUE | refused: 'The cell has no price: no target can be ' / 'A target is between 0 and 100 percent.'
 
 --- 33. Editor: the four fields ---
-  [PASS  ] Check 33: First target sets Allowed TRUE, 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared | file fields kept TRUE | first target TRUE | category TRUE | cleared TRUE | kept when set TRUE
+  [PASS  ] Check 33: First target sets Allowed FALSE (roadmap 8 R5), 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared | file fields kept TRUE | first target TRUE | category TRUE | cleared TRUE | kept when set TRUE
 
 --- 34. Scenario xlsx round trip of the target and the file classes ---
   [PASS  ] Check 34: Scenario xlsx round trip: Distribution, FileDiameterClass_mm and the four fields identical (sheets target_<n>, file_classes); no extra sheets or columns without data; price data unchanged | cells + file classes TRUE | fields TRUE | sheets TRUE (assortments,spruce_spruce_pulpwood,spruce_spruce_sawlog,flat_prices,target_1,file_classes) | editor target TRUE | no data, no extra sheets TRUE | prices TRUE

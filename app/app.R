@@ -1,8 +1,8 @@
 # app/app.R
 #
 # Purpose : Shiny app for Apter, the bucking simulator (shown as "optBuck" in the app).
-#           Two tabs (Phase 4c): Assortments and prices (price sets A and B),
-#           Simulator (NFI data or tree list; compares Scenarios A and B when B differs).
+#           Tabs: 1 Stems, 2 Assortment specifications and prices (Scenarios A and B),
+#           3 Simulator (compares A and B when B differs), 4 Price tuning, then Help.
 #
 # Run     : from the project root,
 #             shiny::runApp("app")   or   shiny::runApp("app/app.R")

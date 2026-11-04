@@ -1,6 +1,6 @@
 # app/server_scenarios.R
 #
-# Purpose : The "Assortments and prices" tab (Phase 4d): Scenario A and
+# Purpose : The "2 Assortment specifications and prices" tab (Phase 4d): Scenario A and
 #           Scenario B, each with its own assortment table and price matrices.
 #           Called from server() in app_server.R; returns the reactives the
 #           runs need.

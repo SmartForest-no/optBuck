@@ -3,7 +3,7 @@
 # Purpose : The "Price tuning" tab (roadmap 7, session 3, 2026-10-30; restructure
 #           R3, 2026-10-30; R4 D5/D7, 2026-11-02). Tunes the prices of the sawlog
 #           assortments of Scenario A or B that have a target distribution (set in
-#           the target view of Assortments and prices, or read from an .hpr/.pin
+#           the target view of 2 Assortment specifications and prices, or read from an .hpr/.pin
 #           file), several at once, on the stems of the chosen source (the built-in
 #           selection, a tree list or .hpr stems), and offers the tuned prices as the
 #           other scenario (R/helpers_price_tuning.R). All sawlog assortments are

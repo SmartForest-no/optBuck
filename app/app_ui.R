@@ -4,9 +4,9 @@
 #           theme.R and helpers_ui.R.
 #           Not named ui.R: Shiny/shinytest2 reject ui.R/server.R next to app.R.
 #
-# Layout  : bslib page_navbar (Bootstrap 5) with two tabs: Assortments and
-#           prices (opens first; Scenario A and Scenario B side by side,
-#           Phase 4d) and Simulator. Styling is in www/apter.css and theme.R;
+# Layout  : bslib page_navbar (Bootstrap 5) with four numbered tabs (1 Stems,
+#           2 Assortment specifications and prices with Scenario A and B,
+#           3 Simulator, 4 Price tuning) and Help. Styling is in www/apter.css and theme.R;
 #           no inline colours here. The app shows the name "optBuck".
 #
 # Text    : every text is an id of the translation table (t_(), helpers_ui.R;
@@ -14,7 +14,7 @@
 #           browser switches language without a reload (www/apter.js), and
 #           the server re-renders its outputs in the chosen language.
 
-# ---- Assortments and prices --------------------------------------------------------
+# ---- 2 Assortment specifications and prices --------------------------------------------------------
 
 # One scenario column, one connected flow (layout-and-figures): the
 # assortment table (click a row to select it; the selection is shared by A

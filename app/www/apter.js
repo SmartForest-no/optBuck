@@ -2,7 +2,7 @@
    Shows the run progress bar as soon as Run is clicked, before the server
    answers (Phase 4d); the server's run_status output then replaces it with
    staged progress. Cleared when the server rejects the run.
-   Also: class toggles and flat price edits for the Assortments and prices tab.
+   Also: class toggles and flat price edits for the Assortment specifications and prices tab (tab 2).
    Language (Phase 1, 2026-10-27): the navbar switch (Norsk | English). The
    choice comes from ?lang= in the URL, else the browser's last choice
    (localStorage), else the page's start language (meta apter-lang). Static

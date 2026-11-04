@@ -124,13 +124,13 @@ dist_clear <- function(pm, id) {
 }
 
 #' The four distribution fields when an assortment gets a target for the first
-#' time (all four NA): allowed, "Volume of logs", within product, MAXDeviation
-#' 0 (the values the owner's spruce 140 SCA sawlog carries, except
-#' MAXDeviation). Fields from a file are kept as they are.
+#' time (all four NA): NOT allowed (distribution bucking unticked; roadmap 8 R5),
+#' "Volume of logs", within product, MAXDeviation 0 (hidden in the app until
+#' the box is ticked). Fields from a file are kept as they are.
 dist_init_fields <- function(defs, id) {
   i <- .dist_def_row(defs, id)
   if (all(is.na(unlist(defs[i, DISTRIBUTION_DEF_COLS, drop = FALSE])))) {
-    defs$DistributionAllowed[i] <- TRUE
+    defs$DistributionAllowed[i] <- FALSE
     defs$DistributionCategory[i] <- "Volume of logs"
     defs$DistributionWithinProduct[i] <- TRUE
     defs$MAXDeviation[i] <- 0

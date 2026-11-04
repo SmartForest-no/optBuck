@@ -2,7 +2,7 @@
 # scripts/polish_screenshots.R (R4, 2026-11-02)
 #
 # Review screenshots of every tab in one language: the Stems panel for the
-# built-in and the .hpr source, Assortments and prices, the Simulator summary
+# built-in and the .hpr source, 2 Assortment specifications and prices, the Simulator summary
 # and result tabs, Price tuning with each matrix view, and Help. The images go
 # to outputs/app_smoke/review/polish/ (gitignored). Uses the synthetic tuning
 # fixture (120 invented stems); nothing private.
@@ -56,7 +56,7 @@ shot("01a_stems_builtin_before")
 app$click("stems_use_nfi"); app$wait_for_idle()
 app$wait_for_js("Array.from(document.querySelectorAll('#fig_stem_dists img')).some(function(e){ return e.offsetParent !== null && e.naturalWidth > 0; })", timeout = 60 * 1000)
 shot("01b_stems_builtin_panel")
-# 2. Assortments and prices; a difference in B for a comparison
+# 2. Assortment specifications and prices; a difference in B for a comparison
 nav("prices")
 app$run_js("Shiny.setInputValue('flat_edit', {side: 'B', key: 'spruce_pulpwood', value: '420'}, {priority: 'event'});")
 app$wait_for_idle(); shot("02_prices")

@@ -645,14 +645,14 @@ ok33a <- identical(fields_of(kept, i_saw), fields_of(d33, i_saw))          # fro
 pulp_k <- keyof(hpr$s, "Spruce Pulpwood"); j <- match(pulp_k, ks33)
 d33n <- dist_clear_fields(d33, pulp_k)                                      # an assortment without the fields
 fresh <- dist_init_fields(d33n, pulp_k)
-ok33b <- isTRUE(fresh$DistributionAllowed[j]) && identical(fresh$DistributionCategory[j], "Volume of logs") &&
+ok33b <- identical(fresh$DistributionAllowed[j], FALSE) && identical(fresh$DistributionCategory[j], "Volume of logs") &&
   isTRUE(fresh$DistributionWithinProduct[j]) && identical(fresh$MAXDeviation[j], 0)
 cat33 <- dist_set_category(fresh, pulp_k, "Number of logs")
 ok33c <- identical(cat33$DistributionCategory[j], "Number of logs") &&
   inherits(tryCatch(dist_set_category(fresh, pulp_k, "x"), error = function(e) e), "error")
 ok33d <- all(is.na(unlist(dist_clear_fields(fresh, pulp_k)[j, FIELDS])))
 ok33e <- identical(dist_init_fields(cat33, pulp_k), cat33)                   # fields already there: kept
-rec("Check 33: First target sets Allowed TRUE, 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared",
+rec("Check 33: First target sets Allowed FALSE (roadmap 8 R5), 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared",
     ok(ok33a && ok33b && ok33c && ok33d && ok33e), sprintf("file fields kept %s | first target %s | category %s | cleared %s | kept when set %s", ok33a, ok33b, ok33c, ok33d, ok33e))
 
 # ==============================================================================
