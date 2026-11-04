@@ -145,10 +145,13 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
     # without grades), whichever way the column is missing on one side.
     perm <- function(x, k, col) if (col %in% names(x$pd))
       norm_permitted_grades(x$pd[[col]][match(k, x$pd$ProductKey)]) else NA_character_
+    butt <- function(x, k) if ("ButtCondition" %in% names(x$pd))
+      as.character(x$pd$ButtCondition[match(k, x$pd$ProductKey)]) else NA_character_
     for (k in intersect(a$keys, b$keys)) {
+      if (!identical(butt(a, k), butt(b, k))) return(FALSE)
       for (col in c("PermittedGrades", "ReferenceGrades"))
         if (!identical(perm(a, k, col), perm(b, k, col))) return(FALSE)
-      cols <- setdiff(intersect(names(a$pd), names(b$pd)), c("PermittedGrades", "ReferenceGrades"))
+      cols <- setdiff(intersect(names(a$pd), names(b$pd)), c("PermittedGrades", "ReferenceGrades", "ButtCondition"))
       ra <- a$pd[a$pd$ProductKey == k, cols, drop = FALSE]
       rb <- b$pd[b$pd$ProductKey == k, cols, drop = FALSE]
       la <- a$lc[a$lc$ProductKey == k, , drop = FALSE]

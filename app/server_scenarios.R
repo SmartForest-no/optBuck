@@ -170,17 +170,18 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       butt = dash(d$MaxButtDiameter_cm),
       length = rng(p$MinLength, p$MaxLength),
       method = unname(VOLUME_METHOD_SHORT[d$VolumeDiameterCategory]),
+      position = ifelse(is.na(d$ButtCondition), "\u2013", BUTT_POSITION_VALUES[match(d$ButtCondition, BUTT_CONDITIONS)]),
       pricing = ifelse(d$PriceType == "matrix", "Matrix", "Flat"),
       stringsAsFactors = FALSE)
   }
   # Field -> column title (text id).
   ASM_COL_IDS <- c(name = "col_assortment", type = "col_type", species = "col_species", top = "col_top_d_cm",
                    butt = "col_max_butt_d_cm", length = "col_length_cm",
-                   method = "col_volume_method", pricing = "col_pricing")
+                   method = "col_volume_method", position = "asm_c_butt", pricing = "col_pricing")
   # Display values: names, species, volume methods and pricing in `l`; the
   # decimal comma in Norsk.
   show_values <- function(disp, l) {
-    for (n in c("name", "species", "method", "pricing")) disp[[n]] <- tr_value(disp[[n]], l)
+    for (n in c("name", "species", "method", "position", "pricing")) disp[[n]] <- tr_value(disp[[n]], l)
     if (l == "no") for (n in c("top", "butt", "length"))
       disp[[n]] <- gsub(".", ",", disp[[n]], fixed = TRUE)
     disp
@@ -392,6 +393,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     }
     rows$PermittedGrades <- if (!is.null(old_row)) old_row$PermittedGrades else NA_character_   # hidden; kept on edits
     rows$ReferenceGrades <- if (!is.null(old_row)) old_row$ReferenceGrades else NA_character_
+    rows$ButtCondition <- if (!is.null(old_row)) old_row$ButtCondition else NA_character_   # read-only
     for (n in c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS))   # hidden fields (Phase 7a, R4 D6); kept on edits
       rows[[n]] <- if (!is.null(old_row)) old_row[[n]] else rows[[n]][NA_integer_]
     errs <- list(); start <- NULL

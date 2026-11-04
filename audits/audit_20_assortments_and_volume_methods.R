@@ -277,7 +277,9 @@ rec("Check 07b: Poles outside their butt limit are never selected, even at 1e6 N
 # ==============================================================================
 section("08. Default products unchanged")
 
-base_path <- file.path(root_dir, "outputs", "assortments", "baseline_phase4b_default.rds")
+# Roadmap 8: the baseline with the NFI tree numbers translated to the permuted ids (values untouched).
+base_path <- file.path(root_dir, "outputs", "assortments", "baseline_phase4b_default_newids.rds")
+if (!file.exists(base_path)) base_path <- file.path(root_dir, "outputs", "assortments", "baseline_phase4b_default.rds")
 if (!file.exists(base_path)) {
   rec("Check 08a: Baseline file present", FAIL, base_path)
 } else {

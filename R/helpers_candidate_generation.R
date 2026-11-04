@@ -167,6 +167,11 @@ grade_flags <- function(o) unlist(normalize_grade_opts(o)[c("use_grades", "cut_a
          # stem without grade data: no grades, no reference grade, or the two sets meet.
          grades = if ("PermittedGrades" %in% names(prow)) {
            g <- permitted_grades_set(prow$PermittedGrades); if (length(g)) g },
+         # Roadmap 8: "only" = only the log that starts at the first cut, "not" = never that log
+         butt = {
+           b <- if ("ButtCondition" %in% names(prow)) as.character(prow$ButtCondition) else NA_character_
+           if (isTRUE(b == "Buck butt-log only")) "only" else if (isTRUE(b == "Do not buck butt log")) "not" else NA_character_
+         },
          ref_ok = {
            g <- if ("PermittedGrades" %in% names(prow)) permitted_grades_set(prow$PermittedGrades) else numeric(0)
            r <- if ("ReferenceGrades" %in% names(prow)) permitted_grades_set(prow$ReferenceGrades) else numeric(0)
@@ -342,6 +347,10 @@ price_len_of <- function(p, log_len)
         if (isTRUE(plan$cut_at_changes))
           eligible <- eligible & (chg_cum[hi + 1L] - chg_cum[pmin(lo + 1L, n_cells + 1L)]) <= 0L
       }
+
+      # ProductCondition: the butt log is the log that starts at the first cut.
+      if (!is.na(p$butt))
+        eligible <- eligible & (if (p$butt == "only") start_pos == stump_height_cm else start_pos != stump_height_cm)
 
       if (usable_only) {
         ii <- which(eligible)

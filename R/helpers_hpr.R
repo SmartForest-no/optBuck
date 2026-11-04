@@ -154,6 +154,7 @@ guess_hpr_species <- function(name, user_id = NA) {
     volume_adjustment = .hx1(cp, "./PriceDefinition/VolumeDiameterAdjustment"),
     volume_length = .hx1(cp, "./PriceDefinition/VolumeLengthCategory"),
     volume_under_bark = .hx1(cp, "./PriceDefinition/VolumeUnderBark"),
+    condition = .hx1(cp, "./ProductCondition"),   # roadmap 8: "Buck always" | "Buck butt-log only" | "Do not buck butt log"
     grades = if (inherits(xml2::xml_find_first(cp, "./PermittedGradesDefinition"), "xml_missing")) NULL
              else suppressWarnings(as.numeric(grades)),
     cells = data.frame(
@@ -738,6 +739,8 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
           if (length(r)) norm_permitted_grades(paste(r, collapse = ";")) else NA_character_
         },
         HprProductKey = if (identical(hpr$kind, "pin")) NA_character_ else p$key,
+        # Roadmap 8: where on the stem the product may be cut (NA = anywhere)
+        ButtCondition = if (isTRUE(p$condition %in% BUTT_CONDITIONS)) p$condition else NA_character_,
         # Phase 7a: the product's LengthDistributionDefinition (NA = the file has none)
         DistributionAllowed = p$dist_allowed, DistributionCategory = p$dist_category,
         DistributionWithinProduct = p$dist_within, MAXDeviation = p$dist_maxdev,

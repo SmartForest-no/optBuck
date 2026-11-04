@@ -475,12 +475,19 @@ DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
 #' The hidden source fields of the assortment table.
 SOURCE_DEF_COLS <- c("SourceXml", "SourceFingerprint", "SourceCells")   # SourceCells: cells of source diameter classes without a whole-cm row
 
+#' Where on the stem a product may be cut (StanForD ProductCondition; roadmap 8, 2026-11-04):
+#' "Buck butt-log only" = only as the log that starts at the first cut, "Do not buck butt log" =
+#' never as that log; NA ("Buck always") = anywhere. Shown read-only in the assortment table.
+BUTT_CONDITIONS <- c("Buck butt-log only", "Do not buck butt log")
+#' Their display values in the assortment table (translated by tr_value()).
+BUTT_POSITION_VALUES <- c("Butt log only", "Not butt log")
+
 #' Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "TypeUser", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
-  "PermittedGrades", "ReferenceGrades", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)
+  "PermittedGrades", "ReferenceGrades", "ButtCondition", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)
 
 # "TRUE"/"true"/TRUE -> TRUE, "FALSE"/... -> FALSE, anything else NA.
 .dist_logical <- function(x) {
@@ -570,7 +577,7 @@ assortment_table_keys <- function(defs) {
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "TypeUser", "Species", "VolumeDiameterCategory",
                                           "PriceType", "PriceLengths_cm", "PermittedGrades",
-                                          "ReferenceGrades", "HprProductKey",
+                                          "ReferenceGrades", "ButtCondition", "HprProductKey",
                                           "DistributionAllowed", "DistributionCategory",
                                           "DistributionWithinProduct", SOURCE_DEF_COLS))
   # Files without the hidden Type: rows are user assortments (commercial).
@@ -587,6 +594,9 @@ assortment_table_keys <- function(defs) {
   d$PermittedGrades <- norm_permitted_grades(d$PermittedGrades)
   if (!"ReferenceGrades" %in% names(d)) d$ReferenceGrades <- rep(NA_character_, nrow(d))
   d$ReferenceGrades <- norm_permitted_grades(d$ReferenceGrades)
+  # Tables without the butt condition (all but hpr imports): anywhere on the stem.
+  if (!"ButtCondition" %in% names(d)) d$ButtCondition <- rep(NA_character_, nrow(d))
+  bc <- trimws(as.character(d$ButtCondition)); d$ButtCondition <- ifelse(bc %in% BUTT_CONDITIONS, bc, NA_character_)
   # The same for the hidden .hpr ProductKey (hpr imports; used by the .hpr export).
   if (!"HprProductKey" %in% names(d)) d$HprProductKey <- rep(NA_character_, nrow(d))
   hk <- trimws(as.character(d$HprProductKey))
@@ -628,6 +638,7 @@ defs_from_products <- function(pd) {
     PriceType = pd$PriceType,
     PermittedGrades = if ("PermittedGrades" %in% names(pd)) pd$PermittedGrades else NA_character_,
     ReferenceGrades = if ("ReferenceGrades" %in% names(pd)) pd$ReferenceGrades else NA_character_,
+    ButtCondition = if ("ButtCondition" %in% names(pd)) pd$ButtCondition else NA_character_,
     stringsAsFactors = FALSE))
 }
 
@@ -702,6 +713,9 @@ products_from_defs <- function(defs, pm) {
   if (any(!is.na(pg))) pd$PermittedGrades <- as.character(pg)
   rg <- if ("ReferenceGrades" %in% names(defs)) defs$ReferenceGrades else rep(NA, nrow(defs))
   if (any(!is.na(rg))) pd$ReferenceGrades <- as.character(rg)
+  # Butt condition (hpr imports only): the column is added only when some row has one.
+  bcn <- if ("ButtCondition" %in% names(defs)) defs$ButtCondition else rep(NA, nrow(defs))
+  if (any(!is.na(bcn))) pd$ButtCondition <- as.character(bcn)
   list(pd = pd, lc = lc)
 }
 
