@@ -77,7 +77,8 @@ for (.h in c("helpers_utils", "helpers_paths", "helpers_i18n", "helpers_volume_m
              "helpers_parallel",
              "helpers_price_matrix", "helpers_comparison", "helpers_heights",
              "helpers_tree_list", "helpers_tree_selection", "helpers_hpr", "helpers_hpr_stems",
-             "helpers_hpr_export", "helpers_pin_export", "helpers_result_tables")) {
+             "helpers_hpr_export", "helpers_pin_export", "helpers_result_tables",
+             "helpers_hpr_logs", "helpers_check")) {
   src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
   if (!file.exists(src)) stop("Helper not found: ", src)
   source(src, local = FALSE)
@@ -771,10 +772,10 @@ prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
 prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "default_2021",
                                   root = get_root_dir(), products = NULL,
                                   length_classes = NULL, params = list(), scenario = NULL,
-                                  grade_opts = NULL) {
+                                  grade_opts = NULL, reject = NULL) {
   # The profiles carry the stem grades only when a scenario uses them.
   grades <- any(grade_flags(grade_opts), grade_flags(scenario$grade_opts))
-  prepare_hpr_job(hpr_stem_profiles(stems, species_map, grades = grades), price_matrix_path, root,
+  prepare_hpr_job(hpr_stem_profiles(stems, species_map, grades = grades, reject = reject), price_matrix_path, root,
                   products, length_classes, params, scenario, grade_opts)
 }
 

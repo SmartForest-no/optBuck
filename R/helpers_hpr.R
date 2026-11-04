@@ -370,6 +370,19 @@ read_hpr <- function(path, filename = basename(path)) {
     errors <- c(errors, sprintf("Product key(s) defined twice: %s.",
                                 paste(unique(pkeys[duplicated(pkeys)]), collapse = ", ")))
   names(products) <- pkeys
+  # Roadmap 8: the unclassified product(s) = waste logs. Found by the element, not by the number
+  # (999999 in most files, 2147483647 in one of the owner's).
+  unclassified_keys <- unique(.hall(machine, "./ProductDefinition[UnclassifiedProductDefinition]/ProductKey"))
+  # Roadmap 8: the file's own grade names per species group (GradeNumber -> GradeName).
+  grade_names <- do.call(rbind, c(list(data.frame(species_key = character(0), grade = numeric(0),
+                                                  name = character(0), stringsAsFactors = FALSE)),
+    lapply(sgs, function(s) {
+      g <- xml2::xml_find_all(s, "./Grades/Grade")
+      if (length(g) == 0L) return(NULL)
+      data.frame(species_key = .hx1(s, "./SpeciesGroupKey"),
+                 grade = suppressWarnings(as.numeric(vapply(g, .hx1, "", "./GradeNumber"))),
+                 name = vapply(g, .hx1, "", "./GradeName"), stringsAsFactors = FALSE)
+    })))
 
   if (nrow(species) > 0L)
     species$n_products <- vapply(species$key, function(k)

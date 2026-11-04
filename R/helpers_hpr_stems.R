@@ -440,7 +440,18 @@ hpr_grade_grid <- function(g, gpos, gval, start_grade, step = HPR_PROFILE_STEP_C
 #'   diameterPosition, DiameterValue, DBH, height_m; for
 #'   profiles_to_profile_vectors()) and excluded (treid, species_group_name,
 #'   excluded_reason).
-hpr_stem_profiles <- function(st, species_map, grades = FALSE) {
+#' Cells (10 cm, [g, g+10)) inside recorded waste logs: the whole cells of [ceiling(start/10)*10,
+#' + floor(length/10)*10). This is the zone the old optBuck set to grade -1 (roadmap 8).
+#' @param g Grid positions (cm); start,len the waste logs of one stem (cm).
+hpr_reject_cells <- function(g, start, len, step = HPR_PROFILE_STEP_CM) {
+  out <- rep(FALSE, length(g))
+  if (!length(start)) return(out)
+  s0 <- ceiling(start / step) * step; e0 <- s0 + floor(len / step) * step
+  for (j in seq_along(s0)) out <- out | (g >= s0[j] & g + step <= e0[j])
+  out
+}
+
+hpr_stem_profiles <- function(st, species_map, grades = FALSE, reject = NULL) {
   ck <- hpr_stem_checks(st, species_map)
   if (is.null(ck$use)) return(ck)
   s <- st$stems; use <- ck$use
@@ -452,6 +463,7 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE) {
   }
   step <- HPR_PROFILE_STEP_CM
   off_grid <- 0L
+  rjl <- if (!is.null(reject)) split(reject, as.character(reject$stem_key))   # recorded waste logs per stem
   prof <- lapply(use, function(i) {
     ii <- rows[[i]]; p <- st$pos[ii]; d <- st$d[ii]
     o <- order(p); p <- p[o]; d <- d[o]
@@ -462,7 +474,8 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE) {
     }
     list(g = g, d = dg,
          dbh = dbh_from_profile(hpr_height_above_ground(p, ck$offset[i]), d),   # at 1.3 m above ground
-         grade = if (grades) hpr_grade_grid(g, st$gpos[grows[[i]]], st$gval[grows[[i]]], sgrade[i]))
+         grade = if (grades) hpr_grade_grid(g, st$gpos[grows[[i]]], st$gval[grows[[i]]], sgrade[i]),
+         rej = if (!is.null(rjl)) { w <- rjl[[as.character(s$stem_key[i])]]; hpr_reject_cells(g, w$start, w$length) })
   })
   ng <- vapply(prof, function(q) length(q$g), 0L)
   key <- s$stem_key[use]
@@ -477,6 +490,7 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE) {
                              sesong = rep(NA, length(use)), species_group = ck$species[use],
                              dbh_cm = dbh_mm / 10, height_m = height_m,
                              height_source = rep("Measured profile", length(use)), stringsAsFactors = FALSE)
+  if (!is.null(rjl)) ck$profiles$reject <- unlist(lapply(prof, `[[`, "rej"), use.names = FALSE)
   if (grades) {
     ck$profiles$grade <- unlist(lapply(prof, `[[`, "grade"), use.names = FALSE)
     # The stem's file (R5): which files' grades a scenario uses is decided per file (grade_files).

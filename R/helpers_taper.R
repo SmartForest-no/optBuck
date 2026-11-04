@@ -266,6 +266,7 @@ profiles_to_profile_vectors <- function(profiles,
   dv_col   <- profiles$DiameterValue
   grade_col <- profiles$grade                       # NULL unless the profiles carry grades
   file_col  <- profiles$file                        # the stem file (.hpr stems with grades, R5)
+  reject_col <- profiles$reject                     # recorded waste zones (bucking check), NULL otherwise
 
   for (tid in tree_ids) {
     ii <- rows_by_tree[[tid]]
@@ -285,6 +286,7 @@ profiles_to_profile_vectors <- function(profiles,
     # Stem grade per grid point (.hpr stems with grades on, Phase 6).
     if (!is.null(grade_col)) pvs[[tid]]$grade <- as.numeric(grade_col[ii])
     if (!is.null(file_col)) pvs[[tid]]$file <- as.integer(file_col[i1])
+    if (!is.null(reject_col)) pvs[[tid]]$reject <- as.logical(reject_col[ii])
   }
   pvs
 }

@@ -110,6 +110,9 @@ GRADE_OPTS_OFF <- list(use_grades = FALSE, cut_at_changes = FALSE)
 normalize_grade_opts <- function(o) {
   out <- list(use_grades = isTRUE(o$use_grades), cut_at_changes = isTRUE(o$cut_at_changes))
   if (!is.null(o$grade_files)) out$grade_files <- lapply(o$grade_files, as.integer)
+  # Roadmap 8 (bucking check): the recorded waste logs of the unclassified product are defect
+  # zones where only waste may be cut (pv$reject; the grade -1 rule of the old optBuck).
+  if (isTRUE(o$reject_zones)) out$reject_zones <- TRUE
   out
 }
 
@@ -180,6 +183,7 @@ grade_flags <- function(o) unlist(normalize_grade_opts(o)[c("use_grades", "cut_a
   })
   list(species_group = species_group, pks = pks, products = products,
        use_grades = grade_opts$use_grades, cut_at_changes = grade_opts$cut_at_changes,
+       reject_zones = isTRUE(grade_opts$reject_zones),
        # files whose grades this species uses (R5); NULL = all
        grade_files = if (!is.null(grade_opts$grade_files))
          as.integer(grade_opts$grade_files[[species_group]]) else NULL,
@@ -289,6 +293,13 @@ price_len_of <- function(p, log_len)
     chg_cum <- c(0L, cumsum(c(FALSE, !is.na(gg[-1L]) & !is.na(gg[-n_cells]) & gg[-1L] != gg[-n_cells])))
   }
   use_cells <- isTRUE(plan$use_grades) && !is.null(gg)   # the recorded grades decide the products
+  # Recorded waste zones (bucking check): cells where only waste may be cut.
+  rj_cum <- NULL; n_rj <- 0L
+  if (isTRUE(plan$reject_zones) && !is.null(pv$reject)) {
+    rj <- as.logical(pv$reject)[pmax(findInterval(grid, diam_pos), 1L)]
+    rj[is.na(rj)] <- FALSE
+    rj_cum <- c(0L, cumsum(rj)); n_rj <- length(rj)
+  }
 
   # Valid log lengths for this tree (all products), pre-filtered by tree height.
   max_len_cm  <- h_cm - stump_height_cm
@@ -348,6 +359,12 @@ price_len_of <- function(p, log_len)
           eligible <- eligible & (chg_cum[hi + 1L] - chg_cum[pmin(lo + 1L, n_cells + 1L)]) <= 0L
       }
 
+      # Recorded waste zones: no product but waste covers a zone cell.
+      if (!is.null(rj_cum) && !identical(as.character(p$product_type), "waste")) {
+        lo2 <- pmin(as.integer(round(start_pos / step_int)) + 1L, n_rj)
+        hi2 <- pmin(as.integer(round(stop_pos / step_int)), n_rj)
+        eligible <- eligible & (rj_cum[hi2 + 1L] - rj_cum[lo2]) == 0L
+      }
       # ProductCondition: the butt log is the log that starts at the first cut.
       if (!is.na(p$butt))
         eligible <- eligible & (if (p$butt == "only") start_pos == stump_height_cm else start_pos != stump_height_cm)
