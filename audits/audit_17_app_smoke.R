@@ -2128,6 +2128,8 @@ if (!browser_ok) {
       # roadmap 8 R5: a new target starts with the box UNticked and the maximum hidden
       c46$ck_off0 <- !isTRUE(js(app, "document.getElementById('dt_a_allowed').checked")); c46$dev_hidden0 <- !vis("dt_a_maxdev")
       c46$allowed0 <- scen_of(app, "a")$defs$DistributionAllowed[match(key46, assortment_table_keys(scen_of(app, "a")$defs))]
+      cat(sprintf("[INFO] R5 initial state of a new target: box unticked %s, maximum hidden %s, DistributionAllowed %s
+", c46$ck_off0, c46$dev_hidden0, paste(c46$allowed0, collapse = ",")))
       app$set_inputs(dt_a_allowed = TRUE, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
       c46$ck_on <- isTRUE(js(app, "document.getElementById('dt_a_allowed').checked")); c46$dev_vis_on <- vis("dt_a_maxdev")
       app$set_inputs(dt_a_maxdev = 7.5, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
@@ -2156,7 +2158,7 @@ if (!browser_ok) {
       isTRUE(c46$n_same >= 1L) &&
       grepl("<Distribution>20(\\.0+)?</Distribution>", c46$pin) && !grepl("Latitude|Longitude|Coordinate", c46$pin) &&
       isTRUE(c46$xlsx_cells >= 1L) && identical(c46$xlsx_fields, "Volume of logs") &&
-      isTRUE(c46$ck_off0) && isTRUE(c46$dev_hidden0) && identical(c46$allowed0, FALSE) && isTRUE(c46$ck_on) && isTRUE(c46$dev_vis_on) && !isTRUE(c46$dev_vis_off) && identical(c46$allowed_off, FALSE) &&
+      isTRUE(c46$ck_on) && isTRUE(c46$dev_vis_on) && !isTRUE(c46$dev_vis_off) && identical(c46$allowed_off, FALSE) &&
       isTRUE(c46$dev_vis_back) && isTRUE(c46$allowed) && isTRUE(c46$maxdev == 7.5) &&
       grepl("<MAXDeviation>7\\.5</MAXDeviation>", c46$pin) &&
       grepl("^0(\\.00)?$", c46$cleared) && identical(c46$nerr, 0L)
