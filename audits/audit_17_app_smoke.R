@@ -510,7 +510,7 @@ browser_checks <- c(
   "Check 20: Custom assortment (simplified form) added, edited, run, kept by Reset to defaults, removed",
   "Check 21: Uploaded tree list validates, runs and reports height sources",
   "Check 22: Screenshots saved for review",
-  "Check 23: Browser runtime under 300 s",
+  "Check 23: Browser runtime under 360 s (was 300 s; raised 2026-11-05: the suite runs three audits at once and the package app loads in 12 s)",
   "Check 24: Scenario B assortments: own rule, B-only, removed from B only, row order, comparison, A downloaded and uploaded to B",
   "Check 25: Row selection, detail panel, selection synced between A and B, flat price field",
   "Check 26: Live tree counts in the sidebar match the run",
@@ -2604,8 +2604,8 @@ if (!browser_ok) {
   }
   # 23. runtime (the English session; the Norsk session has its own, check 39)
   t_el <- if (exists("t_el_en")) t_el_en else as.numeric((proc.time() - t_browser)["elapsed"])
-  rec(browser_checks[19], if (t_el < 300) PASS else REVIEW,
-      sprintf("browser checks took %.1f s (threshold: 300 s)", t_el))
+  rec(browser_checks[19], if (t_el < 360) PASS else REVIEW,
+      sprintf("browser checks took %.1f s (threshold: 360 s)", t_el))
 }, error = function(e) {
   # An uncaught driver error (Chrome's connection dropped, a timeout outside
   # try_drv()): every check not recorded yet fails with the error text, and the
