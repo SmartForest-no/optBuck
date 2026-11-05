@@ -1,7 +1,7 @@
 # ==============================================================================
 # scripts/tab5_manual_check.R  (roadmap 8, step 7, 2026-11-04)
 #
-# Purpose : Drive tab 5 "5 Bucking check" in the real app (shinytest2) on one of the owner's
+# Purpose : Drive tab 5 "5 Bucking analysis" in the real app (shinytest2) on one of the owner's
 #           private files (read in place, uploaded for this tab): run the check, time it, read
 #           the key figures from the page and take screenshots in Norsk and English into
 #           outputs/app_smoke/review/optbuck-merge/ (gitignored; private data shows).
@@ -37,15 +37,18 @@ t0 <- Sys.time()
 app$click("chk_run")
 repeat {
   Sys.sleep(5)
-  done <- isTRUE(app$get_js("document.querySelector('.chk-summary') !== null"))
-  err <- isTRUE(app$get_js("document.querySelector('#chk_results .note-warning') !== null && document.querySelector('.chk-summary') === null"))
+  done <- isTRUE(app$get_js("document.getElementById('chk_dl_pdf') !== null"))
+  err <- isTRUE(app$get_js("document.querySelector('#chk_results .note-warning') !== null && document.getElementById('chk_dl_pdf') === null"))
   if (done || err || as.numeric(difftime(Sys.time(), t0, units = "secs")) > 540) break
 }
 secs <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-cat(sprintf("%s: check finished in %.0f s; summary: %s\n", which_file, secs,
-            app$get_js("(document.querySelector('.chk-summary')||{}).innerText || (document.querySelector('#chk_results')||{}).innerText")))
+txt_all <- app$get_js("(document.querySelector('#chk_results')||{}).innerText")
+kf <- regmatches(txt_all, regexpr("(Alle treslag|All species)[^[:cntrl:]]*", txt_all))
+lo <- regmatches(txt_all, regexpr("[0-9 ]+ (stammer er utelatt|stems were left out)[^[:cntrl:]]*", txt_all))
+cat(sprintf("%s: analysis finished in %.0f s; key figures: %s | %s\n", which_file, secs, if (length(kf)) kf else "-", if (length(lo)) lo else "-"))
 Sys.sleep(3)
-app$run_js("document.querySelector('.chk-summary') && document.querySelector('.chk-summary').scrollIntoView();")
+for (y in seq(0, 8000, by = 700)) { app$run_js(sprintf("window.scrollTo(0, %d);", y)); Sys.sleep(0.7) }   # the figures draw when they come into view
+app$run_js("document.getElementById('chk_results') && document.getElementById('chk_results').scrollIntoView();")
 shot <- function(f) { unlink(f); app$get_screenshot(f) }
 shot(file.path(shots, sprintf("tab5_%s_%s.png", which_file, if (length(args) > 1L) args[2L] else "no")))
 app$run_js("window.scrollTo(0, document.body.scrollHeight / 2);"); Sys.sleep(1)

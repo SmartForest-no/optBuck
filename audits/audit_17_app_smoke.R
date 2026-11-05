@@ -550,7 +550,7 @@ browser_checks <- c(
   "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
   "Check 47: Stems panel of the built-in source (R4 D2): the intro, Use this selection builds the species table (equal to the live counts) and two density plots, and any setting change clears it",
   "Check 49: Price tuning on the built-in stems (R4 D7), in Norsk: all sawlog assortments are listed (those without a target greyed with the reason), an Even target on the spruce sawlog makes it tunable, and a tuning on the default selection ends with a result or the too-few-logs message and no error",
-  "Check 50: Bucking check (tab 5, roadmap 8) as a background job, in Norsk: no run button before a file, the box for the products used is ticked, an upload for the tab and Run give the summary sentence (85,7 % on the synthetic file), the mode line, the stem figure and the two downloads; tab 2 shows no log position column when no assortment has a butt condition",
+  "Check 50: Bucking analysis (tab 5, roadmap 8, revised 2026-11-05) as a background job, in Norsk: the intro, no run button and no products box before a file; after an upload the line 'Fil: ...', the reset link and Run; the result has the key-figure table (85,7 %), the 'left out' line, the quality-code table, no summary sentence, no excluded/control sections, the density figure and one download (PDF, no CSV); tab 2 shows no log position column when no assortment has a butt condition",
   "Check 48: Empty states and Help (R4 D1), in Norsk: a tree list with nothing loaded gives the message in Simulator and Pristilpasning and hides the run button; the Help tab has its three sections")
 if (!browser_ok) {
   for (ck in browser_checks)
@@ -773,7 +773,7 @@ if (!browser_ok) {
     # collapsed menu or at most icon height).
     narrow_ok <- length(g700) == 7L && isTRUE(gi(g700, 4) <= 80L) && isTRUE(gi(g700, 2) <= 26L)
     logo6 <- if (length(g1920) == 7L) gi(g1920, 2) else 0L
-    ok6 <- identical(tabs, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking check|Help") &&
+    ok6 <- identical(tabs, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking analysis|Help") &&
       identical(active, "1 Stems") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
@@ -2303,11 +2303,11 @@ if (!browser_ok) {
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
         c34$marker <- js(app, "window.__apter17 === 1")
       })
-      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortimentskrav og priser|3 Simulator|4 Pristilpasning|5 Kontroll av aptering|Hjelp") &&
+      ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortimentskrav og priser|3 Simulator|4 Pristilpasning|5 Apteringsanalyse|Hjelp") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
         grepl("^Sortiment\\|Type\\|Treslag\\|Topp-Ø \\(cm\\)", or_default(c34$hdr, "")) &&
         grepl("Sagtømmer;SagtømmerMassevirkeAnnet;Gran", or_default(c34$row1, ""), fixed = TRUE) &&
-        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking check|Help") &&
+        identical(c34$state_en, "en|en") && identical(c34$nav_en, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking analysis|Help") &&
         identical(c34$run_en, "Run optimizer") && grepl("^Assortment\\|Type\\|Species\\|Top Ø \\(cm\\)", or_default(c34$hdr_en, "")) &&
         grepl("Bucking simulator", or_default(c34$title_en, "")) &&
         identical(c34$state_back, "nb|no") && identical(c34$hdr_back, c34$hdr) && isTRUE(c34$marker)
@@ -2352,34 +2352,39 @@ if (!browser_ok) {
                     substr(or_default(c49$off_before, ""), 1, 150), c49$run_before, or_default(c49$boxes, ""), or_default(c49$label, ""),
                     substr(or_default(c49$result, ""), 1, 80), trimws(or_default(c49$scope, "")), c49$nerr, err_txt(e49)))
 
-      # 50. Tab 5 on the synthetic fixture, in the fresh Norsk session (roadmap 8).
+      # 50. Tab 5 (Apteringsanalyse) on the synthetic fixture, in the fresh Norsk session (roadmap 8, revised 2026-11-05).
       c50 <- list()
       e50 <- try_drv({
         app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
         c50$pos_col <- grepl("Plassering på stammen", txt(app, "#tbl_asm_a"), fixed = TRUE)
         app$set_inputs(main_nav = "check", wait_ = FALSE); app$wait_for_idle()
-        app$wait_for_js("!!document.getElementById('chk_used_only')", timeout = 30 * 1000)
+        app$wait_for_js("!!document.getElementById('chk_upload')", timeout = 30 * 1000)
         c50$run_before <- js(app, "document.querySelectorAll('#chk_run').length")
-        c50$used_box <- isTRUE(js(app, "document.getElementById('chk_used_only').checked"))
+        c50$box <- js(app, "document.querySelectorAll('#chk_used_only').length")
+        c50$intro <- txt(app, ".page-intro")
         app$upload_file(chk_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_check_synthetic.hpr")); app$wait_for_idle()
         app$wait_for_js("!!document.getElementById('chk_run')", timeout = 30 * 1000)
+        c50$file_line <- txt(app, ".chk-file")
+        c50$reset <- js(app, "document.querySelectorAll('#chk_reset').length")
         app$click("chk_run")
-        app$wait_for_js("!!document.querySelector('.chk-summary')", timeout = 180 * 1000)
-        c50$summary <- txt(app, ".chk-summary")
-        c50$mode <- txt(app, "#chk_results .note-muted")
-        c50$dl <- js(app, "document.querySelectorAll('#chk_dl_stems, #chk_dl_logs').length")
+        app$wait_for_js("!!document.getElementById('chk_dl_pdf')", timeout = 180 * 1000)
         app$wait_for_js("!!document.querySelector('#chk_fig_degree img')", timeout = 30 * 1000)
+        c50$text <- txt(app, "#chk_results")
+        c50$summary <- js(app, "document.querySelectorAll('.chk-summary').length")
+        c50$dl <- js(app, "document.querySelectorAll('#chk_dl_pdf').length")
+        c50$dl_csv <- js(app, "document.querySelectorAll('#chk_dl_stems, #chk_dl_logs').length")
         c50$fig <- isTRUE(js(app, "!!document.querySelector('#chk_fig_degree img')"))
         c50$nerr <- n_err_notif(app)
         lshot(app, "50_check")
       })
-      ok50 <- !nzchar(e50) && !c50$pos_col && identical(c50$run_before, 0L) && c50$used_box &&
-        grepl("Apteringsgrad 85,7", or_default(c50$summary, ""), fixed = TRUE) && grepl("bare de 3 sortimentene", or_default(c50$mode, ""), fixed = TRUE) &&
-        identical(c50$dl, 2L) && c50$fig && identical(c50$nerr, 0L)
+      ok50 <- !nzchar(e50) && !c50$pos_col && identical(c50$run_before, 0L) && identical(c50$box, 0L) &&
+        grepl("Sammenlign hogstmaskinens aptering", or_default(c50$intro, ""), fixed = TRUE) && grepl("^Fil: hpr_check_synthetic.hpr", or_default(c50$file_line, "")) && identical(c50$reset, 1L) &&
+        grepl("85,7", or_default(c50$text, ""), fixed = TRUE) && grepl("1 stammer er utelatt på grunn av ufullstendige eller avvikende data.", or_default(c50$text, ""), fixed = TRUE) &&
+        grepl("Kvalitetskoder per sortiment", or_default(c50$text, ""), fixed = TRUE) && !grepl("Stammer som er utelatt eller merket|Kontroll mot hogstmaskinens|Min toppdiameter", or_default(c50$text, "")) &&
+        identical(c50$summary, 0L) && identical(c50$dl, 1L) && identical(c50$dl_csv, 0L) && c50$fig && identical(c50$nerr, 0L)
       rec(grep("^Check 50:", browser_checks, value = TRUE), if (ok50) PASS else FAIL,
-          sprintf("position column %s | run buttons before the file %s | used box %s | summary '%s' | mode '%s' | downloads %s | figure %s | error notifications %s%s",
-                  or_default(c50$pos_col, NA), c50$run_before, or_default(c50$used_box, NA), substr(or_default(c50$summary, ""), 1, 120),
-                  substr(or_default(c50$mode, ""), 1, 80), c50$dl, or_default(c50$fig, NA), c50$nerr, err_txt(e50)))
+          sprintf("position column %s | run buttons before the file %s | used box %s | file line '%s' | reset link %s | summary sentence %s | PDF button %s, CSV buttons %s | figure %s | error notifications %s%s",
+                  or_default(c50$pos_col, NA), c50$run_before, c50$box, or_default(c50$file_line, ""), c50$reset, c50$summary, c50$dl, c50$dl_csv, or_default(c50$fig, NA), c50$nerr, err_txt(e50)))
 
       # 48. Empty states and the Help tab (R4 D1), in a fresh Norsk session.
       c48 <- list()
@@ -2595,7 +2600,7 @@ if (!browser_ok) {
         identical(c39$flat_b, "420") &&
         grepl("^Loaded optBuck_scenario_A\\.xlsx: 6 assortment\\(s\\) with prices\\.", or_default(c39$msg, "")) &&
         identical(c39$stored, "en") && identical(c39$after_reload, "en|en") &&
-        identical(c39$nav_reload, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking check|Help")
+        identical(c39$nav_reload, "1 Stems|2 Assortment specifications and prices|3 Simulator|4 Price tuning|5 Bucking analysis|Help")
       t_el_no <- as.numeric((proc.time() - t_no)["elapsed"])
       rec(browser_checks[35], if (!ok39) FAIL else if (t_el_no < 240) PASS else REVIEW,
           sprintf("summary numbers same after the switch %s ('%s') | tabs '%s' | B's flat price '%s' | Norsk file in English: '%s' | stored '%s', after reload %s, tabs '%s' | Norsk session %.1f s (threshold 240 s)%s",

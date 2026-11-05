@@ -90,11 +90,11 @@ s_of <- function(k) st[st$StemKey == as.character(k), , drop = FALSE]
 section("01. Reader")
 h <- read_hpr(FIXTURE, "x"); rl <- read_hpr_logs(FIXTURE, "x", defs = h)$logs
 n_manual <- sum(rl$manual); cum3 <- rl[rl$stem_key == "3", ]
-ok1 <- nrow(rl) == 15L && length(unique(rl$stem_key)) == 8L && sum(rl$waste) == 4L && n_manual == 7L &&
+ok1 <- nrow(rl) == 16L && length(unique(rl$stem_key)) == 9L && sum(rl$waste) == 5L && n_manual == 8L &&
   all(!rl$manual[rl$CuttingReason %in% c("Automatic", "Spinning")]) &&
   identical(cum3$StartPos, c(0, 490)) && !any(cum3$start_recorded) && all(rl$start_recorded[rl$stem_key == "1"]) &&
-  sum(rl$kind == "multi") == 1L && !"7" %in% st$StemKey && "7" %in% x$excluded$treid
-rec("Check 01: 15 recorded logs of 8 stems; 4 waste logs (the unclassified product); manual = not Automatic/Spinning (7); StartPos = cumulative lengths when not recorded; the multi-tree stem is read and left out",
+  sum(rl$kind == "multi") == 1L && !"7" %in% st$StemKey && all(c("7", "9") %in% x$excluded$treid)
+rec("Check 01: 16 recorded logs of 9 stems; 5 waste logs (the unclassified product); manual = not Automatic/Spinning (8); StartPos = cumulative lengths when not recorded; the multi-tree stem is read and left out",
     ok(ok1), sprintf("logs %d, stems %d, waste %d, manual %d, stem 3 starts %s, excluded %s", nrow(rl), length(unique(rl$stem_key)),
                      sum(rl$waste), n_manual, paste(cum3$StartPos, collapse = "/"), paste(x$excluded$treid, collapse = ",")))
 
@@ -104,7 +104,7 @@ tmp2 <- tempfile(fileext = ".hpr")
 txt <- paste(readLines(FIXTURE, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
 writeLines(gsub("999999", "2147483647", txt, fixed = TRUE), tmp2, useBytes = TRUE)
 x2 <- bucking_check(tmp2)
-ok2 <- isTRUE(x2$ok) && sum(x2$logs$recorded$waste) == 4L &&
+ok2 <- isTRUE(x2$ok) && sum(x2$logs$recorded$waste) == 5L &&
   isTRUE(all.equal(x2$key_figures$value_rec, x$key_figures$value_rec)) && isTRUE(all.equal(x2$key_figures$value_opt, x$key_figures$value_opt))
 rec("Check 02: with the unclassified product numbered 2147483647 the waste logs and every figure are the same",
     ok(ok2), sprintf("waste logs %d; recorded %.4f vs %.4f", sum(x2$logs$recorded$waste), x2$key_figures$value_rec[1L], x$key_figures$value_rec[1L]))
@@ -175,15 +175,16 @@ rec("Check 08: manual cuts 7 of 14 logs (the multi-tree log is not counted), 1 o
 
 # ---- 9 ---------------------------------------------------------------------------------------------
 section("09. Only the products the harvester used")
-xu <- bucking_check(FIXTURE, used_only = TRUE)
+xu <- x                                            # the default: only the products the harvester used (no box any more)
+xall <- bucking_check(FIXTURE, used_only = FALSE)
 used_keys <- unique(rl$ProductKey[!rl$waste])
-ok9 <- isTRUE(xu$ok) && xu$n_products == length(used_keys) && x$n_products > xu$n_products &&
-  all(xu$stems$value_opt <= x$stems$value_opt[match(xu$stems$StemKey, x$stems$StemKey)] + 1e-9) &&
-  xu$key_figures$value_opt[1L] < x$key_figures$value_opt[1L] && xu$key_figures$value_rec[1L] == x$key_figures$value_rec[1L] &&
+ok9 <- isTRUE(xu$ok) && xu$n_products == length(used_keys) && xall$n_products > xu$n_products &&
+  all(xu$stems$value_opt <= xall$stems$value_opt[match(xu$stems$StemKey, xall$stems$StemKey)] + 1e-9) &&
+  xu$key_figures$value_opt[1L] < xall$key_figures$value_opt[1L] && xu$key_figures$value_rec[1L] == xall$key_figures$value_rec[1L] &&
   !any(grepl("kubb", as.character(xu$logs$optimal$ProductKey)))
-rec("Check 09: restricted to the products the harvester used the best possible value is lower (stem 3 no longer uses Kubb), the recorded value is the same, no unused product is in the best bucking",
-    ok(ok9), sprintf("products %d of %d | best %.4f vs %.4f | yield %.4f vs %.4f", xu$n_products, x$n_products, xu$key_figures$value_opt[1L], x$key_figures$value_opt[1L],
-                     xu$key_figures$yield[1L], x$key_figures$yield[1L]))
+rec("Check 09: by default (no box) the best possible bucking uses only the products the harvester cut a log of; against all products of the file its value is lower (stem 3 no longer uses Kubb), the recorded value is the same, no unused product is in the best bucking",
+    ok(ok9), sprintf("products %d of %d | best %.4f vs %.4f | yield %.4f vs %.4f", xu$n_products, xall$n_products, xu$key_figures$value_opt[1L], xall$key_figures$value_opt[1L],
+                     xu$key_figures$yield[1L], xall$key_figures$yield[1L]))
 
 # ---- 10 --------------------------------------------------------------------------------------------
 section("10. File without stem profiles")
@@ -217,6 +218,49 @@ rec("Check 12: results are identical with 1 and 4 workers",
 section("13. Privacy")
 rec("Check 13: the fixture has no coordinate or contact element and no invented-looking name",
     ok(!grepl("Latitude|Longitude|StemCoordinates|ContactInformation|OperatorName|ObjectName|HarvestDate", txt)), "")
+
+# ---- 15 --------------------------------------------------------------------------------------------
+section("15. Manual-only cells for the best possible bucking")
+blk <- regmatches(txt, regexpr("(?s)<ProductKey>8019</ProductKey>.*?</ProductDefinition>", txt, perl = TRUE))
+txt15 <- sub(blk, gsub("<BuckingCriteria>No limit</BuckingCriteria>", "<BuckingCriteria>Only logs bucked manually allowed</BuckingCriteria>", blk, fixed = TRUE), txt, fixed = TRUE)
+tmp15 <- tempfile(fileext = ".hpr"); writeLines(txt15, tmp15, useBytes = TRUE)
+x15y <- bucking_check(tmp15); x15n <- bucking_check(tmp15, manual_ok = FALSE)
+v15 <- function(z, k) z$stems$value_opt[z$stems$StemKey == k]
+ok15 <- isTRUE(x15y$ok) && abs(v15(x15y, "1") - 60.827) < 1e-9 && isTRUE(x15n$ok) && v15(x15n, "1") < 30 &&
+  all(x$stems$value_opt >= -1e-9) && isTRUE(all.equal(x15y$logs$recorded$value_nok, x$logs$recorded$value_nok, tolerance = 1e-12))
+rec("Check 15: when every sawlog price cell is 'Only logs bucked manually allowed' the best possible bucking in the analysis may still use them with the file's price (stem 1: 60.827 as with free cells), the simulator's rule (manual_ok = FALSE) cannot (best value falls below 30); the recorded valuation is the same",
+    ok(ok15), sprintf("stem 1 best: manual cells allowed %.4f, not allowed %.4f", v15(x15y, "1"), v15(x15n, "1")))
+unlink(tmp15)
+
+# ---- 16 --------------------------------------------------------------------------------------------
+section("16. Incomplete stems")
+s9 <- x$excluded[x$excluded$treid == "9", ]
+ok16 <- nrow(s9) == 1L && grepl("cover less than half", s9$reason) && x$n_incomplete == 1L && x$n_left_out == 1L && !"9" %in% st$StemKey[st$use] &&
+  identical(tr_msg(s9$reason, "no"), "registrerte stokker dekker mindre enn halvparten av den målte stammen")
+rec("Check 16: stem 9 (one 100 cm waste log on 800 cm of profile) is left out as incomplete (n_incomplete 1, shown as 'left out'); the multi-tree stem is not counted as left out because of deviating data; the reason translates",
+    ok(ok16), sprintf("reason '%s' | incomplete %d | left out %d", paste(s9$reason, collapse = ""), x$n_incomplete, x$n_left_out))
+
+# ---- 17 --------------------------------------------------------------------------------------------
+section("17. The PDF report")
+if (!requireNamespace("gridExtra", quietly = TRUE) || !requireNamespace("pdftools", quietly = TRUE)) {
+  rec("Check 17: The PDF report is created in Norsk and English and contains the file name, the title and the translated sections", "REVIEW", "gridExtra or pdftools not installed")
+} else {
+  ROOT <- root_dir; suppressPackageStartupMessages(source(file.path(root_dir, "app", "theme.R"))); source(file.path(root_dir, "app", "check_report.R"))
+  pdf_no <- tempfile(fileext = ".pdf"); pdf_en <- tempfile(fileext = ".pdf")
+  r17 <- x; r17$file_name <- "hpr_check_synthetic.hpr"
+  chk_report_pdf(r17, "no", pdf_no, r17$file_name, as.Date("2026-11-05")); chk_report_pdf(r17, "en", pdf_en, r17$file_name, as.Date("2026-11-05"))
+  t_no <- paste(pdftools::pdf_text(pdf_no), collapse = "
+"); t_en <- paste(pdftools::pdf_text(pdf_en), collapse = "
+")
+  ok17 <- file.size(pdf_no) > 5000 && file.size(pdf_en) > 5000 && grepl("hpr_check_synthetic.hpr", t_no, fixed = TRUE) && grepl("hpr_check_synthetic.hpr", t_en, fixed = TRUE) &&
+    grepl("Apteringsanalyse", t_no, fixed = TRUE) && grepl("Bucking analysis", t_en, fixed = TRUE) && grepl("05.11.2026", t_no, fixed = TRUE) &&
+    grepl("Kvalitetskoder per sortiment", t_no, fixed = TRUE) && grepl("Quality codes per product", t_en, fixed = TRUE) &&
+    grepl("Apteringsgrad", t_no, fixed = TRUE) && grepl("utelatt på grunn av ufullstendige", t_no, fixed = TRUE) &&
+    grepl("left out because of incomplete", t_en, fixed = TRUE) && length(pdftools::pdf_text(pdf_no)) >= 1L
+  rec("Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line",
+      ok(ok17), sprintf("pages %d/%d, bytes %d/%d", length(pdftools::pdf_text(pdf_no)), length(pdftools::pdf_text(pdf_en)), file.size(pdf_no), file.size(pdf_en)))
+  unlink(c(pdf_no, pdf_en))
+}
 
 # ---- 14 --------------------------------------------------------------------------------------------
 section("14. NFI stem profiles on demand")

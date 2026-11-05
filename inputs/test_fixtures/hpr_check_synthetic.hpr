@@ -6408,5 +6408,119 @@
         </Log>
       </SingleTreeProcessedStem>
     </Stem>
+    <Stem>
+      <StemKey>9</StemKey>
+      <SpeciesGroupKey>446</SpeciesGroupKey>
+      <SingleTreeProcessedStem>
+        <DBH>300</DBH>
+        <StemDiameters diameterCategory="Over bark">
+          <DiameterMeasuredStartHeight>0</DiameterMeasuredStartHeight>
+          <DiameterMeasuredEndHeight>800</DiameterMeasuredEndHeight>
+          <DiameterValue diameterPosition="0" diameterMeasurementCategory="First">300</DiameterValue>
+          <DiameterValue diameterPosition="10" diameterMeasurementCategory="First">298</DiameterValue>
+          <DiameterValue diameterPosition="20" diameterMeasurementCategory="First">295</DiameterValue>
+          <DiameterValue diameterPosition="30" diameterMeasurementCategory="First">292</DiameterValue>
+          <DiameterValue diameterPosition="40" diameterMeasurementCategory="First">290</DiameterValue>
+          <DiameterValue diameterPosition="50" diameterMeasurementCategory="First">288</DiameterValue>
+          <DiameterValue diameterPosition="60" diameterMeasurementCategory="First">285</DiameterValue>
+          <DiameterValue diameterPosition="70" diameterMeasurementCategory="First">282</DiameterValue>
+          <DiameterValue diameterPosition="80" diameterMeasurementCategory="First">280</DiameterValue>
+          <DiameterValue diameterPosition="90" diameterMeasurementCategory="First">278</DiameterValue>
+          <DiameterValue diameterPosition="100" diameterMeasurementCategory="First">275</DiameterValue>
+          <DiameterValue diameterPosition="110" diameterMeasurementCategory="First">272</DiameterValue>
+          <DiameterValue diameterPosition="120" diameterMeasurementCategory="First">270</DiameterValue>
+          <DiameterValue diameterPosition="130" diameterMeasurementCategory="First">268</DiameterValue>
+          <DiameterValue diameterPosition="140" diameterMeasurementCategory="First">265</DiameterValue>
+          <DiameterValue diameterPosition="150" diameterMeasurementCategory="First">262</DiameterValue>
+          <DiameterValue diameterPosition="160" diameterMeasurementCategory="First">260</DiameterValue>
+          <DiameterValue diameterPosition="170" diameterMeasurementCategory="First">258</DiameterValue>
+          <DiameterValue diameterPosition="180" diameterMeasurementCategory="First">255</DiameterValue>
+          <DiameterValue diameterPosition="190" diameterMeasurementCategory="First">252</DiameterValue>
+          <DiameterValue diameterPosition="200" diameterMeasurementCategory="First">250</DiameterValue>
+          <DiameterValue diameterPosition="210" diameterMeasurementCategory="First">248</DiameterValue>
+          <DiameterValue diameterPosition="220" diameterMeasurementCategory="First">245</DiameterValue>
+          <DiameterValue diameterPosition="230" diameterMeasurementCategory="First">242</DiameterValue>
+          <DiameterValue diameterPosition="240" diameterMeasurementCategory="First">240</DiameterValue>
+          <DiameterValue diameterPosition="250" diameterMeasurementCategory="First">238</DiameterValue>
+          <DiameterValue diameterPosition="260" diameterMeasurementCategory="First">235</DiameterValue>
+          <DiameterValue diameterPosition="270" diameterMeasurementCategory="First">232</DiameterValue>
+          <DiameterValue diameterPosition="280" diameterMeasurementCategory="First">230</DiameterValue>
+          <DiameterValue diameterPosition="290" diameterMeasurementCategory="First">228</DiameterValue>
+          <DiameterValue diameterPosition="300" diameterMeasurementCategory="First">225</DiameterValue>
+          <DiameterValue diameterPosition="310" diameterMeasurementCategory="First">222</DiameterValue>
+          <DiameterValue diameterPosition="320" diameterMeasurementCategory="First">220</DiameterValue>
+          <DiameterValue diameterPosition="330" diameterMeasurementCategory="First">218</DiameterValue>
+          <DiameterValue diameterPosition="340" diameterMeasurementCategory="First">215</DiameterValue>
+          <DiameterValue diameterPosition="350" diameterMeasurementCategory="First">212</DiameterValue>
+          <DiameterValue diameterPosition="360" diameterMeasurementCategory="First">210</DiameterValue>
+          <DiameterValue diameterPosition="370" diameterMeasurementCategory="First">208</DiameterValue>
+          <DiameterValue diameterPosition="380" diameterMeasurementCategory="First">205</DiameterValue>
+          <DiameterValue diameterPosition="390" diameterMeasurementCategory="First">202</DiameterValue>
+          <DiameterValue diameterPosition="400" diameterMeasurementCategory="First">200</DiameterValue>
+          <DiameterValue diameterPosition="410" diameterMeasurementCategory="First">198</DiameterValue>
+          <DiameterValue diameterPosition="420" diameterMeasurementCategory="First">195</DiameterValue>
+          <DiameterValue diameterPosition="430" diameterMeasurementCategory="First">192</DiameterValue>
+          <DiameterValue diameterPosition="440" diameterMeasurementCategory="First">190</DiameterValue>
+          <DiameterValue diameterPosition="450" diameterMeasurementCategory="First">188</DiameterValue>
+          <DiameterValue diameterPosition="460" diameterMeasurementCategory="First">185</DiameterValue>
+          <DiameterValue diameterPosition="470" diameterMeasurementCategory="First">182</DiameterValue>
+          <DiameterValue diameterPosition="480" diameterMeasurementCategory="First">180</DiameterValue>
+          <DiameterValue diameterPosition="490" diameterMeasurementCategory="First">178</DiameterValue>
+          <DiameterValue diameterPosition="500" diameterMeasurementCategory="First">175</DiameterValue>
+          <DiameterValue diameterPosition="510" diameterMeasurementCategory="First">172</DiameterValue>
+          <DiameterValue diameterPosition="520" diameterMeasurementCategory="First">170</DiameterValue>
+          <DiameterValue diameterPosition="530" diameterMeasurementCategory="First">168</DiameterValue>
+          <DiameterValue diameterPosition="540" diameterMeasurementCategory="First">165</DiameterValue>
+          <DiameterValue diameterPosition="550" diameterMeasurementCategory="First">162</DiameterValue>
+          <DiameterValue diameterPosition="560" diameterMeasurementCategory="First">160</DiameterValue>
+          <DiameterValue diameterPosition="570" diameterMeasurementCategory="First">158</DiameterValue>
+          <DiameterValue diameterPosition="580" diameterMeasurementCategory="First">155</DiameterValue>
+          <DiameterValue diameterPosition="590" diameterMeasurementCategory="First">152</DiameterValue>
+          <DiameterValue diameterPosition="600" diameterMeasurementCategory="First">150</DiameterValue>
+          <DiameterValue diameterPosition="610" diameterMeasurementCategory="First">148</DiameterValue>
+          <DiameterValue diameterPosition="620" diameterMeasurementCategory="First">145</DiameterValue>
+          <DiameterValue diameterPosition="630" diameterMeasurementCategory="First">142</DiameterValue>
+          <DiameterValue diameterPosition="640" diameterMeasurementCategory="First">140</DiameterValue>
+          <DiameterValue diameterPosition="650" diameterMeasurementCategory="First">138</DiameterValue>
+          <DiameterValue diameterPosition="660" diameterMeasurementCategory="First">135</DiameterValue>
+          <DiameterValue diameterPosition="670" diameterMeasurementCategory="First">132</DiameterValue>
+          <DiameterValue diameterPosition="680" diameterMeasurementCategory="First">130</DiameterValue>
+          <DiameterValue diameterPosition="690" diameterMeasurementCategory="First">128</DiameterValue>
+          <DiameterValue diameterPosition="700" diameterMeasurementCategory="First">125</DiameterValue>
+          <DiameterValue diameterPosition="710" diameterMeasurementCategory="First">122</DiameterValue>
+          <DiameterValue diameterPosition="720" diameterMeasurementCategory="First">120</DiameterValue>
+          <DiameterValue diameterPosition="730" diameterMeasurementCategory="First">118</DiameterValue>
+          <DiameterValue diameterPosition="740" diameterMeasurementCategory="First">115</DiameterValue>
+          <DiameterValue diameterPosition="750" diameterMeasurementCategory="First">112</DiameterValue>
+          <DiameterValue diameterPosition="760" diameterMeasurementCategory="First">110</DiameterValue>
+          <DiameterValue diameterPosition="770" diameterMeasurementCategory="First">108</DiameterValue>
+          <DiameterValue diameterPosition="780" diameterMeasurementCategory="First">105</DiameterValue>
+          <DiameterValue diameterPosition="790" diameterMeasurementCategory="First">102</DiameterValue>
+          <DiameterValue diameterPosition="800" diameterMeasurementCategory="First">100</DiameterValue>
+        </StemDiameters>
+        <Log>
+          <LogKey>1</LogKey>
+          <ProductKey>999999</ProductKey>
+          <LogVolume logVolumeCategory="m3 (price)" logMeasurementCategory="Machine">0.0625</LogVolume>
+          <LogVolume logVolumeCategory="m3sob" logMeasurementCategory="Machine">0.0651</LogVolume>
+          <LogVolume logVolumeCategory="m3sub" logMeasurementCategory="Machine">0.0625</LogVolume>
+          <CuttingCategory>
+            <CuttingReason>Other manual</CuttingReason>
+          </CuttingCategory>
+          <Extension>
+            <StartPos>0</StartPos>
+          </Extension>
+          <LogMeasurement logMeasurementCategory="Machine">
+            <LogDiameter logDiameterCategory="Butt ob">300</LogDiameter>
+            <LogDiameter logDiameterCategory="Butt ub">294</LogDiameter>
+            <LogDiameter logDiameterCategory="Mid ob">288</LogDiameter>
+            <LogDiameter logDiameterCategory="Mid ub">282</LogDiameter>
+            <LogDiameter logDiameterCategory="Top ob">275</LogDiameter>
+            <LogDiameter logDiameterCategory="Top ub">269</LogDiameter>
+            <LogLength>100</LogLength>
+          </LogMeasurement>
+        </Log>
+      </SingleTreeProcessedStem>
+    </Stem>
   </Machine>
 </HarvestedProduction>

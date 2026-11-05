@@ -1,16 +1,16 @@
 ============================================================= 
   Audit: texts of the bucking check (roadmap 8)
-  Run: 2026-11-04 15:57:06.463998
+  Run: 2026-11-05 10:37:39.315769
 ============================================================= 
 
 --- 01. Ids used by app/check.R ---
-  [PASS  ] Check 01: every id app/check.R uses is a ui row with an English and a Norsk text | 93 ids; missing or empty: none
+  [PASS  ] Check 01: every id app/check.R uses is a ui row with an English and a Norsk text | 74 ids; missing or empty: none
 
 --- 02. No unused chk_* text ---
-  [PASS  ] Check 02: every chk_* ui row is used in app/check.R | 98 rows; unused: none
+  [PASS  ] Check 02: every chk_* ui row is used in app/check.R | 76 rows; unused: none
 
 --- 03. Backend messages ---
-  [PASS  ] Check 03: every reason the check gives for a stem left out, and the failure message, has a msg row in both languages | 5 messages; without a row: none
+  [PASS  ] Check 03: every reason the check gives for a stem left out, and the failure message, has a msg row in both languages | 6 messages; without a row: none
 
 --- 04. Other ids ---
   [PASS  ] Check 04: tab_check, help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages | missing: none

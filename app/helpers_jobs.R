@@ -198,7 +198,8 @@ run_check_async <- function(spec, progress = function(step, done, total) NULL) {
   progress("read", 0L, NA_integer_)
   p0 <- .backend_promise("bucking_check", list(
     path = spec$path, species_map = spec$species_map, filename = spec$name,
-    reject_zones = spec$reject_zones, used_only = spec$used_only, root = ROOT, stage = "prepare"))
+    reject_zones = spec$reject_zones, used_only = or_default(spec$used_only, TRUE), manual_ok = or_default(spec$manual_ok, TRUE),
+    root = ROOT, stage = "prepare"))
   promises::then(p0, function(prep) {
     if (!inherits(prep, "check_prep")) return(prep)       # a final result: error, or no stem profiles
     job <- prep$job

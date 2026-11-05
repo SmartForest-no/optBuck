@@ -20,6 +20,8 @@
 #                                   with the zone rule the best bucking equals the recorded one
 #   7  multi-tree stem             left out of the check
 #   8  pine (445), H 600, d0 280, slope 0.25   7953 pulpwood 400 (Automatic) + waste 200
+#   9  H 800, d0 300, slope 0.25   one waste log of 100 cm (the recorded logs cover 12.5 % of the measured
+#                                   stem: left out as incomplete)
 #
 # Usage   : Rscript scripts/make_hpr_check_fixture.R
 # ==============================================================================
@@ -87,6 +89,9 @@ add_stem(6L, "446", p6, chain(p6, list(c("8019", 430, "Automatic"), c("999999", 
 add_stem(7L, "446", p1, chain(p1, list(c("8019", 430, "Automatic"))), multi = TRUE)
 p8 <- profile(600, 280, 0.25)
 add_stem(8L, "445", p8, chain(p8, list(c("7953", 400, "Automatic"), c("999999", 200, "Other manual"))))
+
+p9 <- profile(800, 300, 0.25)
+add_stem(9L, "446", p9, chain(p9, list(c("999999", 100, "Other manual"))))
 
 tmp <- tempfile(fileext = ".hpr"); xml2::write_xml(doc, tmp)
 txt <- paste(readLines(tmp, warn = FALSE, encoding = "UTF-8"), collapse = "\n")

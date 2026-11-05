@@ -7,8 +7,8 @@
 #           user text in app/ files is audit 28 check 3.)
 #
 # Checks  :
-#  1.  Every id used in app/check.R (L("..."), t_("...")) is a ui row with an English and a Norsk text
-#  2.  Every chk_* ui row is used in app/check.R
+#  1.  Every id used in app/check.R and app/check_report.R (L("..."), t_("...")) is a ui row with an English and a Norsk text
+#  2.  Every chk_* ui row is used in app/check.R or app/check_report.R
 #  3.  Every reason R/helpers_check.R writes for a stem left out, and the failure message of the app,
 #      has a msg row (English text matched), with a Norsk text
 #  4.  Other ids of roadmap 8: tab_check, help_use_5, asm_c_butt, v_butt_only, v_butt_not
@@ -63,7 +63,7 @@ cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
 tbl <- i18n_table(file.path(root_dir, "inputs", "i18n", "translations.csv"))
-src_check <- paste(readLines(file.path(root_dir, "app", "check.R"), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+src_check <- paste(unlist(lapply(c("check.R", "check_report.R"), function(f) readLines(file.path(root_dir, "app", f), warn = FALSE, encoding = "UTF-8"))), collapse = "\n")
 src_logic <- paste(readLines(file.path(root_dir, "R", "helpers_check.R"), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
 shorten <- function(x, n = 8L) if (length(x) == 0L) "none" else
   paste(c(utils::head(x, n), if (length(x) > n) sprintf("... (%d)", length(x))), collapse = " | ")
@@ -94,7 +94,7 @@ rec("Check 03: every reason the check gives for a stem left out, and the failure
     ok(length(reasons) >= 5L && all(has_msg)), sprintf("%d messages; without a row: %s", length(reasons), shorten(reasons[!has_msg])))
 
 section("04. Other ids")
-others <- list(c("tab_check", "ui"), c("help_use_5", "ui"), c("asm_c_butt", "ui"), c("v_butt_only", "value"), c("v_butt_not", "value"),
+others <- list(c("tab_check", "ui"), c("chk_dl_pdf", "ui"), c("chk_left_out", "ui"), c("chk_lim_g", "ui"), c("chk_lim_h", "ui"), c("help_use_5", "ui"), c("asm_c_butt", "ui"), c("v_butt_only", "value"), c("v_butt_not", "value"),
                c("v_stage_nfi_build", "value"), c("v_stage_nfi_save", "value"))
 bad4 <- vapply(others, function(o) !filled(o[1L], o[2L]), NA)
 rec("Check 04: tab_check, help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages",

@@ -19,6 +19,10 @@
 # Backend text is English (the app translates messages, tr_msg()).
 # ==============================================================================
 
+#' A stem whose recorded logs (waste included) cover less than this share of its measured length is
+#' left out of the check (incomplete data, e.g. one 3 dm waste piece on 6 m of profile).
+CHECK_MIN_COVER <- 0.5
+
 #' Value the recorded logs like candidates of the optimiser.
 #'
 #' For each recorded log: top diameter at the product's DiameterTopPosition (under bark if the
@@ -147,8 +151,10 @@ hpr_rec_prices <- function(h, defs) {
 #' @param species_map Named character (species group key -> "spruce"/"pine"/"none"); default: guessed.
 #' @param filename    Name for messages.
 #' @param reject_zones TRUE: recorded waste logs are defect zones (the decision of 2026-11-04).
-#' @param used_only  TRUE: the best possible bucking may use only the products the harvester used in this
-#'   file (a recorded log in them); FALSE (default): every product of the file's instruction.
+#' @param used_only  TRUE (default; the tab has no box): the best possible bucking may use only the products
+#'   the harvester cut at least one log of in this file; FALSE: every product of the file's instruction.
+#' @param manual_ok  TRUE (default): the best possible bucking may also use cells marked "Only logs bucked
+#'   manually allowed" (with the file's price): the operator was allowed to cut them. FALSE: as the simulator.
 #' @param stage       "all" (default: prepare, buck, finish in this process); "prepare" returns a `check_prep`
 #'   object (or a final result when the file cannot be checked) without bucking; "finish" takes `prep` and the
 #'   chunk results `b` of buck_job() (the app runs the stages as background jobs: app/helpers_jobs.R).
@@ -156,7 +162,7 @@ hpr_rec_prices <- function(h, defs) {
 #' @return list(ok, errors, warnings, info, no_profile, file, overview, stems, logs, key_figures,
 #'   assortments, length_dist, manual, defect, top, excluded, flagged, control, broken).
 bucking_check <- function(path, species_map = NULL, filename = basename(path), reject_zones = TRUE,
-                          used_only = FALSE, progress = NULL, root = get_root_dir(),
+                          used_only = TRUE, manual_ok = TRUE, progress = NULL, root = get_root_dir(),
                           stage = "all", prep = NULL, b = NULL) {
   prog <- function(step) if (is.function(progress)) progress(step)
   fail <- function(e, w = character(0)) list(ok = FALSE, errors = e, warnings = w, info = character(0))
@@ -170,7 +176,7 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   smap <- if (is.null(species_map)) setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key) else species_map
   rl <- read_hpr_logs(path, filename, defs = h); if (!isTRUE(rl$ok)) return(fail(rl$errors))
   keep <- if (used_only) unique(rl$logs$ProductKey[!rl$logs$waste]) else NULL
-  sc <- hpr_to_scenario(h, smap, keep = keep); if (!isTRUE(sc$ok)) return(fail(sc$errors, sc$warnings))
+  sc <- hpr_to_scenario(h, smap, keep = keep, manual_ok = manual_ok); if (!isTRUE(sc$ok)) return(fail(sc$errors, sc$warnings))
   pm <- pm_minimal(sc$pm); defs <- sc$defs; pr <- products_from_defs(defs, pm); pd <- pr$pd
   lg <- rl$logs
   warnings <- c(h$warnings, sc$warnings, rl$warnings); info <- c(sc$info, rl$info)
@@ -253,6 +259,9 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   last_ub <- vapply(sk, function(k) { pv <- job$pvs[[k]]; as.numeric(utils::tail(pv$DiameterValueUB, 1L)) }, 0)
   top_end <- vapply(sk, function(k) max(job$pvs[[k]]$diameterPosition), 0)
   stems$last_ub_mm <- last_ub
+  stems$measured_cm <- top_end
+  stems$logged_cm <- as.numeric(tapply(rec$LogLength, factor(rec$stem_key, levels = sk), sum))
+  stems$logged_cm[is.na(stems$logged_cm)] <- 0
   stems$n_logs_rec <- as.integer(table(factor(rec$stem_key, levels = sk)))
   above <- tapply(rec$StopPos, factor(rec$stem_key, levels = sk), function(x) if (length(x)) max(x) else NA_real_)
   stems$log_above_profile <- !is.na(above) & unname(above) > top_end + 1e-9
@@ -263,6 +272,7 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
                  excluded = FALSE)   # never excluded on this rule, only flagged (decided 2026-11-04)
   stems$reason <- NA_character_
   stems$reason[stems$n_logs_rec == 0L] <- "no recorded logs"
+  stems$reason[is.na(stems$reason) & stems$logged_cm < CHECK_MIN_COVER * stems$measured_cm] <- "recorded logs cover less than half of the measured stem"
   stems$reason[is.na(stems$reason) & stems$log_above_profile] <- "a recorded log ends above the measured profile"
   oks <- setNames(tsum$optimizer_status, as.character(tsum$treid))
   stems$opt_status <- unname(oks[stems$StemKey])
@@ -310,7 +320,10 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
 
   list_out <- c(base, list(
     stems = stems, logs = list(recorded = rec, optimal = opt), key_figures = key_figures, broken = broken,
-    excluded = excluded, flagged = flagged, job = job, prodmap = prodmap, min_saw_top = min_saw_top,
+    excluded = excluded, flagged = flagged,
+    n_incomplete = sum(stems$reason %in% "recorded logs cover less than half of the measured stem"),
+    n_left_out = sum(!grepl("^multi-tree|set to Not used$", excluded$reason)),   # incomplete or deviating data (not other species, not multi-tree)
+    job = job, prodmap = prodmap, min_saw_top = min_saw_top,
     assortments = check_assortments(recu, optu, ptype),
     manual = check_manual(recu, stems),
     top = check_top(job, recu, optu),

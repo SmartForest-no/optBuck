@@ -66,7 +66,7 @@ The xlsx needs a sheet 'assortments' and the price sheets. | xlsx-filen må ha e
 RDS file does not contain a data frame. | RDS-filen inneholder ikke en tabell.
 Unsupported file type '.txt' (use .csv, .xlsx or .rds). | Filtypen '.txt' støttes ikke (bruk .csv, .xlsx eller .rds).
 No lengths (a flat price needs min length <= max length; a grid needs length columns): spruce_poles | Ingen lengder (en fast pris trenger minste lengde <= største lengde; et rutenett trenger lengdekolonner): spruce_poles
-There are no assortments. | Det finnes ingen sortiment.
+There are no assortments. | Det finnes ingen sortimenter.
 The largest diameter class is 50 cm: the max top diameter is 50 cm. | Den største diameterklassen er 50 cm: største toppdiameter er 50 cm.
 Length 34 dm is already in the matrix. | Lengden 34 dm finnes allerede i matrisen.
 A length is a positive whole number of dm. | En lengde er et positivt helt antall dm.

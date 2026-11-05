@@ -578,12 +578,14 @@ hpr_product_table <- function(hpr, species_map) {
 # whole-dm length columns. Returns list(pm (long), limits (kept class lower
 # limits, cm), lengths (cm), errors, warnings (something lost), info (not
 # shown: what follows the documented rules, e.g. rounding)).
-.hpr_grid <- function(p, key) {
+.hpr_grid <- function(p, key, manual_ok = FALSE) {
   w <- character(0); info <- character(0)
   cells <- p$cells[!is.na(p$cells$d_mm) & !is.na(p$cells$l_cm), , drop = FALSE]
-  forbidden <- cells$criteria %in% HPR_UNAVAILABLE
+  forbidden <- cells$criteria %in% (if (manual_ok) HPR_FORBIDDEN else HPR_UNAVAILABLE)   # manual_ok: the bucking check lets the best bucking use manual-only cells
   n_forb <- sum(forbidden)
   ok_cells <- cells[!is.na(cells$price) & !forbidden, , drop = FALSE]
+  if (manual_ok)   # a manual-only class no longer than the top-diameter position (or 10 cm) is no log: left out
+    ok_cells <- ok_cells[!(ok_cells$criteria %in% HPR_MANUAL & ok_cells$l_cm <= max(c(10, p$top_pos), na.rm = TRUE)), , drop = FALSE]
   if (n_forb > 0L) info <- c(info, sprintf("%d forbidden cell(s) left empty (never chosen).", n_forb))
   if (nrow(ok_cells) == 0L) return(list(errors = "no priced cells"))
 
@@ -663,7 +665,7 @@ hpr_product_table <- function(hpr, species_map) {
 #' @return list(ok, defs, pm, errors, warnings (shown: something lost or
 #'   replaced, e.g. a product skipped or a volume method replaced), info (not
 #'   shown: what follows the documented rules, e.g. rounding, forbidden cells)).
-hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
+hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, manual_ok = FALSE) {
   fail <- function(msg, w = character(0)) list(ok = FALSE, errors = msg, warnings = w)
   if (!isTRUE(hpr$ok)) return(fail(hpr$errors))
   tab <- hpr_product_table(hpr, species_map)
@@ -695,7 +697,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL) {
         if (ak %in% used_keys) { name <- sprintf("%s %s", name, p$key); ak <- paste0(sp, "_", assortment_slug(name)) }
         info <- c(info, sprintf("Renamed a second '%s' for %s to '%s'.", trimws(p$name), sp, name))
       }
-      grid <- .hpr_grid(p, ak)
+      grid <- .hpr_grid(p, ak, manual_ok = manual_ok)
       if (length(grid$errors) > 0L) {
         w <- c(w, sprintf("%s not imported: %s.", p$name, grid$errors)); next
       }

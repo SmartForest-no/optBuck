@@ -53,7 +53,7 @@ source(file.path(ROOT, "R", "helpers_distribution_edit.R"))
 
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
-             "helpers_upload.R", "helpers_jobs.R", "tuning.R", "check.R", "help.R", "app_ui.R", "server_scenarios.R",
+             "helpers_upload.R", "helpers_jobs.R", "tuning.R", "check_report.R", "check.R", "help.R", "app_ui.R", "server_scenarios.R",
              "app_server.R")) {
   source(file.path(APP_DIR, .f), local = TRUE)
 }
