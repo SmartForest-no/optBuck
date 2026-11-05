@@ -33,29 +33,24 @@
 #           val <- validate_price_matrix_against_products(pd, lc, pm)
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
-
-if (!exists("get_root_dir", mode = "function"))
-  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_paths.R"))
 
 
-#' Price-diameter cap (cm) of the default 2021 matrices, whose largest class
-#' is 50. Since Phase 4b (2026-10-13) the cap is per product: the largest
-#' class of the product's own matrix (build_price_lookup()); this constant
-#' is the fallback for flat products and for cap_price_diameter_class().
-#' Capping applies to price lookup only; the physical top diameter is NOT
-#' changed.
+
+# Price-diameter cap (cm) of the default 2021 matrices, whose largest class
+# is 50. Since Phase 4b (2026-10-13) the cap is per product: the largest
+# class of the product's own matrix (build_price_lookup()); this constant
+# is the fallback for flat products and for cap_price_diameter_class().
+# Capping applies to price lookup only; the physical top diameter is NOT
+# changed.
 DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM <- 50L
 
-#' Default price scenario name.
+# Default price scenario name.
 DEFAULT_PRICE_SCENARIO <- "default_2021"
 
-#' Sawlog length classes supported in the default_2021 price matrix (dm).
-#' Used as a reference for validation checks.
-#' 31 dm was filled by interpolation (a one-off script, since removed,
-#' 2026-08-03) — rows are marked PriceSource == "Interpolated".
+# Sawlog length classes supported in the default_2021 price matrix (dm).
+# Used as a reference for validation checks.
+# 31 dm was filled by interpolation (a one-off script, since removed,
+# 2026-08-03) — rows are marked PriceSource == "Interpolated".
 EXPECTED_SUPPORTED_SAWLOG_DM <- c(31L, 34L, 37L, 40L, 43L, 46L, 49L, 52L, 55L)
 
 
@@ -63,19 +58,19 @@ EXPECTED_SUPPORTED_SAWLOG_DM <- c(31L, 34L, 37L, 40L, 43L, 46L, 49L, 52L, 55L)
 # Loader
 # ------------------------------------------------------------------------------
 
-#' Load PriceMatrix_long from the canonical CSV under inputs/price_matrices/.
-#'
-#' @param root_dir   Project root (default: get_root_dir()).
-#' @param scenario   Price scenario name (used to filter PriceScenario column).
-#'                   Pass NULL to return all scenarios.
-#' @param file_name  CSV file name (default: PriceMatrix_long_default_2021.csv).
-#' @return data.frame — all rows matching the scenario (or all rows if NULL).
+# Load PriceMatrix_long from the canonical CSV under inputs/price_matrices/.
+#
+# @param root_dir   Project root (default: get_root_dir()).
+# @param scenario   Price scenario name (used to filter PriceScenario column).
+#                   Pass NULL to return all scenarios.
+# @param file_name  CSV file name (default: PriceMatrix_long_default_2021.csv).
+# @return data.frame — all rows matching the scenario (or all rows if NULL).
 load_price_matrix_long <- function(
     root_dir   = get_root_dir(),
     scenario   = DEFAULT_PRICE_SCENARIO,
     file_name  = "PriceMatrix_long_default_2021.csv") {
 
-  path <- file.path(root_dir, "inputs", "price_matrices", file_name)
+  path <- path_input("price_matrices", file_name, root_dir = root_dir)
   if (!file.exists(path))
     stop("PriceMatrix_long file not found: ", path)
 
@@ -94,16 +89,16 @@ load_price_matrix_long <- function(
 # Length-support queries
 # ------------------------------------------------------------------------------
 
-#' Return a data.frame of ProductKey + LengthClass_dm that have a price entry.
-#'
-#' Only rows with a non-NA PriceNOKperM3 and a non-NA LengthClass_dm are
-#' considered supported (sawlog / length-dependent products).
-#' Flat-priced products (pulpwood, waste) have NA in LengthClass_dm and are
-#' returned with LengthClass_dm = NA_integer_ and a supported = TRUE flag
-#' because they do not depend on length matching.
-#'
-#' @param pm data.frame from load_price_matrix_long().
-#' @return data.frame(ProductKey, LengthClass_dm, price_type, supported).
+# Return a data.frame of ProductKey + LengthClass_dm that have a price entry.
+#
+# Only rows with a non-NA PriceNOKperM3 and a non-NA LengthClass_dm are
+# considered supported (sawlog / length-dependent products).
+# Flat-priced products (pulpwood, waste) have NA in LengthClass_dm and are
+# returned with LengthClass_dm = NA_integer_ and a supported = TRUE flag
+# because they do not depend on length matching.
+#
+# @param pm data.frame from load_price_matrix_long().
+# @return data.frame(ProductKey, LengthClass_dm, price_type, supported).
 get_supported_sawlog_lengths <- function(pm) {
   required_cols <- c("ProductKey", "LengthClass_dm", "PriceNOKperM3")
   missing <- setdiff(required_cols, names(pm))
@@ -138,21 +133,21 @@ get_supported_sawlog_lengths <- function(pm) {
 }
 
 
-#' Find sawlog length classes in LengthClasses that have no entry in PriceMatrix.
-#'
-#' LengthClasses stores lengths in **centimetres** (LogLength column).
-#' PriceMatrix_long stores lengths in **decimetres** (LengthClass_dm column).
-#' This function converts LengthClasses to dm before comparing.
-#'
-#' The 31 dm gap was resolved by interpolation on 2026-08-03 (see
-#' a one-off script, since removed) — it is kept here as a
-#' defensive check in case a future price scenario reintroduces the gap,
-#' in which case it will again be labelled and reported rather than erroring.
-#'
-#' @param lc data.frame from load_length_classes().
-#' @param pm data.frame from load_price_matrix_long().
-#' @return data.frame(ProductKey, LogLength_dm, in_length_classes,
-#'                    in_price_matrix, is_known_31dm_gap).
+# Find sawlog length classes in LengthClasses that have no entry in PriceMatrix.
+#
+# LengthClasses stores lengths in **centimetres** (LogLength column).
+# PriceMatrix_long stores lengths in **decimetres** (LengthClass_dm column).
+# This function converts LengthClasses to dm before comparing.
+#
+# The 31 dm gap was resolved by interpolation on 2026-08-03 (see
+# a one-off script, since removed) — it is kept here as a
+# defensive check in case a future price scenario reintroduces the gap,
+# in which case it will again be labelled and reported rather than erroring.
+#
+# @param lc data.frame from load_length_classes().
+# @param pm data.frame from load_price_matrix_long().
+# @return data.frame(ProductKey, LogLength_dm, in_length_classes,
+#                    in_price_matrix, is_known_31dm_gap).
 get_unsupported_sawlog_lengths <- function(lc, pm) {
   if (!"LogLength" %in% names(lc))
     stop("LengthClasses must have a LogLength column (values in cm).")
@@ -201,27 +196,27 @@ get_unsupported_sawlog_lengths <- function(lc, pm) {
 # Full validation
 # ------------------------------------------------------------------------------
 
-#' Validate PriceMatrix_long completeness against ProductData and LengthClasses.
-#'
-#' Returns a list with:
-#'   $checks       data.frame(check, result, detail)
-#'   $supported    output of get_supported_sawlog_lengths()
-#'   $unsupported  output of get_unsupported_sawlog_lengths()  (in lc but not pm)
-#'   $missing_products  ProductKey values in ProductData but absent from pm
-#'
-#' Validation rules:
-#'   - Technically eligible and priced  → OK
-#'   - Technically eligible but unpriced → reported, not an error unless whole product missing
-#'   - 31 dm sawlog gap                  → PASS as of 2026-08-03 (filled by interpolation);
-#'                                          would report REVIEW again if ever reintroduced
-#'   - Whole product missing from pm     → FAIL
-#'   - Negative PriceNOKperM3           → FAIL
-#'   - PriceNOKperM3 == 0               → REVIEW (warn; might be intentional)
-#'
-#' @param pd  data.frame from load_products().
-#' @param lc  data.frame from load_length_classes().
-#' @param pm  data.frame from load_price_matrix_long().
-#' @return List with $checks, $supported, $unsupported, $missing_products.
+# Validate PriceMatrix_long completeness against ProductData and LengthClasses.
+#
+# Returns a list with:
+#   $checks       data.frame(check, result, detail)
+#   $supported    output of get_supported_sawlog_lengths()
+#   $unsupported  output of get_unsupported_sawlog_lengths()  (in lc but not pm)
+#   $missing_products  ProductKey values in ProductData but absent from pm
+#
+# Validation rules:
+#   - Technically eligible and priced  → OK
+#   - Technically eligible but unpriced → reported, not an error unless whole product missing
+#   - 31 dm sawlog gap                  → PASS as of 2026-08-03 (filled by interpolation);
+#                                          would report REVIEW again if ever reintroduced
+#   - Whole product missing from pm     → FAIL
+#   - Negative PriceNOKperM3           → FAIL
+#   - PriceNOKperM3 == 0               → REVIEW (warn; might be intentional)
+#
+# @param pd  data.frame from load_products().
+# @param lc  data.frame from load_length_classes().
+# @param pm  data.frame from load_price_matrix_long().
+# @return List with $checks, $supported, $unsupported, $missing_products.
 validate_price_matrix_against_products <- function(pd, lc, pm) {
   checks <- list()
 
@@ -301,7 +296,7 @@ validate_price_matrix_against_products <- function(pd, lc, pm) {
   add_check(
     "No zero PriceNOKperM3 values",
     if (nrow(zero_rows) == 0L) "PASS" else "REVIEW",
-    sprintf("%d zero-price row(s) — check if intentional", nrow(zero_rows))
+    sprintf("%d zero-price row(s) \u2014 check if intentional", nrow(zero_rows))
   )
 
   # 5. 31 dm sawlog gap
@@ -346,37 +341,37 @@ validate_price_matrix_against_products <- function(pd, lc, pm) {
 # Diameter capping helpers
 # ------------------------------------------------------------------------------
 
-#' Cap price-diameter class values at a maximum for price lookup.
-#'
-#' This function implements the accepted protocol: logs with a top-diameter
-#' class above the matrix maximum are priced as if they were at the maximum.
-#' The physical diameter is never changed; the cap applies only to the price
-#' join key.
-#'
-#' @param x           Integer or numeric vector of PriceDiameterClass_cm values.
-#' @param max_class_cm Maximum allowed value (default: 50).
-#' @return Integer vector with values capped at max_class_cm.
+# Cap price-diameter class values at a maximum for price lookup.
+#
+# This function implements the accepted protocol: logs with a top-diameter
+# class above the matrix maximum are priced as if they were at the maximum.
+# The physical diameter is never changed; the cap applies only to the price
+# join key.
+#
+# @param x           Integer or numeric vector of PriceDiameterClass_cm values.
+# @param max_class_cm Maximum allowed value (default: 50).
+# @return Integer vector with values capped at max_class_cm.
 cap_price_diameter_class <- function(x, max_class_cm = DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM) {
   max_class_cm <- as.integer(max_class_cm)
   pmin(as.integer(x), max_class_cm)
 }
 
 
-#' Add PriceDiameterClass_cm_uncapped and PriceDiameterClass_cm_used to a
-#' candidates data frame, ready for price join.
-#'
-#' Precondition : candidates must contain a PriceDiameterClass_cm column.
-#'
-#' Postcondition:
-#'   - PriceDiameterClass_cm_uncapped = original PriceDiameterClass_cm (unchanged)
-#'   - PriceDiameterClass_cm_used     = capped: per product at the largest
-#'     class of its matrix when a price lookup is given (Phase 4b), else at
-#'     one fixed cap
-#'
-#' @param candidates data.frame with ProductKey and PriceDiameterClass_cm.
-#' @param max_price_diameter_class_cm A build_price_lookup() result (per-
-#'   product caps; the backend) or a fixed cap in cm (default 50).
-#' @return candidates with two new columns appended.
+# Add PriceDiameterClass_cm_uncapped and PriceDiameterClass_cm_used to a
+# candidates data frame, ready for price join.
+#
+# Precondition : candidates must contain a PriceDiameterClass_cm column.
+#
+# Postcondition:
+#   - PriceDiameterClass_cm_uncapped = original PriceDiameterClass_cm (unchanged)
+#   - PriceDiameterClass_cm_used     = capped: per product at the largest
+#     class of its matrix when a price lookup is given (Phase 4b), else at
+#     one fixed cap
+#
+# @param candidates data.frame with ProductKey and PriceDiameterClass_cm.
+# @param max_price_diameter_class_cm A build_price_lookup() result (per-
+#   product caps; the backend) or a fixed cap in cm (default 50).
+# @return candidates with two new columns appended.
 prepare_price_join_keys <- function(candidates,
                                     max_price_diameter_class_cm =
                                       DEFAULT_MAX_PRICE_DIAMETER_CLASS_CM) {
@@ -396,22 +391,22 @@ prepare_price_join_keys <- function(candidates,
 }
 
 
-#' Price lookup tables for one PriceMatrix_long (built once per matrix).
-#'
-#' Matrix rows have a LengthClass_dm and are keyed by
-#' "ProductKey|LengthClass_dm|PriceDiameterClass_cm"; flat rows (pulpwood,
-#' waste, flat custom assortments) have no LengthClass_dm and are keyed by
-#' ProductKey (first row wins if a key is duplicated).
-#'
-#' Per-product price-diameter cap (Phase 4b, 2026-10-13): a matrix product's
-#' cap is the largest PriceDiameterClass_cm in its own matrix (50 for the
-#' default 2021 matrices). Flat products keep DEFAULT_MAX_PRICE_DIAMETER_
-#' CLASS_CM for the informational PriceDiameterClass_cm_used column; it does
-#' not affect their price.
-#'
-#' @param pm PriceMatrix_long data.frame.
-#' @return list(saw = named numeric, flat = named numeric, matrix_keys,
-#'   max_class = named integer, ProductKey -> cap in cm).
+# Price lookup tables for one PriceMatrix_long (built once per matrix).
+#
+# Matrix rows have a LengthClass_dm and are keyed by
+# "ProductKey|LengthClass_dm|PriceDiameterClass_cm"; flat rows (pulpwood,
+# waste, flat custom assortments) have no LengthClass_dm and are keyed by
+# ProductKey (first row wins if a key is duplicated).
+#
+# Per-product price-diameter cap (Phase 4b, 2026-10-13): a matrix product's
+# cap is the largest PriceDiameterClass_cm in its own matrix (50 for the
+# default 2021 matrices). Flat products keep DEFAULT_MAX_PRICE_DIAMETER_
+# CLASS_CM for the informational PriceDiameterClass_cm_used column; it does
+# not affect their price.
+#
+# @param pm PriceMatrix_long data.frame.
+# @return list(saw = named numeric, flat = named numeric, matrix_keys,
+#   max_class = named integer, ProductKey -> cap in cm).
 build_price_lookup <- function(pm) {
   saw  <- pm[!is.na(pm$LengthClass_dm), , drop = FALSE]
   flat <- pm[is.na(pm$LengthClass_dm), , drop = FALSE]
@@ -429,14 +424,14 @@ build_price_lookup <- function(pm) {
     max_class   = setNames(as.integer(max_class), names(max_class)))
 }
 
-#' The price-diameter class used for lookup: the uncapped class, capped at
-#' the product's largest matrix class (see build_price_lookup()). The
-#' physical diameter is never changed.
-#'
-#' @param logs   data.frame with ProductKey and PriceDiameterClass_cm_uncapped
-#'               (or PriceDiameterClass_cm).
-#' @param lookup build_price_lookup() result.
-#' @return Integer vector.
+# The price-diameter class used for lookup: the uncapped class, capped at
+# the product's largest matrix class (see build_price_lookup()). The
+# physical diameter is never changed.
+#
+# @param logs   data.frame with ProductKey and PriceDiameterClass_cm_uncapped
+#               (or PriceDiameterClass_cm).
+# @param lookup build_price_lookup() result.
+# @return Integer vector.
 price_class_used <- function(logs, lookup) {
   col <- intersect(c("PriceDiameterClass_cm_uncapped", "PriceDiameterClass_cm",
                      "PriceDiameterClass_cm_used"), names(logs))
@@ -447,17 +442,17 @@ price_class_used <- function(logs, lookup) {
   pmin(as.integer(raw), as.integer(cap))
 }
 
-#' Price (NOK/m3) for each log or candidate. NA where the matrix has no price.
-#'
-#' The single price lookup used by the backend run and by scenario re-pricing
-#' (helpers_comparison.R). A product is matrix-priced if the matrix has
-#' length-class rows for it; its class is capped at that matrix's largest
-#' class (price_class_used()), so re-pricing under another matrix uses that
-#' matrix's cap.
-#'
-#' @param logs   data.frame with ProductKey, LengthClass_dm and
-#'               PriceDiameterClass_cm_uncapped (or PriceDiameterClass_cm).
-#' @param lookup build_price_lookup() result, or a PriceMatrix_long.
+# Price (NOK/m3) for each log or candidate. NA where the matrix has no price.
+#
+# The single price lookup used by the backend run and by scenario re-pricing
+# (helpers_comparison.R). A product is matrix-priced if the matrix has
+# length-class rows for it; its class is capped at that matrix's largest
+# class (price_class_used()), so re-pricing under another matrix uses that
+# matrix's cap.
+#
+# @param logs   data.frame with ProductKey, LengthClass_dm and
+#               PriceDiameterClass_cm_uncapped (or PriceDiameterClass_cm).
+# @param lookup build_price_lookup() result, or a PriceMatrix_long.
 lookup_prices <- function(logs, lookup) {
   if (is.data.frame(lookup)) lookup <- build_price_lookup(lookup)
   pk   <- as.character(logs$ProductKey)
@@ -472,23 +467,23 @@ lookup_prices <- function(logs, lookup) {
   .price_vectors(keys, match(pk, keys), logs$LengthClass_dm, cls_raw, lookup)$price
 }
 
-#' Prices and price-diameter classes for candidates or logs given as
-#' vectors: the engine of lookup_prices(), used directly by the backend's
-#' per-tree loop (R/helpers_bucking_core.R).
-#'
-#' A matrix product's class is capped at its matrix's largest class
-#' (price_class_used()) and priced by "ProductKey|LengthClass_dm|class";
-#' a flat product by its ProductKey. The key strings are built once per
-#' distinct (product, length class, class) combination, not once per row;
-#' the prices are the same lookups.
-#'
-#' @param keys    ProductKey of each product index.
-#' @param prod    Product index (into keys) per row.
-#' @param lc_dm   LengthClass_dm per row.
-#' @param cls_raw Uncapped PriceDiameterClass_cm per row.
-#' @param lookup  build_price_lookup() result.
-#' @return list(price = NOK/m3 per row (NA where unpriced), class_used =
-#'   capped class per row, as price_class_used()).
+# Prices and price-diameter classes for candidates or logs given as
+# vectors: the engine of lookup_prices(), used directly by the backend's
+# per-tree loop (R/helpers_bucking_core.R).
+#
+# A matrix product's class is capped at its matrix's largest class
+# (price_class_used()) and priced by "ProductKey|LengthClass_dm|class";
+# a flat product by its ProductKey. The key strings are built once per
+# distinct (product, length class, class) combination, not once per row;
+# the prices are the same lookups.
+#
+# @param keys    ProductKey of each product index.
+# @param prod    Product index (into keys) per row.
+# @param lc_dm   LengthClass_dm per row.
+# @param cls_raw Uncapped PriceDiameterClass_cm per row.
+# @param lookup  build_price_lookup() result.
+# @return list(price = NOK/m3 per row (NA where unpriced), class_used =
+#   capped class per row, as price_class_used()).
 .price_vectors <- function(keys, prod, lc_dm, cls_raw, lookup) {
   n   <- length(prod)
   cap <- unname(lookup$max_class[keys])
@@ -517,7 +512,7 @@ lookup_prices <- function(logs, lookup) {
   list(price = unname(price), class_used = cls)
 }
 
-#' Re-price logs under a price matrix: PriceNOKperM3 and value_nok replaced.
+# Re-price logs under a price matrix: PriceNOKperM3 and value_nok replaced.
 price_logs <- function(logs, pm) {
   logs$PriceNOKperM3 <- lookup_prices(logs, pm)
   logs$value_nok     <- logs$price_volume_m3 * logs$PriceNOKperM3

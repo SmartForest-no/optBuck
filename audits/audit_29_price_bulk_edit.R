@@ -55,10 +55,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 
 out_dir <- path_output("assortments", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -161,7 +160,7 @@ if (!browser_ok) {
   # Own Chrome profile and Chrome process (helpers_audit.R): stopped below, and at
   # R exit if the script halts first.
   audit_browser_start()
-  app <- audit_app_driver(file.path(root_dir, "app"), name = "audit29",
+  app <- audit_app_driver(file.path(root_dir, "inst", "app"), name = "audit29",
                           load_timeout = 60 * 1000, timeout = 120 * 1000,
                           width = 1400, height = 1100)
   if (!inherits(app, "AppDriver")) {

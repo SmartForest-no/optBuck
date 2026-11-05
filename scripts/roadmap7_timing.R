@@ -27,7 +27,7 @@ root <- local({
 })
 Sys.setenv(APTER_ROOT = root)
 suppressPackageStartupMessages(
-  source(file.path(root, "scripts", "app_backend", "01_run_sampled_plot_bucking.R")))
+  suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
 
 out_dir <- file.path(root, "outputs", "roadmap7")
 source(file.path(root, "scripts", "roadmap7_helpers.R"))   # shared helpers (hand check runs here)

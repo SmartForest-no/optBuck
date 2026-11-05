@@ -49,14 +49,8 @@ ROOT <- local({
   d
 })
 
-# Source helpers and backend.
-for (.h in c("helpers_paths", "helpers_products", "helpers_valuation",
-             "helpers_taper", "helpers_candidate_generation",
-             "helpers_dp_optimizer")) {
-  source(file.path(ROOT, "R", paste0(.h, ".R")), local = FALSE)
-}
-source(file.path(ROOT, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+# The package (helpers and backend).
+suppressMessages(pkgload::load_all(ROOT, quiet = TRUE))
 
 cat("Helpers and backend sourced.\n\n")
 
@@ -71,7 +65,7 @@ PARAMS <- list(species_group = "spruce", hogstkl = 41L,
 PM_PATH <- "default_2021"
 
 # --- load data and sample plots (mirrors backend steps 2-5) ---
-gh_dir      <- file.path(ROOT, "data_processed_github")
+gh_dir      <- file.path(ROOT, "inst", "extdata", "nfi")
 trees_all   <- as.data.frame(arrow::read_parquet(
   file.path(gh_dir, "nfi_tree_plot_stratum_ready_github.parquet")))
 eligible_trees <- trees_all[trees_all$species_group == PARAMS$species_group &

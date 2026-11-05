@@ -1,4 +1,4 @@
-# Apter development notes
+# Apter (the R package optBuck) development notes
 
 These notes are for developers working on Apter. The partner-facing overview
 is in [README.md](../README.md). AI-assistant context (domain terms,
@@ -40,11 +40,16 @@ The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
 
 ## Repository layout
 
+The repository is the R package `optBuck` (roadmap 8, step 8): `DESCRIPTION`, `NAMESPACE` (roxygen2 from `R/api.R`),
+`LICENSE` (MIT, NIBIO), `NEWS.md`, `README.md`, `CITATION.cff`, `inst/CITATION`, `man/`, `tests/testthat/`, `.Rbuildignore`
+(the folders below that are not part of the package: `audits/`, `scripts/`, `docs/`, `outputs/`, `figures/`, `logs/`,
+`data_raw/`, `data_processed/`). Check it with `R CMD build .` and `R CMD check --no-manual optBuck_*.tar.gz`; run the
+audits with `Rscript scripts/run_audits.R` (they use `pkgload::load_all()`).
+
 ```
-app/                        Shiny app, files sourced explicitly by app.R
-  app.R                     Entry point: resolves the root, sources the backend
-                            and the files below, calls shinyApp(ui, server)
-  helpers_root.R            Project root resolution (APTER_ROOT / parent of app/)
+inst/app/                    Shiny app, files sourced explicitly by app.R
+  app.R                     Entry point: loads the package (load_all() in development), attaches its internals,
+                            sources the files below, calls shinyApp(ui, server)
   setup.R                   Data, default assortments and prices (APP_DEFS, APP_PM_DEFAULT),
                             HKL/bonitet/county choices, all plots (APTER_N_PLOTS for tests),
                             tree counts for the large-run note, APP_VERSION
@@ -71,7 +76,7 @@ app/                        Shiny app, files sourced explicitly by app.R
 R/                          Core engine helpers
   helpers_paths.R           Project root and path utilities (get_root_dir())
   helpers_i18n.R            Norsk / English: tr(), tr_msg(), tr_value(), number formats and
-                            result CSVs per language (inputs/i18n/translations.csv)
+                            result CSVs per language (inst/extdata/inputs/i18n/translations.csv)
   helpers_products.R        Product definitions, assumption checks, the assortment table
                             (defs_from_products(), products_from_defs()), validate_products()
   helpers_volume_methods.R  Price-volume methods (Top cylinder, Top frustum, solid volume, Norwegian mid, Mid)
@@ -130,7 +135,7 @@ audits/
   prototype_reference/      Frozen audits 05–12
 
 scripts/
-  98_create_github_safe_processed_data.R  Sanitizes data_processed/ into data_processed_github/
+  98_create_github_safe_processed_data.R  Sanitizes data_processed/ into inst/extdata/nfi/
   run_prototype_00_prepare_nfi_data.R     Runs the frozen Oracle extraction under the current root
   phase4b_save_default_baseline.R         Saved the pre-Phase-4b default results (run once on e8b1f05; do not rerun)
   performance_save_main_baseline.R        Saved main's results before the Performance phase (run once on 3fa0a9d; do not rerun)
@@ -142,19 +147,19 @@ scripts/
   performance_benchmark.R                 Benchmark timings (outputs/performance/benchmarks.csv)
   phase4c_limits_change_report.R          What the Phase 4c default diameter limits change against the baselines
   make_demo_files.R                       Writes demo/ (scenario and price files, example tree list)
-  make_hpr_grades_fixture.R               Builds inputs/test_fixtures/hpr_grades_synthetic.hpr (audit 30) from the synthetic fixture: invented stems with stem grades
-  make_hpr_test_fixture.R                 Builds inputs/test_fixtures/hpr_example_synthetic.hpr from optBuck's example.hpr (whitelist, no personal data; 13 invented stems)
-  make_pin_test_fixture.R                 Builds inputs/test_fixtures/pin_minimal_synthetic.pin and pin_full_synthetic.pin from literals (refuses coordinates and contacts)
+  make_hpr_grades_fixture.R               Builds inst/extdata/inputs/test_fixtures/hpr_grades_synthetic.hpr (audit 30) from the synthetic fixture: invented stems with stem grades
+  make_hpr_test_fixture.R                 Builds inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr from optBuck's example.hpr (whitelist, no personal data; 13 invented stems)
+  make_pin_test_fixture.R                 Builds inst/extdata/inputs/test_fixtures/pin_minimal_synthetic.pin and pin_full_synthetic.pin from literals (refuses coordinates and contacts)
   hpr_stems_benchmark.R                   Time and memory of reading and an A/B run on real .hpr files (local only; output never committed)
   app_backend/
     00_precompute_taper_profiles_github.R     Precomputes the taper profile cache for the app
-    01_run_sampled_plot_bucking.R             Backend used by the app (fast DP optimizer): NFI
+    (01_run_sampled_plot_bucking.R is now R/run_bucking.R)  Backend used by the app (fast DP optimizer): NFI
                                               runs (all plots, or a sample) and tree-list runs
                                               (run_tree_list_bucking())
     02_benchmark_dp_optimizer_alternatives.R  DP optimizer benchmark (v3 adopted)
   prototype_reference/      Frozen prototype scripts 00–15
 
-inputs/
+inst/extdata/inputs/
   ProductData_spruce_pine_default.csv     Product definitions
   LengthClasses_spruce_pine_default.csv   Allowed log lengths per product
   price_matrices/           PriceMatrix_long and per-product matrices (default 2021)
@@ -162,7 +167,7 @@ inputs/
   i18n/translations.csv     The one translation table (Norsk / English) of the app
   test_fixtures/            hpr_example_synthetic.hpr: audits 25 and 26's .hpr file (definitions, prices, invented stems)
 
-data_processed_github/      Sanitized NFI sample used by the app (committed)
+inst/extdata/nfi/      Sanitized NFI sample used by the app (committed)
   nfi_plots_github.parquet
   nfi_tree_plot_stratum_ready_github.parquet
   sanitization_manifest.txt Record of what was removed or replaced
@@ -197,7 +202,7 @@ docs/
 | `data_processed/` | Processed private NFI data (~15 MB); local only |
 | Oracle credentials, `.Renviron` | Never committed |
 | `outputs/stem_profiles/`, `optimizer_tests/`, `selected_stratum_summary/`, `mixed_species_example_bucking/`, `stratum_tests/` | Derived from private NFI trees or large; regenerate locally |
-| `inputs/*.rds` | Binary caches of the CSV inputs |
+| `inst/extdata/inputs/*.rds` | Binary caches of the CSV inputs |
 | `logs/`, `figures/presentation_2026-10/` | Local logs and presentation material |
 
 ---
@@ -209,7 +214,7 @@ project root in this order:
 
 1. `APTER_ROOT` environment variable (`get_root_dir()` then also reads the
    option `apter.root`)
-2. Fallback: the app uses the parent of `app/`; `get_root_dir()`
+2. Fallback: the app uses the parent of `inst/app/`; `get_root_dir()`
    (`R/helpers_paths.R`), the backend, scripts and audits walk up from the
    working directory to the first folder containing `R/helpers_paths.R`
 
@@ -241,17 +246,17 @@ Table headers are grey-green (`#6A726E` on `#F7F8F7`), A/B differences
 pale green `#EAF3EE`, and the summary boxes `#F7F8F7` without a border.
 Audit 17 check 6 reads these colours back from the browser.
 Everything is our own: colours
-are the tokens in `app/theme.R` (`APTER_TOKENS`, `APTER_CHART`), component
-styles are in `app/www/apter.css`, and building blocks are in
-`app/helpers_ui.R`. No inline colours in `app_ui.R` / `app_server.R`, and no
+are the tokens in `inst/app/theme.R` (`APTER_TOKENS`, `APTER_CHART`), component
+styles are in `inst/app/www/apter.css`, and building blocks are in
+`inst/app/helpers_ui.R`. No inline colours in `app_ui.R` / `app_server.R`, and no
 Oracle or ForestSens assets.
 
-- Fonts are self-hosted from `app/www/fonts/` (no Google Fonts request at
+- Fonts are self-hosted from `inst/app/www/fonts/` (no Google Fonts request at
   runtime): Inter for the UI (Source Serif 4 is still in `fonts/` but unused
   since the Home page went). Both are SIL OFL 1.1; keep the licence files
   next to the font files. The ggplot2 figures use Inter's .ttf files
   (fontsource latin subset, 400 and 600), registered with
-  `systemfonts::register_font()` in `app/theme.R`; Shiny draws plots with
+  `systemfonts::register_font()` in `inst/app/theme.R`; Shiny draws plots with
   ragg, which picks them up (falls back to sans without them).
 - Chart colours were checked with the dataviz palette validator (headless
   Chrome, all pairs, white surface; 2026-10-16). The requested pulpwood
@@ -283,10 +288,10 @@ Oracle or ForestSens assets.
 The app starts in Norsk (bokmål); the navbar switch changes to English
 without a reload, and the browser remembers the choice (localStorage
 `apter.lang`; `?lang=en` in the URL forces a language). Every text is in
-one table, `inputs/i18n/translations.csv` (`id, kind, en, no, note`):
+one table, `inst/extdata/inputs/i18n/translations.csv` (`id, kind, en, no, note`):
 
 - **ui**: app text, looked up by id. Static UI uses `t_(id, ...)`
-  (`app/helpers_ui.R`): a span carrying the id, swapped by `www/apter.js`
+  (`inst/app/helpers_ui.R`): a span carrying the id, swapped by `www/apter.js`
   from the JSON of both languages in the page head. The server uses
   `tr(id, ..., lang = lang())`, so its outputs re-render on a switch.
 - **msg**: backend message templates, matched by their English text (the
@@ -405,16 +410,16 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 22 — performance equivalence | `Rscript audits/audit_22_performance_equivalence.R` | future, promises, later, taperNOR; taper profile cache; `outputs/performance/baseline_main_3fa0a9d.rds`; uses up to 15 workers |
 | 23 — assortment table and price sets | `Rscript audits/audit_23_assortment_table_and_price_sets.R` | readxl, writexl, taperNOR |
 | 24 — scenarios | `Rscript audits/audit_24_scenarios.R` | readxl, writexl, taperNOR, fieldPlot; `demo/` |
-| 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
-| 26 — hpr stems | `Rscript audits/audit_26_hpr_stems.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 25 — hpr import | `Rscript audits/audit_25_hpr_import.R` | xml2, zip, writexl, readxl, taperNOR; `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 26 — hpr stems | `Rscript audits/audit_26_hpr_stems.R` | xml2, zip, taperNOR, future; `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr` |
 | 27 — result tables | `Rscript audits/audit_27_result_tables.R` | writexl, readxl, taperNOR |
-| 28 — translations | `Rscript audits/audit_28_translations.R` | xml2, zip, writexl, readxl, taperNOR; `inputs/test_fixtures/hpr_example_synthetic.hpr` |
-| 30 — stem grades | `Rscript audits/audit_30_stem_grades.R` | xml2, writexl, readxl, taperNOR, future; `inputs/test_fixtures/hpr_grades_synthetic.hpr` |
-| 31 — hpr export | `Rscript audits/audit_31_hpr_export.R` | xml2, zip, taperNOR, future; `inputs/test_fixtures/hpr_example_synthetic.hpr` (variants in tempfiles) |
-| 36 — bucking check | `Rscript audits/audit_36_bucking_check.R` | xml2, arrow, future, taperNOR; `inputs/test_fixtures/hpr_check_synthetic.hpr` (scripts/make_hpr_check_fixture.R) |
+| 28 — translations | `Rscript audits/audit_28_translations.R` | xml2, zip, writexl, readxl, taperNOR; `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr` |
+| 30 — stem grades | `Rscript audits/audit_30_stem_grades.R` | xml2, writexl, readxl, taperNOR, future; `inst/extdata/inputs/test_fixtures/hpr_grades_synthetic.hpr` |
+| 31 — hpr export | `Rscript audits/audit_31_hpr_export.R` | xml2, zip, taperNOR, future; `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr` (variants in tempfiles) |
+| 36 — bucking check | `Rscript audits/audit_36_bucking_check.R` | xml2, arrow, future, taperNOR; `inst/extdata/inputs/test_fixtures/hpr_check_synthetic.hpr` (scripts/make_hpr_check_fixture.R) |
 | 37 — check vs old optBuck | `Rscript audits/audit_37_check_vs_old.R` | private files in `C:/apter_private/` (REVIEW without them) |
 | 38 — check texts | `Rscript audits/audit_38_check_texts.R` | none |
-| 32 — pin import and export | `Rscript audits/audit_32_pin_import_export.R` | xml2; `inputs/test_fixtures/pin_minimal_synthetic.pin`, `pin_full_synthetic.pin` |
+| 32 — pin import and export | `Rscript audits/audit_32_pin_import_export.R` | xml2; `inst/extdata/inputs/test_fixtures/pin_minimal_synthetic.pin`, `pin_full_synthetic.pin` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
 data.frame pipeline (`audit_dp_inputs()` in `R/helpers_audit.R`) and check
@@ -453,7 +458,7 @@ summary in `outputs/performance/profile_summary.txt`.
   - Trees are split into contiguous chunks and combined in chunk order, so results do not depend on the number of workers or the chunking.
   - Each chunk gets the bucking core as one environment (helper files, `helpers_utils.R` first, sourced with parent `package:stats`), so workers need no setup.
   - taperNOR for tree lists is chunked the same way.
-- App (`app/helpers_jobs.R`):
+- App (`inst/app/helpers_jobs.R`):
   - a run is a promise chain run by a `shiny::ExtendedTask`, with progress per chunk;
   - Run is disabled while a task runs;
   - futures are queued and polled with `later`, because `promises::future_promise()` 1.3.2 calls the plan function directly, which future ≥ 1.40 rejects.
@@ -468,7 +473,7 @@ summary in `outputs/performance/profile_summary.txt`.
 The `cores − 1` default assumes **one** R process on the machine. On a
 multi-user server with several R processes (e.g. several app processes, or
 an app plus batch jobs), set `apter.workers` so that processes × workers ≤
-cores. One app process starts its workers once (`app/setup.R`) and shares
+cores. One app process starts its workers once (`inst/app/setup.R`) and shares
 them between its sessions.
 
 **Benchmarks** (`scripts/performance_benchmark.R`, remote desktop: Windows
@@ -516,15 +521,15 @@ Rscript scripts/run_prototype_00_prepare_nfi_data.R             # run (needs Ora
 Oracle (SKOG.NORGE_TRE_2024_V, SKOG.NORGE_FLA_2024_V)
   └─ scripts/run_prototype_00_prepare_nfi_data.R  -> data_processed/   (private, local)
        └─ scripts/98_create_github_safe_processed_data.R
-            -> data_processed_github/   (sanitized, committed; read by the app)
+            -> inst/extdata/nfi/   (sanitized, committed; read by the app)
                  └─ scripts/app_backend/00_precompute_taper_profiles_github.R
                       -> outputs/app_cache/taper_profiles_github/   (taper cache)
 ```
 
-- Oracle access uses the keyring entry `REDACTED41_medium` / `REDACTED42_pluss`.
+- Oracle access uses a keyring entry (service and user names are placeholders `ORACLE_SERVICE` / `ORACLE_USER` in the frozen script; set the real ones locally, never commit them).
 - Sanitization replaces the original `plot_id` with a synthetic
   `plot_id_github`; the mapping is never written to disk. See
-  `data_processed_github/sanitization_manifest.txt`.
+  `inst/extdata/nfi/sanitization_manifest.txt`.
 - Re-running script 98 rewrites the committed sanitized data. Do it only
   deliberately, and re-run the audits afterwards.
 - Data-privacy rules, including the one authorised coordinate-export
@@ -556,7 +561,7 @@ trees the run will buck (audit 17 check 4e). Don't reimplement it.
 - **Altitude (`hoh`, m a.s.l.)** is a plot attribute (one value per plot,
   integer, recorded to 5 m), already in the sanitized data; no Oracle
   extraction or preparation script was changed for it. The sidebar slider
-  covers 0–1,100 m (`HOH_RANGE` in `app/setup.R`: all HKL 3–5 plots, 0–1,080
+  covers 0–1,100 m (`HOH_RANGE` in `inst/app/setup.R`: all HKL 3–5 plots, 0–1,080
   m, rounded out to the 50 m step). At the full range `build_run_params()`
   sends no bounds (`selected_hoh()`), so the params are identical to those
   without the filter; a narrowed range sends inclusive `hoh_min`/`hoh_max`,
@@ -595,7 +600,7 @@ These keep the old name on purpose:
 | What | Why |
 |------|-----|
 | `scripts/prototype_reference/`, `audits/prototype_reference/` | Frozen (audit 14 checks 19–20) |
-| `data_processed_github/sanitization_manifest.txt` | Record of the sanitization run; regenerating it rewrites the committed data |
+| `inst/extdata/nfi/sanitization_manifest.txt` | Record of the sanitization run; regenerating it rewrites the committed data |
 | `outputs/helper_validation/helper_price_matrix_validation_summary.txt` | Written by frozen prototype script 14 |
 | `logs/_archive/`, prototype output folders, the taper cache manifest | Records of past runs |
 | `docs/plans/phase0.md`, `docs/plans/PLAN.md` | Historical plan; "formerly nfiBuck" |
@@ -619,7 +624,7 @@ These keep the old name on purpose:
   `scenarios_differ()`). With the
   default table and 2021 prices, A runs through the default price file and
   products, as before; audit 23 check 10 shows the explicit path gives the same.
-- **Fixed sampling.** NFI runs used 200 plots and seed 42 (`app/setup.R`);
+- **Fixed sampling.** NFI runs used 200 plots and seed 42 (`inst/app/setup.R`);
   replaced in Phase 4d by all plots (below).
 - **Default diameter limits** (optBuck's example.hpr, under bark): spruce sawlog
   max top 60 / butt 65 cm, pine sawlog 50 / 60, pulpwood 70 / 70. The baselines
@@ -630,13 +635,13 @@ These keep the old name on purpose:
   339 trees and 22 logs; value 27 268.08 -> 27 150.33 NOK, commercial volume
   70.30 -> 69.90 m³, NOK/m³ 387.90 -> 388.41 (value falls less than the
   commercial volume, so NOK/m³ rises slightly).
-- `inputs/ProductData_spruce_pine_default.rds` is a stale prototype artifact
+- `inst/extdata/inputs/ProductData_spruce_pine_default.rds` is a stale prototype artifact
   (no PriceType column; read only by frozen prototype script 03) and was not
   updated.
 
 ## Phase 4d: scenarios and polish
 
-- **Scenarios.** `app/server_scenarios.R` (`scenario_server()`) holds two
+- **Scenarios.** `inst/app/server_scenarios.R` (`scenario_server()`) holds two
   independent scenarios, `sc$A` and `sc$B` (assortment table and prices
   each). An earlier draft linked B to A per assortment; it was replaced
   before merging. Now B starts as a copy, and "Make assortment/matrix equal to
@@ -701,7 +706,7 @@ These keep the old name on purpose:
   `.prepare_runs()` treats a different price length as a different product
   definition.
 - **Test file.** The real example has exact stem coordinates and names, so
-  it is not in the repository. `inputs/test_fixtures/hpr_example_synthetic.hpr`
+  it is not in the repository. `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr`
   holds its species groups (with DBHHeight since Phase B; FURU set to 120),
   products and prices plus 13 invented stems
   (`scripts/make_hpr_test_fixture.R`, run with the path to optBuck's
@@ -755,7 +760,7 @@ These keep the old name on purpose:
   `PermittedGrades` and `ReferenceGrades` come from the .hpr import (a product that does not
   permit its group's reference grade is left out for stems without grade data). Rules and decisions: CLAUDE.md,
   "hpr stem grades"; tests: audit 30 (fixture
-  `inputs/test_fixtures/hpr_grades_synthetic.hpr`, rebuilt by
+  `inst/extdata/inputs/test_fixtures/hpr_grades_synthetic.hpr`, rebuilt by
   `scripts/make_hpr_grades_fixture.R`) and audit 17 check 41.
 - **Backend.** `prepare_hpr_job()` / `run_hpr_bucking()` (stump forced to
   0), `prepare_hpr_stems_job()` for the app's worker; `.result_tree_list()`

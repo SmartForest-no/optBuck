@@ -84,3 +84,6 @@ outputs/roadmap7/
 
 # Restructure session: derived numbers from private files (never committed)
 outputs/restructure/
+
+# Old location of the app (a locked font file of a running app kept the folder; delete it once it is free)
+/app/

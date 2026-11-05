@@ -84,14 +84,10 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
-source(file.path(root_dir, "app", "helpers_upload.R"))
-source(file.path(root_dir, "R", "helpers_price_tuning.R"))      # tuning_target() (Even / Longer logs)
-source(file.path(root_dir, "R", "helpers_distribution_edit.R"))  # the editor (restructure R2)
-if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
+source(file.path(root_dir, "inst", "app", "helpers_upload.R"))
 
 out_dir <- path_output("distribution_import", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -114,7 +110,7 @@ cat("  Audit: distribution import and export (Phase 7a)\n", file = audit_txt, ap
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-FX <- file.path(root_dir, "inputs", "test_fixtures")
+FX <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures")
 F_HPR <- file.path(FX, "distribution_synthetic.hpr")
 F_PIN <- file.path(FX, "distribution_synthetic.pin")
 DIST <- PM_DISTRIBUTION_COL

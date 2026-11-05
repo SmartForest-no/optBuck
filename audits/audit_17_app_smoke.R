@@ -266,9 +266,9 @@ root_dir <- local({
   }
   d
 })
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-app_dir <- file.path(root_dir, "app")
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+app_dir <- file.path(root_dir, "inst", "app")
 out_dir <- path_output("app_smoke", root_dir = root_dir)
 ensure_dir(out_dir)
 audit_txt <- file.path(out_dir, "audit_17_app_smoke.txt")
@@ -311,7 +311,7 @@ rec("Check 01: shinytest2 + chromote installed and Chrome found",
 # ==============================================================================
 section("02. Split app files exist")
 app_files <- c("app.R", "app_ui.R", "app_server.R", "server_scenarios.R", "setup.R",
-               "theme.R", "helpers_root.R", "helpers_ui.R", "helpers_validation.R",
+               "theme.R", "helpers_ui.R", "helpers_validation.R",
                "helpers_upload.R", "www/apter.css", "www/apter.js", "www/apter-icon.svg")
 missing_app  <- app_files[!file.exists(file.path(app_dir, app_files))]
 conflicting  <- c("ui.R", "server.R", "global.R")
@@ -319,66 +319,52 @@ conflicting  <- conflicting[file.exists(file.path(app_dir, conflicting))]
 rec("Check 02: Split app files exist",
     if (length(missing_app) == 0L && length(conflicting) == 0L) PASS else FAIL,
     if (length(missing_app) == 0L && length(conflicting) == 0L)
-      sprintf("all %d present in app/; no ui.R/server.R/global.R", length(app_files))
+      sprintf("all %d present in inst/app/; no ui.R/server.R/global.R", length(app_files))
     else paste0("missing: ", paste(missing_app, collapse = ", "),
                 " | conflicting: ", paste(conflicting, collapse = ", ")))
 # ==============================================================================
 # Check 03: root resolution (no browser)
 # ==============================================================================
 section("03. Root resolution")
-root_env <- new.env()
-root_src_ok <- tryCatch({
-  source(file.path(app_dir, "helpers_root.R"), local = root_env)
-  TRUE
-}, error = function(e) FALSE)
-if (root_src_ok) {
-  saved_root  <- Sys.getenv("APTER_ROOT", unset = NA)
-  restore_env <- function() {
-    if (is.na(saved_root)) Sys.unsetenv("APTER_ROOT")
-    else Sys.setenv(APTER_ROOT = saved_root)
-  }
-  # a. unset -> parent of app/
-  Sys.unsetenv("APTER_ROOT")
-  r_a <- tryCatch(root_env$resolve_app_root(app_dir),
-                  error = function(e) paste("ERROR:", conditionMessage(e)))
-  rec("Check 03a: Env unset -> resolves to project root",
-      if (identical(r_a, root_dir)) PASS else FAIL,
-      sprintf("resolved '%s' (expected '%s')", r_a, root_dir))
-  # b. APTER_ROOT = empty temp dir -> clear error
-  bad_dir <- file.path(tempdir(), "audit17_not_a_root")
-  dir.create(bad_dir, showWarnings = FALSE)
-  Sys.setenv(APTER_ROOT = bad_dir)
-  r_b <- tryCatch({ root_env$resolve_app_root(app_dir); NULL },
-                  error = function(e) conditionMessage(e))
-  rec("Check 03b: APTER_ROOT = temp dir -> clear error",
-      if (!is.null(r_b) && grepl("does not contain R/helpers_paths.R", r_b,
-                                 fixed = TRUE)) PASS else FAIL,
-      if (is.null(r_b)) "resolved without error (expected stop())"
-      else sprintf("error: %s", r_b))
-  # c. APTER_ROOT = real root -> resolves
-  Sys.setenv(APTER_ROOT = root_dir)
-  r_c <- tryCatch(root_env$resolve_app_root(app_dir),
-                  error = function(e) paste("ERROR:", conditionMessage(e)))
-  rec("Check 03c: APTER_ROOT = project root -> resolves",
-      if (identical(r_c, root_dir)) PASS else FAIL,
-      sprintf("resolved '%s'", r_c))
-  restore_env()
-} else {
-  rec("Check 03: Root resolution", FAIL, "app/helpers_root.R failed to source")
+# Roadmap 8: the app no longer has its own root resolution (helpers_root.R is gone); it uses get_root_dir() of the package.
+saved_root  <- Sys.getenv("APTER_ROOT", unset = NA)
+restore_env <- function() {
+  if (is.na(saved_root)) Sys.unsetenv("APTER_ROOT")
+  else Sys.setenv(APTER_ROOT = saved_root)
 }
+# a. unset -> the package folder (here the source folder, load_all())
+Sys.unsetenv("APTER_ROOT")
+r_a <- tryCatch(get_root_dir(), error = function(e) paste("ERROR:", conditionMessage(e)))
+rec("Check 03a: Env unset -> resolves to the package root",
+    if (identical(r_a, root_dir)) PASS else FAIL,
+    sprintf("resolved '%s' (expected '%s')", r_a, root_dir))
+# b. APTER_ROOT = empty temp dir -> clear error
+bad_dir <- file.path(tempdir(), "audit17_not_a_root")
+dir.create(bad_dir, showWarnings = FALSE)
+Sys.setenv(APTER_ROOT = bad_dir)
+r_b <- tryCatch({ get_root_dir(); NULL }, error = function(e) conditionMessage(e))
+rec("Check 03b: APTER_ROOT = temp dir -> clear error",
+    if (!is.null(r_b) && grepl("does not contain inst/extdata/inputs", r_b, fixed = TRUE)) PASS else FAIL,
+    if (is.null(r_b)) "resolved without error (expected stop())" else sprintf("error: %s", r_b))
+# c. APTER_ROOT = real root -> resolves
+Sys.setenv(APTER_ROOT = root_dir)
+r_c <- tryCatch(get_root_dir(), error = function(e) paste("ERROR:", conditionMessage(e)))
+rec("Check 03c: APTER_ROOT = project root -> resolves",
+    if (identical(r_c, root_dir)) PASS else FAIL,
+    sprintf("resolved '%s'", r_c))
+restore_env()
 # ==============================================================================
 # Check 04: pure helpers (no browser)
 # ==============================================================================
 section("04. Pure app helpers")
 # Same load order as app.R: backend (global), then app files into one env.
 H <- new.env()
-H$ROOT <- root_dir
+H$ROOT <- root_dir; H$APP_DIR <- file.path(root_dir, "inst", "app")
 saved_np <- Sys.getenv("APTER_N_PLOTS", unset = NA)
 Sys.unsetenv("APTER_N_PLOTS")
 helpers_err <- tryCatch({
   suppressPackageStartupMessages(library(shiny))
-  source(file.path(root_dir, "scripts", "app_backend",
-                   "01_run_sampled_plot_bucking.R"), local = FALSE)
+  
   for (f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
              "helpers_upload.R"))
     source(file.path(app_dir, f), local = H)
@@ -1629,7 +1615,7 @@ if (!browser_ok) {
       c29$err <- txt(app, "#hpr_check")
       c29$bad_disabled <- isTRUE(js(app, "document.getElementById('hpr_apply').disabled"))
       cancel(app)
-      app$upload_file(scen_b_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+      app$upload_file(scen_b_upload = file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
       app$wait_for_idle()
       c29$title_b <- txt(app, ".modal-title")
       c29$species <- js(app, paste0("Array.from(document.querySelectorAll('#hpr_species select'))",
@@ -1704,7 +1690,7 @@ if (!browser_ok) {
       c31$src_before <- app$get_value(input = "tree_source")
       app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE)
-      app$upload_file(hs_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+      app$upload_file(hs_upload = file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
       app$wait_for_js("document.querySelector('#hs_validation .pm-msg-ok, #hs_validation .pm-msg-error') !== null",
                       timeout = 60 * 1000)
       app$wait_for_idle()
@@ -1760,7 +1746,7 @@ if (!browser_ok) {
     # a copy with every StemKey + 1000 uploaded at once. One total line, the
     # species table merged by name (3 rows), the comparison runs on 10 stems,
     # the Trees table has a File column, and no file name is in the results.
-    fx_src <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+    fx_src <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
     c40 <- list()
     e40 <- try_drv({
       fl <- readLines(fx_src, warn = FALSE, encoding = "UTF-8")
@@ -1823,7 +1809,7 @@ if (!browser_ok) {
     # 41. Stem grades (Phase 6): the invented grades fixture as the .hpr source.
     c41 <- list()
     e41 <- try_drv({
-      fx41 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
+      fx41 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
       vis <- function(id) isTRUE(js(app, sprintf(
         "(function(){ var e = document.getElementById('%s'); return !!(e && e.offsetParent !== null); })()", id)))
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
@@ -1875,7 +1861,7 @@ if (!browser_ok) {
     # ProductInstruction file without coordinates.
     c42 <- list()
     e42 <- try_drv({
-      fx42 <- file.path(root_dir, "inputs", "test_fixtures", "pin_full_synthetic.pin")
+      fx42 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "pin_full_synthetic.pin")
       app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       c42$kept_before <- app$get_values(export = TRUE)$export$hpr_kept_path
       c42$button <- js(app, "document.getElementById('scen_a_upload').accept")
@@ -1919,7 +1905,7 @@ if (!browser_ok) {
                 open = NA_integer_, cells = 0L, equal = FALSE, changed = 0L, nerr = NA_integer_,
                 plot_w = NA, plot_h = NA, views = list(), kept = FALSE, cleared = FALSE, radio = "")
     e43 <- try_drv({
-      fx43 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+      fx43 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
       key43 <- "spruce_140_sca_sagt_mmer"
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
@@ -2031,8 +2017,8 @@ if (!browser_ok) {
     # its assortments.
     c44 <- list()
     e44 <- try_drv({
-      fx44 <- file.path(root_dir, "inputs", "test_fixtures", "pin_full_synthetic.pin")
-      fx44b <- file.path(root_dir, "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
+      fx44 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "pin_full_synthetic.pin")
+      fx44b <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_grades_synthetic.hpr")
       on_stems <- function() { app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle() }
       on_prices <- function() { app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle() }
       on_stems(); c44$valid0 <- txt(app, "#hs_validation"); c44$src0 <- app$get_value(input = "tree_source")
@@ -2246,9 +2232,8 @@ if (!browser_ok) {
     section("34-39. Norsk")
     Sys.unsetenv("APTER_LANG")                       # the app's default language
     if (!exists("i18n_table", mode = "function")) {
-      source(file.path(root_dir, "R", "helpers_utils.R")); source(file.path(root_dir, "R", "helpers_i18n.R"))
     }
-    tr_tbl <- i18n_table(file.path(root_dir, "inputs", "i18n", "translations.csv"))
+    tr_tbl <- i18n_table(file.path(root_dir, "inst", "extdata", "inputs", "i18n", "translations.csv"))
     # English texts of the table that must not show in Norsk: those whose
     # Norsk differs, with two or more words or six or more letters, without
     # placeholders (template texts are checked by their fixed parts below).
@@ -2362,7 +2347,7 @@ if (!browser_ok) {
         c50$run_before <- js(app, "document.querySelectorAll('#chk_run').length")
         c50$box <- js(app, "document.querySelectorAll('#chk_used_only').length")
         c50$intro <- txt(app, ".page-intro")
-        app$upload_file(chk_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_check_synthetic.hpr")); app$wait_for_idle()
+        app$upload_file(chk_upload = file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_check_synthetic.hpr")); app$wait_for_idle()
         app$wait_for_js("!!document.getElementById('chk_run')", timeout = 30 * 1000)
         c50$file_line <- txt(app, ".chk-file")
         c50$reset <- js(app, "document.querySelectorAll('#chk_reset').length")
@@ -2473,7 +2458,7 @@ if (!browser_ok) {
         pick(app, "b", "spruce_pulpwood"); app$wait_for_idle()
         app$click("asm_remove_b"); app$wait_for_js("!!document.querySelector('.modal.show')", timeout = 10 * 1000)
         c36$remove <- modal_txt(app); close_modal(app)
-        app$upload_file(scen_a_upload = file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
+        app$upload_file(scen_a_upload = file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
         app$wait_for_js("!!document.querySelector('.hpr-summary')", timeout = 60 * 1000)
         c36$hpr <- modal_txt(app); lshot(app, "05_hpr_import_no"); close_modal(app)
         app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()

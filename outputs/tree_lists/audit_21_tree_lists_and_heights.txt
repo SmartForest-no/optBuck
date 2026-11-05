@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: tree lists and heights
-  Run: 2026-10-28 10:52:43.406562
+  Run: 2026-11-05 10:55:25.392664
 ============================================================= 
 
 --- 01. FinnHoyde reference curves by hand ---
@@ -15,7 +15,7 @@
   [PASS  ] Check 03c: Ratio 1.8 warns, ratio 1.2 does not; site-independence warning only for the species without heights | Spruce: measured heights are on average 80 % above the FinnHoyde curve (ratio 1.80, n = 3); check the heights or measure more trees. | Heights for 2 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees. | (inside: 0 warnings)
 
 --- 04. Time limit on the nlme fit ---
-  [PASS  ] Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights | full fit: nlme in 0.61 s | limited: nls in 0.28 s, note 'nlme stopped at the 0.2 s time limit; nls used'
+  [PASS  ] Check 04: A 0.2 s limit interrupts nlme (sooner than the full fit) and falls back to nls; no NA heights | full fit: nlme in 0.63 s | limited: nls in 0.25 s, note 'nlme stopped at the 0.2 s time limit; nls used'
 
 --- 05. Validation of broken tree lists ---
   [PASS  ] Check 05: missing column -> rejected | Missing required column(s): dbh
@@ -39,7 +39,7 @@
   [PASS  ] Check 05: ignored column -> accepted with a warning | Ignored column(s): age / Heights for 1 pine trees come from average NFI height curves (FinnHoyde, uncalibrated). These are independent of site and can be biased for your trees.
 
 --- 06. NFI trees as a tree list ---
-  [PASS  ] Check 06: NFI trees uploaded as a tree list (with their heights) give the same logs, values and NOK/m3 | 69 trees | logs 177 vs 177, unmatched 0 | NOK/m3 381.3811 vs 381.3811
+  [PASS  ] Check 06: NFI trees uploaded as a tree list (with their heights) give the same logs, values and NOK/m3 | 68 trees | logs 137 vs 137, unmatched 0 | NOK/m3 355.3580 vs 355.3580
 
 --- 07. End to end, mixed list, with a scenario comparison ---
   [PASS  ] Check 07: Mixed list: run at default and scenario prices, comparison, height source per tree, excluded tree listed | 32 trees bucked, 1 excluded (dbh below 5.0 cm) | sources: fieldPlot (plot) 9, FinnHoyde (uncalibrated) 8, measured 15 | changed trees 6 | NOK/m3 385.4 -> 494.0

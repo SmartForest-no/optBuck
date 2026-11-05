@@ -1,0 +1,9 @@
+bibentry(
+  "Manual",
+  title = "optBuck: Bucking Simulator and Bucking Analysis for Harvester Files",
+  author = person("Lennart", "Noordermeer"),
+  organization = "NIBIO",
+  year = "2026",
+  note = "R package version 0.3.0",
+  url = "https://github.com/SmartForest-no/optBuck"
+)

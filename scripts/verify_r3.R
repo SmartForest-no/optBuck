@@ -21,8 +21,8 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
 dirp <- "C:/apter_private/hpr"; ref <- "C:/apter_private/optbuck_reference"; dg <- "C:/apter_private/diag"
 dir.create(dg, showWarnings = FALSE, recursive = TRUE)
 cfg <- list(file1 = list(path = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], ref = "file1"),
@@ -189,7 +189,7 @@ part_e <- function() {
     list(new = sum(s[keep]), old = sum(old$actual_value[match(keep, as.character(old$StemKey))], na.rm = TRUE), n = length(keep))
   }
   x0 <- get_check(nm)
-  BARK_MODELS$spruce_all <<- function(d_cm, dbh_cm, species_group) bark_model_barkNOR(d_cm, dbh_cm, rep("spruce", length(species_group)))
+  BARK_MODELS$spruce_all <- function(d_cm, dbh_cm, species_group) bark_model_barkNOR(d_cm, dbh_cm, rep("spruce", length(species_group)))
   options(apter.bark_model = "spruce_all"); x1 <- bucking_check(cfg[[nm]]$path); options(apter.bark_model = NULL)
   r <- list(`new rules (barkNOR per species, under-bark price)` = tot(x0), `old bark rule (spruce for all species)` = tot(x1),
             `old price lookup (over-bark top)` = tot(x0, TRUE), `both old rules` = tot(x1, TRUE))

@@ -30,8 +30,8 @@ root <- local({
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-src_file <- file.path(root, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
-out_file <- file.path(root, "inputs", "test_fixtures", "hpr_check_synthetic.hpr")
+src_file <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+out_file <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_check_synthetic.hpr")
 
 doc <- xml2::read_xml(src_file); xml2::xml_ns_strip(doc)
 m <- xml2::xml_find_first(doc, "./Machine")

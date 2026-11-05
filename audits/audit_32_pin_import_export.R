@@ -67,11 +67,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
-if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 
 out_dir <- path_output("pin_import_export", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -93,7 +91,7 @@ cat("  Audit: .pin import and export (Phase 5b)\n", file = audit_txt, append = T
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-FX <- file.path(root_dir, "inputs", "test_fixtures")
+FX <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures")
 MINI <- file.path(FX, "pin_minimal_synthetic.pin")
 FULL <- file.path(FX, "pin_full_synthetic.pin")
 HPRFX <- file.path(FX, "hpr_example_synthetic.hpr")
@@ -315,9 +313,9 @@ same_as_plain <- identical(ic$s$defs[, keep_cols], full$s$defs[, keep_cols]) && 
   grepl("INVENTED-BUYER-ID", ic$s$defs$SourceXml[1L], fixed = TRUE)
 # The scan removes a file that holds a coordinate element.
 real_scan <- .hpr_export_has_coordinates
-assign(".hpr_export_has_coordinates", function(path, ...) TRUE, envir = globalenv())
+set_internal(".hpr_export_has_coordinates", function(path, ...) TRUE)
 f9b <- tempfile(fileext = ".pin"); x9b <- pin_export_scenario(full$s$defs, full$s$pm, f9b)
-assign(".hpr_export_has_coordinates", real_scan, envir = globalenv())
+set_internal(".hpr_export_has_coordinates", real_scan)
 scan_txt <- tempfile(fileext = ".pin"); writeLines("<A><Latitude>1</Latitude></A>", scan_txt)
 ok9 <- isTRUE(x9$ok) && !leak && same_as_plain && !isTRUE(x9b$ok) && !file.exists(f9b) &&
   real_scan(scan_txt) && !real_scan(f9)
@@ -329,8 +327,8 @@ rec("Check 09: Invented header coordinates in an input .pin reach no output (a p
 section("10. Dispatcher and app wiring")
 as_pin_name <- variant(HPRFX, function(t) t, ext = ".pin")           # an .hpr under a .pin name
 as_hpr_name <- variant(MINI, function(t) t, ext = ".hpr")            # a .pin under an .hpr name
-src <- paste(readLines(file.path(root_dir, "app", "server_scenarios.R"), warn = FALSE), collapse = "\n")
-ui_src <- paste(readLines(file.path(root_dir, "app", "app_ui.R"), warn = FALSE), collapse = "\n")
+src <- paste(readLines(file.path(root_dir, "inst", "app", "server_scenarios.R"), warn = FALSE), collapse = "\n")
+ui_src <- paste(readLines(file.path(root_dir, "inst", "app", "app_ui.R"), warn = FALSE), collapse = "\n")
 ok10 <- identical(read_product_file(MINI)$kind, "pin") && identical(read_product_file(as_hpr_name)$kind, "pin") &&
   identical(read_product_file(HPRFX)$kind, "hpr") && identical(read_product_file(as_pin_name)$kind, "hpr") &&
   grepl("if (!identical(data$kind, \"pin\")) hpr_kept(", src, fixed = TRUE) && !grepl("hpr_imported", src, fixed = TRUE) &&

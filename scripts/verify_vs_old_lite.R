@@ -17,8 +17,8 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
 dirp <- "C:/apter_private/hpr"; ref <- "C:/apter_private/optbuck_reference"
 cfg <- list(file1 = c(list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L], "file1"),
             file3 = c(file.path(dirp, "REDACTED33"), "file3"),

@@ -334,3 +334,12 @@ audit_dp_inputs <- function(params, root, price_matrix_path = "default_2021") {
   })
   list(dp_in = dp[!vapply(dp, is.null, logical(1))], result = res)
 }
+
+# Replace a function inside the optBuck namespace (audits that simulate a failure): since the package
+# conversion the functions live in the namespace, not in the global environment.
+set_internal <- function(name, value) {
+  ns <- asNamespace("optBuck")
+  if (bindingIsLocked(name, ns)) { unlockBinding(name, ns) }
+  assign(name, value, envir = ns)
+  invisible(NULL)
+}

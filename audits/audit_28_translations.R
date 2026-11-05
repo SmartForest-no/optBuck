@@ -64,13 +64,12 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 # Pure app helpers (no Shiny session): uploads and tree counts.
-source(file.path(root_dir, "app", "helpers_upload.R"))
-source(file.path(root_dir, "app", "helpers_validation.R"))
+source(file.path(root_dir, "inst", "app", "helpers_upload.R"))
+source(file.path(root_dir, "inst", "app", "helpers_validation.R"))
 
 out_dir <- path_output("i18n", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -92,7 +91,7 @@ cat("  Audit: translations (Norsk / English)\n", file = audit_txt, append = TRUE
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-tbl <- i18n_table(file.path(root_dir, "inputs", "i18n", "translations.csv"))
+tbl <- i18n_table(file.path(root_dir, "inst", "extdata", "inputs", "i18n", "translations.csv"))
 shorten <- function(x, n = 6L) if (length(x) == 0L) "none" else
   paste(c(utils::head(x, n), if (length(x) > n) sprintf("... (%d)", length(x))), collapse = " | ")
 
@@ -125,10 +124,10 @@ rec("Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same pla
 
 # ==============================================================================
 section("02. Ids used in the code")
-code_files <- c(Sys.glob(file.path(root_dir, "app", "*.R")),
+code_files <- c(Sys.glob(file.path(root_dir, "inst", "app", "*.R")),
                 file.path(root_dir, "R", c("helpers_result_tables.R", "helpers_hpr_stems.R")))   # warning texts: grade_warning_text()
 code <- unlist(lapply(code_files, readLines, encoding = "UTF-8", warn = FALSE))
-js <- readLines(file.path(root_dir, "app", "www", "apter.js"), warn = FALSE)
+js <- readLines(file.path(root_dir, "inst", "app", "www", "apter.js"), warn = FALSE)
 # Literal ids in tr(), t_(), L(), M(), T_() calls (also c("a", "b") inside them).
 calls <- regmatches(code, gregexpr("\\b(tr|t_|L|M|T_)\\((c\\()?\"[a-z][a-z0-9_]*\"(, *\"[a-z][a-z0-9_]*\")*", code, perl = TRUE))
 lit_ids <- unique(unlist(lapply(unlist(calls), function(x)
@@ -168,7 +167,7 @@ section("03. No English text left in the app code")
 # backend's messages).
 # helpers_root.R is left out: its errors stop the app before it starts
 # (developer messages, never in the browser).
-app_files <- setdiff(Sys.glob(file.path(root_dir, "app", "*.R")), file.path(root_dir, "app", "helpers_root.R"))
+app_files <- setdiff(Sys.glob(file.path(root_dir, "inst", "app", "*.R")), file.path(root_dir, "inst", "app", "helpers_root.R"))
 lits <- do.call(rbind, lapply(app_files, function(f) {
   pd <- utils::getParseData(parse(f, keep.source = TRUE, encoding = "UTF-8"))
   s <- pd[pd$token == "STR_CONST", c("line1", "text")]
@@ -255,7 +254,7 @@ p_cal <- prepare_tree_list(cal); see(p_cal$warnings, p_cal$trees$height_source, 
 tl_n <- length(seen)
 
 # .hpr import: the fixture, its product table, broken files and an empty map.
-FIXTURE <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+FIXTURE <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
 h <- read_hpr(FIXTURE, "fixture.hpr"); see(h$errors, h$warnings)
 map_all <- stats::setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key)
 tab <- hpr_product_table(h, map_all); see(tab$reason[nzchar(tab$reason)])

@@ -59,46 +59,46 @@
 #   top cylinder always was; solid volume is not rounded.
 # ==============================================================================
 
-#' Price-volume methods (ProductData$VolumeDiameterCategory).
+# Price-volume methods (ProductData$VolumeDiameterCategory).
 VOLUME_METHODS <- c("Top cylinder", "Top", "All diameters (solid volume)",
                     "Calculated Norwegian mid", "Mid")
 
-#' ProductData$VolumeDiameterAdjustment values.
+# ProductData$VolumeDiameterAdjustment values.
 VOLUME_ROUND_DOWN_CM <- "Measured diameter rounded downwards to cm"
 VOLUME_DIAMETER_ADJUSTMENTS <- c("None", VOLUME_ROUND_DOWN_CM)
 
-#' The diameter rounding of each volume method (Phase 4d: fixed per method,
-#' no longer a setting): Top cylinder, Top, Norwegian mid and Mid round down
-#' to whole cm; solid volume never rounds.
+# The diameter rounding of each volume method (Phase 4d: fixed per method,
+# no longer a setting): Top cylinder, Top, Norwegian mid and Mid round down
+# to whole cm; solid volume never rounds.
 volume_rounding <- function(method) {
   ifelse(as.character(method) == "All diameters (solid volume)", "None", VOLUME_ROUND_DOWN_CM)
 }
 
-#' Short labels of the volume methods for compact tables.
+# Short labels of the volume methods for compact tables.
 VOLUME_METHOD_SHORT <- c("Top cylinder" = "Top cylinder", "Top" = "Top (frustum)",
                          "All diameters (solid volume)" = "Solid volume",
                          "Calculated Norwegian mid" = "Norwegian mid", "Mid" = "Mid")
 
-#' Frustum / Norwegian mid taper: 1 cm per metre = 0.1 mm per cm of length.
+# Frustum / Norwegian mid taper: 1 cm per metre = 0.1 mm per cm of length.
 VOLUME_TAPER_MM_PER_CM <- 0.1
 
-#' The Maalereglement's pi for Norwegian mid (reproduces the official
-#' volume); the other methods use pi.
+# The Maalereglement's pi for Norwegian mid (reproduces the official
+# volume); the other methods use pi.
 VOLUME_NORWEGIAN_PI <- 3.14
 
 
-#' Price volume (m3) of logs, vectorised over logs of one product.
-#'
-#' @param method      One of VOLUME_METHODS.
-#' @param top_d_mm    Measuring top diameter (mm).
-#' @param length_cm   Log length (cm).
-#' @param start_pos,stop_pos Log positions (cm); used by solid volume only.
-#' @param solid_vol   function(start, stop) from section_volume_fun() on the
-#'                    product's diameter series; used by solid volume only.
-#' @param adjustment  VolumeDiameterAdjustment (NA/NULL = "None").
-#' @param mid_d_mm    Diameter (mm) at the middle of the log; Mid only.
-#' @return Numeric vector (m3). NA where the measuring diameter (top, or mid
-#'   for Mid) is NA or <= 0 (formula methods).
+# Price volume (m3) of logs, vectorised over logs of one product.
+#
+# @param method      One of VOLUME_METHODS.
+# @param top_d_mm    Measuring top diameter (mm).
+# @param length_cm   Log length (cm).
+# @param start_pos,stop_pos Log positions (cm); used by solid volume only.
+# @param solid_vol   function(start, stop) from section_volume_fun() on the
+#                    product's diameter series; used by solid volume only.
+# @param adjustment  VolumeDiameterAdjustment (NA/NULL = "None").
+# @param mid_d_mm    Diameter (mm) at the middle of the log; Mid only.
+# @return Numeric vector (m3). NA where the measuring diameter (top, or mid
+#   for Mid) is NA or <= 0 (formula methods).
 price_volume_m3 <- function(method, top_d_mm, length_cm,
                             start_pos = NULL, stop_pos = NULL,
                             solid_vol = NULL, adjustment = "None",

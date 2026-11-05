@@ -32,26 +32,22 @@
 #                           decimal comma (write.csv2), UTF-8 with BOM
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
-#' The languages, in the order of the switch; the first is the default.
+# The languages, in the order of the switch; the first is the default.
 APTER_LANGS <- c("no", "en")
 
 .i18n <- new.env(parent = emptyenv())
 .i18n$misses <- character(0)
 
-#' The translation table (read once per process).
-#'
-#' @param path inputs/i18n/translations.csv by default (project root from
-#'   get_root_dir() when available, else option apter.root / APTER_ROOT).
+# The translation table (read once per process).
+#
+# @param path inputs/i18n/translations.csv by default (project root from
+#   get_root_dir() when available, else option apter.root / APTER_ROOT).
 i18n_table <- function(path = NULL) {
   if (!is.null(.i18n$table) && is.null(path)) return(.i18n$table)
   if (is.null(path)) {
-    root <- if (exists("get_root_dir", mode = "function")) get_root_dir()
-            else or_default(getOption("apter.root"), Sys.getenv("APTER_ROOT"))
-    path <- file.path(root, "inputs", "i18n", "translations.csv")
+    root <- get_root_dir()
+    path <- path_input("i18n", "translations.csv", root_dir = root)
   }
   t <- utils::read.csv(path, encoding = "UTF-8", fileEncoding = "UTF-8", colClasses = "character",
                        na.strings = character(0), check.names = FALSE)
@@ -70,13 +66,13 @@ i18n_table <- function(path = NULL) {
   t
 }
 
-#' Is `lang` a language of the app? Anything else falls back to the default.
+# Is `lang` a language of the app? Anything else falls back to the default.
 i18n_lang <- function(lang) {
   lang <- as.character(or_default(lang, APTER_LANGS[1L]))[1L]
   if (lang %in% APTER_LANGS) lang else APTER_LANGS[1L]
 }
 
-#' A `ui` text by id, filled with sprintf(). Unknown ids are an error.
+# A `ui` text by id, filled with sprintf(). Unknown ids are an error.
 tr <- function(id, ..., lang = "en") {
   t <- i18n_table(); i <- .i18n$by_id[id]
   if (anyNA(i)) stop(sprintf("Unknown text id(s): %s", paste(id[is.na(i)], collapse = ", ")), call. = FALSE)
@@ -86,8 +82,8 @@ tr <- function(id, ..., lang = "en") {
   unname(sprintf(s, ...))
 }
 
-#' Data values (species, types, volume methods, "Total", column names) to
-#' `lang`; exact matches only, unknown values unchanged. Keeps NA.
+# Data values (species, types, volume methods, "Total", column names) to
+# `lang`; exact matches only, unknown values unchanged. Keeps NA.
 tr_value <- function(x, lang = "en") {
   if (i18n_lang(lang) == "en" || length(x) == 0L) return(x)
   i18n_table()
@@ -97,11 +93,11 @@ tr_value <- function(x, lang = "en") {
   y
 }
 
-#' The display name of an assortment: the species ("Spruce" / "Gran") and the name. A product
-#' name from a file is shown exactly as written (case unchanged); only the base names
-#' (Sawlog, Pulpwood, Waste), which Apter translates, start in lower case ("Spruce sawlog",
-#' "Gran sagtømmer").
-#' @param species "spruce" / "pine"; @param name the assortment's Name; @param lang "en" / "no".
+# The display name of an assortment: the species ("Spruce" / "Gran") and the name. A product
+# name from a file is shown exactly as written (case unchanged); only the base names
+# (Sawlog, Pulpwood, Waste), which Apter translates, start in lower case ("Spruce sawlog",
+# "Gran sagtømmer").
+# @param species "spruce" / "pine"; @param name the assortment's Name; @param lang "en" / "no".
 assortment_display_name <- function(species, name, lang = "en") {
   name <- as.character(name)
   nm <- tr_value(name, lang)
@@ -110,18 +106,18 @@ assortment_display_name <- function(species, name, lang = "en") {
   sprintf("%s %s", tr_value(tools::toTitleCase(as.character(species)), lang), nm)
 }
 
-#' English backend text to `lang`: exact match first, then the message
-#' templates (most specific first). Captured arguments are translated in
-#' turn (a reason inside "3 stems dropped: <reason>."), numbers get the
-#' language's decimal mark. Unmatched text is returned unchanged and
-#' recorded (i18n_misses()).
+# English backend text to `lang`: exact match first, then the message
+# templates (most specific first). Captured arguments are translated in
+# turn (a reason inside "3 stems dropped: <reason>."), numbers get the
+# language's decimal mark. Unmatched text is returned unchanged and
+# recorded (i18n_misses()).
 tr_msg <- function(text, lang = "en") {
   if (i18n_lang(lang) == "en" || length(text) == 0L) return(text)
   i18n_table()
   vapply(as.character(text), function(s) .tr_one(s, lang, depth = 0L), "", USE.NAMES = FALSE)
 }
 
-#' Texts tr_msg() could not translate since the table was (re)loaded.
+# Texts tr_msg() could not translate since the table was (re)loaded.
 i18n_misses <- function() unique(.i18n$misses)
 i18n_reset_misses <- function() .i18n$misses <- character(0)
 
@@ -161,7 +157,7 @@ i18n_reset_misses <- function() .i18n$misses <- character(0)
 # An argument captured from a template: a number in the language's format,
 # else translated if the table knows it (up to three levels deep).
 .tr_arg <- function(a, lang, depth) {
-  if (grepl("^-?[0-9]{1,3}(,[0-9]{3})+$", a)) return(gsub(",", " ", a, fixed = TRUE))
+  if (grepl("^-?[0-9]{1,3}(,[0-9]{3})+$", a)) return(gsub(",", "\u00a0", a, fixed = TRUE))
   if (grepl("^-?[0-9]+\\.[0-9]+$", a)) return(sub(".", ",", a, fixed = TRUE))
   if (grepl("^-?[0-9]+$", a) || depth >= 3L) return(a)
   hit <- .i18n$exact[a]
@@ -211,7 +207,7 @@ i18n_reset_misses <- function() .i18n$misses <- character(0)
   out[order(-vapply(out, `[[`, 0, "weight"))]
 }
 
-#' Column names and character values of a table in `lang` (exact matches).
+# Column names and character values of a table in `lang` (exact matches).
 i18n_df <- function(df, lang = "en") {
   if (i18n_lang(lang) == "en") return(df)
   names(df) <- tr_value(names(df), lang)
@@ -220,13 +216,13 @@ i18n_df <- function(df, lang = "en") {
   df
 }
 
-#' A text to render later, in the language of the moment: the id of a `ui`
-#' text and its arguments (themselves texts, numbers or English backend
-#' text).
+# A text to render later, in the language of the moment: the id of a `ui`
+# text and its arguments (themselves texts, numbers or English backend
+# text).
 i18n_text <- function(id, ...) structure(list(id = id, args = list(...)), class = "apter_text")
 
-#' Render an i18n_text(), English backend text (tr_msg()), or a list of
-#' them (one string each).
+# Render an i18n_text(), English backend text (tr_msg()), or a list of
+# them (one string each).
 render_text <- function(x, lang = "en") {
   if (is.null(x)) return(NULL)
   if (inherits(x, "apter_text"))
@@ -237,27 +233,27 @@ render_text <- function(x, lang = "en") {
   x
 }
 
-#' Numbers in the language's format: English "1,234.5", Norsk "1 234,5"
-#' (non-breaking space). NA as `na`.
-fmt_num <- function(x, digits = 0L, lang = "en", big = TRUE, na = "–") {
+# Numbers in the language's format: English "1,234.5", Norsk "1 234,5"
+# (non-breaking space). NA as `na`.
+fmt_num <- function(x, digits = 0L, lang = "en", big = TRUE, na = "\u2013") {
   no <- i18n_lang(lang) == "no"
   out <- formatC(round(as.numeric(x), digits), format = "f", digits = digits,
-                 big.mark = if (!big) "" else if (no) " " else ",",
+                 big.mark = if (!big) "" else if (no) "\u00a0" else ",",
                  decimal.mark = if (no) "," else ".")
   out[is.na(x)] <- na
   trimws(out)
 }
 
-#' Decimal points inside labels ("5–9.9") as the language writes them
-#' ("5–9,9" in Norsk).
+# Decimal points inside labels ("5–9.9") as the language writes them
+# ("5–9,9" in Norsk).
 i18n_decimals <- function(x, lang = "en") {
   if (i18n_lang(lang) == "en") return(x)
   gsub("([0-9])\\.([0-9])", "\\1,\\2", x, perl = TRUE)
 }
 
-#' A result table as CSV in the language's format: English as before
-#' (write.csv, UTF-8); Norsk with ";" and a decimal comma (write.csv2) and a
-#' UTF-8 byte-order mark, so Norwegian Excel opens it directly.
+# A result table as CSV in the language's format: English as before
+# (write.csv, UTF-8); Norsk with ";" and a decimal comma (write.csv2) and a
+# UTF-8 byte-order mark, so Norwegian Excel opens it directly.
 write_download_csv <- function(df, file, lang = "en", na = "NA") {
   if (i18n_lang(lang) == "en")
     return(utils::write.csv(df, file, row.names = FALSE, fileEncoding = "UTF-8", na = na))

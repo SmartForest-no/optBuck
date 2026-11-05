@@ -24,7 +24,7 @@ root <- local({
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-dir <- file.path(root, "inputs", "test_fixtures")
+dir <- file.path(root, "inst", "extdata", "inputs", "test_fixtures")
 
 ROOT_OPEN <- paste0('<ProductInstruction xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ',
                     'xmlns:xsd="http://www.w3.org/2001/XMLSchema" messageType="pin" ',

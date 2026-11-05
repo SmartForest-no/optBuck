@@ -20,23 +20,23 @@
 #           and the comparison.
 # ==============================================================================
 
-#' Tree-list columns.
+# Tree-list columns.
 TREE_LIST_REQUIRED <- c("tree_id", "species", "dbh")
 TREE_LIST_OPTIONAL <- c("height", "plot_id")
 
-#' taperNOR's range (as for NFI trees; helpers_taper.R).
+# taperNOR's range (as for NFI trees; helpers_taper.R).
 TREE_LIST_MIN_DBH_CM   <- 5.0
 TREE_LIST_MIN_HEIGHT_M <- 4.5
-#' Beyond these the taper and height models extrapolate: warning.
+# Beyond these the taper and height models extrapolate: warning.
 TREE_LIST_MAX_DBH_CM   <- 80
 TREE_LIST_MAX_HEIGHT_M <- 40
-#' Plausible height/diameter ratio (height m / dbh m).
+# Plausible height/diameter ratio (height m / dbh m).
 TREE_LIST_HD_RANGE <- c(30, 150)
 
 
-#' Read an uploaded tree list (all columns as text, names lower-cased).
-#'
-#' @return list(data = data.frame or NULL, errors).
+# Read an uploaded tree list (all columns as text, names lower-cased).
+#
+# @return list(data = data.frame or NULL, errors).
 read_tree_list <- function(path, filename = path) {
   ext <- tolower(tools::file_ext(filename))
   df <- tryCatch(switch(ext,
@@ -54,14 +54,14 @@ read_tree_list <- function(path, filename = path) {
 }
 
 
-#' Validate a tree list, impute heights and check taperNOR's range.
-#'
-#' @param df   data.frame from read_tree_list()$data (text columns).
-#' @param min_measured,timeout_s Passed to impute_heights().
-#' @return list(ok, errors, warnings, trees, heights = impute_heights()
-#'   summary, excluded). `trees` (all valid rows): treid, tree_id, plot_id,
-#'   species_group, dbh_cm, height_measured_m, height_m, height_source,
-#'   in_range, excluded_reason.
+# Validate a tree list, impute heights and check taperNOR's range.
+#
+# @param df   data.frame from read_tree_list()$data (text columns).
+# @param min_measured,timeout_s Passed to impute_heights().
+# @return list(ok, errors, warnings, trees, heights = impute_heights()
+#   summary, excluded). `trees` (all valid rows): treid, tree_id, plot_id,
+#   species_group, dbh_cm, height_measured_m, height_m, height_source,
+#   in_range, excluded_reason.
 prepare_tree_list <- function(df, min_measured = HEIGHT_MIN_MEASURED_PER_SPECIES,
                               timeout_s = HEIGHT_FIT_TIMEOUT_S) {
   err <- character(0); warn <- character(0)
@@ -167,8 +167,8 @@ prepare_tree_list <- function(df, min_measured = HEIGHT_MIN_MEASURED_PER_SPECIES
 }
 
 
-#' Example tree list (CSV): spruce with 4 measured heights (calibrated
-#' FinnHoyde), pine without heights (uncalibrated FinnHoyde), two plots.
+# Example tree list (CSV): spruce with 4 measured heights (calibrated
+# FinnHoyde), pine without heights (uncalibrated FinnHoyde), two plots.
 tree_list_template <- function(path) {
   t <- data.frame(
     tree_id = c(1:7, 1:5),

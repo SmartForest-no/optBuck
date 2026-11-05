@@ -20,9 +20,8 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
-source(file.path(root_dir, "R", "helpers_price_tuning.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
 source(file.path(root_dir, "scripts", "roadmap7_helpers.R"))
 
 f5 <- "C:/apter_private/hpr/REDACTED28"

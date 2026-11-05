@@ -25,41 +25,38 @@
 #           character vectors (shown in the import dialog); they do not stop.
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
-#' Token prefixes that identify a species group's species (lower case).
+# Token prefixes that identify a species group's species (lower case).
 HPR_SPECIES_PATTERNS <- list(
   spruce = c("gran", "spruce", "picea", "kuusi", "fichte"),
-  pine   = c("furu", "fura", "tall", "pine", "pinus", "mänty", "manty", "kiefer"))
+  pine   = c("furu", "fura", "tall", "pine", "pinus", "m\u00e4nty", "manty", "kiefer"))
 
-#' Bucking criterion of a price cell that may not be cut: left empty.
+# Bucking criterion of a price cell that may not be cut: left empty.
 HPR_FORBIDDEN <- "Forbidden to buck the log even manually"
 
-#' Bucking criterion of a price cell for logs bucked by hand only. Apter
-#' simulates automatic bucking, so such cells are left empty too (decided
-#' 2026-10-29, Phase 5b). "The log is excluded from apportionment bucking,
-#' only bucking according to value allowed" stays priced.
+# Bucking criterion of a price cell for logs bucked by hand only. Apter
+# simulates automatic bucking, so such cells are left empty too (decided
+# 2026-10-29, Phase 5b). "The log is excluded from apportionment bucking,
+# only bucking according to value allowed" stays priced.
 HPR_MANUAL <- "Only logs bucked manually allowed"
 
-#' Criteria of cells the optimiser may not use (left empty).
+# Criteria of cells the optimiser may not use (left empty).
 HPR_UNAVAILABLE <- c(HPR_FORBIDDEN, HPR_MANUAL)
 
-#' StanForD volume categories Apter computes (others become solid volume).
+# StanForD volume categories Apter computes (others become solid volume).
 HPR_VOLUME_METHODS <- c("Top", "Calculated Norwegian mid", "Mid", "All diameters (solid volume)")
 
-#' Volume method of a .pin product without a PriceDefinition: the default of a
-#' new assortment in the app (Phase 5b). Never read from a file, so it is not
-#' in HPR_VOLUME_METHODS; hpr_to_scenario() accepts it without a warning.
+# Volume method of a .pin product without a PriceDefinition: the default of a
+# new assortment in the app (Phase 5b). Never read from a file, so it is not
+# in HPR_VOLUME_METHODS; hpr_to_scenario() accepts it without a warning.
 PIN_DEFAULT_VOLUME_METHOD <- "Top cylinder"
 
-#' Product group / name tokens of sawlogs and pulpwood (the hidden Type).
-HPR_SAWLOG_TOKENS   <- c("tømmer", "tommer", "sag", "timber", "saw", "kubb", "stock")
+# Product group / name tokens of sawlogs and pulpwood (the hidden Type).
+HPR_SAWLOG_TOKENS   <- c("t\u00f8mmer", "tommer", "sag", "timber", "saw", "kubb", "stock")
 HPR_PULPWOOD_TOKENS <- c("massevirke", "massa", "pulp", "energi", "energy", "bio")
-#' Extra pulpwood prefixes read from the product name only (R5): a product group "MASSE" also
-#' holds a birch product that stays a custom type.
-HPR_PULPWOOD_NAME_TOKENS <- c("masse", "rmasse", "tørr", "torr")
+# Extra pulpwood prefixes read from the product name only (R5): a product group "MASSE" also
+# holds a birch product that stays a custom type.
+HPR_PULPWOOD_NAME_TOKENS <- c("masse", "rmasse", "t\u00f8rr", "torr")
 
 # Text (trimmed) / number / attribute of the first node matching `xpath`
 # under one node, NA if none; all matching texts.
@@ -77,12 +74,12 @@ HPR_PULPWOOD_NAME_TOKENS <- c("masse", "rmasse", "tørr", "torr")
 # Lower-case letter tokens of a text ("NO1_FURU" -> "no", "furu").
 .hpr_tokens <- function(x) {
   x <- tolower(paste(x[!is.na(x)], collapse = " "))
-  t <- strsplit(x, "[^[:alpha:]æøåäöü]+", perl = TRUE)[[1L]]
+  t <- strsplit(x, "[^[:alpha:]\u00e6\u00f8\u00e5\u00e4\u00f6\u00fc]+", perl = TRUE)[[1L]]
   t[nzchar(t)]
 }
 
-#' Guess Apter's species of a species group from its name and user ID:
-#' "spruce", "pine", or "none" (no match, or both).
+# Guess Apter's species of a species group from its name and user ID:
+# "spruce", "pine", or "none" (no match, or both).
 guess_hpr_species <- function(name, user_id = NA) {
   vapply(seq_along(name), function(i) {
     tok <- .hpr_tokens(c(name[i], user_id[i]))
@@ -105,9 +102,9 @@ guess_hpr_species <- function(name, user_id = NA) {
 }
 
 
-#' One product of a StanForD 2010 product definition (an .hpr Machine/ProductDefinition
-#' or a .pin ProductDefinition) as a list. `key` is ProductKey (.hpr); the .pin
-#' reader overwrites it (a .pin has none).
+# One product of a StanForD 2010 product definition (an .hpr Machine/ProductDefinition
+# or a .pin ProductDefinition) as a list. `key` is ProductKey (.hpr); the .pin
+# reader overwrites it (a .pin has none).
 .hpr_product <- function(p) {
   cp <- xml2::xml_find_first(p, "./ClassifiedProductDefinition")
   dd <- "./DiameterDefinition"; dc <- paste0(dd, "/DiameterClasses")
@@ -202,17 +199,17 @@ source_cells_parse <- function(x) {
 
 # ---- reading -------------------------------------------------------------------------
 
-#' Bytes read per step when looking for the first stem.
+# Bytes read per step when looking for the first stem.
 HPR_CHUNK_BYTES <- 4L * 1024L * 1024L
 
-#' A stem record: <Stem> directly followed by its StemKey. ("<Stem>" alone
-#' also occurs inside species groups' biomass functions, and StemTypeDefinition
-#' and StemCode start with "<Stem".)
+# A stem record: <Stem> directly followed by its StemKey. ("<Stem>" alone
+# also occurs inside species groups' biomass functions, and StemTypeDefinition
+# and StemCode start with "<Stem".)
 HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
 
-#' Byte position of the first stem record in `buf` (NA if none): the first
-#' "<StemKey>" (a fast fixed search), then its "<Stem" opening tag, checked
-#' with HPR_STEM_START on that short stretch only.
+# Byte position of the first stem record in `buf` (NA if none): the first
+# "<StemKey>" (a fast fixed search), then its "<Stem" opening tag, checked
+# with HPR_STEM_START on that short stretch only.
 .hpr_stem_pos <- function(buf) {
   for (k in grepRaw("<StemKey>", buf, fixed = TRUE, all = TRUE)) {
     if (k <= 1L) next
@@ -227,9 +224,9 @@ HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
   NA_integer_
 }
 
-#' The bytes of an .hpr (or .gz) file before its first stem record:
-#' list(bytes (raw), found (a stem was found), total (bytes read)). Only that
-#' part is read; a file without stems is read whole.
+# The bytes of an .hpr (or .gz) file before its first stem record:
+# list(bytes (raw), found (a stem was found), total (bytes read)). Only that
+# part is read; a file without stems is read whole.
 .hpr_prefix <- function(path, entry = NULL) {
   # gzfile() also reads uncompressed files; unz() streams one zip entry.
   con <- if (is.null(entry)) gzfile(path, "rb") else unz(path, entry, open = "rb")
@@ -252,8 +249,8 @@ HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
   }
 }
 
-#' Close the elements still open at the end of a truncated XML text (the part
-#' before the first stem), so it parses as a whole document.
+# Close the elements still open at the end of a truncated XML text (the part
+# before the first stem), so it parses as a whole document.
 .hpr_close_tags <- function(bytes) {
   txt <- rawToChar(bytes)
   tags <- regmatches(txt, gregexpr("<(/?)([A-Za-z_][A-Za-z0-9_.:-]*)[^<>]*?(/?)>", txt, perl = TRUE,
@@ -269,9 +266,9 @@ HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
   c(bytes, charToRaw(paste0(sprintf("</%s>", rev(stack)), collapse = "")))
 }
 
-#' The .hpr file to read: the file itself, or for a .zip the first .hpr
-#' inside it (`entry`: streamed with unz(), extracted only when the whole
-#' file must be parsed). list(path, entry, errors, warnings).
+# The .hpr file to read: the file itself, or for a .zip the first .hpr
+# inside it (`entry`: streamed with unz(), extracted only when the whole
+# file must be parsed). list(path, entry, errors, warnings).
 .hpr_source <- function(path, filename) {
   if (!grepl("\\.zip$", filename, ignore.case = TRUE))
     return(list(path = path, entry = NULL, errors = character(0), warnings = character(0)))
@@ -284,19 +281,19 @@ HPR_STEM_START <- "<Stem[^>]*>[[:space:]]*<StemKey"
                   else character(0))
 }
 
-#' Read the definitions of a StanForD 2010 .hpr file (also .hpr.gz, or an
-#' .hpr inside a .zip): species groups, products with their price matrices
-#' and permitted grades. Only the part before the first stem is parsed
-#' (definitions precede the stems in StanForD 2010 files); if no definitions
-#' are found there, the whole file is parsed.
-#'
-#' @param path     File path.
-#' @param filename Name shown in messages (its extension decides .zip).
-#' @return list(ok, errors, warnings, header (file, version, read: "prefix"
-#'   or "whole", mb_read, mb_file), species (data.frame: key, name, user_id,
-#'   best_grade, start_grade, dbh_height (cm from the felling cut; NA if
-#'   absent), n_products), products (list, one per classified product)).
-#'   Stems are not read here (R/helpers_hpr_stems.R).
+# Read the definitions of a StanForD 2010 .hpr file (also .hpr.gz, or an
+# .hpr inside a .zip): species groups, products with their price matrices
+# and permitted grades. Only the part before the first stem is parsed
+# (definitions precede the stems in StanForD 2010 files); if no definitions
+# are found there, the whole file is parsed.
+#
+# @param path     File path.
+# @param filename Name shown in messages (its extension decides .zip).
+# @return list(ok, errors, warnings, header (file, version, read: "prefix"
+#   or "whole", mb_read, mb_file), species (data.frame: key, name, user_id,
+#   best_grade, start_grade, dbh_height (cm from the felling cut; NA if
+#   absent), n_products), products (list, one per classified product)).
+#   Stems are not read here (R/helpers_hpr_stems.R).
 read_hpr <- function(path, filename = basename(path)) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   src <- .hpr_source(path, filename)
@@ -404,15 +401,15 @@ read_hpr <- function(path, filename = basename(path)) {
 
 # ---- .pin files (Phase 5b) ---------------------------------------------------------------
 
-#' Read the products of a StanForD 2010 .pin file (ProductInstruction): the
-#' same ProductDefinition elements as an .hpr, without species group
-#' definitions or product keys. Nothing of the header is read. The result has
-#' the shape of read_hpr() plus `kind = "pin"`: the product key is its
-#' ProductUserID (else its ProductName; a repeated one gets _2, _3, ...), and
-#' the species table is made of the distinct SpeciesGroupUserIDs (key = name =
-#' user ID), so the species map and the import dialog work as for an .hpr.
-#' A missing PriceDefinition means the volume method of a new assortment
-#' ("Top cylinder"); missing optional elements are not reported.
+# Read the products of a StanForD 2010 .pin file (ProductInstruction): the
+# same ProductDefinition elements as an .hpr, without species group
+# definitions or product keys. Nothing of the header is read. The result has
+# the shape of read_hpr() plus `kind = "pin"`: the product key is its
+# ProductUserID (else its ProductName; a repeated one gets _2, _3, ...), and
+# the species table is made of the distinct SpeciesGroupUserIDs (key = name =
+# user ID), so the species map and the import dialog work as for an .hpr.
+# A missing PriceDefinition means the volume method of a new assortment
+# ("Top cylinder"); missing optional elements are not reported.
 read_pin <- function(path, filename = basename(path)) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   x <- tryCatch(xml2::read_xml(path, options = c("NOBLANKS", "HUGE")), error = function(e) NULL)
@@ -485,9 +482,9 @@ read_pin <- function(path, filename = basename(path)) {
        species = species, products = products)
 }
 
-#' Read a product file by its root element: a .pin (ProductInstruction) with
-#' read_pin(), anything else with read_hpr() (which also takes .gz and .zip).
-#' Only the first bytes are looked at to decide, as .hpr files can be 150 MB.
+# Read a product file by its root element: a .pin (ProductInstruction) with
+# read_pin(), anything else with read_hpr() (which also takes .gz and .zip).
+# Only the first bytes are looked at to decide, as .hpr files can be 150 MB.
 read_product_file <- function(path, filename = basename(path)) {
   head <- tryCatch(readBin(path, "raw", 4096L), error = function(e) raw(0))
   txt <- rawToChar(head[head != as.raw(0L)])
@@ -498,14 +495,14 @@ read_product_file <- function(path, filename = basename(path)) {
 
 # ---- products and the grade filter ----------------------------------------------------
 
-#' Reference grades per species group (decided 2026-10-22): the grade(s)
-#' permitted by the most products of the group, each product counted once
-#' (ties keep all tied grades); if no product of the group lists permitted
-#' grades, its StartGrade, else its lowest GradeNumber. Grade names and
-#' product names are not used.
-#'
-#' @return Named list (species group key -> numeric grades; numeric(0) when
-#'   the group defines no grades).
+# Reference grades per species group (decided 2026-10-22): the grade(s)
+# permitted by the most products of the group, each product counted once
+# (ties keep all tied grades); if no product of the group lists permitted
+# grades, its StartGrade, else its lowest GradeNumber. Grade names and
+# product names are not used.
+#
+# @return Named list (species group key -> numeric grades; numeric(0) when
+#   the group defines no grades).
 hpr_reference_grades <- function(hpr) {
   sp <- hpr$species
   out <- lapply(seq_len(NROW(sp)), function(i) {
@@ -519,9 +516,9 @@ hpr_reference_grades <- function(hpr) {
   setNames(out, sp$key)
 }
 
-#' Whether a product permits a reference grade of any of its species groups
-#' (hpr_reference_grades()): TRUE / FALSE, NA when the product has no
-#' permitted grades or its groups no reference grade.
+# Whether a product permits a reference grade of any of its species groups
+# (hpr_reference_grades()): TRUE / FALSE, NA when the product has no
+# permitted grades or its groups no reference grade.
 hpr_grade_ok <- function(p, ref) {
   if (is.null(p$grades) || length(p$grades) == 0L) return(NA)
   r <- unlist(ref[intersect(p$species_keys, names(ref))])
@@ -532,22 +529,22 @@ hpr_grade_ok <- function(p, ref) {
 # "130–360 mm (14 classes)", "305 cm (1 class)".
 .hpr_range <- function(x, unit) {
   x <- x[!is.na(x)]
-  if (length(x) == 0L) return("–")
+  if (length(x) == 0L) return("\u2013")
   n <- sprintf("(%d class%s)", length(x), if (length(x) == 1L) "" else "es")
   if (length(x) == 1L) sprintf("%g %s %s", x, unit, n)
-  else sprintf("%g–%g %s %s", min(x), max(x), unit, n)
+  else sprintf("%g\u2013%g %s %s", min(x), max(x), unit, n)
 }
 
-#' One row per product for the import dialog: its species (after the
-#' species map), forbidden cells, and whether it is imported by default
-#' (not if its species is not used or it has no priced cells), with the
-#' reason. Grades no longer untick products (2026-10-28): a product that
-#' permits none of its group's reference grades (hpr_reference_grades()) is
-#' kept, and the run leaves it out for stems without grade data
-#' (`ReferenceGrades`, .candidate_species_plan()).
-#'
-#' @param species_map Named character: species group key -> "spruce",
-#'   "pine" or "none".
+# One row per product for the import dialog: its species (after the
+# species map), forbidden cells, and whether it is imported by default
+# (not if its species is not used or it has no priced cells), with the
+# reason. Grades no longer untick products (2026-10-28): a product that
+# permits none of its group's reference grades (hpr_reference_grades()) is
+# kept, and the run leaves it out for stems without grade data
+# (`ReferenceGrades`, .candidate_species_plan()).
+#
+# @param species_map Named character: species group key -> "spruce",
+#   "pine" or "none".
 hpr_product_table <- function(hpr, species_map) {
   if (length(hpr$products) == 0L) return(data.frame())
   ref <- hpr_reference_grades(hpr)
@@ -602,7 +599,7 @@ hpr_product_table <- function(hpr, species_map) {
                       paste(L[!keep_l], collapse = ", ")))
   if (any(keep_l & L %% 10 != 0))
     info <- c(info, sprintf("Length classes rounded up to whole dm: %s.",
-                      paste(sprintf("%g→%g", L[keep_l & L %% 10 != 0], cut[keep_l & L %% 10 != 0]),
+                      paste(sprintf("%g\u2192%g", L[keep_l & L %% 10 != 0], cut[keep_l & L %% 10 != 0]),
                             collapse = ", ")))
   L <- L[keep_l]; cut <- cut[keep_l]
   ok_cells <- ok_cells[ok_cells$l_cm %in% L, , drop = FALSE]
@@ -651,20 +648,20 @@ hpr_product_table <- function(hpr, species_map) {
        max_top_mm = max_top_mm, warnings = w, info = info, errors = character(0))
 }
 
-#' Turn a read_hpr() result into a scenario: the assortment table and prices
-#' of the chosen products (one row per product and species), plus a 0-priced
-#' Waste row per species, checked with check_price_set().
-#'
-#' @param hpr          read_hpr() result.
-#' @param species_map  Named character: species group key -> "spruce",
-#'   "pine" or "none".
-#' @param keep         Product keys to import (default: those
-#'   hpr_product_table() imports by default).
-#' @param base_defs    The base assortment table (its Waste rows are
-#'   added); default from load_products().
-#' @return list(ok, defs, pm, errors, warnings (shown: something lost or
-#'   replaced, e.g. a product skipped or a volume method replaced), info (not
-#'   shown: what follows the documented rules, e.g. rounding, forbidden cells)).
+# Turn a read_hpr() result into a scenario: the assortment table and prices
+# of the chosen products (one row per product and species), plus a 0-priced
+# Waste row per species, checked with check_price_set().
+#
+# @param hpr          read_hpr() result.
+# @param species_map  Named character: species group key -> "spruce",
+#   "pine" or "none".
+# @param keep         Product keys to import (default: those
+#   hpr_product_table() imports by default).
+# @param base_defs    The base assortment table (its Waste rows are
+#   added); default from load_products().
+# @return list(ok, defs, pm, errors, warnings (shown: something lost or
+#   replaced, e.g. a product skipped or a volume method replaced), info (not
+#   shown: what follows the documented rules, e.g. rounding, forbidden cells)).
 hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, manual_ok = FALSE) {
   fail <- function(msg, w = character(0)) list(ok = FALSE, errors = msg, warnings = w)
   if (!isTRUE(hpr$ok)) return(fail(hpr$errors))

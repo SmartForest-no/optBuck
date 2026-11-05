@@ -27,15 +27,15 @@
 # ==============================================================================
 
 
-#' barkNOR as an Apter bark model.
-#'
-#' taperNOR::barkNOR() type-checks h and h_top but does not use them
-#' (verified 2026-10-12), so they are passed as numeric placeholders.
-#'
-#' @param d_cm          Over-bark diameter(s) along the stem (cm).
-#' @param dbh_cm        Tree dbh over bark (cm), scalar.
-#' @param species_group "spruce" or "pine".
-#' @return Double bark thickness (mm), unfloored.
+# barkNOR as an Apter bark model.
+#
+# taperNOR::barkNOR() type-checks h and h_top but does not use them
+# (verified 2026-10-12), so they are passed as numeric placeholders.
+#
+# @param d_cm          Over-bark diameter(s) along the stem (cm).
+# @param dbh_cm        Tree dbh over bark (cm), scalar.
+# @param species_group "spruce" or "pine".
+# @return Double bark thickness (mm), unfloored.
 bark_model_barkNOR <- function(d_cm, dbh_cm, species_group) {
   if (!requireNamespace("taperNOR", quietly = TRUE))
     stop("Package 'taperNOR' is required for the barkNOR bark model.")
@@ -43,53 +43,55 @@ bark_model_barkNOR <- function(d_cm, dbh_cm, species_group) {
                     h_top = 1, sp = species_group)
 }
 
-#' Registry of bark models: name -> function(d_cm, dbh_cm, species_group) -> mm.
-BARK_MODELS <- list(barkNOR = bark_model_barkNOR)
+# Registry of bark models: name -> function(d_cm, dbh_cm, species_group) -> mm. An environment, so
+# that a model can be registered from outside the package (BARK_MODELS$name <- fn) also when installed.
+BARK_MODELS <- new.env(parent = emptyenv())
+BARK_MODELS$barkNOR <- bark_model_barkNOR
 
-#' Name of the default bark model.
+# Name of the default bark model.
 DEFAULT_BARK_MODEL <- "barkNOR"
 
-#' The active bark model function (option apter.bark_model, else barkNOR).
+# The active bark model function (option apter.bark_model, else barkNOR).
 get_bark_model <- function(name = getOption("apter.bark_model", DEFAULT_BARK_MODEL)) {
   fn <- BARK_MODELS[[name]]
   if (!is.function(fn))
     stop("Unknown bark model '", name, "'. Registered: ",
-         paste(names(BARK_MODELS), collapse = ", "))
+         paste(sort(names(BARK_MODELS)), collapse = ", "))
   fn
 }
 
 
-#' Double bark thickness (mm), floored at 0 (provisional; see header).
-#'
-#' @param d_ob_mm   Over-bark diameter(s) (mm).
-#' @param dbh_ob_mm Tree dbh over bark (mm), scalar.
-#' @param species_group "spruce" or "pine".
-#' @param model     Bark model function (default: get_bark_model()).
+# Double bark thickness (mm), floored at 0 (provisional; see header).
+#
+# @param d_ob_mm   Over-bark diameter(s) (mm).
+# @param dbh_ob_mm Tree dbh over bark (mm), scalar.
+# @param species_group "spruce" or "pine".
+# @param model     Bark model function (default: get_bark_model()).
 double_bark_mm <- function(d_ob_mm, dbh_ob_mm, species_group,
                            model = get_bark_model()) {
   b <- model(d_ob_mm / 10, dbh_ob_mm / 10, species_group)
   pmax(b, 0)
 }
 
-#' Under-bark diameter(s) (mm): d_ob - B, never below 0 or above d_ob.
+# Under-bark diameter(s) (mm): d_ob - B, never below 0 or above d_ob.
 under_bark_diameter <- function(d_ob_mm, dbh_ob_mm, species_group,
                                 model = get_bark_model()) {
   pmax(d_ob_mm - double_bark_mm(d_ob_mm, dbh_ob_mm, species_group, model), 0)
 }
 
-#' Over-bark dbh (mm) read from a profile at 1.3 m (linear interpolation).
-#' For profiles without a measured dbh (imported stem profiles).
+# Over-bark dbh (mm) read from a profile at 1.3 m (linear interpolation).
+# For profiles without a measured dbh (imported stem profiles).
 dbh_from_profile <- function(positions_cm, d_ob_mm) {
   stats::approx(positions_cm, d_ob_mm, xout = 130, rule = 2)$y
 }
 
-#' Add the under-bark profile (DiameterValueUB, mm) to a profile vector.
-#'
-#' Uses the measured over-bark dbh (pv$DBH, mm) when present, which is also
-#' the dbh taperNOR uses; otherwise reads dbh from the profile at 1.3 m.
-#'
-#' @param pv    Profile vector from profiles_to_profile_vectors().
-#' @param model Bark model function (default: get_bark_model()).
+# Add the under-bark profile (DiameterValueUB, mm) to a profile vector.
+#
+# Uses the measured over-bark dbh (pv$DBH, mm) when present, which is also
+# the dbh taperNOR uses; otherwise reads dbh from the profile at 1.3 m.
+#
+# @param pv    Profile vector from profiles_to_profile_vectors().
+# @param model Bark model function (default: get_bark_model()).
 add_under_bark_profile <- function(pv, model = get_bark_model()) {
   dbh_mm <- pv$DBH
   if (is.null(dbh_mm) || length(dbh_mm) != 1L || is.na(dbh_mm))

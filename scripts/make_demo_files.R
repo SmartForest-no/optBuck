@@ -28,9 +28,9 @@ root_dir <- local({
   }
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
-out <- file.path(root_dir, "demo")
+out <- file.path(root_dir, "inst", "extdata", "demo")
 dir.create(out, showWarnings = FALSE)
 
 # ---- Scenario A: the defaults ---------------------------------------------------

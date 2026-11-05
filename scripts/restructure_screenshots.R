@@ -12,13 +12,13 @@ stopifnot(file.exists(file.path(root, "R", "helpers_paths.R")), lang %in% c("en"
 Sys.setenv(APTER_ROOT = root, NOT_CRAN = "true", APTER_N_PLOTS = "5", APTER_TUNE_MAX_ITER = "3")
 if (lang == "en") Sys.setenv(APTER_LANG = "en") else Sys.unsetenv("APTER_LANG")
 options(chromote.timeout = 60)
-source(file.path(root, "R", "helpers_paths.R")); source(file.path(root, "R", "helpers_audit.R"))
+suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/); source(file.path(root, "audits", "helpers_audit.R"))
 dir <- file.path(root, "outputs", "app_smoke", "review", "restructure"); dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-fx <- file.path(root, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+fx <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
 key <- "spruce_140_sca_sagt_mmer"
 audit_browser_start()
 res <- tryCatch({
-  app <- audit_app_driver(file.path(root, "app"), name = paste0("shots_", lang), load_timeout = 60000, timeout = 180000, width = 1400, height = 1000)
+  app <- audit_app_driver(file.path(root, "inst", "app"), name = paste0("shots_", lang), load_timeout = 60000, timeout = 180000, width = 1400, height = 1000)
   stopifnot(inherits(app, "AppDriver"))
   shot <- function(name) { f <- file.path(dir, sprintf("%s_%s.png", name, lang)); unlink(f); app$get_screenshot(f); cat("saved", basename(f), "\n") }
   nav <- function(v) { app$set_inputs(main_nav = v, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(0.8) }

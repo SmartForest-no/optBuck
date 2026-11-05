@@ -15,11 +15,8 @@
 #           R/helpers_hpr_stems.R).
 # ==============================================================================
 
-if (!exists(".hpr_stem_chunks", mode = "function"))   # helpers_hpr_stems.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_hpr_stems.R"))
 
-#' CuttingReason values that are NOT manual cuts (StanForD 2010: "Automatic" and "Spinning").
+# CuttingReason values that are NOT manual cuts (StanForD 2010: "Automatic" and "Spinning").
 HPR_AUTOMATIC_REASONS <- c("Automatic", "Spinning")
 
 # One chunk's logs (r: complete stem records as bytes).
@@ -47,17 +44,17 @@ HPR_AUTOMATIC_REASONS <- c("Automatic", "Spinning")
     stringsAsFactors = FALSE)
 }
 
-#' Read the recorded logs of a StanForD 2010 .hpr file (also .hpr.gz or an .hpr in a .zip).
-#'
-#' @param path     File path.
-#' @param filename Name used in messages (its extension decides .zip).
-#' @param defs     read_hpr() result, if already read (gives the unclassified product key).
-#' @param chunk_bytes Bytes per chunk (results do not depend on it).
-#' @return list(ok, errors, warnings, info, logs (data.frame, one row per recorded log in file
-#'   order: stem_key, species_key, kind, LogKey, ProductKey, StartPos (recorded, else the sum of
-#'   the previous lengths), start_recorded, LogLength, StopPos, CuttingReason, manual (not
-#'   "Automatic" or "Spinning"), waste (the unclassified product), m3_price, m3sob, m3sub,
-#'   estimated, ButtOb ... TopUb in mm), unclassified_keys, seconds).
+# Read the recorded logs of a StanForD 2010 .hpr file (also .hpr.gz or an .hpr in a .zip).
+#
+# @param path     File path.
+# @param filename Name used in messages (its extension decides .zip).
+# @param defs     read_hpr() result, if already read (gives the unclassified product key).
+# @param chunk_bytes Bytes per chunk (results do not depend on it).
+# @return list(ok, errors, warnings, info, logs (data.frame, one row per recorded log in file
+#   order: stem_key, species_key, kind, LogKey, ProductKey, StartPos (recorded, else the sum of
+#   the previous lengths), start_recorded, LogLength, StopPos, CuttingReason, manual (not
+#   "Automatic" or "Spinning"), waste (the unclassified product), m3_price, m3sob, m3sub,
+#   estimated, ButtOb ... TopUb in mm), unclassified_keys, seconds).
 read_hpr_logs <- function(path, filename = basename(path), defs = NULL,
                           chunk_bytes = HPR_STEM_CHUNK_BYTES) {
   t0 <- Sys.time()
@@ -92,12 +89,12 @@ read_hpr_logs <- function(path, filename = basename(path), defs = NULL,
        logs = lg, unclassified_keys = uk, seconds = as.numeric(difftime(Sys.time(), t0, units = "secs")))
 }
 
-#' The permitted stem grades of each product of an .hpr file with the file's grade names
-#' (the table the old getPermittedGrades() gave, plus names): one row per product x species group
-#' x permitted grade; a product with no PermittedGradesDefinition has grade NA (= all grades).
-#' The unclassified product is listed with grade NA as well (it takes any grade).
-#'
-#' @param hpr read_hpr() result.
+# The permitted stem grades of each product of an .hpr file with the file's grade names
+# (the table the old getPermittedGrades() gave, plus names): one row per product x species group
+# x permitted grade; a product with no PermittedGradesDefinition has grade NA (= all grades).
+# The unclassified product is listed with grade NA as well (it takes any grade).
+#
+# @param hpr read_hpr() result.
 hpr_permitted_grades <- function(hpr) {
   gn <- hpr$grade_names
   one <- function(p) {

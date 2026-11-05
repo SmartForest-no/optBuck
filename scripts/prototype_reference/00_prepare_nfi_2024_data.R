@@ -83,9 +83,9 @@ is_pine_code   <- function(x) x %in% c(10L, 11L, 12L, 20L)
 drv <- dbDriver("Oracle")
 con <- dbConnect(
   drv,
-  dbname   = "REDACTED41_medium",
-  username = "REDACTED42_pluss",
-  password = keyring::key_get("REDACTED41_medium", "REDACTED42_pluss")
+  dbname   = "ORACLE_SERVICE",
+  username = "ORACLE_USER",
+  password = keyring::key_get("ORACLE_SERVICE", "ORACLE_USER")
 )
 
 # Always close the connection, even if the script errors.

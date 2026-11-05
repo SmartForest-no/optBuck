@@ -77,10 +77,8 @@ root_dir <- local({
   d
 })
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "R", "helpers_products.R"))
-source(file.path(root_dir, "R", "helpers_valuation.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
 
 out_dir  <- path_output("helper_validation", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -116,7 +114,7 @@ helper_files <- c(
   "R/helpers_paths.R",
   "R/helpers_products.R",
   "R/helpers_valuation.R",
-  "R/helpers_audit.R"
+  "audits/helpers_audit.R"
 )
 
 for (fn in helper_files) {
@@ -450,7 +448,9 @@ s14_mtime <- if (file.exists(s14_fp)) file.info(s14_fp)$mtime else Sys.time()
 n_modified_after <- 0L
 modified_names   <- character(0)
 
-for (fp in accepted_scripts[!is.na(accepted_scripts)]) {
+# Roadmap 8 (2026-11-05): script 00 was edited once on purpose: the Oracle alias and user name were replaced by the
+# placeholders ORACLE_SERVICE / ORACLE_USER (publication check); it is exempt from the freeze check, its content is checked below.
+for (fp in accepted_scripts[!is.na(accepted_scripts) & basename(accepted_scripts) != "00_prepare_nfi_2024_data.R"]) {
   mtime <- file.info(fp)$mtime
   if (!is.na(mtime) && mtime > s14_mtime) {
     n_modified_after <- n_modified_after + 1L
@@ -468,6 +468,13 @@ rec("Accepted scripts 00-12 not modified after script 14 was created",
       sprintf("%d modified after script 14: %s",
               n_modified_after, paste(modified_names, collapse = ", ")))
 
+
+s00 <- accepted_scripts[basename(accepted_scripts) == "00_prepare_nfi_2024_data.R"]
+t00 <- if (length(s00) && !is.na(s00)) readLines(s00, warn = FALSE) else character(0)
+rec("Frozen script 00 holds the Oracle placeholders and no real alias or user name",
+    if (any(grepl("ORACLE_SERVICE", t00, fixed = TRUE)) && any(grepl("ORACLE_USER", t00, fixed = TRUE)) &&
+        !any(grepl("REDACTED41|REDACTED42", t00))) PASS else FAIL,
+    sprintf("%d lines read", length(t00)))
 
 # ---- verdict and output ----
 

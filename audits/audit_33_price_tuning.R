@@ -86,12 +86,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
-source(file.path(root_dir, "R", "helpers_price_tuning.R"))
-source(file.path(root_dir, "R", "helpers_distribution_edit.R"))   # Even target for check 15 (restructure R2)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 source(file.path(root_dir, "scripts", "roadmap7_helpers.R"))   # read_hpr_distribution()
 
 out_dir <- path_output("price_tuning", root_dir = root_dir)
@@ -450,9 +447,9 @@ if (!all(file.exists(paths12))) {
 
 # ==============================================================================
 section("17. Tuned prices are whole NOK and are the prices evaluated and applied (R4)")
-for (e in parse(file.path(root_dir, "app", "tuning.R"), keep.source = FALSE))
+for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FALSE))
   if (is.call(e) && identical(as.character(e[[1L]]), "<-") && as.character(e[[2L]]) %in% c("TUNE_MIN_LOGS", "tuning_run")) eval(e)
-FX17 <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+FX17 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
 h17 <- read_hpr(FX17); st17 <- read_hpr_stems(FX17)
 sc17 <- hpr_to_scenario(h17, setNames(guess_hpr_species(h17$species$name, h17$species$user_id), h17$species$key))
 pm17 <- pm_minimal(sc17$pm); d17 <- sc17$defs

@@ -26,7 +26,7 @@ root_dir <- local({
   d
 })
 suppressPackageStartupMessages(library(arrow))
-gh <- file.path(root_dir, "data_processed_github")
+gh <- file.path(root_dir, "inst", "extdata", "nfi")
 f_tree <- file.path(gh, "nfi_tree_plot_stratum_ready_github.parquet")
 f_plot <- file.path(gh, "nfi_plots_github.parquet")
 priv <- "C:/apter_private"

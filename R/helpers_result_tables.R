@@ -22,16 +22,13 @@
 #           species.
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
-#' Tally measures: column in log_tally() -> label.
-TALLY_MEASURES <- c(logs = "Logs", volume = "Volume (m³ u.b.)")
+# Tally measures: column in log_tally() -> label.
+TALLY_MEASURES <- c(logs = "Logs", volume = "Volume (m\u00b3 u.b.)")
 
-#' DBH classes (cm): width, the first lower limit and the open top class.
-#' Classes start at 0: NFI trees and tree lists start at 5 cm, but .hpr stems
-#' have no minimum DBH.
+# DBH classes (cm): width, the first lower limit and the open top class.
+# Classes start at 0: NFI trees and tree lists start at 5 cm, but .hpr stems
+# have no minimum DBH.
 DBH_CLASS_WIDTH_CM <- 5
 DBH_CLASS_FROM_CM  <- 0
 DBH_CLASS_OPEN_CM  <- 60
@@ -43,15 +40,15 @@ DBH_CLASS_OPEN_CM  <- 60
 .tally_matrix_keys <- function(pm)
   if (is.null(pm)) character(0) else unique(as.character(pm$ProductKey[!is.na(pm$LengthClass_dm)]))
 
-#' The log tally of one run, long: one row per assortment, diameter class
-#' (NA for flat-priced) and length class, with logs and commercial volume.
-#'
-#' @param selected_logs A run's selected_logs_all.
-#' @param pm            The run's price matrix (long; pm_minimal() layout).
-#' @return data.frame(ProductKey, ProductType, species_group, priced
-#'   ("matrix"/"flat"), diameter_class_cm, length_class_dm, logs, volume_m3),
-#'   ordered by species (spruce, pine), type (sawlog, pulpwood, other), key,
-#'   diameter and length.
+# The log tally of one run, long: one row per assortment, diameter class
+# (NA for flat-priced) and length class, with logs and commercial volume.
+#
+# @param selected_logs A run's selected_logs_all.
+# @param pm            The run's price matrix (long; pm_minimal() layout).
+# @return data.frame(ProductKey, ProductType, species_group, priced
+#   ("matrix"/"flat"), diameter_class_cm, length_class_dm, logs, volume_m3),
+#   ordered by species (spruce, pine), type (sawlog, pulpwood, other), key,
+#   diameter and length.
 log_tally <- function(selected_logs, pm) {
   sl <- selected_logs[as.character(selected_logs$ProductType) != "waste", , drop = FALSE]
   empty <- data.frame(ProductKey = character(0), ProductType = character(0),
@@ -79,13 +76,13 @@ log_tally <- function(selected_logs, pm) {
   out
 }
 
-#' Logs per length class and type group (Sawlog, Pulpwood, Other; waste left
-#' out, as in log_tally()), for the Logs tab's length figure. The counts equal
-#' the log tally's Total row summed over the non-waste assortments.
-#'
-#' @param selected_logs A run's selected_logs_all.
-#' @return data.frame(length_class_dm, type (factor, ASSORTMENT_TYPE_GROUPS),
-#'   logs), ordered by length class and type.
+# Logs per length class and type group (Sawlog, Pulpwood, Other; waste left
+# out, as in log_tally()), for the Logs tab's length figure. The counts equal
+# the log tally's Total row summed over the non-waste assortments.
+#
+# @param selected_logs A run's selected_logs_all.
+# @return data.frame(length_class_dm, type (factor, ASSORTMENT_TYPE_GROUPS),
+#   logs), ordered by length class and type.
 log_length_distribution <- function(selected_logs) {
   g <- type_group(selected_logs$ProductType)
   k <- !is.na(g) & !is.na(selected_logs$LengthClass_dm)
@@ -105,7 +102,7 @@ log_length_distribution <- function(selected_logs) {
   d
 }
 
-#' Assortments in one or two tallies, in tally order (A's first).
+# Assortments in one or two tallies, in tally order (A's first).
 log_tally_keys <- function(tally_a, tally_b = NULL)
   unique(c(as.character(tally_a$ProductKey), as.character(tally_b$ProductKey)))
 
@@ -160,15 +157,15 @@ log_tally_keys <- function(tally_a, tally_b = NULL)
   rbind(out, tot)
 }
 
-#' One assortment's tally grid in one scenario, laid out like its price grid.
-#'
-#' @param tally   log_tally() of the run.
-#' @param pm      The run's price matrix.
-#' @param key     ProductKey.
-#' @param measure "logs" or "volume".
-#' @return data.frame: "Diameter (cm)" (or "All diameters" for a flat-priced
-#'   assortment), one column per length class (dm), "Total"; a "Total" row.
-#'   NA: the cell has no price; 0: priced, no logs.
+# One assortment's tally grid in one scenario, laid out like its price grid.
+#
+# @param tally   log_tally() of the run.
+# @param pm      The run's price matrix.
+# @param key     ProductKey.
+# @param measure "logs" or "volume".
+# @return data.frame: "Diameter (cm)" (or "All diameters" for a flat-priced
+#   assortment), one column per length class (dm), "Total"; a "Total" row.
+#   NA: the cell has no price; 0: priced, no logs.
 log_tally_grid <- function(tally, pm, key, measure = c("logs", "volume")) {
   measure <- match.arg(measure)
   flat <- !key %in% .tally_matrix_keys(pm)
@@ -183,10 +180,10 @@ log_tally_grid <- function(tally, pm, key, measure = c("logs", "volume")) {
   !((m_a || !has(tally_a, pm_a)) && (m_b || !has(tally_b, pm_b)) && (m_a || m_b))
 }
 
-#' B - A of one assortment's tally: the union of both grids' axes, signed
-#' values. An assortment only one scenario has is shown against zero; one
-#' priced on a matrix in one scenario and flat in the other is compared per
-#' length class.
+# B - A of one assortment's tally: the union of both grids' axes, signed
+# values. An assortment only one scenario has is shown against zero; one
+# priced on a matrix in one scenario and flat in the other is compared per
+# length class.
 log_tally_diff_grid <- function(tally_a, pm_a, tally_b, pm_b, key, measure = c("logs", "volume")) {
   measure <- match.arg(measure)
   flat <- .tally_diff_flat(key, pm_a, pm_b, tally_a, tally_b)
@@ -196,9 +193,9 @@ log_tally_diff_grid <- function(tally_a, pm_a, tally_b, pm_b, key, measure = c("
   .tally_grid(.tally_merge(rbind(a, b)), flat)
 }
 
-#' The tallies as one long table (CSV download).
-#'
-#' @param tallies Named list of log_tally() results (e.g. A, B).
+# The tallies as one long table (CSV download).
+#
+# @param tallies Named list of log_tally() results (e.g. A, B).
 log_tally_long <- function(tallies) {
   out <- do.call(rbind, lapply(names(tallies), function(nm)
     if (nrow(tallies[[nm]])) cbind(Scenario = nm, tallies[[nm]], stringsAsFactors = FALSE)))
@@ -208,20 +205,20 @@ log_tally_long <- function(tallies) {
   out
 }
 
-#' Write the tallies to an xlsx file: one sheet per assortment, stacking the
-#' grids (logs and volume per scenario, then B - A) on common axes, and a
-#' sheet "long" with every cell.
-#'
-#' @param tallies Named list of log_tally() results: A, and B for a comparison.
-#' @param pms     Named list of the matching price matrices.
-#' @param label   function(key) -> sheet title (e.g. "Spruce sawlog").
-#' @param scenario_keys Optional list(A = , B = ) of each scenario's
-#'   assortment keys: an assortment only one scenario has gets only that
-#'   scenario's grids, without B - A (2026-10-22). NULL: every assortment
-#'   gets every scenario's grids.
-#' @param lang    "en" (as before) or "no": headers, table titles, values and
-#'   the "long" sheet's name through the translation table (helpers_i18n.R);
-#'   `label` gives the sheet titles in that language.
+# Write the tallies to an xlsx file: one sheet per assortment, stacking the
+# grids (logs and volume per scenario, then B - A) on common axes, and a
+# sheet "long" with every cell.
+#
+# @param tallies Named list of log_tally() results: A, and B for a comparison.
+# @param pms     Named list of the matching price matrices.
+# @param label   function(key) -> sheet title (e.g. "Spruce sawlog").
+# @param scenario_keys Optional list(A = , B = ) of each scenario's
+#   assortment keys: an assortment only one scenario has gets only that
+#   scenario's grids, without B - A (2026-10-22). NULL: every assortment
+#   gets every scenario's grids.
+# @param lang    "en" (as before) or "no": headers, table titles, values and
+#   the "long" sheet's name through the translation table (helpers_i18n.R);
+#   `label` gives the sheet titles in that language.
 log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys = NULL, lang = "en") {
   keys <- do.call(log_tally_keys, unname(tallies))
   sheets <- lapply(keys, function(key) {
@@ -263,19 +260,19 @@ log_tally_xlsx <- function(path, tallies, pms, label = identity, scenario_keys =
 
 # ---- per assortment (Products tab) ----------------------------------------------------
 
-#' Logs, price volume, value, NOK/m3 contribution and share of commercial
-#' volume per assortment, for one run or A and B (2026-10-23, Products tab).
-#' Sums of the selected logs (product_summary's columns, unrounded). The
-#' contribution is the assortment's value / the run's total commercial
-#' volume, so the contributions add up to the run's NOK/m3; the share is
-#' its commercial volume / the total.
-#'
-#' @param r_a,r_b Run results (r_b NULL: one run).
-#' @param keys    Optional list(A = , B = ) of each scenario's assortment
-#'   keys: an assortment a scenario does not have is NA there (shown "–");
-#'   one it has without logs is 0. NULL: missing means 0.
-#' @return data.frame: key, then logs, price_vol, value, contrib, share with
-#'   suffix _a (and _b); rows in order of first appearance (A, then B).
+# Logs, price volume, value, NOK/m3 contribution and share of commercial
+# volume per assortment, for one run or A and B (2026-10-23, Products tab).
+# Sums of the selected logs (product_summary's columns, unrounded). The
+# contribution is the assortment's value / the run's total commercial
+# volume, so the contributions add up to the run's NOK/m3; the share is
+# its commercial volume / the total.
+#
+# @param r_a,r_b Run results (r_b NULL: one run).
+# @param keys    Optional list(A = , B = ) of each scenario's assortment
+#   keys: an assortment a scenario does not have is NA there (shown "–");
+#   one it has without logs is 0. NULL: missing means 0.
+# @return data.frame: key, then logs, price_vol, value, contrib, share with
+#   suffix _a (and _b); rows in order of first appearance (A, then B).
 assortment_summary <- function(r_a, r_b = NULL, keys = NULL) {
   one <- function(r) {
     l <- r$selected_logs_all; k <- unique(as.character(l$ProductKey))
@@ -304,21 +301,21 @@ assortment_summary <- function(r_a, r_b = NULL, keys = NULL) {
 
 # ---- value by DBH class ----------------------------------------------------------------
 
-#' DBH class lower limit (cm) and label for dbh values (cm).
+# DBH class lower limit (cm) and label for dbh values (cm).
 dbh_class <- function(dbh_cm, width = DBH_CLASS_WIDTH_CM, from = DBH_CLASS_FROM_CM,
                       open_from = DBH_CLASS_OPEN_CM) {
   lo <- pmin(pmax(floor((dbh_cm - from) / width) * width + from, from), open_from)
-  list(lo = lo, label = ifelse(lo >= open_from, sprintf("≥ %g", open_from),
-                               sprintf("%g–%.1f", lo, lo + width - 0.1)))
+  list(lo = lo, label = ifelse(lo >= open_from, sprintf("\u2265 %g", open_from),
+                               sprintf("%g\u2013%.1f", lo, lo + width - 0.1)))
 }
 
-#' Trees, commercial volume, value and NOK/m3 per species and DBH class,
-#' plus a total per species.
-#'
-#' @param tree_summary A run's tree_summary.
-#' @return data.frame(species_group, dbh_class (label; "All" for the totals),
-#'   class_lo (NA for the totals), trees, commercial_volume_m3, value_nok,
-#'   nok_per_m3), species spruce, pine; classes ascending, then "All".
+# Trees, commercial volume, value and NOK/m3 per species and DBH class,
+# plus a total per species.
+#
+# @param tree_summary A run's tree_summary.
+# @return data.frame(species_group, dbh_class (label; "All" for the totals),
+#   class_lo (NA for the totals), trees, commercial_volume_m3, value_nok,
+#   nok_per_m3), species spruce, pine; classes ascending, then "All".
 dbh_class_summary <- function(tree_summary, width = DBH_CLASS_WIDTH_CM, from = DBH_CLASS_FROM_CM,
                               open_from = DBH_CLASS_OPEN_CM) {
   ts <- tree_summary
@@ -344,15 +341,15 @@ dbh_class_summary <- function(tree_summary, width = DBH_CLASS_WIDTH_CM, from = D
   out
 }
 
-#' Stems per species for the Stems tab (restructure R1.2): the stems that will
-#' be bucked (count, mean DBH in cm, mean height in m) and, where the source
-#' reports them, the stems left out, per species (spruce first, then pine).
-#' Plain numbers only; a species with no stems and no exclusions is not listed.
-#'
-#' @param species,dbh_cm,height_m Per used stem.
-#' @param excluded_species Species of the excluded stems (any other value, such
-#'   as "none", is not counted).
-#' @return data.frame(species, n_stems, mean_dbh_cm, mean_height_m, n_excluded).
+# Stems per species for the Stems tab (restructure R1.2): the stems that will
+# be bucked (count, mean DBH in cm, mean height in m) and, where the source
+# reports them, the stems left out, per species (spruce first, then pine).
+# Plain numbers only; a species with no stems and no exclusions is not listed.
+#
+# @param species,dbh_cm,height_m Per used stem.
+# @param excluded_species Species of the excluded stems (any other value, such
+#   as "none", is not counted).
+# @return data.frame(species, n_stems, mean_dbh_cm, mean_height_m, n_excluded).
 stem_species_summary <- function(species, dbh_cm, height_m, excluded_species = character(0)) {
   sp <- intersect(c("spruce", "pine"), unique(c(species, excluded_species)))
   do.call(rbind, lapply(sp, function(s) {
@@ -367,15 +364,15 @@ stem_species_summary <- function(species, dbh_cm, height_m, excluded_species = c
   out
 }
 
-#' The Summary comparison of two runs (R4 D4): total value, NOK per m3,
-#' commercial volume, price volume and the sawlog share of the commercial
-#' volume (sawlog m3 / all m3, under bark) for A and B, with B - A and the
-#' relative difference (%).
-#'
-#' @param r_a,r_b Backend results (selected_logs_all, per_m3_summary).
-#' @return data.frame(id, a, b, diff, pct): ids value, nok_per_m3,
-#'   commercial_volume, price_volume, sawlog_share (percent); pct is
-#'   100 * (b - a) / a, NA when a is 0.
+# The Summary comparison of two runs (R4 D4): total value, NOK per m3,
+# commercial volume, price volume and the sawlog share of the commercial
+# volume (sawlog m3 / all m3, under bark) for A and B, with B - A and the
+# relative difference (%).
+#
+# @param r_a,r_b Backend results (selected_logs_all, per_m3_summary).
+# @return data.frame(id, a, b, diff, pct): ids value, nok_per_m3,
+#   commercial_volume, price_volume, sawlog_share (percent); pct is
+#   100 * (b - a) / a, NA when a is 0.
 summary_comparison <- function(r_a, r_b) {
   one <- function(r) {
     l <- r$selected_logs_all; s <- r$per_m3_summary; s <- s[s$scope == "Total", , drop = FALSE]

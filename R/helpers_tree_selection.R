@@ -12,25 +12,22 @@
 #           raises its own messages.
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
 NFI_MIN_DBH_CM   <- 5.0     # taperNOR validity filter (script 11 convention)
 NFI_MIN_HEIGHT_M <- 4.5
 
 
-#' Select the NFI trees of a run.
-#'
-#' @param trees_all NFI tree table (nfi_tree_plot_stratum_ready_github.parquet)
-#'   with at least plot_id_github, treid, species_group, hogstkl, abonitet,
-#'   fylnr, dbh_cm and beregnet_hoyde (or trehoyde); hoh for an elevation filter.
-#' @param params Backend params (build_run_params() in the app): species_group,
-#'   hogstkl, abonitet; optional fylnr, hoh_min, hoh_max, all_plots, n_plots
-#'   (default 10, max 50), seed (default 42).
-#' @return list(trees = the selected trees with height_m, plots = the selected
-#'   plot ids, eligible_plots, n_plots_req, n_trees_before_filter,
-#'   t_filter_sample, t_tree_filter (s)).
+# Select the NFI trees of a run.
+#
+# @param trees_all NFI tree table (nfi_tree_plot_stratum_ready_github.parquet)
+#   with at least plot_id_github, treid, species_group, hogstkl, abonitet,
+#   fylnr, dbh_cm and beregnet_hoyde (or trehoyde); hoh for an elevation filter.
+# @param params Backend params (build_run_params() in the app): species_group,
+#   hogstkl, abonitet; optional fylnr, hoh_min, hoh_max, all_plots, n_plots
+#   (default 10, max 50), seed (default 42).
+# @return list(trees = the selected trees with height_m, plots = the selected
+#   plot ids, eligible_plots, n_plots_req, n_trees_before_filter,
+#   t_filter_sample, t_tree_filter (s)).
 select_nfi_trees <- function(trees_all, params) {
   .el <- function(t0) as.numeric((proc.time() - t0)["elapsed"])
   sg           <- params$species_group

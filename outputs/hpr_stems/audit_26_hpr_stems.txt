@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr stems (hpr Phase B)
-  Run: 2026-10-28 13:11:57.576947
+  Run: 2026-11-05 10:54:30.844836
 ============================================================= 
 
 --- 01. Reading the fixture's stems ---
@@ -31,7 +31,7 @@
   [PASS  ] Check 09: Stems without profiles (logs only) and a file without stems are errors | 'logs_only.hpr has 2 stems but none with a stem profile (StemDiameters): there is nothing to buck.' | 'no_stems.hpr contains no stems.'
 
 --- 10. Privacy: coordinates, dates, operators and names are never read ---
-  [PASS  ] Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output | 17 tables, 60 columns | coordinate-like columns: none | invented values found: none | stem table columns: stem_key,species_key,kind,category,n_points
+  [PASS  ] Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output | 18 tables, 62 columns | coordinate-like columns: none | invented values found: none | stem table columns: stem_key,species_key,kind,category,n_points
 
 --- 11. End-to-end A/B run ---
   [PASS  ] Check 11: An A/B run on the fixture's stems: stems as trees, no plots, a comparison, higher NOK/m3 at higher sawlog prices | source hpr | trees 1,2,3,4,5 | plots 0 | excluded 8 | compared 5, changed 3 | NOK/m3 361.3 -> 468.6 | 15 logs in A
@@ -44,7 +44,7 @@
   [PASS  ] Check 13b: The same file twice: the second file's stems are dropped as already-used StemKeys, with a warning | read 26, used 5 | warnings: 2 stems dropped: profile recorded 'Under bark', not over bark (not supported). / 11 stems dropped: StemKey already used by an earlier stem. / 1 stem dropped: profile does not start at the felling cut (position 0). / 1 stem dropped: a diameter above 1,500 mm (likely a unit error).
   [PASS  ] Check 13c: A failing file is skipped with its position and reason, the others are used | file 2: 'no stem profiles' | used files 1, stems 5/13
   [PASS  ] Check 13d: All files failing is an error 'None of the files can be used.', with each file's position and reason and no file name | ok FALSE | errors 'None of the files can be used.' | files 1,2: no stem profiles,no stems
-  [PASS  ] Check 13e: No uploaded file name in any result table (A and B), params, run label, message or CSV download; the file column is 1/2 | 26 tables, 1474 CSV lines, 23 messages searched | file names found: 0 | file column in trees and logs: TRUE
+  [PASS  ] Check 13e: No uploaded file name in any result table (A and B), params, run label, message or CSV download; the file column is 1/2 | 27 tables, 1491 CSV lines, 23 messages searched | file names found: 0 | file column in trees and logs: TRUE
 
 --- 14. Cleaning (Phase 3): broken top, minimum fall, maximum fall ---
   [PASS  ] Check 14a: hpr_clean_flags(): each synthetic stem (one passing and one failing per rule, boundaries exactly 1 mm / 30 mm / 60 mm pass) is flagged as expected | 12 stems | mismatches: none

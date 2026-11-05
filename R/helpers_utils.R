@@ -10,11 +10,11 @@
 # only replaces NULL. Apter code uses or_default(); base `%||%` is left alone.
 # ==============================================================================
 
-#' x, unless it is NULL or a single NA; then default.
-#'
-#' @param x       Value.
-#' @param default Fallback (evaluated only when used).
-#' @return x or default.
+# x, unless it is NULL or a single NA; then default.
+#
+# @param x       Value.
+# @param default Fallback (evaluated only when used).
+# @return x or default.
 or_default <- function(x, default) {
   if (is.null(x) || (length(x) == 1L && is.na(x))) default else x
 }

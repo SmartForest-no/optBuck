@@ -1,5 +1,5 @@
 # ==============================================================================
-# scripts/app_backend/01_run_sampled_plot_bucking.R
+# R/run_bucking.R (was scripts/app_backend/01_run_sampled_plot_bucking.R before the package conversion)
 #
 # Purpose : Sampled-plot bucking backend for Apter (Shiny app v1 support).
 #           Exposes a single function:
@@ -34,7 +34,7 @@
 #     only. Plots are still how NFI trees are sampled.
 #
 # Usage:
-#   source("scripts/app_backend/01_run_sampled_plot_bucking.R")
+#   library(optBuck)
 #   result <- run_sampled_plot_bucking(
 #     params = list(species_group = "spruce", hogstkl = 41L, abonitet = 17L,
 #                   n_plots = 10L, seed = 42L),
@@ -42,48 +42,7 @@
 #   )
 # ==============================================================================
 
-suppressPackageStartupMessages({
-  library(arrow)
-  library(dplyr)
-  library(readr)
-})
-
-# ---- source helpers ----------------------------------------------------------
-# Resolve R/ relative to project root. This runs before helpers_paths.R is
-# sourced, so it carries an inline copy of get_root_dir()'s env/walk-up logic.
-.BACKEND_ROOT <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
-  is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
-  if (nzchar(env)) {
-    d <- normalizePath(env, winslash = "/", mustWork = FALSE)
-    if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
-           "R/helpers_paths.R.", call. = FALSE)
-  } else {
-    d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
-    while (!is_root(d) && dirname(d) != d) d <- dirname(d)
-    if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
-           "inside the project directory.", call. = FALSE)
-  }
-  d
-})
-
-for (.h in c("helpers_utils", "helpers_paths", "helpers_i18n", "helpers_volume_methods", "helpers_products",
-             "helpers_valuation",
-             "helpers_taper", "helpers_bark", "helpers_commercial_volume",
-             "helpers_candidate_generation", "helpers_dp_optimizer", "helpers_bucking_core",
-             "helpers_parallel", "helpers_nfi_cache",
-             "helpers_price_matrix", "helpers_comparison", "helpers_heights",
-             "helpers_tree_list", "helpers_tree_selection", "helpers_hpr", "helpers_hpr_stems",
-             "helpers_hpr_export", "helpers_pin_export", "helpers_result_tables",
-             "helpers_hpr_logs", "helpers_check")) {
-  src <- file.path(.BACKEND_ROOT, "R", paste0(.h, ".R"))
-  if (!file.exists(src)) stop("Helper not found: ", src)
-  source(src, local = FALSE)
-}
-rm(.h, src)
+# (The helpers are the other files of this package; the library() calls and the sourcing loop of the script version are gone.)
 
 # ---- constants ---------------------------------------------------------------
 BACKEND_MIN_DBH_CM               <- NFI_MIN_DBH_CM     # R/helpers_tree_selection.R
@@ -341,29 +300,29 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
        t_summary = t_summary)
 }
 
-#' Run the sampled-plot bucking pipeline.
-#'
-#' @param params Named list. Required: species_group, hogstkl, abonitet.
-#'   Optional: all_plots (TRUE: every eligible plot, no sampling; the app,
-#'   Phase 4d), n_plots (default 10, max 50; ignored with all_plots), seed
-#'   (default 42),
-#'   fylnr (character vector or NULL), hoh_min, hoh_max (altitude in m,
-#'   numeric or NULL; inclusive, plot level, a set bound excludes plots with
-#'   missing altitude),
-#'   stump_height_cm (default 10), start_pos_step_cm (default 10).
-#' @param price_matrix_path "default_2021" (default) or a path to a CSV/RDS
-#'   file in PriceMatrix_long format.
-#' @param root Project root directory. Default: get_root_dir().
-#' @param products,length_classes The run's ProductData / LengthClasses
-#'   (NULL: the default files).
-#' @param scenario NULL, or list(price_matrix_path, products, length_classes)
-#'   for a second run on the same trees (a comparison). Both runs are priced
-#'   from one candidate pass per tree; the scenario's result is returned as
-#'   `$scenario` (the same structure).
-#' @param workers Number of parallel workers (apter_workers(); 1 = in this
-#'   process). Results do not depend on it.
-#'
-#' @return Named list with run outputs, summaries, diagnostics, and label.
+# Run the sampled-plot bucking pipeline.
+#
+# @param params Named list. Required: species_group, hogstkl, abonitet.
+#   Optional: all_plots (TRUE: every eligible plot, no sampling; the app,
+#   Phase 4d), n_plots (default 10, max 50; ignored with all_plots), seed
+#   (default 42),
+#   fylnr (character vector or NULL), hoh_min, hoh_max (altitude in m,
+#   numeric or NULL; inclusive, plot level, a set bound excludes plots with
+#   missing altitude),
+#   stump_height_cm (default 10), start_pos_step_cm (default 10).
+# @param price_matrix_path "default_2021" (default) or a path to a CSV/RDS
+#   file in PriceMatrix_long format.
+# @param root Project root directory. Default: get_root_dir().
+# @param products,length_classes The run's ProductData / LengthClasses
+#   (NULL: the default files).
+# @param scenario NULL, or list(price_matrix_path, products, length_classes)
+#   for a second run on the same trees (a comparison). Both runs are priced
+#   from one candidate pass per tree; the scenario's result is returned as
+#   `$scenario` (the same structure).
+# @param workers Number of parallel workers (apter_workers(); 1 = in this
+#   process). Results do not depend on it.
+#
+# @return Named list with run outputs, summaries, diagnostics, and label.
 run_sampled_plot_bucking <- function(
     params,
     price_matrix_path = "default_2021",
@@ -377,8 +336,8 @@ run_sampled_plot_bucking <- function(
   finish_job(job, buck_job(job, workers))
 }
 
-#' Steps 1-8 of run_sampled_plot_bucking(): sample the trees, load their
-#' profiles, products and prices. Returns a job for buck_job() / finish_job().
+# Steps 1-8 of run_sampled_plot_bucking(): sample the trees, load their
+# profiles, products and prices. Returns a job for buck_job() / finish_job().
 prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
                                 root = get_root_dir(), products = NULL,
                                 length_classes = NULL, scenario = NULL) {
@@ -406,9 +365,9 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
 
   # ---- 2. Load sanitized data ------------------------------------------------
   t0_load_data <- proc.time()
-  gh_dir <- file.path(root, "data_processed_github")
+  gh_dir <- extdata_path("nfi", root_dir = root)
   if (!dir.exists(gh_dir))
-    stop("data_processed_github/ not found at: ", gh_dir)
+    stop("The NFI data folder (extdata/nfi) was not found at: ", gh_dir)
 
   trees_all <- arrow::read_parquet(
     file.path(gh_dir, "nfi_tree_plot_stratum_ready_github.parquet"))
@@ -457,8 +416,7 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
 
   # ---- 8. Load precomputed taper profiles from partitioned cache -------------
   t0_taper_profiles <- proc.time()
-  taper_cache_dir <- file.path(root, "outputs", "app_cache",
-                                "taper_profiles_by_plot_block_github")
+  taper_cache_dir <- nfi_cache_dir(root)
 
   # First use of the built-in NFI source: build the profile cache (roadmap 8, step 6). The app builds it
   # on its workers before the job is prepared (app/helpers_jobs.R); a script or a worker builds it here.
@@ -616,24 +574,24 @@ prepare_sampled_job <- function(params, price_matrix_path = "default_2021",
     profile_failures        = m$profile_failures,
     diagnostics             = diagnostics,
     label                   = paste("Results describe the selected trees only.",
-                                    "Values are NOK per m³ of commercial volume under bark."),
+                                    "Values are NOK per m\u00b3 of commercial volume under bark."),
     elapsed_seconds         = elapsed_secs
   )
 }
 
 
-#' Buck an uploaded tree list (Phase 5).
-#'
-#' @param prepared Result of prepare_tree_list() (R/helpers_tree_list.R):
-#'   validated trees with heights (measured or imputed) and height_source.
-#'   Trees outside taperNOR's range are already flagged (in_range = FALSE)
-#'   and are not bucked.
-#' @param price_matrix_path,root,products,length_classes,scenario,workers As
-#'   for run_sampled_plot_bucking().
-#' @param params Optional list stored in the result (e.g. file name).
-#' @return The same structure as run_sampled_plot_bucking(), with
-#'   tree_source = "tree_list", the height summary (heights) and the
-#'   excluded trees. plot_id_github holds the user's plot_id.
+# Buck an uploaded tree list (Phase 5).
+#
+# @param prepared Result of prepare_tree_list() (R/helpers_tree_list.R):
+#   validated trees with heights (measured or imputed) and height_source.
+#   Trees outside taperNOR's range are already flagged (in_range = FALSE)
+#   and are not bucked.
+# @param price_matrix_path,root,products,length_classes,scenario,workers As
+#   for run_sampled_plot_bucking().
+# @param params Optional list stored in the result (e.g. file name).
+# @return The same structure as run_sampled_plot_bucking(), with
+#   tree_source = "tree_list", the height summary (heights) and the
+#   excluded trees. plot_id_github holds the user's plot_id.
 run_tree_list_bucking <- function(prepared,
                                   price_matrix_path = "default_2021",
                                   root = get_root_dir(),
@@ -647,8 +605,8 @@ run_tree_list_bucking <- function(prepared,
   finish_job(job, buck_job(job, workers))
 }
 
-#' The trees of a prepared tree list that are bucked (within taperNOR's
-#' range), in the backend's tree_data layout (plot_id = the user's plot).
+# The trees of a prepared tree list that are bucked (within taperNOR's
+# range), in the backend's tree_data layout (plot_id = the user's plot).
 tree_list_tree_data <- function(prepared) {
   trees <- prepared$trees[prepared$trees$in_range, , drop = FALSE]
   data.frame(plot_id = trees$plot_id, treid = trees$treid, sesong = NA,
@@ -657,11 +615,11 @@ tree_list_tree_data <- function(prepared) {
              stringsAsFactors = FALSE)
 }
 
-#' The preparation part of run_tree_list_bucking(): taperNOR profiles, under
-#' bark, products and prices. Returns a job for buck_job() / finish_job().
-#' `workers`: taperNOR in chunks on that many workers; `profiles`: the
-#' taperNOR profiles of tree_list_tree_data(prepared), already computed (the
-#' app does this asynchronously).
+# The preparation part of run_tree_list_bucking(): taperNOR profiles, under
+# bark, products and prices. Returns a job for buck_job() / finish_job().
+# `workers`: taperNOR in chunks on that many workers; `profiles`: the
+# taperNOR profiles of tree_list_tree_data(prepared), already computed (the
+# app does this asynchronously).
 prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
                                   root = get_root_dir(), products = NULL,
                                   length_classes = NULL, params = list(),
@@ -712,15 +670,15 @@ prepare_tree_list_job <- function(prepared, price_matrix_path = "default_2021",
                        excluded = excluded, profile_failures = profile_failures))
 }
 
-#' Buck the stems of a StanForD 2010 .hpr file (hpr Phase B): each stem's
-#' measured over-bark profile, from the felling cut (stump 0) to its last
-#' measured position; under bark with barkNOR and DBH from the profile at
-#' 1.3 m above ground (R/helpers_hpr_stems.R).
-#'
-#' @param prepared Result of hpr_stem_profiles(read_hpr_stems(...), species_map).
-#' @param params   Optional list stored in the result (e.g. file name).
-#' @return The tree-list result structure, with tree_source = "hpr", treid =
-#'   StemKey, no plots, and the dropped stems as excluded_trees.
+# Buck the stems of a StanForD 2010 .hpr file (hpr Phase B): each stem's
+# measured over-bark profile, from the felling cut (stump 0) to its last
+# measured position; under bark with barkNOR and DBH from the profile at
+# 1.3 m above ground (R/helpers_hpr_stems.R).
+#
+# @param prepared Result of hpr_stem_profiles(read_hpr_stems(...), species_map).
+# @param params   Optional list stored in the result (e.g. file name).
+# @return The tree-list result structure, with tree_source = "hpr", treid =
+#   StemKey, no plots, and the dropped stems as excluded_trees.
 run_hpr_bucking <- function(prepared,
                             price_matrix_path = "default_2021",
                             root = get_root_dir(),
@@ -735,9 +693,9 @@ run_hpr_bucking <- function(prepared,
   finish_job(job, buck_job(job, workers))
 }
 
-#' The preparation part of run_hpr_bucking(): profile vectors, under bark,
-#' products and prices. The stump is 0 whatever params say: position 0 is the
-#' felling cut.
+# The preparation part of run_hpr_bucking(): profile vectors, under bark,
+# products and prices. The stump is 0 whatever params say: position 0 is the
+# felling cut.
 prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
                             root = get_root_dir(), products = NULL,
                             length_classes = NULL, params = list(), scenario = NULL,
@@ -769,8 +727,8 @@ prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
                        excluded = prepared$excluded, profile_failures = data.frame()))
 }
 
-#' prepare_hpr_job() from read stems and a species map (the app runs this on
-#' a worker: building the profiles takes a few seconds on large files).
+# prepare_hpr_job() from read stems and a species map (the app runs this on
+# a worker: building the profiles takes a few seconds on large files).
 prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "default_2021",
                                   root = get_root_dir(), products = NULL,
                                   length_classes = NULL, params = list(), scenario = NULL,
@@ -781,14 +739,14 @@ prepare_hpr_stems_job <- function(stems, species_map, price_matrix_path = "defau
                   products, length_classes, params, scenario, grade_opts)
 }
 
-#' A job with other prices (price-matrix tuning): rebuilds only the runs
-#' (.load_runs) and the prepared runs (.prepare_runs); the profiles stay.
-#' The job's stem-grade options (the first run's) are kept.
-#'
-#' @param job      A job from prepare_hpr_job() or prepare_hpr_stems_job().
-#' @param products list(pd, lc, pm): ProductData, LengthClasses (with
-#'   LogLength_dm) and the price matrix (pm_minimal layout, long).
-#' @return The job with new `pps` and `prep`.
+# A job with other prices (price-matrix tuning): rebuilds only the runs
+# (.load_runs) and the prepared runs (.prepare_runs); the profiles stay.
+# The job's stem-grade options (the first run's) are kept.
+#
+# @param job      A job from prepare_hpr_job() or prepare_hpr_stems_job().
+# @param products list(pd, lc, pm): ProductData, LengthClasses (with
+#   LogLength_dm) and the price matrix (pm_minimal layout, long).
+# @return The job with new `pps` and `prep`.
 swap_job_prices <- function(job, products, root = get_root_dir()) {
   path <- tempfile(fileext = ".csv")
   on.exit(unlink(path), add = TRUE)
@@ -801,10 +759,10 @@ swap_job_prices <- function(job, products, root = get_root_dir()) {
   job
 }
 
-#' A job restricted to some stems (price-matrix tuning samples).
-#'
-#' @param idx Integer positions in names(job$pvs) (the job's tree order).
-#' @return The job with those stems only; order and everything else kept.
+# A job restricted to some stems (price-matrix tuning samples).
+#
+# @param idx Integer positions in names(job$pvs) (the job's tree order).
+# @return The job with those stems only; order and everything else kept.
 subset_job_stems <- function(job, idx) {
   ids <- names(job$pvs)[sort(unique(idx))]
   keep <- names(job$pvs) %in% ids
@@ -868,7 +826,7 @@ subset_job_stems <- function(job, idx) {
       workers                           = core$workers),
     label                   = paste(if (hpr) "Results describe the stems of the .hpr file only (measured part)."
                                     else "Results describe the uploaded trees only.",
-                                    "Values are NOK per m³ of commercial volume under bark."),
+                                    "Values are NOK per m\u00b3 of commercial volume under bark."),
     elapsed_seconds         = elapsed
   )
 }
@@ -901,9 +859,9 @@ subset_job_stems <- function(job, idx) {
        bark_model = getOption("apter.bark_model", DEFAULT_BARK_MODEL))
 }
 
-#' Step 9 of a job: the per-tree loop (.buck_trees(), R/helpers_bucking_core.R),
-#' in this process (workers = 1) or in chunks on parallel workers
-#' (R/helpers_parallel.R). Returns .buck_trees()'s structure for all trees.
+# Step 9 of a job: the per-tree loop (.buck_trees(), R/helpers_bucking_core.R),
+# in this process (workers = 1) or in chunks on parallel workers
+# (R/helpers_parallel.R). Returns .buck_trees()'s structure for all trees.
 buck_job <- function(job, workers = apter_workers()) {
   out <- if (workers <= 1L || length(job$pvs) == 0L)
     .buck_trees(job$pvs, job$tree_data, job$prep, job$stump_cm, job$step_cm)
@@ -912,8 +870,8 @@ buck_job <- function(job, workers = apter_workers()) {
   out
 }
 
-#' Steps 10-18 of a job: result tables per run and the result list (the
-#' scenario's, if any, as `$scenario`).
+# Steps 10-18 of a job: result tables per run and the result list (the
+# scenario's, if any, as `$scenario`).
 finish_job <- function(job, b) {
   cores <- lapply(b$runs, function(x) {
     core <- .assemble_results(x$rows, x$sel, x$unpriced)

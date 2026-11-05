@@ -19,11 +19,9 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
-source(file.path(root_dir, "R", "helpers_price_tuning.R"))
-source(file.path(root_dir, "R", "helpers_distribution_edit.R"))
-for (e in parse(file.path(root_dir, "app", "tuning.R"), keep.source = FALSE))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
+for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FALSE))
   if (is.call(e) && identical(as.character(e[[1L]]), "<-") && as.character(e[[2L]]) %in% c("TUNE_MIN_LOGS", "tuning_run")) eval(e)
 skip_tuning <- "skip_tuning" %in% commandArgs(trailingOnly = TRUE)
 only <- sub("^only=", "", grep("^only=", commandArgs(trailingOnly = TRUE), value = TRUE))   # e.g. only=file5
@@ -32,7 +30,7 @@ dirp <- "C:/apter_private/hpr"
 files <- c(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L],
            file2 = file.path(dirp, "REDACTED40"), file3 = file.path(dirp, "REDACTED33"),
            file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))
-fx <- list.files(file.path(root_dir, "inputs", "test_fixtures"), "\\.hpr$", full.names = TRUE)
+fx <- list.files(file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures"), "\\.hpr$", full.names = TRUE)
 names(fx) <- paste0("fixture:", sub("\\.hpr$", "", basename(fx)))
 files <- c(files[file.exists(files)], fx)
 if (length(only)) files <- files[names(files) %in% only]

@@ -54,13 +54,9 @@ ROOT <- local({
   d
 })
 
-# ---- source helpers ---------------------------------------------------------
-for (.h in c("helpers_utils", "helpers_paths", "helpers_taper")) {
-  src <- file.path(ROOT, "R", paste0(.h, ".R"))
-  if (!file.exists(src)) stop("Helper not found: ", src)
-  source(src, local = FALSE)
-}
-rm(.h, src)
+# ---- the package (helpers) ----------------------------------------------------
+# (Since roadmap 8 the NFI profiles are also built on first use: build_nfi_cache(), R/helpers_nfi_cache.R.)
+suppressMessages(pkgload::load_all(ROOT, quiet = TRUE))
 
 # ---- constants (match backend and script 11) --------------------------------
 MIN_DBH_CM   <- 5.0
@@ -84,7 +80,7 @@ cat(sprintf("  Started : %s\n", Sys.time()))
 cat(sprintf("  ROOT    : %s\n", ROOT))
 
 # ---- load sanitized tree data -----------------------------------------------
-GH_DIR <- file.path(ROOT, "data_processed_github")
+GH_DIR <- file.path(ROOT, "inst", "extdata", "nfi")
 input_file <- file.path(GH_DIR, "nfi_tree_plot_stratum_ready_github.parquet")
 
 if (!file.exists(input_file))

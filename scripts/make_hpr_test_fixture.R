@@ -89,7 +89,7 @@ add_stem(11, 446, s11$p, s11$d)                               # ends below 1.3 m
 add_stem(12, 446, s1$p[-(1:2)], s1$d[-(1:2)])                 # starts at 20 cm, not at the cut
 add_stem(13, 446, s1$p, s1$d * 6)                             # 1,980 mm at the butt: a unit error
 
-dest <- file.path(root, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+dest <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
 dir.create(dirname(dest), showWarnings = FALSE, recursive = TRUE)
 xml2::write_xml(out, dest)
 txt <- readLines(dest, warn = FALSE)

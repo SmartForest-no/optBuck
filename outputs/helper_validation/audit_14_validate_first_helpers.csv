@@ -2,7 +2,7 @@ check,result,detail
 Helper exists: R/helpers_paths.R,PASS,found
 Helper exists: R/helpers_products.R,PASS,found
 Helper exists: R/helpers_valuation.R,PASS,found
-Helper exists: R/helpers_audit.R,PASS,found
+Helper exists: audits/helpers_audit.R,PASS,found
 Output exists: helper_product_check.csv,PASS,found
 Output exists: helper_price_support_by_product.csv,PASS,found
 Output exists: helper_unsupported_sawlog_lengths.csv,PASS,found
@@ -27,3 +27,4 @@ validate_price_matrix_against_products(): no FAIL items,PASS,0 FAIL item(s) in v
 validate_price_matrix_against_products(): REVIEW only for 31 dm gap or zero prices,PASS,"1 REVIEW item(s), zero prices only on waste (pine_waste, spruce_waste): zero-priced waste accepted as intentional (scope decision 2026-10-12)"
 All accepted scripts 00-12 exist,PASS,"13 present, 0 missing"
 Accepted scripts 00-12 not modified after script 14 was created,PASS,none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)
+Frozen script 00 holds the Oracle placeholders and no real alias or user name,PASS,570 lines read

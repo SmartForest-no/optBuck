@@ -35,16 +35,16 @@
 # with enough heights and enforces its own time limit (setTimeLimit()).
 # ==============================================================================
 
-#' Minimum measured heights of a species for a fieldPlot model.
+# Minimum measured heights of a species for a fieldPlot model.
 HEIGHT_MIN_MEASURED_PER_SPECIES <- 10L
 
-#' Calibration ratios outside this range are reported as a warning.
+# Calibration ratios outside this range are reported as a warning.
 HEIGHT_CALIBRATION_RANGE <- c(0.7, 1.3)
 
-#' Time limit (s) for one nlme fit before falling back to fitHD().
+# Time limit (s) for one nlme fit before falling back to fitHD().
 HEIGHT_FIT_TIMEOUT_S <- 30
 
-#' Height-source labels.
+# Height-source labels.
 HEIGHT_SOURCE_MEASURED      <- "measured"
 HEIGHT_SOURCE_FP_PLOT       <- "fieldPlot (plot)"
 HEIGHT_SOURCE_FP_SPECIES    <- "fieldPlot (species curve)"
@@ -52,10 +52,10 @@ HEIGHT_SOURCE_FH_UNCAL      <- "FinnHoyde (uncalibrated)"
 height_source_fh_calibrated <- function(k) sprintf("FinnHoyde (calibrated, n = %d)", k)
 
 
-#' FinnHoyde NFI reference height (m) from dbh (cm) and species.
-#'
-#' @param d_cm    Diameter at breast height, cm (vector).
-#' @param species "spruce" or "pine" (vector or scalar).
+# FinnHoyde NFI reference height (m) from dbh (cm) and species.
+#
+# @param d_cm    Diameter at breast height, cm (vector).
+# @param species "spruce" or "pine" (vector or scalar).
 finnhoyde_height <- function(d_cm, species) {
   species <- rep_len(as.character(species), length(d_cm))
   h <- rep(NA_real_, length(d_cm))
@@ -113,14 +113,14 @@ finnhoyde_height <- function(d_cm, species) {
 }
 
 
-#' Impute missing heights per species.
-#'
-#' @param trees data.frame with species_group ("spruce"/"pine"), dbh_cm,
-#'   height_m (measured, NA when missing) and plot_id (NA when not given).
-#' @param min_measured Minimum measured heights of a species for fieldPlot.
-#' @param timeout_s Time limit (s) for one nlme fit.
-#' @return list(height_m, height_source (one per tree), summary = data.frame
-#'   (species, n_trees, n_measured, method, model, ratio, note), warnings).
+# Impute missing heights per species.
+#
+# @param trees data.frame with species_group ("spruce"/"pine"), dbh_cm,
+#   height_m (measured, NA when missing) and plot_id (NA when not given).
+# @param min_measured Minimum measured heights of a species for fieldPlot.
+# @param timeout_s Time limit (s) for one nlme fit.
+# @return list(height_m, height_source (one per tree), summary = data.frame
+#   (species, n_trees, n_measured, method, model, ratio, note), warnings).
 impute_heights <- function(trees, min_measured = HEIGHT_MIN_MEASURED_PER_SPECIES,
                            timeout_s = HEIGHT_FIT_TIMEOUT_S) {
   h   <- as.numeric(trees$height_m)

@@ -34,31 +34,28 @@
 #           problem in the file (hpr_stem_checks()); expected drops go to info.
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
-#' Bytes read per chunk of stems (2 MB: as fast as 8 MB, less than half the
-#' memory on the owner's largest files).
+# Bytes read per chunk of stems (2 MB: as fast as 8 MB, less than half the
+# memory on the owner's largest files).
 HPR_STEM_CHUNK_BYTES <- 2L * 1024L * 1024L
 
-#' A stem record starts with <Stem> (attributes allowed) directly followed by
-#' its StemKey (PCRE; "<Stem>" alone also occurs in biomass functions).
+# A stem record starts with <Stem> (attributes allowed) directly followed by
+# its StemKey (PCRE; "<Stem>" alone also occurs in biomass functions).
 HPR_STEM_RECORD_RE <- "<Stem(?:\\s[^>]*)?>\\s*<StemKey>"
 
-#' DBH height above ground (cm).
+# DBH height above ground (cm).
 HPR_DBH_ABOVE_GROUND_CM <- 130
 
-#' Stump offset (cm) when a species group has no DBHHeight: Apter's stump.
+# Stump offset (cm) when a species group has no DBHHeight: Apter's stump.
 HPR_DEFAULT_STUMP_CM <- 10
 
-#' Largest accepted stump offset (cm).
+# Largest accepted stump offset (cm).
 HPR_MAX_STUMP_CM <- 50
 
-#' Diameters above this (mm) suggest a unit error: the stem is dropped.
+# Diameters above this (mm) suggest a unit error: the stem is dropped.
 HPR_MAX_DIAMETER_MM <- 1500
 
-#' Profile grid (cm), as for taperNOR profiles.
+# Profile grid (cm), as for taperNOR profiles.
 HPR_PROFILE_STEP_CM <- 10L
 
 # Cleaning (Phase 3, Stambas defaults): checked from HPR_CLEAN_FROM_CM from the
@@ -74,15 +71,15 @@ HPR_CLEAN_MAX_FALL_10DM_MM <- 60    # at most this over 10 dm
 
 # ---- heights -------------------------------------------------------------------------
 
-#' Stump offset (cm) of a species group: 130 - DBHHeight, within 0-50 cm;
-#' HPR_DEFAULT_STUMP_CM when DBHHeight is missing.
+# Stump offset (cm) of a species group: 130 - DBHHeight, within 0-50 cm;
+# HPR_DEFAULT_STUMP_CM when DBHHeight is missing.
 hpr_stump_offset <- function(dbh_height_cm) {
   off <- HPR_DBH_ABOVE_GROUND_CM - as.numeric(dbh_height_cm)
   off[is.na(off)] <- HPR_DEFAULT_STUMP_CM
   pmin(pmax(off, 0), HPR_MAX_STUMP_CM)
 }
 
-#' Height above ground (cm) of hpr positions (cm from the felling cut).
+# Height above ground (cm) of hpr positions (cm from the felling cut).
 hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
 
 
@@ -203,18 +200,18 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
   else .hs_extract_regex(r)
 }
 
-#' Read the stems of a StanForD 2010 .hpr file (also .hpr.gz, or an .hpr in
-#' a .zip), streaming. The definitions (species groups, units, DBHHeight)
-#' come from read_hpr(), which parses only the part before the first stem.
-#'
-#' @param path        File path.
-#' @param filename    Name shown in messages (its extension decides .zip).
-#' @param defs        read_hpr() result, if already read.
-#' @param chunk_bytes Bytes per chunk (results do not depend on it).
-#' @return list(ok, errors, warnings, info, file, species (read_hpr()'s, plus
-#'   offset_cm, n_stems, n_profiles), stems (data.frame: stem_key,
-#'   species_key, kind "single"/"multi"/"other", category, n_points),
-#'   idx/pos/d (profile points: stem row, cm from the cut, mm), seconds).
+# Read the stems of a StanForD 2010 .hpr file (also .hpr.gz, or an .hpr in
+# a .zip), streaming. The definitions (species groups, units, DBHHeight)
+# come from read_hpr(), which parses only the part before the first stem.
+#
+# @param path        File path.
+# @param filename    Name shown in messages (its extension decides .zip).
+# @param defs        read_hpr() result, if already read.
+# @param chunk_bytes Bytes per chunk (results do not depend on it).
+# @return list(ok, errors, warnings, info, file, species (read_hpr()'s, plus
+#   offset_cm, n_stems, n_profiles), stems (data.frame: stem_key,
+#   species_key, kind "single"/"multi"/"other", category, n_points),
+#   idx/pos/d (profile points: stem row, cm from the cut, mm), seconds).
 read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
                            chunk_bytes = HPR_STEM_CHUNK_BYTES) {
   t0 <- Sys.time()
@@ -259,18 +256,18 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
 
 # ---- profiles ------------------------------------------------------------------------
 
-#' Cleaning checks on the stems' own measured points (over bark, cm from the
-#' felling cut, mm). Range: from HPR_CLEAN_FROM_CM (interpolated if no point
-#' lies there) to the first measured point at or above it with a diameter <=
-#' HPR_CLEAN_END_MM, else the last point. Windows start at every measured
-#' point of the range, end by interpolation and lie inside the range; only
-#' decreases count (local increases are never a max-fall failure). Thresholds
-#' are strict (exactly 30 mm, 60 mm or 1 mm passes). Pure: no state.
-#'
-#' @param idx,pos,d Profile points (stem row, cm, mm), as read_hpr_stems().
-#' @param n         Number of stems.
-#' @param check      Stem rows to check (the others stay FALSE).
-#' @return data.frame(broken_top, too_flat, too_steep), n rows.
+# Cleaning checks on the stems' own measured points (over bark, cm from the
+# felling cut, mm). Range: from HPR_CLEAN_FROM_CM (interpolated if no point
+# lies there) to the first measured point at or above it with a diameter <=
+# HPR_CLEAN_END_MM, else the last point. Windows start at every measured
+# point of the range, end by interpolation and lie inside the range; only
+# decreases count (local increases are never a max-fall failure). Thresholds
+# are strict (exactly 30 mm, 60 mm or 1 mm passes). Pure: no state.
+#
+# @param idx,pos,d Profile points (stem row, cm, mm), as read_hpr_stems().
+# @param n         Number of stems.
+# @param check      Stem rows to check (the others stay FALSE).
+# @return data.frame(broken_top, too_flat, too_steep), n rows.
 hpr_clean_flags <- function(idx, pos, d, n, check = seq_len(n)) {
   broken <- flat <- steep <- rep(FALSE, n)
   if (length(pos) == 0L || length(check) == 0L)
@@ -305,29 +302,29 @@ hpr_clean_flags <- function(idx, pos, d, n, check = seq_len(n)) {
   data.frame(broken_top = broken, too_flat = flat, too_steep = steep)
 }
 
-#' Which read stems Apter bucks, with the species map (species group key ->
-#' "spruce" / "pine" / "none"); cheap (no profiles built), for the app's
-#' message as the map changes.
-#'
-#' Dropped, in this order: multi-tree stems, stems without diameters,
-#' profiles not over bark, duplicate StemKeys, species groups set to Not used
-#' (per group), unreadable values, profiles not starting at the felling cut,
-#' diameters above HPR_MAX_DIAMETER_MM, and profiles ending below 1.3 m above
-#' ground (no DBH). Only real problems in the file are warnings (profiles not
-#' over bark, duplicate keys, unreadable values, not starting at 0, too large
-#' diameters; one per reason, with counts). Expected drops (multi-tree stems,
-#' stems without a profile, Not-used species, profiles ending below 1.3 m)
-#' are counted in info only: the summary line (stems read, used) covers them
-#' (decided 2026-10-21).
-#'
-#' Cleaning (Phase 3, hpr_clean_flags()) then checks the stems left: too flat and
-#' too steep profiles are dropped (once, under the first failing check); a broken
-#' top is only counted, the stem is kept (2026-10-28). One warning line per check,
-#' counted independently (`clean_counts` has the counts).
-#'
-#' @return list(ok, errors, warnings, info, file, n_read, n_used, use (row
-#'   indices of the stems bucked), species (per stem), offset, last (cm),
-#'   group (per stem), reason (NA if bucked), species_used (per stem bucked)).
+# Which read stems Apter bucks, with the species map (species group key ->
+# "spruce" / "pine" / "none"); cheap (no profiles built), for the app's
+# message as the map changes.
+#
+# Dropped, in this order: multi-tree stems, stems without diameters,
+# profiles not over bark, duplicate StemKeys, species groups set to Not used
+# (per group), unreadable values, profiles not starting at the felling cut,
+# diameters above HPR_MAX_DIAMETER_MM, and profiles ending below 1.3 m above
+# ground (no DBH). Only real problems in the file are warnings (profiles not
+# over bark, duplicate keys, unreadable values, not starting at 0, too large
+# diameters; one per reason, with counts). Expected drops (multi-tree stems,
+# stems without a profile, Not-used species, profiles ending below 1.3 m)
+# are counted in info only: the summary line (stems read, used) covers them
+# (decided 2026-10-21).
+#
+# Cleaning (Phase 3, hpr_clean_flags()) then checks the stems left: too flat and
+# too steep profiles are dropped (once, under the first failing check); a broken
+# top is only counted, the stem is kept (2026-10-28). One warning line per check,
+# counted independently (`clean_counts` has the counts).
+#
+# @return list(ok, errors, warnings, info, file, n_read, n_used, use (row
+#   indices of the stems bucked), species (per stem), offset, last (cm),
+#   group (per stem), reason (NA if bucked), species_used (per stem bucked)).
 hpr_stem_checks <- function(st, species_map) {
   if (!isTRUE(st$ok)) return(list(ok = FALSE, errors = st$errors, warnings = st$warnings,
                                   info = character(0), file = st$file))
@@ -406,17 +403,17 @@ hpr_stem_checks <- function(st, species_map) {
        clean_counts = clean_counts)
 }
 
-#' The stem grade at each 10 cm grid point (Phase 6). A grade runs from its
-#' gradeStartPosition (snapped to the nearest grid point, halves up) to the
-#' next change; the grade at grid point g is the grade of the cell [g, g+10).
-#' Before the first start, and for a stem without grades, the species group's
-#' StartGrade applies (NA when the group has none: the stem is then treated as
-#' grade-free). Where two starts snap to the same point the later one wins.
-#'
-#' @param g           Grid positions (cm, ascending).
-#' @param gpos,gval   The stem's own grade starts (cm) and numbers.
-#' @param start_grade Species group StartGrade (NA if none).
-#' @return Numeric vector, length(g).
+# The stem grade at each 10 cm grid point (Phase 6). A grade runs from its
+# gradeStartPosition (snapped to the nearest grid point, halves up) to the
+# next change; the grade at grid point g is the grade of the cell [g, g+10).
+# Before the first start, and for a stem without grades, the species group's
+# StartGrade applies (NA when the group has none: the stem is then treated as
+# grade-free). Where two starts snap to the same point the later one wins.
+#
+# @param g           Grid positions (cm, ascending).
+# @param gpos,gval   The stem's own grade starts (cm) and numbers.
+# @param start_grade Species group StartGrade (NA if none).
+# @return Numeric vector, length(g).
 hpr_grade_grid <- function(g, gpos, gval, start_grade, step = HPR_PROFILE_STEP_CM) {
   ok <- !is.na(gpos) & !is.na(gval)
   out <- rep(as.numeric(start_grade), length(g))
@@ -428,21 +425,21 @@ hpr_grade_grid <- function(g, gpos, gval, start_grade, step = HPR_PROFILE_STEP_C
   out
 }
 
-#' Turn read stems into the stems Apter bucks (hpr_stem_checks(), then the
-#' profiles). Kept stems get a 10 cm profile from 0 to the last measured
-#' position rounded down to 10 cm (interpolated where positions are off the
-#' grid; local diameter increases are kept), and DBH = the over-bark profile
-#' at 1.3 m above ground.
-#'
-#' @return hpr_stem_checks()'s list plus tree_data (plot_id NA, treid =
-#'   StemKey, species_group, dbh_cm, height_m = measured length,
-#'   height_source), profiles (long: treid, plot_id, species_group,
-#'   diameterPosition, DiameterValue, DBH, height_m; for
-#'   profiles_to_profile_vectors()) and excluded (treid, species_group_name,
-#'   excluded_reason).
-#' Cells (10 cm, [g, g+10)) inside recorded waste logs: the whole cells of [ceiling(start/10)*10,
-#' + floor(length/10)*10). This is the zone the old optBuck set to grade -1 (roadmap 8).
-#' @param g Grid positions (cm); start,len the waste logs of one stem (cm).
+# Turn read stems into the stems Apter bucks (hpr_stem_checks(), then the
+# profiles). Kept stems get a 10 cm profile from 0 to the last measured
+# position rounded down to 10 cm (interpolated where positions are off the
+# grid; local diameter increases are kept), and DBH = the over-bark profile
+# at 1.3 m above ground.
+#
+# @return hpr_stem_checks()'s list plus tree_data (plot_id NA, treid =
+#   StemKey, species_group, dbh_cm, height_m = measured length,
+#   height_source), profiles (long: treid, plot_id, species_group,
+#   diameterPosition, DiameterValue, DBH, height_m; for
+#   profiles_to_profile_vectors()) and excluded (treid, species_group_name,
+#   excluded_reason).
+# Cells (10 cm, [g, g+10)) inside recorded waste logs: the whole cells of [ceiling(start/10)*10,
+# + floor(length/10)*10). This is the zone the old optBuck set to grade -1 (roadmap 8).
+# @param g Grid positions (cm); start,len the waste logs of one stem (cm).
 hpr_reject_cells <- function(g, start, len, step = HPR_PROFILE_STEP_CM) {
   out <- rep(FALSE, length(g))
   if (!length(start)) return(out)
@@ -516,8 +513,8 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE, reject = NULL) {
 # file). File names never reach results: stems carry `file`, the file's
 # position in the upload, and messages name files by position.
 
-#' Why a file could not be used, without the file name (a short phrase the
-#' app shows as "File 2 not used: <reason>.").
+# Why a file could not be used, without the file name (a short phrase the
+# app shows as "File 2 not used: <reason>.").
 hpr_file_failure_reason <- function(errors, filename) {
   e <- paste(errors, collapse = " ")
   if (grepl("contains no stems", e, fixed = TRUE)) return("no stems")
@@ -527,17 +524,17 @@ hpr_file_failure_reason <- function(errors, filename) {
   gsub(filename, "the file", errors[1L], fixed = TRUE)
 }
 
-#' Combine read_hpr_stems() results (one per file, in upload order) into one
-#' read_hpr_stems()-shaped list for hpr_stem_checks() and hpr_stem_profiles().
-#'
-#' Species group keys become "<n>:<key>" (n = the file's position), because
-#' keys such as 1, 2, 3 repeat across files; `name_id` (lower case, trimmed
-#' group name) is what the app maps species by. Each stem gets `file` = n.
-#'
-#' @param reads     List of read_hpr_stems() results.
-#' @param filenames Their names (only used to keep them out of messages).
-#' @return list(ok, errors, warnings, info, file = NA, n_files (used), failed
-#'   (data.frame: file, reason), species, stems (with `file`), idx, pos, d).
+# Combine read_hpr_stems() results (one per file, in upload order) into one
+# read_hpr_stems()-shaped list for hpr_stem_checks() and hpr_stem_profiles().
+#
+# Species group keys become "<n>:<key>" (n = the file's position), because
+# keys such as 1, 2, 3 repeat across files; `name_id` (lower case, trimmed
+# group name) is what the app maps species by. Each stem gets `file` = n.
+#
+# @param reads     List of read_hpr_stems() results.
+# @param filenames Their names (only used to keep them out of messages).
+# @return list(ok, errors, warnings, info, file = NA, n_files (used), failed
+#   (data.frame: file, reason), species, stems (with `file`), idx, pos, d).
 combine_hpr_stems <- function(reads, filenames = vapply(reads, function(r) or_default(r$file, ""), "")) {
   good <- which(vapply(reads, function(r) isTRUE(r$ok), TRUE))
   bad  <- setdiff(seq_along(reads), good)
@@ -580,12 +577,12 @@ combine_hpr_stems <- function(reads, filenames = vapply(reads, function(r) or_de
        gval = unlist(lapply(good, function(i) reads[[i]]$gval), use.names = FALSE))
 }
 
-#' Read several .hpr files one after the other and combine them
-#' (combine_hpr_stems()). The app runs this on a worker.
-#'
-#' @param paths     File paths, in upload order.
-#' @param filenames Names shown in the reader's own messages (extension
-#'   decides .zip / .gz); they are kept out of the combined messages.
+# Read several .hpr files one after the other and combine them
+# (combine_hpr_stems()). The app runs this on a worker.
+#
+# @param paths     File paths, in upload order.
+# @param filenames Names shown in the reader's own messages (extension
+#   decides .zip / .gz); they are kept out of the combined messages.
 read_hpr_stem_files <- function(paths, filenames = basename(paths)) {
   reads <- vector("list", length(paths))
   for (i in seq_along(paths))
@@ -602,14 +599,14 @@ read_hpr_stem_files <- function(paths, filenames = basename(paths)) {
 # another quality in another job's file. With "Use stem grades" on, a sawlog product that permits
 # the grades of less than half of a species' stem length gets a warning.
 
-#' Length of the stems by species and grade on the grade grid the bucking uses: one 10 cm cell
-#' per grid point of each stem still bucked (hpr_stem_checks()), the grade of a cell as in
-#' hpr_stem_profiles(grades = TRUE) (a stem without grades has its group's StartGrade; NA =
-#' grade-free).
-#'
-#' @param st,species_map As hpr_stem_checks().
-#' @param ck  hpr_stem_checks(st, species_map) (default: computed).
-#' @return data.frame(species, grade, cells) (cells = number of 10 cm cells); NULL without stems.
+# Length of the stems by species and grade on the grade grid the bucking uses: one 10 cm cell
+# per grid point of each stem still bucked (hpr_stem_checks()), the grade of a cell as in
+# hpr_stem_profiles(grades = TRUE) (a stem without grades has its group's StartGrade; NA =
+# grade-free).
+#
+# @param st,species_map As hpr_stem_checks().
+# @param ck  hpr_stem_checks(st, species_map) (default: computed).
+# @return data.frame(species, grade, cells) (cells = number of 10 cm cells); NULL without stems.
 hpr_grade_lengths <- function(st, species_map, ck = hpr_stem_checks(st, species_map)) {
   if (!isTRUE(ck$ok) || is.null(st$gpos) || length(ck$use) == 0L) return(NULL)
   s <- st$stems; sp <- st$species; step <- HPR_PROFILE_STEP_CM
@@ -633,23 +630,23 @@ hpr_grade_lengths <- function(st, species_map, ck = hpr_stem_checks(st, species_
              cells = tab$Freq, stringsAsFactors = FALSE)
 }
 
-#' Grade numbers as text: consecutive numbers "1–2", otherwise "1, 3, 5".
+# Grade numbers as text: consecutive numbers "1–2", otherwise "1, 3, 5".
 format_grades <- function(g) {
   g <- sort(unique(g[!is.na(g)]))
   if (length(g) >= 2L && all(diff(g) == 1)) return(sprintf("%g\u2013%g", min(g), max(g)))
   paste(format(g, trim = TRUE, scientific = FALSE), collapse = ", ")
 }
 
-#' The grade mismatch check: with "Use stem grades" on, every sawlog product whose permitted
-#' grades cover less than half of its species' stem length (cells without a grade count as
-#' permitted).
-#'
-#' @param dist       hpr_grade_lengths() result (NULL: no .hpr stems).
-#' @param defs       The scenario's assortment table.
-#' @param use_grades The scenario's "Use stem grades" option.
-#' @param threshold  Warn below this permitted share (0.5).
-#' @return data.frame(key, species, grade (the species' dominant grade), share (whole percent of
-#'   the species' length), permitted (text)); no rows when nothing applies.
+# The grade mismatch check: with "Use stem grades" on, every sawlog product whose permitted
+# grades cover less than half of its species' stem length (cells without a grade count as
+# permitted).
+#
+# @param dist       hpr_grade_lengths() result (NULL: no .hpr stems).
+# @param defs       The scenario's assortment table.
+# @param use_grades The scenario's "Use stem grades" option.
+# @param threshold  Warn below this permitted share (0.5).
+# @return data.frame(key, species, grade (the species' dominant grade), share (whole percent of
+#   the species' length), permitted (text)); no rows when nothing applies.
 grade_mismatch_check <- function(dist, defs, use_grades, threshold = 0.5) {
   none <- data.frame(key = character(0), species = character(0), grade = numeric(0),
                      share = numeric(0), permitted = character(0), stringsAsFactors = FALSE)
@@ -671,8 +668,8 @@ grade_mismatch_check <- function(dist, defs, use_grades, threshold = 0.5) {
   if (length(rows) == 0L) none else do.call(rbind, rows)
 }
 
-#' The warning texts (one per row of grade_mismatch_check()) in `lang`.
-#' @param label Function: assortment key -> display name.
+# The warning texts (one per row of grade_mismatch_check()) in `lang`.
+# @param label Function: assortment key -> display name.
 grade_warning_text <- function(w, label, lang = "en") {
   if (NROW(w) == 0L) return(character(0))
   vapply(seq_len(nrow(w)), function(i)
@@ -688,9 +685,9 @@ grade_warning_text <- function(w, label, lang = "en") {
 # the file: every scenario product of the species that came from a file matches a product of that
 # species in the stem file by ProductKey (or, for a .pin product, ProductUserID) AND product name.
 
-#' The product definitions of a read_hpr() result for the comparison with a scenario.
-#' @return data.frame(key, name, uid, groups): ProductKey, ProductName, ProductUserID (NA if none) and
-#'   the product's species group keys joined by "|".
+# The product definitions of a read_hpr() result for the comparison with a scenario.
+# @return data.frame(key, name, uid, groups): ProductKey, ProductName, ProductUserID (NA if none) and
+#   the product's species group keys joined by "|".
 hpr_instruction_table <- function(h) {
   p <- h$products
   if (length(p) == 0L) return(data.frame(key = character(0), name = character(0), uid = character(0),
@@ -716,19 +713,19 @@ hpr_instruction_table <- function(h) {
   identical(nm, n) || startsWith(nm, paste0(n, " (")) && endsWith(nm, ")") || nm == paste(n, key)
 }
 
-#' Whether the scenario has the same instruction as each stem file, per species.
-#'
-#' A scenario product counts when it came from a file (a HprProductKey or a SourceXml); products
-#' the user added are ignored. For a species the scenario has the same instruction as a file when
-#' there is at least one such product and every one matches a product of that species in the file:
-#' same ProductKey (a .pin product without key: same ProductUserID, or any when the file product
-#' has none) and same product name (a renamed duplicate "Name (GROUP)" counts as its original).
-#'
-#' @param instr       hpr_instruction_table() rows of all files, with `file` (default 1).
-#' @param species_map Named character: species group key -> "spruce", "pine" or "none".
-#' @param defs        The scenario's assortment table.
-#' @param files       File numbers to answer for (default: those in `instr`).
-#' @return data.frame(file, species, same).
+# Whether the scenario has the same instruction as each stem file, per species.
+#
+# A scenario product counts when it came from a file (a HprProductKey or a SourceXml); products
+# the user added are ignored. For a species the scenario has the same instruction as a file when
+# there is at least one such product and every one matches a product of that species in the file:
+# same ProductKey (a .pin product without key: same ProductUserID, or any when the file product
+# has none) and same product name (a renamed duplicate "Name (GROUP)" counts as its original).
+#
+# @param instr       hpr_instruction_table() rows of all files, with `file` (default 1).
+# @param species_map Named character: species group key -> "spruce", "pine" or "none".
+# @param defs        The scenario's assortment table.
+# @param files       File numbers to answer for (default: those in `instr`).
+# @return data.frame(file, species, same).
 hpr_same_instruction <- function(instr, species_map, defs, files = NULL) {
   if (is.null(instr)) instr <- data.frame(key = character(0), name = character(0), uid = character(0),
                                           groups = character(0), file = integer(0))
@@ -756,19 +753,19 @@ hpr_same_instruction <- function(instr, species_map, defs, files = NULL) {
   do.call(rbind, out)
 }
 
-#' Per species, the files whose grades a scenario uses (the files with its instruction). The
-#' caller asks only when "Use stem grades" or "Cut at grade changes" is on; with `on` FALSE it is
-#' NULL (all files, as before).
+# Per species, the files whose grades a scenario uses (the files with its instruction). The
+# caller asks only when "Use stem grades" or "Cut at grade changes" is on; with `on` FALSE it is
+# NULL (all files, as before).
 grade_files_of <- function(same, on) {
   if (!isTRUE(on)) return(NULL)
   setNames(lapply(PRODUCT_SPECIES, function(sp) same$file[same$species == sp & same$same]), PRODUCT_SPECIES)
 }
 
-#' `hpr_grade_lengths()` rows summed to species and grade, over the given files only (R5).
-#'
-#' @param dist  hpr_grade_lengths() result.
-#' @param files NULL (all files) or a named list species -> file numbers to keep.
-#' @return data.frame(species, grade, cells) as the grade mismatch check reads it; NULL if empty.
+# `hpr_grade_lengths()` rows summed to species and grade, over the given files only (R5).
+#
+# @param dist  hpr_grade_lengths() result.
+# @param files NULL (all files) or a named list species -> file numbers to keep.
+# @return data.frame(species, grade, cells) as the grade mismatch check reads it; NULL if empty.
 grade_dist_by_grade <- function(dist, files = NULL) {
   if (is.null(dist) || NROW(dist) == 0L) return(NULL)
   if (!is.null(files))
@@ -781,12 +778,12 @@ grade_dist_by_grade <- function(dist, files = NULL) {
              stringsAsFactors = FALSE)
 }
 
-#' The share (text) of the stem length with a grade other than the start grade, per species, over
-#' the stems of files whose grades are not used (R5). Whole percent, "<1" between 0 and 0.5.
-#'
-#' @param dist hpr_grade_lengths() result.
-#' @param same hpr_same_instruction() result.
-#' @return data.frame(species, share) for species with grade information in an unused file.
+# The share (text) of the stem length with a grade other than the start grade, per species, over
+# the stems of files whose grades are not used (R5). Whole percent, "<1" between 0 and 0.5.
+#
+# @param dist hpr_grade_lengths() result.
+# @param same hpr_same_instruction() result.
+# @return data.frame(species, share) for species with grade information in an unused file.
 grade_unused_notes <- function(dist, same) {
   none <- data.frame(species = character(0), share = character(0), stringsAsFactors = FALSE)
   if (is.null(dist) || NROW(dist) == 0L || !"file" %in% names(dist)) return(none)
@@ -802,7 +799,7 @@ grade_unused_notes <- function(dist, same) {
   if (length(rows)) do.call(rbind, rows) else none
 }
 
-#' The note texts of grade_unused_notes() for scenario `side` in `lang`.
+# The note texts of grade_unused_notes() for scenario `side` in `lang`.
 grade_unused_text <- function(notes, side, lang = "en") {
   if (NROW(notes) == 0L) return(character(0))
   vapply(seq_len(nrow(notes)), function(i)

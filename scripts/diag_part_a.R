@@ -8,8 +8,8 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
 dirp <- "C:/apter_private/hpr"
 cfg <- list(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))
 for (nm in intersect(names(cfg), commandArgs(TRUE))) for (mo in c(FALSE, TRUE)) {

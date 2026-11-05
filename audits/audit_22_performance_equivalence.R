@@ -64,10 +64,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-suppressMessages(source(file.path(root_dir, "scripts", "app_backend",
-                                  "01_run_sampled_plot_bucking.R"), local = FALSE))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
 source(file.path(root_dir, "scripts", "performance_cases.R"))
 
@@ -220,7 +219,7 @@ rec("Check 06: workers = 1 sets no future plan and records 1 worker",
 # ==============================================================================
 section("07. App background job")
 ROOT <- root_dir
-source(file.path(root_dir, "app", "helpers_jobs.R"))
+source(file.path(root_dir, "inst", "app", "helpers_jobs.R"))
 old_w <- options(apter.workers = N_WORKERS)
 await <- function(p) {
   done <- FALSE; val <- NULL; err <- NULL

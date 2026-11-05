@@ -22,21 +22,21 @@
 
 # ---- FG ----------------------------------------------------------------------------
 
-#' FG of one diameter class: S, W in percent over the length classes.
+# FG of one diameter class: S, W in percent over the length classes.
 fg_class <- function(S, W) 100 - 0.5 * sum(abs(S - W))
 
-#' Real target: the Distribution values of the available cells, normalised to
-#' 100 % within each diameter class (columns). A class whose values sum to 0
-#' has no target: its column is NA. (Unavailable cells count as 0.)
+# Real target: the Distribution values of the available cells, normalised to
+# 100 % within each diameter class (columns). A class whose values sum to 0
+# has no target: its column is NA. (Unavailable cells count as 0.)
 real_target <- function(dist, avail) {
   w <- dist * avail; w[is.na(w)] <- 0
   s <- colSums(w)
   sweep(w, 2L, ifelse(s > 0, s, NA_real_), "/") * 100
 }
 
-#' The Apter diameter row (whole cm) -> the file's diameter class (lower limit
-#' mm): the largest class <= c * 10 mm, as the import maps prices (the smallest
-#' class below it).
+# The Apter diameter row (whole cm) -> the file's diameter class (lower limit
+# mm): the largest class <= c * 10 mm, as the import maps prices (the smallest
+# class below it).
 file_class_of_cm <- function(cm, d_file) {
   d_file <- sort(unique(d_file))
   vapply(cm, function(c) { u <- d_file[d_file <= c * 10]; if (length(u)) max(u) else min(d_file) }, 0)
@@ -48,27 +48,27 @@ file_class_of_cm <- function(cm, d_file) {
 .tg_rows <- function(pm, product_id)
   pm[pm$ProductKey == product_id & !is.na(pm$LengthClass_dm), , drop = FALSE]
 
-#' The distribution info of one .hpr product, for tuning_grid(hpr =).
-#'
-#' @param dst A read_hpr_distribution() result (scripts/roadmap7_helpers.R).
-#' @param key The product's ProductKey in the file (assortment HprProductKey).
+# The distribution info of one .hpr product, for tuning_grid(hpr =).
+#
+# @param dst A read_hpr_distribution() result (scripts/roadmap7_helpers.R).
+# @param key The product's ProductKey in the file (assortment HprProductKey).
 hpr_tuning_info <- function(dst, key)
   list(cells = dst$cells[[key]],
        category = dst$products$DistributionCategory[match(key, dst$products$key)])
 
-#' A product's tuning grid.
-#'
-#' @param products list(pd, lc, pm).
-#' @param product_id ProductKey of a matrix-priced product.
-#' @param hpr NULL, or list(cells (d_mm, l_cm, dist), category) from
-#'   hpr_tuning_info(): the file's diameter classes, its Distribution and its
-#'   DistributionCategory. File length classes map to Apter's by the import's
-#'   rule (rounded up to whole dm).
-#' @return list(product_id, name, lengths (dm), diam_classes, price (length x
-#'   diameter, NA = unavailable), species, cm_map (named by Apter cm row: the
-#'   grid column it belongs to), basis_default ("volume" when the file's
-#'   DistributionCategory is "Volume of logs", else "number"), distribution
-#'   (NULL, or the file's Distribution on the grid)).
+# A product's tuning grid.
+#
+# @param products list(pd, lc, pm).
+# @param product_id ProductKey of a matrix-priced product.
+# @param hpr NULL, or list(cells (d_mm, l_cm, dist), category) from
+#   hpr_tuning_info(): the file's diameter classes, its Distribution and its
+#   DistributionCategory. File length classes map to Apter's by the import's
+#   rule (rounded up to whole dm).
+# @return list(product_id, name, lengths (dm), diam_classes, price (length x
+#   diameter, NA = unavailable), species, cm_map (named by Apter cm row: the
+#   grid column it belongs to), basis_default ("volume" when the file's
+#   DistributionCategory is "Volume of logs", else "number"), distribution
+#   (NULL, or the file's Distribution on the grid)).
 tuning_grid <- function(products, product_id, hpr = NULL) {
   rows <- .tg_rows(products$pm, product_id)
   if (nrow(rows) == 0L) stop("No matrix-priced product '", product_id, "' in the price matrix.")
@@ -101,8 +101,8 @@ tuning_grid <- function(products, product_id, hpr = NULL) {
        distribution = dist)
 }
 
-#' Products with every Apter cell of the product set from its grid cell.
-#' Unavailable cells (NA in the grid or in the price matrix) stay as they are.
+# Products with every Apter cell of the product set from its grid cell.
+# Unavailable cells (NA in the grid or in the price matrix) stay as they are.
 apply_grid_prices <- function(products, grid, price) {
   pm <- products$pm
   i <- which(pm$ProductKey == grid$product_id & !is.na(pm$LengthClass_dm) & !is.na(pm$PriceNOKperM3))
@@ -117,15 +117,15 @@ apply_grid_prices <- function(products, grid, price) {
 
 # ---- target ---------------------------------------------------------------------------
 
-#' Target W in percent per diameter class (columns sum to 100 over the
-#' available cells); NA where no target.
-#'
-#' @param type "real": the Distribution of the available cells normalised to
-#'   100 per class (classes summing to 0 get NA); "neutral": equal share per
-#'   available length class; "long": weights 1..k from the shortest to the
-#'   longest available length class, normalised.
-#' @param distribution Length x diameter matrix for "real" (default: the grid's
-#'   own `distribution`, the file's).
+# Target W in percent per diameter class (columns sum to 100 over the
+# available cells); NA where no target.
+#
+# @param type "real": the Distribution of the available cells normalised to
+#   100 per class (classes summing to 0 get NA); "neutral": equal share per
+#   available length class; "long": weights 1..k from the shortest to the
+#   longest available length class, normalised.
+# @param distribution Length x diameter matrix for "real" (default: the grid's
+#   own `distribution`, the file's).
 tuning_target <- function(grid, type = c("real", "neutral", "long"), distribution = NULL) {
   type <- match.arg(type)
   avail <- !is.na(grid$price)
@@ -146,14 +146,14 @@ tuning_target <- function(grid, type = c("real", "neutral", "long"), distributio
 
 # ---- tally and FG ---------------------------------------------------------------------
 
-#' The product's logs of a run on its grid: counts and price volume (the volume
-#' the prices apply to). A log goes to the cell of the classes it was priced
-#' with: LengthClass_dm (a price length class of the product) and
-#' PriceDiameterClass_cm_used (via cm_map). Stops if a log has no cell or if the
-#' summed counts or volumes differ from the product's totals in the result.
-#'
-#' @param result finish_job() output.
-#' @return list(n, v) matrices on the grid.
+# The product's logs of a run on its grid: counts and price volume (the volume
+# the prices apply to). A log goes to the cell of the classes it was priced
+# with: LengthClass_dm (a price length class of the product) and
+# PriceDiameterClass_cm_used (via cm_map). Stops if a log has no cell or if the
+# summed counts or volumes differ from the product's totals in the result.
+#
+# @param result finish_job() output.
+# @return list(n, v) matrices on the grid.
 tally_grid <- function(result, product_id, grid) {
   sl <- result$selected_logs_all
   sl <- sl[as.character(sl$ProductKey) == product_id, , drop = FALSE]
@@ -174,13 +174,13 @@ tally_grid <- function(result, product_id, grid) {
   list(n = n, v = v)
 }
 
-#' Fordelningsgrad on a tally.
-#'
-#' Shares S = 100 * x / column total, x = tally$n ("number") or tally$v
-#' ("volume"). FG_j = 100 - 0.5 * sum_i |S_ij - W_ij| over the cells with W not
-#' NA; overall = mean of FG_j weighted by the column totals. Classes with total
-#' 0 or no target are left out (NA).
-#' @return list(overall, by_class (named), S, weights (column totals)).
+# Fordelningsgrad on a tally.
+#
+# Shares S = 100 * x / column total, x = tally$n ("number") or tally$v
+# ("volume"). FG_j = 100 - 0.5 * sum_i |S_ij - W_ij| over the cells with W not
+# NA; overall = mean of FG_j weighted by the column totals. Classes with total
+# 0 or no target are left out (NA).
+# @return list(overall, by_class (named), S, weights (column totals)).
 fg_grid <- function(tally, W, basis = c("number", "volume")) {
   basis <- match.arg(basis)
   x <- if (basis == "number") tally$n else tally$v
@@ -197,22 +197,22 @@ fg_grid <- function(tally, W, basis = c("number", "volume")) {
 
 # ---- the price update --------------------------------------------------------------
 
-#' The next price matrix. Steered cells: W not NA, price available, class
-#' eligible; every other cell is P1.
-#'
-#' Per steered cell: g_r = 0.95 for r < 3, else 0.95^(r - 2); D = S - W
-#' (percentage points); if r >= 2 and |S - S_prev| < 0.5 the cell stagnated and
-#' keeps P, else P_new = P - g_r * D. Calibration, only when r + 1 > 10, per
-#' eligible class j: cbar_new = sum V*P_new / sum V (latest run's volume V),
-#' cbar_1 = sum V1*P1 / sum V1 (sums over the available cells; a class with a
-#' zero volume sum is skipped); the steered cells of the class are shifted by
-#' -(cbar_new - cbar_1). Floor: P_new = max(P_new, floor), floor <= P1 per
-#' cell, so a price is never raised above its original by the floor.
-#'
-#' @param P current prices, P1 original prices, S/S_prev current/previous
-#'   shares (S_prev NULL at r = 1), W target, r iteration just evaluated,
-#'   eligible logical per diameter class, floor matrix, V/V1 volume tallies of
-#'   the latest and the first run.
+# The next price matrix. Steered cells: W not NA, price available, class
+# eligible; every other cell is P1.
+#
+# Per steered cell: g_r = 0.95 for r < 3, else 0.95^(r - 2); D = S - W
+# (percentage points); if r >= 2 and |S - S_prev| < 0.5 the cell stagnated and
+# keeps P, else P_new = P - g_r * D. Calibration, only when r + 1 > 10, per
+# eligible class j: cbar_new = sum V*P_new / sum V (latest run's volume V),
+# cbar_1 = sum V1*P1 / sum V1 (sums over the available cells; a class with a
+# zero volume sum is skipped); the steered cells of the class are shifted by
+# -(cbar_new - cbar_1). Floor: P_new = max(P_new, floor), floor <= P1 per
+# cell, so a price is never raised above its original by the floor.
+#
+# @param P current prices, P1 original prices, S/S_prev current/previous
+#   shares (S_prev NULL at r = 1), W target, r iteration just evaluated,
+#   eligible logical per diameter class, floor matrix, V/V1 volume tallies of
+#   the latest and the first run.
 update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
   avail <- !is.na(P1)
   steer <- !is.na(W) & avail & matrix(eligible, nrow(P1), ncol(P1), byrow = TRUE)
@@ -249,49 +249,49 @@ update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
        price = pm$PriceNOKperM3[i])
 }
 
-#' Tune one or several sawlog products' prices towards target distributions.
-#'
-#' r = 1 bucks a sample of the job's stems with the original prices; each
-#' further iteration updates the prices (update_prices()), swaps them into the
-#' job and bucks the same sample again. Stops at max_iter, or when r >= 4 and
-#' the best FG up to r exceeds the best up to r - 3 by less than 0.1 (only if
-#' `early_stop`; with FALSE it always runs max_iter iterations). Returns the
-#' iteration with the highest FG (on `basis`).
-#'
-#' Several products (restructure R3.1) are tuned together: every iteration
-#' updates each product's grid with the rules above (eligibility, stagnation,
-#' calibration, floor, all per product), applies them all, bucks the sample
-#' once and tallies each product. The overall FG, used to choose the best
-#' iteration and for the stop rule, is the mean of the products' FG weighted
-#' by each product's total logs (basis "number") or price volume (basis
-#' "volume") in iteration 1. With one product everything is as it was before:
-#' same trace, prices and FG.
-#'
-#' @param job A hpr job (prepare_hpr_stems_job()).
-#' @param products list(pd, lc, pm) the job was prepared with.
-#' @param product_id One ProductKey, or several.
-#' @param target_type "real", "neutral" or "long": one for all, or one per product.
-#' @param hpr Passed to tuning_grid() (the file's classes and Distribution): one
-#'   hpr_tuning_info() for one product, a list named by ProductKey for several.
-#' @param distribution NULL, or the matrix for the "real" target (a list named
-#'   by ProductKey for several products).
-#' @param basis "number" or "volume" (one for all, or one per product); NULL:
-#'   "volume" when target_type is "real" and the product's DistributionCategory
-#'   is "Volume of logs", else "number".
-#' @param early_stop TRUE (default): the stop rule above; FALSE: always max_iter
-#'   iterations.
-#' @param on_iter NULL, or function(r, max_iter, fg) called after each iteration
-#'   (fg = that iteration's overall FG), e.g. for a progress display.
-#' @param min_logs A diameter class is steered only if its first run has at
-#'   least this many logs (counts, whatever the basis).
-#' @return One product: list(best_price, best_iter, trace, eligible,
-#'   fg_class_first, fg_class_best, settings, grid, W, floor (value, product,
-#'   price, matrix), steered (cells), cells_at_floor_best, P_first, prices (by
-#'   iteration), logs_first, by_product). Several: the same, with best_price,
-#'   eligible, fg_class_*, grid, W, floor, steered, cells_at_floor_best,
-#'   P_first, prices and logs_first as lists named by ProductKey, the trace with
-#'   one `fg_<ProductKey>` column per product, and by_product (one list per
-#'   product with its own, single-product-shaped results and `fg` by iteration).
+# Tune one or several sawlog products' prices towards target distributions.
+#
+# r = 1 bucks a sample of the job's stems with the original prices; each
+# further iteration updates the prices (update_prices()), swaps them into the
+# job and bucks the same sample again. Stops at max_iter, or when r >= 4 and
+# the best FG up to r exceeds the best up to r - 3 by less than 0.1 (only if
+# `early_stop`; with FALSE it always runs max_iter iterations). Returns the
+# iteration with the highest FG (on `basis`).
+#
+# Several products (restructure R3.1) are tuned together: every iteration
+# updates each product's grid with the rules above (eligibility, stagnation,
+# calibration, floor, all per product), applies them all, bucks the sample
+# once and tallies each product. The overall FG, used to choose the best
+# iteration and for the stop rule, is the mean of the products' FG weighted
+# by each product's total logs (basis "number") or price volume (basis
+# "volume") in iteration 1. With one product everything is as it was before:
+# same trace, prices and FG.
+#
+# @param job A hpr job (prepare_hpr_stems_job()).
+# @param products list(pd, lc, pm) the job was prepared with.
+# @param product_id One ProductKey, or several.
+# @param target_type "real", "neutral" or "long": one for all, or one per product.
+# @param hpr Passed to tuning_grid() (the file's classes and Distribution): one
+#   hpr_tuning_info() for one product, a list named by ProductKey for several.
+# @param distribution NULL, or the matrix for the "real" target (a list named
+#   by ProductKey for several products).
+# @param basis "number" or "volume" (one for all, or one per product); NULL:
+#   "volume" when target_type is "real" and the product's DistributionCategory
+#   is "Volume of logs", else "number".
+# @param early_stop TRUE (default): the stop rule above; FALSE: always max_iter
+#   iterations.
+# @param on_iter NULL, or function(r, max_iter, fg) called after each iteration
+#   (fg = that iteration's overall FG), e.g. for a progress display.
+# @param min_logs A diameter class is steered only if its first run has at
+#   least this many logs (counts, whatever the basis).
+# @return One product: list(best_price, best_iter, trace, eligible,
+#   fg_class_first, fg_class_best, settings, grid, W, floor (value, product,
+#   price, matrix), steered (cells), cells_at_floor_best, P_first, prices (by
+#   iteration), logs_first, by_product). Several: the same, with best_price,
+#   eligible, fg_class_*, grid, W, floor, steered, cells_at_floor_best,
+#   P_first, prices and logs_first as lists named by ProductKey, the trace with
+#   one `fg_<ProductKey>` column per product, and by_product (one list per
+#   product with its own, single-product-shaped results and `fg` by iteration).
 tune_prices <- function(job, products, product_id, target_type, distribution = NULL,
                         n = 1000, seed = 1, max_iter = 30, min_logs = 20, basis = NULL,
                         hpr = NULL, workers = apter_workers(), early_stop = TRUE, on_iter = NULL) {
@@ -413,25 +413,25 @@ tune_prices <- function(job, products, product_id, target_type, distribution = N
 # The app has no .hpr file at hand, only the imported scenario (price matrix with
 # the hidden Distribution column, defs with the hidden DistributionCategory).
 
-#' The number of stems to tune on: all of them when the product has at most
-#' `target_logs` logs, else the share that gives about `target_logs` logs.
-#' Never more than n_stems, never less than 1.
+# The number of stems to tune on: all of them when the product has at most
+# `target_logs` logs, else the share that gives about `target_logs` logs.
+# Never more than n_stems, never less than 1.
 tuning_sample_size <- function(n_stems, product_logs, target_logs = 1000) {
   n <- if (product_logs <= target_logs) n_stems else ceiling(n_stems * target_logs / product_logs)
   max(1L, min(as.integer(n_stems), as.integer(n)))
 }
 
-#' The `hpr` argument of tuning_grid()/tune_prices() from a scenario alone.
-#'
-#' The diameter class of a whole-cm row is its hidden FileDiameterClass_mm (the
-#' lower limit of the .hpr/.pin class it was spread from); a row without one
-#' (not from a file, or a row added in the app) is its own class, whole cm x 10.
-#' Rows are never merged. The Distribution of a class is that of its first row.
-#'
-#' @param defs Assortment table (DistributionCategory is read from it, NA if absent).
-#' @param pm Price matrix of the scenario (long, hidden Distribution and
-#'   FileDiameterClass_mm columns optional).
-#' @return list(cells (d_mm, l_cm, dist), category), as hpr_tuning_info().
+# The `hpr` argument of tuning_grid()/tune_prices() from a scenario alone.
+#
+# The diameter class of a whole-cm row is its hidden FileDiameterClass_mm (the
+# lower limit of the .hpr/.pin class it was spread from); a row without one
+# (not from a file, or a row added in the app) is its own class, whole cm x 10.
+# Rows are never merged. The Distribution of a class is that of its first row.
+#
+# @param defs Assortment table (DistributionCategory is read from it, NA if absent).
+# @param pm Price matrix of the scenario (long, hidden Distribution and
+#   FileDiameterClass_mm columns optional).
+# @return list(cells (d_mm, l_cm, dist), category), as hpr_tuning_info().
 tuning_hpr_info <- function(defs, pm, product_id) {
   rows <- .tg_rows(pm, product_id)
   if (nrow(rows) == 0L) stop("No matrix-priced product '", product_id, "' in the price matrix.")
@@ -451,11 +451,11 @@ tuning_hpr_info <- function(defs, pm, product_id) {
   list(cells = cells, category = cat_)
 }
 
-#' Every sawlog assortment of a scenario with the reason it cannot be tuned (R4 D5):
-#' "ok" (tunable and has a target), "no_target", "one_length" (fewer than two priced
-#' lengths), "one_class" (fewer than two diameter classes) or "flat" (a flat price,
-#' no matrix).
-#' @return data.frame(product_id, name, species, reason).
+# Every sawlog assortment of a scenario with the reason it cannot be tuned (R4 D5):
+# "ok" (tunable and has a target), "no_target", "one_length" (fewer than two priced
+# lengths), "one_class" (fewer than two diameter classes) or "flat" (a flat price,
+# no matrix).
+# @return data.frame(product_id, name, species, reason).
 tuning_sawlog_status <- function(defs, pm) {
   keys <- assortment_table_keys(defs)
   tunable <- tuning_products(defs, pm)
@@ -474,11 +474,11 @@ tuning_sawlog_status <- function(defs, pm) {
   else data.frame(product_id = character(0), name = character(0), species = character(0), reason = character(0))
 }
 
-#' The products of a scenario that can be tuned: sawlog type, matrix-priced, more
-#' than one priced length class and more than one diameter class (the derived
-#' file classes with a price).
-#' @return data.frame(product_id, name, species, has_file_target); has_file_target =
-#'   the product has a Distribution value > 0 in pm.
+# The products of a scenario that can be tuned: sawlog type, matrix-priced, more
+# than one priced length class and more than one diameter class (the derived
+# file classes with a price).
+# @return data.frame(product_id, name, species, has_file_target); has_file_target =
+#   the product has a Distribution value > 0 in pm.
 tuning_products <- function(defs, pm) {
   keys <- assortment_table_keys(defs)
   out <- list()
@@ -499,17 +499,17 @@ tuning_products <- function(defs, pm) {
   else data.frame(product_id = character(0), name = character(0), species = character(0), has_file_target = logical(0))
 }
 
-#' The matrix of one tuned product in one of the tuning tab's four views
-#' (restructure R3.4): diameter classes (file class, mm) in rows, length
-#' classes (cm) in columns, like the price grid.
-#'
-#' @param by One element of tune_prices()$by_product extended with the run's
-#'   shares (see tuning_run()): `W` (target), `S_orig`, `S_tuned` (shares in
-#'   percent, length x class), `fg_orig`, `fg_tuned` (FG per class),
-#'   `P1`, `Pb` (prices before and after), `eligible`, `grid`.
-#' @param view "target", "orig", "tuned" or "change".
-#' @return list(m = classes x lengths numeric (NA: no value), fg = FG per class
-#'   or NULL, digits): shares and prices rounded to whole numbers.
+# The matrix of one tuned product in one of the tuning tab's four views
+# (restructure R3.4): diameter classes (file class, mm) in rows, length
+# classes (cm) in columns, like the price grid.
+#
+# @param by One element of tune_prices()$by_product extended with the run's
+#   shares (see tuning_run()): `W` (target), `S_orig`, `S_tuned` (shares in
+#   percent, length x class), `fg_orig`, `fg_tuned` (FG per class),
+#   `P1`, `Pb` (prices before and after), `eligible`, `grid`.
+# @param view "target", "orig", "tuned" or "change".
+# @return list(m = classes x lengths numeric (NA: no value), fg = FG per class
+#   or NULL, digits): shares and prices rounded to whole numbers.
 tuning_matrix_view <- function(by, view = c("target", "orig", "tuned", "change")) {
   view <- match.arg(view)
   g <- by$grid

@@ -25,29 +25,26 @@
 #     so trees can be processed in any chunking or on any worker.
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
 
 # ------------------------------------------------------------------------------
 # DP (backend optimizer, v3)
 # ------------------------------------------------------------------------------
 
-#' Backward-induction DP over candidate logs given as vectors.
-#'
-#' Tie-breaking (Phase 4a, R/helpers_dp_optimizer.R): totals within
-#' DP_TIE_TOL_NOK are equal; then fewer logs, higher priority (lower
-#' ProductPriority), longer log, ProductKey; skipping a position (unallocated)
-#' wins a tie only when it needs fewer logs. Audits 16 and 19 assert that
-#' this agrees with optimize_one_tree_dp().
-#'
-#' @param sp_vec,ep_vec Integer start and stop positions (cm).
-#' @param val_vec  Value (NOK) per candidate.
-#' @param prio_vec ProductPriority per candidate (no NA).
-#' @param pk_vec   Rank of the candidate's ProductKey among the sorted keys.
-#' @return list(sel_idx = selected candidates in stem order, best = best
-#'   total value).
+# Backward-induction DP over candidate logs given as vectors.
+#
+# Tie-breaking (Phase 4a, R/helpers_dp_optimizer.R): totals within
+# DP_TIE_TOL_NOK are equal; then fewer logs, higher priority (lower
+# ProductPriority), longer log, ProductKey; skipping a position (unallocated)
+# wins a tie only when it needs fewer logs. Audits 16 and 19 assert that
+# this agrees with optimize_one_tree_dp().
+#
+# @param sp_vec,ep_vec Integer start and stop positions (cm).
+# @param val_vec  Value (NOK) per candidate.
+# @param prio_vec ProductPriority per candidate (no NA).
+# @param pk_vec   Rank of the candidate's ProductKey among the sorted keys.
+# @return list(sel_idx = selected candidates in stem order, best = best
+#   total value).
 .dp_select <- function(sp_vec, ep_vec, val_vec, prio_vec, pk_vec) {
   n_dp    <- length(sp_vec)
   len_vec <- ep_vec - sp_vec
@@ -123,14 +120,14 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
 # Runs
 # ------------------------------------------------------------------------------
 
-#' Prepare the runs bucked together: per run its product keys, price lookup
-#' and own candidate plan (for its error messages), and the candidate plans
-#' shared by runs whose common products are defined identically.
-#'
-#' @param runs List of list(pd, lc, lookup): ProductData, LengthClasses and
-#'   build_price_lookup() result per run.
-#' @return list(runs, groups): groups = list of list(plan, runs = run
-#'   indices), one candidate pass per group.
+# Prepare the runs bucked together: per run its product keys, price lookup
+# and own candidate plan (for its error messages), and the candidate plans
+# shared by runs whose common products are defined identically.
+#
+# @param runs List of list(pd, lc, lookup): ProductData, LengthClasses and
+#   build_price_lookup() result per run.
+# @return list(runs, groups): groups = list of list(plan, runs = run
+#   indices), one candidate pass per group.
 .prepare_runs <- function(runs) {
   runs <- lapply(runs, function(r) {
     r$keys     <- as.character(r$pd$ProductKey)
@@ -202,8 +199,8 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
   structure(cols, class = "data.frame",
             row.names = c(NA_integer_, -length(cols[[1L]])))
 
-#' Row-bind per-tree column lists (tree rows or selected logs, NULL where
-#' none) into one data.frame; NULL if all are NULL.
+# Row-bind per-tree column lists (tree rows or selected logs, NULL where
+# none) into one data.frame; NULL if all are NULL.
 .bind_cols_lists <- function(x) {
   x <- x[!vapply(x, is.null, logical(1))]
   if (length(x) == 0L) return(NULL)
@@ -340,17 +337,17 @@ if (!exists("or_default", mode = "function"))   # helpers_utils.R
   out
 }
 
-#' Buck a set of trees for one or more runs (the per-tree loop of both
-#' runners; also the unit of work of a parallel chunk).
-#'
-#' @param pvs       Named list of profile vectors with under-bark profiles.
-#' @param tree_data One row per tree (plot_id, treid, dbh_cm, height_m,
-#'   height_source).
-#' @param prep      .prepare_runs() result.
-#' @param stump_cm,step_cm Stump height and start-position step (cm).
-#' @return list with, per run, tree rows, selected logs and unpriced tables
-#'   (lists in tree order; NULL where none), and stage times in seconds
-#'   (t_cand shared by the runs; t_price, t_dp per run).
+# Buck a set of trees for one or more runs (the per-tree loop of both
+# runners; also the unit of work of a parallel chunk).
+#
+# @param pvs       Named list of profile vectors with under-bark profiles.
+# @param tree_data One row per tree (plot_id, treid, dbh_cm, height_m,
+#   height_source).
+# @param prep      .prepare_runs() result.
+# @param stump_cm,step_cm Stump height and start-position step (cm).
+# @return list with, per run, tree rows, selected logs and unpriced tables
+#   (lists in tree order; NULL where none), and stage times in seconds
+#   (t_cand shared by the runs; t_price, t_dp per run).
 .buck_trees <- function(pvs, tree_data, prep, stump_cm, step_cm) {
   tids   <- names(pvs)
   n      <- length(tids)

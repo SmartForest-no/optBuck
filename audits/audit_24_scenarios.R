@@ -77,12 +77,11 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
-source(file.path(root_dir, "app", "helpers_upload.R"))     # upload_price_set()
+source(file.path(root_dir, "inst", "app", "helpers_upload.R"))     # upload_price_set()
 
 out_dir <- path_output("assortments", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -266,7 +265,7 @@ rec("Check 07: Waste renamed 'Residue' (type stays waste): per-tree results unch
 
 # ==============================================================================
 section("08. Scenario file uploaded to B")
-demo <- file.path(root_dir, "demo")
+demo <- file.path(root_dir, "inst", "extdata", "demo")
 sa <- scenario_import(file.path(demo, "scenario_A.xlsx"))
 sb <- scenario_import(file.path(demo, "scenario_B.xlsx"))
 f8 <- tempfile(fileext = ".xlsx"); scenario_export(sb$defs, sb$pm, f8)

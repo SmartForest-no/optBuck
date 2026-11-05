@@ -57,9 +57,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 
 out_dir <- path_output("check", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -80,7 +80,7 @@ cat("  Audit: bucking check (roadmap 8, tab 5)\n", file = audit_txt, append = TR
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-FIXTURE <- file.path(root_dir, "inputs", "test_fixtures", "hpr_check_synthetic.hpr")
+FIXTURE <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_check_synthetic.hpr")
 options(apter.workers = 2L)
 x <- bucking_check(FIXTURE)
 st <- x$stems; rec_l <- x$logs$recorded; opt_l <- x$logs$optimal
@@ -245,7 +245,7 @@ section("17. The PDF report")
 if (!requireNamespace("gridExtra", quietly = TRUE) || !requireNamespace("pdftools", quietly = TRUE)) {
   rec("Check 17: The PDF report is created in Norsk and English and contains the file name, the title and the translated sections", "REVIEW", "gridExtra or pdftools not installed")
 } else {
-  ROOT <- root_dir; suppressPackageStartupMessages(source(file.path(root_dir, "app", "theme.R"))); source(file.path(root_dir, "app", "check_report.R"))
+  ROOT <- root_dir; APP_DIR <- file.path(root_dir, "inst", "app"); suppressPackageStartupMessages(source(file.path(root_dir, "inst", "app", "theme.R"))); source(file.path(root_dir, "inst", "app", "check_report.R"))
   pdf_no <- tempfile(fileext = ".pdf"); pdf_en <- tempfile(fileext = ".pdf")
   r17 <- x; r17$file_name <- "hpr_check_synthetic.hpr"
   chk_report_pdf(r17, "no", pdf_no, r17$file_name, as.Date("2026-11-05")); chk_report_pdf(r17, "en", pdf_en, r17$file_name, as.Date("2026-11-05"))

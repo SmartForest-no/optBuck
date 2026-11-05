@@ -91,10 +91,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 
 out_dir <- path_output("hpr_stems", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -116,7 +115,7 @@ cat("  Audit: .hpr stems (hpr Phase B)\n", file = audit_txt, append = TRUE)
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-FIXTURE <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+FIXTURE <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
 fx <- readLines(FIXTURE, warn = FALSE, encoding = "UTF-8")
 first_stem <- grep("<Stem>", fx, fixed = TRUE)[1L]
 machine_end <- grep("</Machine>", fx, fixed = TRUE)
@@ -557,7 +556,6 @@ rec("Check 14c: the 13 fixture stems are not flagged (5 still used); stems of a 
                        sum(ckfx$clean_counts), ckfx$n_used, sum(ck14n$clean_counts),
                        paste(ck14ab$clean_counts, collapse = "/"), ck14ab$n_used, ck14ab$n_read))
 
-if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
 i18n_reset_misses()
 no14 <- tr_msg(ck14$warnings, "no")
 ok14d <- !length(i18n_misses()) && all(no14 != ck14$warnings) && any(grepl("2 stammer med knekt topp \\(siste diameter over 200 mm\\)", no14)) &&

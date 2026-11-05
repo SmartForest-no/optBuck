@@ -1,0 +1,92 @@
+Package: optBuck
+Title: Bucking Simulator and Bucking Analysis for Harvester Files
+Version: 0.3.0
+Authors@R: c(
+    person("Lennart", "Noordermeer", email = "lennart.noordermeer@nibio.no",
+           role = c("aut", "cre"), comment = c(ORCID = "0000-0000-0000-0000")),
+    person("NIBIO", role = "cph"),
+    person("SFI SmartForest", role = "fnd"))
+Description: Reads StanForD 2010 harvester production files (.hpr) and product
+    instructions (.pin), finds the cutting pattern that gives the highest
+    value for each stem (backward induction on the stem profile), compares
+    the harvester's recorded bucking with the best possible bucking, tunes
+    price matrices to a target length distribution and offers a Shiny app for
+    comparing two sets of assortments and prices. Norwegian national forest
+    inventory trees (sanitized) and an uploaded tree list can be bucked too.
+License: MIT + file LICENSE
+URL: https://github.com/SmartForest-no/optBuck
+BugReports: https://github.com/SmartForest-no/optBuck/issues
+Depends: R (>= 4.1)
+Imports:
+    arrow,
+    dplyr,
+    future,
+    parallel,
+    readr,
+    readxl,
+    stats,
+    tools,
+    utils,
+    writexl,
+    xml2
+Suggests:
+    bslib,
+    chromote,
+    fieldPlot,
+    ggplot2,
+    gridExtra,
+    htmltools,
+    jsonlite,
+    later,
+    pdftools,
+    pkgload,
+    processx,
+    promises,
+    ragg,
+    reactable,
+    rhandsontable,
+    shiny,
+    shinytest2,
+    systemfonts,
+    taperNOR,
+    testthat (>= 3.0.0),
+    zip
+Remotes:
+    SmartForest-no/taperNOR,
+    lennartnoordermeer/fieldPlot
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-GB
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Collate:
+    'helpers_utils.R'
+    'helpers_paths.R'
+    'helpers_i18n.R'
+    'helpers_volume_methods.R'
+    'helpers_products.R'
+    'helpers_valuation.R'
+    'helpers_taper.R'
+    'helpers_bark.R'
+    'helpers_commercial_volume.R'
+    'helpers_candidate_generation.R'
+    'helpers_dp_optimizer.R'
+    'helpers_bucking_core.R'
+    'helpers_parallel.R'
+    'helpers_nfi_cache.R'
+    'helpers_price_matrix.R'
+    'helpers_comparison.R'
+    'helpers_heights.R'
+    'helpers_tree_list.R'
+    'helpers_tree_selection.R'
+    'helpers_hpr.R'
+    'helpers_hpr_stems.R'
+    'helpers_hpr_export.R'
+    'helpers_pin_export.R'
+    'helpers_result_tables.R'
+    'helpers_hpr_logs.R'
+    'helpers_check.R'
+    'helpers_price_tuning.R'
+    'helpers_distribution_edit.R'
+    'run_bucking.R'
+    'api.R'

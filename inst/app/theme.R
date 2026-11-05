@@ -80,7 +80,7 @@ APTER_SPECIES <- c(Spruce = "#3F6E58", Pine = "#C9A97A")
 #' web fonts (www/fonts, SIL OFL), registered with systemfonts; Shiny draws
 #' plots with ragg, which uses it. "sans" if the files or packages are missing.
 APTER_PLOT_FONT <- local({
-  f <- file.path(ROOT, "app", "www", "fonts",c("inter-latin-400-normal.ttf", "inter-latin-600-normal.ttf"))
+  f <- file.path(APP_DIR, "www", "fonts", c("inter-latin-400-normal.ttf", "inter-latin-600-normal.ttf"))
   ok <- all(file.exists(f)) && requireNamespace("systemfonts", quietly = TRUE) &&
         requireNamespace("ragg", quietly = TRUE)
   if (ok) ok <- !inherits(try(systemfonts::register_font("Inter", plain = f[1], bold = f[2]),

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bucking check (roadmap 8, tab 5)
-  Run: 2026-11-05 10:37:00.815139
+  Run: 2026-11-05 11:02:41.929392
 ============================================================= 
 
 --- 01. Reader ---
@@ -49,7 +49,7 @@
   [PASS  ] Check 16: stem 9 (one 100 cm waste log on 800 cm of profile) is left out as incomplete (n_incomplete 1, shown as 'left out'); the multi-tree stem is not counted as left out because of deviating data; the reason translates | reason 'recorded logs cover less than half of the measured stem' | incomplete 1 | left out 1
 
 --- 17. The PDF report ---
-  [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 58869/61753
+  [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 58869/61752
 
 --- 14. NFI stem profiles on demand ---
   [PASS  ] Check 14: no cache in an empty folder; building three plots in chunks (progress called per chunk, ending at the total) gives exactly the profiles of the existing cache (every diameter equal) | rows 5867 vs 5867 | progress 0/43

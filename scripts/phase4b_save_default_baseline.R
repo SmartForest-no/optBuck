@@ -38,7 +38,7 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 PHASE4B_BASELINE_STRATA <- list(
   spruce = list(species_group = "spruce", hogstkl = c(41L, 42L),

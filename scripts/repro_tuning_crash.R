@@ -16,10 +16,10 @@ f5 <- if (length(args) >= 2L) args[2L] else "C:/apter_private/hpr/REDACTED28"
 root <- normalizePath(getwd(), winslash = "/")
 stopifnot(file.exists(file.path(root, "R", "helpers_paths.R")), file.exists(f5))
 Sys.setenv(APTER_ROOT = root, NOT_CRAN = "true", APTER_LANG = "en", APTER_TUNE_MAX_ITER = "3")
-source(file.path(root, "R", "helpers_paths.R")); source(file.path(root, "R", "helpers_audit.R"))
+suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/); source(file.path(root, "audits", "helpers_audit.R"))
 log <- file.path(scratch, "repro_app.log")
 srv <- processx::process$new(file.path(R.home("bin"), "Rscript.exe"),
-  c("-e", sprintf("shiny::runApp('%s', port = 7791, launch.browser = FALSE)", file.path(root, "app"))),
+  c("-e", sprintf("shiny::runApp('%s', port = 7791, launch.browser = FALSE)", file.path(root, "inst", "app"))),
   stdout = log, stderr = "2>&1", cleanup_tree = TRUE)
 on.exit(try(srv$kill_tree(), silent = TRUE), add = TRUE)
 for (i in 1:60) { if (file.exists(log) && any(grepl("Listening on", readLines(log, warn = FALSE)))) break; Sys.sleep(1) }

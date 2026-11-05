@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bark model and commercial volume under bark
-  Run: 2026-11-04 16:09:00.562847
+  Run: 2026-11-05 10:49:42.622628
 ============================================================= 
 
 --- 01. Bark model matches taperNOR(with_bark = FALSE), spruce ---

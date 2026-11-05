@@ -67,10 +67,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 
 out_dir <- path_output("hpr_export", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -92,7 +91,7 @@ cat("  Audit: .hpr export (Phase 5a)\n", file = audit_txt, append = TRUE)
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-FIXTURE <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+FIXTURE <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
 txt <- paste(readLines(FIXTURE, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
 i1 <- regexpr("<Stem>", txt, fixed = TRUE)[1L]
 head_txt <- substr(txt, 1L, i1 - 1L); stems_txt <- substr(txt, i1, nchar(txt))
@@ -285,7 +284,6 @@ rec("Check 08: Bucking the exported file's stems under the same scenario gives t
 
 # ==============================================================================
 section("09. Messages")
-if (!exists("tr_msg", mode = "function")) source(file.path(root_dir, "R", "helpers_i18n.R"))
 i18n_reset_misses()
 m <- c("The source .hpr file(s) are no longer available.", "The source file is not UTF-8; it cannot be exported.",
        "The source file has no stems.", "Coordinates found in the export; the file was not written.",

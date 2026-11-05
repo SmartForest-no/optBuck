@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use optBuck, please cite it as below."
+title: "optBuck: Bucking Simulator and Bucking Analysis for Harvester Files"
+version: 0.3.0
+date-released: 2026-11-05
+license: MIT
+repository-code: "https://github.com/SmartForest-no/optBuck"
+authors:
+  - family-names: Noordermeer
+    given-names: Lennart
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+    affiliation: "NIBIO"

@@ -27,7 +27,7 @@ Sys.setenv(APTER_ROOT = root)
 if (identical(args[1L], "--one")) {
   # One file, in this process: one line of results.
   f <- args[2L]; workers <- as.integer(args[3L])
-  suppressPackageStartupMessages(source(file.path(root, "scripts", "app_backend", "01_run_sampled_plot_bucking.R")))
+  suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
   mem <- function() ps::ps_memory_info()
   mb <- function(x) x / 1048576
   w0 <- mem()[["wset"]]

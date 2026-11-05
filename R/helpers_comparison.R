@@ -20,22 +20,19 @@
 #        (helpers_dp_optimizer.R).
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
 
 .tree_key <- function(df) paste(df$plot_id_github, df$treid, sep = "|")
 
-#' Per-tree comparison of two runs on the same trees.
-#'
-#' @param r1,r2   Backend results (default and scenario) on the same sample.
-#' @param pm1,pm2 Their price matrices (PriceMatrix_long).
-#' @param tol     Value tolerance (NOK), default DP_TIE_TOL_NOK.
-#' @return data.frame, one row per tree: plot_id_github, treid,
-#'   species_group, n_logs_default, n_logs_scenario, value_default,
-#'   value_scenario (each under its own prices), gain_at_scenario,
-#'   gain_at_default, max_volume_diff_m3, pattern_differs, changed, tie_only.
+# Per-tree comparison of two runs on the same trees.
+#
+# @param r1,r2   Backend results (default and scenario) on the same sample.
+# @param pm1,pm2 Their price matrices (PriceMatrix_long).
+# @param tol     Value tolerance (NOK), default DP_TIE_TOL_NOK.
+# @return data.frame, one row per tree: plot_id_github, treid,
+#   species_group, n_logs_default, n_logs_scenario, value_default,
+#   value_scenario (each under its own prices), gain_at_scenario,
+#   gain_at_default, max_volume_diff_m3, pattern_differs, changed, tie_only.
 compare_cutting_patterns <- function(r1, r2, pm1, pm2,
                                      tol = if (exists("DP_TIE_TOL_NOK")) DP_TIE_TOL_NOK else 1e-6) {
   # Vectorised (2026-10-15): every log is priced once per matrix and summed
@@ -67,7 +64,8 @@ compare_cutting_patterns <- function(r1, r2, pm1, pm2,
   # Log sets and log counts per tree.
   set_of <- function(l, k) {
     s <- vapply(split(paste(l$StartPos, l$StopPos, l$ProductKey), factor(k, levels = unique(k))),
-                function(x) paste(sort(x), collapse = ""), character(1))
+                function(x) paste(sort(x), collapse = "
+"), character(1))
     out <- setNames(rep("", length(keys)), keys); s <- s[names(s) %in% keys]; out[names(s)] <- s
     out
   }
@@ -77,13 +75,16 @@ compare_cutting_patterns <- function(r1, r2, pm1, pm2,
   # Largest difference in commercial volume by assortment class per tree.
   vol <- function(l, k) {
     if (nrow(l) == 0L) return(numeric(0))
-    g <- paste(k, l$ProductType, sep = "")
+    g <- paste(k, l$ProductType, sep = "
+")
     vapply(split(l$commercial_volume_m3, factor(g, levels = unique(g))), sum, numeric(1))
   }
   va <- vol(l1, k1); vb <- vol(l2, k2)
   g <- union(names(va), names(vb))
   d <- abs(ifelse(is.na(va[g]), 0, va[g]) - ifelse(is.na(vb[g]), 0, vb[g]))
-  dk <- sub("[^]*$", "", g)
+  dk <- sub("
+[^
+]*$", "", g)
   dvol <- setNames(rep(0, length(keys)), keys)
   if (length(g)) {
     m <- vapply(split(d, factor(dk, levels = unique(dk))), max, numeric(1))
@@ -102,16 +103,16 @@ compare_cutting_patterns <- function(r1, r2, pm1, pm2,
              stringsAsFactors = FALSE, row.names = NULL)
 }
 
-#' NOK/m3 per scope and assortment under both price matrices.
-#'
-#' @param by "assortment" (the runs' per_m3_by_assortment: types in the
-#'   Total scope, assortments per species) or "type" (Sawlog, Pulpwood,
-#'   Other in every scope; waste left out), for scenarios with different
-#'   assortments.
-#' @return data.frame: scope, assortment, nok_per_m3_default,
-#'   nok_per_m3_scenario, delta_nok_per_m3, volume_share_default,
-#'   volume_share_scenario, delta_volume_share. Scope totals have assortment
-#'   "All" and NOK/m3 = scope value / scope commercial volume.
+# NOK/m3 per scope and assortment under both price matrices.
+#
+# @param by "assortment" (the runs' per_m3_by_assortment: types in the
+#   Total scope, assortments per species) or "type" (Sawlog, Pulpwood,
+#   Other in every scope; waste left out), for scenarios with different
+#   assortments.
+# @return data.frame: scope, assortment, nok_per_m3_default,
+#   nok_per_m3_scenario, delta_nok_per_m3, volume_share_default,
+#   volume_share_scenario, delta_volume_share. Scope totals have assortment
+#   "All" and NOK/m3 = scope value / scope commercial volume.
 compare_per_m3 <- function(r1, r2, by = c("assortment", "type")) {
   by <- match.arg(by)
   if (by == "type") { r1 <- .per_m3_by_type(r1); r2 <- .per_m3_by_type(r2) }
@@ -151,11 +152,11 @@ compare_per_m3 <- function(r1, r2, by = c("assortment", "type")) {
 # type: sawlog, pulpwood and other (custom commercial types). Waste is left
 # out (value 0, as in the log tally).
 
-#' Type groups in display order.
+# Type groups in display order.
 ASSORTMENT_TYPE_GROUPS <- c("Sawlog", "Pulpwood", "Other")
 
-#' The type group of each ProductType: "Sawlog", "Pulpwood", "Other", or NA
-#' for waste.
+# The type group of each ProductType: "Sawlog", "Pulpwood", "Other", or NA
+# for waste.
 type_group <- function(product_type) {
   t <- as.character(product_type)
   out <- ifelse(t %in% "sawlog", "Sawlog", ifelse(t %in% "pulpwood", "Pulpwood", "Other"))
@@ -172,12 +173,12 @@ type_group <- function(product_type) {
   r
 }
 
-#' Logs, value, price volume, commercial volume and share of commercial
-#' volume per type group in A (r1) and B (r2). Groups without logs in
-#' either scenario are left out.
-#'
-#' @return data.frame: type, logs_a, logs_b, value_a, value_b, price_vol_a,
-#'   price_vol_b, comm_vol_a, comm_vol_b, share_a, share_b.
+# Logs, value, price volume, commercial volume and share of commercial
+# volume per type group in A (r1) and B (r2). Groups without logs in
+# either scenario are left out.
+#
+# @return data.frame: type, logs_a, logs_b, value_a, value_b, price_vol_a,
+#   price_vol_b, comm_vol_a, comm_vol_b, share_a, share_b.
 compare_by_type <- function(r1, r2) {
   per <- function(r) {
     l <- r$selected_logs_all; g <- type_group(l$ProductType); k <- !is.na(g)

@@ -22,23 +22,19 @@
 #     ProductGroupName (sawlog, pulpwood, else the type's name).
 # ==============================================================================
 
-if (!exists("hpr_export_products", mode = "function")) {
-  .px_root <- Sys.getenv("APTER_ROOT", unset = "")
-  if (nzchar(.px_root)) source(file.path(.px_root, "R", "helpers_hpr_export.R"))
-}
 
-#' SenderApplication of an exported .pin.
+# SenderApplication of an exported .pin.
 PIN_SENDER_APPLICATION <- "optBuck"
 
-#' ProductUserIDs of assortment names: spaces become underscores; a repeated
-#' ID gets _2, _3, ... (the first keeps its name).
+# ProductUserIDs of assortment names: spaces become underscores; a repeated
+# ID gets _2, _3, ... (the first keeps its name).
 pin_product_ids <- function(names) {
   id <- ascii_id(gsub("[[:space:]]+", "_", trimws(as.character(names))))
   id[!nzchar(id)] <- "product"
   unique_ids(id)
 }
 
-#' CountryCode of an exported .pin (the header requires one): 578, Norway.
+# CountryCode of an exported .pin (the header requires one): 578, Norway.
 PIN_COUNTRY_CODE <- "578"
 
 # ISO 8601 time with the offset as +hh:mm.
@@ -47,11 +43,11 @@ PIN_COUNTRY_CODE <- "578"
   paste0(format(t, "%Y-%m-%dT%H:%M:%S"), substr(z, 1L, 3L), ":", substr(z, 4L, 5L))
 }
 
-#' Write one scenario as a .pin file.
-#'
-#' @param defs,pm The scenario's assortment table and price matrix.
-#' @param path    Output file.
-#' @return list(ok, errors, path, n_products, ids).
+# Write one scenario as a .pin file.
+#
+# @param defs,pm The scenario's assortment table and price matrix.
+# @param path    Output file.
+# @return list(ok, errors, path, n_products, ids).
 pin_export_scenario <- function(defs, pm, path) {
   fail <- function(msg) { if (file.exists(path)) unlink(path); list(ok = FALSE, errors = msg) }
   defs <- defs[as.character(defs$Type) != "waste", , drop = FALSE]

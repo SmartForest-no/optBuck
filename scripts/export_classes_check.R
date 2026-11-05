@@ -17,8 +17,8 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
 out <- file.path(root_dir, "outputs", "polish"); dir.create(out, recursive = TRUE, showWarnings = FALSE)
 log <- file.path(out, "export_classes.txt"); unlink(log)
 say <- function(...) { x <- sprintf(...); cat(x, "\n"); cat(x, "\n", file = log, append = TRUE) }

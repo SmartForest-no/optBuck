@@ -24,30 +24,23 @@
 #           chk <- check_product_assumptions(pd)
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
-if (!exists("get_root_dir", mode = "function"))
-  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_paths.R"))
-if (!exists("VOLUME_METHODS"))
-  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_volume_methods.R"))
 
 
 # ------------------------------------------------------------------------------
 # Constants
 # ------------------------------------------------------------------------------
 
-#' The six active ProductKey values recognised by Apter.
+# The six active ProductKey values recognised by Apter.
 ACTIVE_PRODUCT_KEYS <- c(
   "spruce_sawlog", "spruce_pulpwood", "spruce_waste",
   "pine_sawlog",   "pine_pulpwood",   "pine_waste"
 )
 
-#' Expected DiameterUnderBark value for all active products.
+# Expected DiameterUnderBark value for all active products.
 EXPECTED_DIAMETER_UNDER_BARK <- TRUE
 
-#' Expected DiameterSource value for all active products.
+# Expected DiameterSource value for all active products.
 EXPECTED_DIAMETER_SOURCE <- "taperNOR_over_bark"
 
 
@@ -55,16 +48,16 @@ EXPECTED_DIAMETER_SOURCE <- "taperNOR_over_bark"
 # Loaders
 # ------------------------------------------------------------------------------
 
-#' Load ProductData from the default CSV.
-#'
-#' @param root_dir   Project root (default: get_root_dir()).
-#' @param file_name  CSV file name under inputs/.
-#' @return data.frame with one row per product.
+# Load ProductData from the default CSV.
+#
+# @param root_dir   Project root (default: get_root_dir()).
+# @param file_name  CSV file name under inputs/.
+# @return data.frame with one row per product.
 load_products <- function(
     root_dir  = get_root_dir(),
     file_name = "ProductData_spruce_pine_default.csv") {
 
-  path <- file.path(root_dir, "inputs", file_name)
+  path <- path_input(file_name, root_dir = root_dir)
   if (!file.exists(path))
     stop("ProductData file not found: ", path)
 
@@ -74,19 +67,19 @@ load_products <- function(
 }
 
 
-#' Load LengthClasses from the default CSV.
-#'
-#' LogLength values are stored in **centimetres** in the CSV.
-#' A convenience column LogLength_dm (= LogLength / 10) is added.
-#'
-#' @param root_dir   Project root (default: get_root_dir()).
-#' @param file_name  CSV file name under inputs/.
-#' @return data.frame with columns ProductKey, LogLength (cm), LogLength_dm.
+# Load LengthClasses from the default CSV.
+#
+# LogLength values are stored in **centimetres** in the CSV.
+# A convenience column LogLength_dm (= LogLength / 10) is added.
+#
+# @param root_dir   Project root (default: get_root_dir()).
+# @param file_name  CSV file name under inputs/.
+# @return data.frame with columns ProductKey, LogLength (cm), LogLength_dm.
 load_length_classes <- function(
     root_dir  = get_root_dir(),
     file_name = "LengthClasses_spruce_pine_default.csv") {
 
-  path <- file.path(root_dir, "inputs", file_name)
+  path <- path_input(file_name, root_dir = root_dir)
   if (!file.exists(path))
     stop("LengthClasses file not found: ", path)
 
@@ -105,20 +98,20 @@ load_length_classes <- function(
 # Validation
 # ------------------------------------------------------------------------------
 
-#' Check that ProductData satisfies the accepted assumptions.
-#'
-#' Returns a data.frame with columns: check, result, detail.
-#' Results are "PASS", "REVIEW", or "FAIL".
-#'
-#' Checks performed:
-#'   1. All ACTIVE_PRODUCT_KEYS are present.
-#'   2. No extra ProductKey values beyond ACTIVE_PRODUCT_KEYS.
-#'   3. DiameterUnderBark equals EXPECTED_DIAMETER_UNDER_BARK (TRUE) for all
-#'      active products.
-#'   4. DiameterSource is "taperNOR_over_bark" for all active products (if column exists).
-#'
-#' @param pd data.frame from load_products().
-#' @return data.frame(check, result, detail).
+# Check that ProductData satisfies the accepted assumptions.
+#
+# Returns a data.frame with columns: check, result, detail.
+# Results are "PASS", "REVIEW", or "FAIL".
+#
+# Checks performed:
+#   1. All ACTIVE_PRODUCT_KEYS are present.
+#   2. No extra ProductKey values beyond ACTIVE_PRODUCT_KEYS.
+#   3. DiameterUnderBark equals EXPECTED_DIAMETER_UNDER_BARK (TRUE) for all
+#      active products.
+#   4. DiameterSource is "taperNOR_over_bark" for all active products (if column exists).
+#
+# @param pd data.frame from load_products().
+# @return data.frame(check, result, detail).
 check_product_assumptions <- function(pd) {
   checks <- list()
 
@@ -200,16 +193,16 @@ check_product_assumptions <- function(pd) {
 # Species products and custom assortments (Phase 4b, 2026-10-13)
 # ------------------------------------------------------------------------------
 
-#' Supported species groups.
+# Supported species groups.
 PRODUCT_SPECIES <- c("spruce", "pine")
 
-#' ProductData$PriceType values.
+# ProductData$PriceType values.
 PRODUCT_PRICE_TYPES <- c("matrix", "flat")
 
-#' Where a custom assortment is used: the default run, the scenario run, or both.
+# Where a custom assortment is used: the default run, the scenario run, or both.
 ASSORTMENT_USE_IN <- c("both", "default", "scenario")
 
-#' ProductData columns a product definition must have.
+# ProductData columns a product definition must have.
 PRODUCT_REQUIRED_COLS <- c(
   "ProductKey", "ProductName", "ProductType", "SpeciesGroupKey", "species_group",
   "VolumeDiameterCategory", "VolumeLengthCategory", "VolumeDiameterAdjustment",
@@ -218,23 +211,23 @@ PRODUCT_REQUIRED_COLS <- c(
   "PriceType")
 
 
-#' ProductKeys of one species group, in ProductData order.
-#'
-#' @param pd ProductData (base products plus any custom assortments).
-#' @param species_group "spruce" or "pine".
+# ProductKeys of one species group, in ProductData order.
+#
+# @param pd ProductData (base products plus any custom assortments).
+# @param species_group "spruce" or "pine".
 species_products <- function(pd, species_group) {
   as.character(pd$ProductKey[pd$species_group %in% species_group])
 }
 
 
-#' Validate product definitions (base and custom) before a run.
-#'
-#' Errors block a run; warnings do not.
-#'
-#' @param pd ProductData.
-#' @param lc LengthClasses (ProductKey, LogLength in cm); NULL skips the
-#'   length checks.
-#' @return list(ok, errors, warnings).
+# Validate product definitions (base and custom) before a run.
+#
+# Errors block a run; warnings do not.
+#
+# @param pd ProductData.
+# @param lc LengthClasses (ProductKey, LogLength in cm); NULL skips the
+#   length checks.
+# @return list(ok, errors, warnings).
 validate_products <- function(pd, lc = NULL) {
   err <- character(0); warn <- character(0)
   miss <- setdiff(PRODUCT_REQUIRED_COLS, names(pd))
@@ -303,14 +296,14 @@ validate_products <- function(pd, lc = NULL) {
 }
 
 
-#' A lower-case key part from an assortment name ("Large sawlogs" ->
-#' "large_sawlogs").
+# A lower-case key part from an assortment name ("Large sawlogs" ->
+# "large_sawlogs").
 assortment_slug <- function(name) {
   s <- gsub("[^a-z0-9]+", "_", tolower(trimws(as.character(name))))
   gsub("^_+|_+$", "", s)
 }
 
-#' Parse allowed lengths: "310;340, 370" or a numeric vector -> integer cm.
+# Parse allowed lengths: "310;340, 370" or a numeric vector -> integer cm.
 parse_lengths_cm <- function(x) {
   if (is.numeric(x)) return(as.integer(round(x)))
   v <- trimws(unlist(strsplit(as.character(x), "[;, ]+")))
@@ -318,20 +311,20 @@ parse_lengths_cm <- function(x) {
 }
 
 
-#' ProductData and LengthClasses rows for one custom assortment.
-#'
-#' The definition is entered in the app's units: diameters in cm, lengths
-#' and DiameterTopPosition in cm. It gives one product per species
-#' ("both" -> spruce and pine), ProductKey = "<species>_<slug of Name>".
-#'
-#' @param def One-row data.frame or list with Name, Class, Species
-#'   ("spruce", "pine" or "both"), MinTopDiameter_cm, MaxTopDiameter_cm,
-#'   MinButtDiameter_cm, MaxButtDiameter_cm (NA/Inf = no limit),
-#'   AllowedLengths_cm ("310;340" or numeric), Priority, DiameterUnderBark,
-#'   DiameterTopPosition_cm, VolumeDiameterCategory,
-#'   VolumeDiameterAdjustment, PriceType ("matrix"/"flat"), UseIn.
-#' @return list(pd = ProductData rows, lc = LengthClasses rows (with
-#'   LogLength_dm)).
+# ProductData and LengthClasses rows for one custom assortment.
+#
+# The definition is entered in the app's units: diameters in cm, lengths
+# and DiameterTopPosition in cm. It gives one product per species
+# ("both" -> spruce and pine), ProductKey = "<species>_<slug of Name>".
+#
+# @param def One-row data.frame or list with Name, Class, Species
+#   ("spruce", "pine" or "both"), MinTopDiameter_cm, MaxTopDiameter_cm,
+#   MinButtDiameter_cm, MaxButtDiameter_cm (NA/Inf = no limit),
+#   AllowedLengths_cm ("310;340" or numeric), Priority, DiameterUnderBark,
+#   DiameterTopPosition_cm, VolumeDiameterCategory,
+#   VolumeDiameterAdjustment, PriceType ("matrix"/"flat"), UseIn.
+# @return list(pd = ProductData rows, lc = LengthClasses rows (with
+#   LogLength_dm)).
 custom_assortment_rows <- function(def) {
   def <- as.list(def)
   g <- function(n, default = NA) {
@@ -378,14 +371,14 @@ custom_assortment_rows <- function(def) {
 }
 
 
-#' Product set and length classes for one run: base products plus the custom
-#' assortments whose UseIn includes the run ("default" or "scenario").
-#'
-#' @param base_pd,base_lc Base ProductData / LengthClasses.
-#' @param defs Custom assortment definitions (data.frame, one row each; NULL
-#'   or 0 rows for none).
-#' @param run "default" or "scenario".
-#' @return list(pd, lc).
+# Product set and length classes for one run: base products plus the custom
+# assortments whose UseIn includes the run ("default" or "scenario").
+#
+# @param base_pd,base_lc Base ProductData / LengthClasses.
+# @param defs Custom assortment definitions (data.frame, one row each; NULL
+#   or 0 rows for none).
+# @param run "default" or "scenario".
+# @return list(pd, lc).
 products_for_run <- function(base_pd, base_lc, defs, run = c("default", "scenario")) {
   run <- match.arg(run)
   pd <- base_pd; lc <- base_lc
@@ -400,10 +393,10 @@ products_for_run <- function(base_pd, base_lc, defs, run = c("default", "scenari
   list(pd = pd, lc = lc)
 }
 
-#' The base products with their limits before Phase 4c (no maximum top or
-#' butt diameter). Phase 4c set the default maxima from optBuck's
-#' example.hpr; the audits that compare against older baselines (20 check 8,
-#' 22 check 5) run with this, so that the limits are the only change.
+# The base products with their limits before Phase 4c (no maximum top or
+# butt diameter). Phase 4c set the default maxima from optBuck's
+# example.hpr; the audits that compare against older baselines (20 check 8,
+# 22 check 5) run with this, so that the limits are the only change.
 pre_phase4c_limits <- function(pd) {
   base <- pd$ProductKey %in% ACTIVE_PRODUCT_KEYS
   pd$MaxTopDiameter[base]  <- Inf
@@ -458,7 +451,7 @@ pre_phase4c_limits <- function(pd) {
 # by runs (products_from_defs() does not pass them on), not compared between
 # A and B, and not in the scenario xlsx.
 
-#' The hidden distribution fields of the assortment table.
+# The hidden distribution fields of the assortment table.
 DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
                            "DistributionWithinProduct", "MAXDeviation")
 
@@ -472,17 +465,17 @@ DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
 # on export. NA for every other assortment. Kept on edits, copies and in scenario
 # files; never in run data, not compared between A and B.
 
-#' The hidden source fields of the assortment table.
+# The hidden source fields of the assortment table.
 SOURCE_DEF_COLS <- c("SourceXml", "SourceFingerprint", "SourceCells")   # SourceCells: cells of source diameter classes without a whole-cm row
 
-#' Where on the stem a product may be cut (StanForD ProductCondition; roadmap 8, 2026-11-04):
-#' "Buck butt-log only" = only as the log that starts at the first cut, "Do not buck butt log" =
-#' never as that log; NA ("Buck always") = anywhere. Shown read-only in the assortment table.
+# Where on the stem a product may be cut (StanForD ProductCondition; roadmap 8, 2026-11-04):
+# "Buck butt-log only" = only as the log that starts at the first cut, "Do not buck butt log" =
+# never as that log; NA ("Buck always") = anywhere. Shown read-only in the assortment table.
 BUTT_CONDITIONS <- c("Buck butt-log only", "Do not buck butt log")
-#' Their display values in the assortment table (translated by tr_value()).
+# Their display values in the assortment table (translated by tr_value()).
 BUTT_POSITION_VALUES <- c("Butt log only", "Not butt log")
 
-#' Columns of the assortment table.
+# Columns of the assortment table.
 ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "TypeUser", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
@@ -495,8 +488,8 @@ ASSORTMENT_TABLE_COLS <- c(
   ifelse(v %in% c("true", "1"), TRUE, ifelse(v %in% c("false", "0"), FALSE, NA))
 }
 
-#' A permitted-grades string in its canonical form: sorted unique whole
-#' numbers joined by ";"; NA for empty, missing or unreadable.
+# A permitted-grades string in its canonical form: sorted unique whole
+# numbers joined by ";"; NA for empty, missing or unreadable.
 norm_permitted_grades <- function(x) {
   vapply(as.character(x), function(s) {
     if (is.na(s) || !nzchar(trimws(s)) || s == "NA") return(NA_character_)
@@ -506,16 +499,16 @@ norm_permitted_grades <- function(x) {
   }, "", USE.NAMES = FALSE)
 }
 
-#' The grade numbers of a PermittedGrades string (numeric(0) = all grades).
+# The grade numbers of a PermittedGrades string (numeric(0) = all grades).
 permitted_grades_set <- function(x) {
   if (is.null(x) || length(x) == 0L || is.na(x[1L]) || !nzchar(trimws(x[1L]))) return(numeric(0))
   g <- suppressWarnings(as.numeric(strsplit(as.character(x[1L]), "[,; ]+")[[1L]]))
   sort(unique(g[!is.na(g)]))
 }
 
-#' Price-volume lengths (cm) of the given log lengths (cm): the class lower
-#' limit in `limits` (a PriceLengths_cm string) whose whole-dm round-up is
-#' the log length, else the log length itself.
+# Price-volume lengths (cm) of the given log lengths (cm): the class lower
+# limit in `limits` (a PriceLengths_cm string) whose whole-dm round-up is
+# the log length, else the log length itself.
 price_lengths <- function(limits, log_len) {
   lim <- if (is.null(limits) || length(limits) == 0L || is.na(limits) || !nzchar(trimws(limits)))
     numeric(0) else suppressWarnings(as.numeric(strsplit(as.character(limits), "[,; ]+")[[1L]]))
@@ -524,34 +517,34 @@ price_lengths <- function(limits, log_len) {
   ifelse(is.na(i), as.numeric(log_len), lim[i])
 }
 
-#' Length step (cm) of flat-priced assortments (Phase 4d: fixed).
+# Length step (cm) of flat-priced assortments (Phase 4d: fixed).
 FLAT_LENGTH_STEP_CM <- 10
 
-#' The hidden Type of a user-added assortment: the slug of its name, never
-#' the reserved "waste" (user-added assortments are always commercial).
+# The hidden Type of a user-added assortment: the slug of its name, never
+# the reserved "waste" (user-added assortments are always commercial).
 custom_type <- function(name) {
   s <- vapply(name, assortment_slug, character(1), USE.NAMES = FALSE)
   ifelse(s == "waste", "waste_commercial", s)
 }
 
-#' The type of an assortment as the user sees it (R5): "sawlog", "pulpwood",
-#' "waste" (the reserved base waste rows) or "other" (any custom type).
+# The type of an assortment as the user sees it (R5): "sawlog", "pulpwood",
+# "waste" (the reserved base waste rows) or "other" (any custom type).
 type_choice <- function(type) {
   t <- as.character(type)
   ifelse(t %in% c("sawlog", "pulpwood", "waste"), t, "other")
 }
 
-#' The Type value stored for the user's choice "sawlog" / "pulpwood" / "other"
-#' (R5). "other" is the slug of the name, kept apart from the reserved types.
+# The Type value stored for the user's choice "sawlog" / "pulpwood" / "other"
+# (R5). "other" is the slug of the name, kept apart from the reserved types.
 type_from_choice <- function(choice, name) {
   if (choice %in% c("sawlog", "pulpwood")) return(choice)
   s <- custom_type(name)
   if (s %in% c("sawlog", "pulpwood", "waste")) paste0(s, "_other") else s
 }
 
-#' The assortment table with row `key`'s type set by the user (R5): Type
-#' becomes the choice and TypeUser TRUE. Waste rows (reserved) and unknown
-#' keys are left alone.
+# The assortment table with row `key`'s type set by the user (R5): Type
+# becomes the choice and TypeUser TRUE. Waste rows (reserved) and unknown
+# keys are left alone.
 set_assortment_type <- function(defs, key, choice) {
   i <- match(key, assortment_table_keys(defs))
   if (is.na(i) || identical(as.character(defs$Type[i]), "waste") ||
@@ -560,13 +553,13 @@ set_assortment_type <- function(defs, key, choice) {
   defs
 }
 
-#' Priority in ties, derived from pricing and type.
+# Priority in ties, derived from pricing and type.
 derived_priority <- function(price_type, product_type) {
   ifelse(as.character(product_type) == "waste", 99,
          ifelse(as.character(price_type) == "matrix", 1, 2))
 }
 
-#' ProductKeys of the assortment table's rows.
+# ProductKeys of the assortment table's rows.
 assortment_table_keys <- function(defs) {
   if (is.null(defs) || nrow(defs) == 0L) return(character(0))
   paste0(as.character(defs$Species), "_", vapply(defs$Name, assortment_slug, character(1),
@@ -622,7 +615,7 @@ assortment_table_keys <- function(defs) {
   d
 }
 
-#' The assortment table of a ProductData (e.g. the base products).
+# The assortment table of a ProductData (e.g. the base products).
 defs_from_products <- function(pd) {
   sp <- as.character(pd$species_group)
   nm <- sub(sprintf("^(%s) ", paste(PRODUCT_SPECIES, collapse = "|")), "",
@@ -642,10 +635,10 @@ defs_from_products <- function(pd) {
     stringsAsFactors = FALSE))
 }
 
-#' Allowed lengths (cm) of each table row: the matrix columns in `pm` for
-#' matrix-priced rows, MinLength..MaxLength by 10 cm for flat ones.
-#'
-#' @return Named list (ProductKey -> integer cm, ascending).
+# Allowed lengths (cm) of each table row: the matrix columns in `pm` for
+# matrix-priced rows, MinLength..MaxLength by 10 cm for flat ones.
+#
+# @return Named list (ProductKey -> integer cm, ascending).
 assortment_lengths <- function(defs, pm) {
   keys <- assortment_table_keys(defs)
   setNames(lapply(seq_len(nrow(defs)), function(i) {
@@ -659,12 +652,12 @@ assortment_lengths <- function(defs, pm) {
   }), keys)
 }
 
-#' ProductData and LengthClasses of an assortment table.
-#'
-#' @param defs Assortment table (ASSORTMENT_TABLE_COLS), in product order.
-#' @param pm   The run's price matrix (minimal long); gives the lengths of
-#'   matrix-priced products.
-#' @return list(pd, lc (with LogLength_dm)).
+# ProductData and LengthClasses of an assortment table.
+#
+# @param defs Assortment table (ASSORTMENT_TABLE_COLS), in product order.
+# @param pm   The run's price matrix (minimal long); gives the lengths of
+#   matrix-priced products.
+# @return list(pd, lc (with LogLength_dm)).
 products_from_defs <- function(defs, pm) {
   keys <- assortment_table_keys(defs)
   lens <- assortment_lengths(defs, pm)
@@ -719,10 +712,10 @@ products_from_defs <- function(defs, pm) {
   list(pd = pd, lc = lc)
 }
 
-#' Check an assortment table (names, species, lengths) and the products it
-#' gives (validate_products()). `pm` gives matrix-priced lengths.
-#'
-#' @return list(ok, errors, warnings).
+# Check an assortment table (names, species, lengths) and the products it
+# gives (validate_products()). `pm` gives matrix-priced lengths.
+#
+# @return list(ok, errors, warnings).
 validate_assortment_table <- function(defs, pm) {
   err <- character(0)
   miss <- setdiff(ASSORTMENT_TABLE_COLS, names(defs))

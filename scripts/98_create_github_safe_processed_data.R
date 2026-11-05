@@ -79,7 +79,7 @@ ROOT     <- local({
   d
 })
 SRC_DIR  <- file.path(ROOT, "data_processed")
-OUT_DIR  <- file.path(ROOT, "data_processed_github")
+OUT_DIR  <- file.path(ROOT, "inst", "extdata", "nfi")
 MANIFEST <- file.path(OUT_DIR, "sanitization_manifest.txt")
 RUN_TIME <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
 

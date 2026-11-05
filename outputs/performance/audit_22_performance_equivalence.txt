@@ -1,10 +1,10 @@
 ============================================================= 
   Audit: performance equivalence
-  Run: 2026-10-27 16:39:15.222787
+  Run: 2026-11-05 10:50:06.904129
 ============================================================= 
 
 --- 01. 1 worker vs N workers ---
-  [PASS  ] Check 01: 1 vs 15 workers: NFI stratum and 1000-tree list identical (unsorted) | all tables identical | workers recorded: 1 and 15 | trees: 194 and 1000
+  [PASS  ] Check 01: 1 vs 15 workers: NFI stratum and 1000-tree list identical (unsorted) | all tables identical | workers recorded: 1 and 15 | trees: 282 and 1000
 
 --- 02. Chunk sizes ---
   [PASS  ] Check 02: Chunk sizes 1, 7 and default give identical results (comparison with custom assortments) | all tables identical

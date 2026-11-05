@@ -37,11 +37,8 @@
 #   result$dp_best_value   # total value (NOK)
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
 
-#' Totals within this many NOK of the best count as a tie (see header).
+# Totals within this many NOK of the best count as a tie (see header).
 DP_TIE_TOL_NOK <- 1e-6
 
 
@@ -49,21 +46,21 @@ DP_TIE_TOL_NOK <- 1e-6
 # Main DP function
 # ------------------------------------------------------------------------------
 
-#' Run the backward-induction DP optimiser for one tree.
-#'
-#' The input data frame must have been priced (PriceNOKperM3 and value_nok
-#' present and non-NA).  Rows with NA value_nok are silently dropped.
-#'
-#' @param valued_candidates data.frame with priced, eligible candidates.
-#'   Required columns: StartPos (int), StopPos (int), value_nok (numeric),
-#'   and all other columns to be passed through to the selected-log output.
-#' @return Named list:
-#'   \item{selected_logs}{data.frame of selected (non-overlapping) logs.}
-#'   \item{dp_best_value}{numeric — optimal total value (NOK).}
-#'   \item{n_selected}{integer — number of selected logs.}
-#'   \item{n_dp_candidates}{integer — rows entering the DP.}
-#'   \item{optimizer_status}{character — "ok", "zero_logs", or "no_candidates".}
-#'   \item{optimizer_message}{character — human-readable status.}
+# Run the backward-induction DP optimiser for one tree.
+#
+# The input data frame must have been priced (PriceNOKperM3 and value_nok
+# present and non-NA).  Rows with NA value_nok are silently dropped.
+#
+# @param valued_candidates data.frame with priced, eligible candidates.
+#   Required columns: StartPos (int), StopPos (int), value_nok (numeric),
+#   and all other columns to be passed through to the selected-log output.
+# @return Named list:
+#   \item{selected_logs}{data.frame of selected (non-overlapping) logs.}
+#   \item{dp_best_value}{numeric — optimal total value (NOK).}
+#   \item{n_selected}{integer — number of selected logs.}
+#   \item{n_dp_candidates}{integer — rows entering the DP.}
+#   \item{optimizer_status}{character — "ok", "zero_logs", or "no_candidates".}
+#   \item{optimizer_message}{character — human-readable status.}
 optimize_one_tree_dp <- function(valued_candidates) {
   # Remove rows with missing value.
   dp_in <- valued_candidates[
@@ -207,14 +204,14 @@ optimize_one_tree_dp <- function(valued_candidates) {
 # Post-optimisation checks
 # ------------------------------------------------------------------------------
 
-#' Check for overlapping logs in the selected-log output.
-#'
-#' Overlap: two consecutive logs from the same tree where StopPos of the
-#' first exceeds StartPos of the next.  (Touching logs — StopPos == next
-#' StartPos — are allowed.)
-#'
-#' @param selected_logs data.frame with columns treid, StartPos, StopPos.
-#' @return Integer count of overlapping consecutive pairs.
+# Check for overlapping logs in the selected-log output.
+#
+# Overlap: two consecutive logs from the same tree where StopPos of the
+# first exceeds StartPos of the next.  (Touching logs — StopPos == next
+# StartPos — are allowed.)
+#
+# @param selected_logs data.frame with columns treid, StartPos, StopPos.
+# @return Integer count of overlapping consecutive pairs.
 check_selected_logs_no_overlap <- function(selected_logs) {
   if (is.null(selected_logs) || nrow(selected_logs) < 2L) return(0L)
 
@@ -232,12 +229,12 @@ check_selected_logs_no_overlap <- function(selected_logs) {
 # Summary helper
 # ------------------------------------------------------------------------------
 
-#' Summarise the optimiser result for one tree.
-#'
-#' @param selected_logs  data.frame from optimize_one_tree_dp()$selected_logs.
-#' @param tree_height_m  Numeric; used to compute stem coverage (optional).
-#' @param stump_height_cm Integer; used to compute stem coverage (optional).
-#' @return Named list with summary statistics.
+# Summarise the optimiser result for one tree.
+#
+# @param selected_logs  data.frame from optimize_one_tree_dp()$selected_logs.
+# @param tree_height_m  Numeric; used to compute stem coverage (optional).
+# @param stump_height_cm Integer; used to compute stem coverage (optional).
+# @return Named list with summary statistics.
 summarize_optimizer_result <- function(selected_logs,
                                         tree_height_m    = NA_real_,
                                         stump_height_cm  = 10L) {

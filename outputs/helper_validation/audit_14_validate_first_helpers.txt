@@ -1,13 +1,13 @@
 ============================================================= 
   Audit: R/14_validate_first_helpers.R
-  Run: 2026-10-27 16:32:37.316049
+  Run: 2026-11-05 10:54:53.555709
 ============================================================= 
 
 --- 1. Helper files ---
   [PASS  ] Helper exists: R/helpers_paths.R | found
   [PASS  ] Helper exists: R/helpers_products.R | found
   [PASS  ] Helper exists: R/helpers_valuation.R | found
-  [PASS  ] Helper exists: R/helpers_audit.R | found
+  [PASS  ] Helper exists: audits/helpers_audit.R | found
 
 --- 2. Script 14 output files ---
   [PASS  ] Output exists: helper_product_check.csv | found
@@ -54,11 +54,12 @@
 --- 19-20. Accepted scripts integrity ---
   [PASS  ] All accepted scripts 00-12 exist | 13 present, 0 missing
   [PASS  ] Accepted scripts 00-12 not modified after script 14 was created | none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)
+  [PASS  ] Frozen script 00 holds the Oracle placeholders and no real alias or user name | 570 lines read
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 28
+1   PASS 29
 
   Verdict: PASS 
 ============================================================= 

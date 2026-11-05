@@ -1,12 +1,12 @@
 # ==============================================================================
 # audits/audit_16_sampled_plot_backend_smoke.R
 #
-# Purpose : Smoke audit for scripts/app_backend/01_run_sampled_plot_bucking.R.
+# Purpose : Smoke audit for the backend (R/run_bucking.R).
 #           Verifies that the sampled-plot backend runs safely on sanitized
 #           GitHub data and does not expose original NFI plot identifiers.
 #
 # Checks  :
-#  1.  Backend script exists at scripts/app_backend/01_run_sampled_plot_bucking.R
+#  1.  Backend file exists at R/run_bucking.R
 #  2.  Backend script sources without error
 #  3.  Smoke call completes without error
 #      params: species_group="spruce", hogstkl=41, abonitet=17, n_plots=5, seed=42
@@ -72,9 +72,8 @@ root_dir <- local({
   d
 })
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "R", "helpers_dp_optimizer.R"))   # for overlap check
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
 
 out_dir   <- path_output("sampled_plot_backend_smoke", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -103,8 +102,7 @@ cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 cat("\n--- 01. Backend script exists ---\n", file = audit_txt, append = TRUE)
 cat("\n--- 01. Backend script exists ---\n")
 
-backend_path <- file.path(root_dir, "scripts", "app_backend",
-                           "01_run_sampled_plot_bucking.R")
+backend_path <- file.path(root_dir, "R", "run_bucking.R")   # since the package conversion
 
 rec("Check 01: Backend script exists",
     if (file.exists(backend_path)) PASS else FAIL,

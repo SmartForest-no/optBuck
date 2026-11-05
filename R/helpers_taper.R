@@ -21,21 +21,16 @@
 #           pv      <- pvs[["242251"]]
 # ==============================================================================
 
-if (!exists("or_default", mode = "function"))   # helpers_utils.R
-  source(file.path(dirname(if (is.null(sys.frame(1L)$ofile)) "." else sys.frame(1L)$ofile),
-                   "helpers_utils.R"))
-
-if (!exists("get_root_dir", mode = "function"))
-  source(file.path(dirname(or_default(sys.frame(1L)$ofile, ".")), "helpers_paths.R"))
 
 
-#' Minimum DBH (cm) accepted by taperNOR.
+
+# Minimum DBH (cm) accepted by taperNOR.
 TAPER_MIN_DBH_CM <- 5.0
 
-#' Minimum height (m) accepted by taperNOR.
+# Minimum height (m) accepted by taperNOR.
 TAPER_MIN_HEIGHT_M <- 4.5
 
-#' Profile step in cm (must equal START_POS_STEP_CM in candidate generation).
+# Profile step in cm (must equal START_POS_STEP_CM in candidate generation).
 PROFILE_STEP_CM <- 10L
 
 
@@ -43,15 +38,15 @@ PROFILE_STEP_CM <- 10L
 # Input normalisation
 # ------------------------------------------------------------------------------
 
-#' Normalise a single-row data frame or named list to the inputs required by
-#' generate_taper_profile_one_tree().
-#'
-#' Handles both "height_m" (metres) and "beregnet_hoyde" (decimetres) columns.
-#' Returns a named list with: treid, plot_id, species_group, dbh_cm, height_m.
-#' Stops with a descriptive error if any required value is missing.
-#'
-#' @param tree_row  A one-row data.frame or named list.
-#' @return Named list: treid, plot_id, species_group, dbh_cm, height_m.
+# Normalise a single-row data frame or named list to the inputs required by
+# generate_taper_profile_one_tree().
+#
+# Handles both "height_m" (metres) and "beregnet_hoyde" (decimetres) columns.
+# Returns a named list with: treid, plot_id, species_group, dbh_cm, height_m.
+# Stops with a descriptive error if any required value is missing.
+#
+# @param tree_row  A one-row data.frame or named list.
+# @return Named list: treid, plot_id, species_group, dbh_cm, height_m.
 normalise_tree_inputs_for_taper <- function(tree_row) {
   get_field <- function(x, ...) {
     candidates <- c(...)
@@ -102,22 +97,22 @@ normalise_tree_inputs_for_taper <- function(tree_row) {
 # One-tree profile generation
 # ------------------------------------------------------------------------------
 
-#' Generate a taper profile for one tree using taperNOR (over-bark).
-#'
-#' Returns a data.frame with one row per profile step, including derived
-#' columns (diameterPosition in cm, DiameterValue in mm) needed by
-#' candidate generation.
-#'
-#' @param treid          Tree ID (character or numeric).
-#' @param plot_id        Plot ID (character).
-#' @param species_group  "spruce" or "pine".
-#' @param dbh_cm         Diameter at breast height (cm), over-bark.
-#' @param height_m       Total tree height (m).
-#' @param profile_step_m Profile step (m); default 0.10.
-#' @param sesong         Optional season/year field (passed through).
-#' @return data.frame with columns: treid, plot_id, species_group, dbh_cm,
-#'   height_m, z_m, diameter_cm, DiameterValue (mm), diameterPosition (cm),
-#'   DBH (mm).
+# Generate a taper profile for one tree using taperNOR (over-bark).
+#
+# Returns a data.frame with one row per profile step, including derived
+# columns (diameterPosition in cm, DiameterValue in mm) needed by
+# candidate generation.
+#
+# @param treid          Tree ID (character or numeric).
+# @param plot_id        Plot ID (character).
+# @param species_group  "spruce" or "pine".
+# @param dbh_cm         Diameter at breast height (cm), over-bark.
+# @param height_m       Total tree height (m).
+# @param profile_step_m Profile step (m); default 0.10.
+# @param sesong         Optional season/year field (passed through).
+# @return data.frame with columns: treid, plot_id, species_group, dbh_cm,
+#   height_m, z_m, diameter_cm, DiameterValue (mm), diameterPosition (cm),
+#   DBH (mm).
 generate_taper_profile_one_tree <- function(treid, plot_id = NA_character_,
                                              species_group,
                                              dbh_cm, height_m,
@@ -165,15 +160,15 @@ generate_taper_profile_one_tree <- function(treid, plot_id = NA_character_,
 # Batch profile generation
 # ------------------------------------------------------------------------------
 
-#' Generate taper profiles for multiple trees.
-#'
-#' @param tree_data      data.frame with one row per tree. Required columns:
-#'                       treid, species_group, dbh_cm, height_m (or
-#'                       beregnet_hoyde).  Optional: plot_id, sesong.
-#' @param profile_step_m Profile step (m); default 0.10.
-#' @param quiet          Suppress per-tree messages.
-#' @return data.frame: all profiles row-bound, plus a `profile_ok` attribute
-#'   (logical vector, one per tree).
+# Generate taper profiles for multiple trees.
+#
+# @param tree_data      data.frame with one row per tree. Required columns:
+#                       treid, species_group, dbh_cm, height_m (or
+#                       beregnet_hoyde).  Optional: plot_id, sesong.
+# @param profile_step_m Profile step (m); default 0.10.
+# @param quiet          Suppress per-tree messages.
+# @return data.frame: all profiles row-bound, plus a `profile_ok` attribute
+#   (logical vector, one per tree).
 generate_taper_profiles_for_trees <- function(tree_data,
                                                profile_step_m = 0.10,
                                                quiet = FALSE) {
@@ -222,23 +217,23 @@ generate_taper_profiles_for_trees <- function(tree_data,
 # Profile vector extraction (for per-tree candidate generation)
 # ------------------------------------------------------------------------------
 
-#' Convert a profiles data.frame to a named list of per-tree profile vectors.
-#'
-#' Each element is a list with fields used by generate_candidate_logs_one_tree:
-#'   diameterPosition  integer vector (cm, multiples of PROFILE_STEP_CM)
-#'   DiameterValue     numeric vector (mm)
-#'   DBH               numeric scalar (mm)
-#'   height_m          numeric scalar (m)
-#'   height_cm         integer scalar (cm)
-#'   species_group     character scalar
-#'   plot_id           character scalar
-#'   treid             character scalar
-#'   grade             numeric vector, one per position (optional; .hpr stem
-#'                     grades, Phase 6: the grade of the cell [pos, pos + 10 cm))
-#'
-#' @param profiles        data.frame from generate_taper_profiles_for_trees().
-#' @param profile_step_cm Profile step in cm; default PROFILE_STEP_CM (10L).
-#' @return Named list keyed by treid (character).
+# Convert a profiles data.frame to a named list of per-tree profile vectors.
+#
+# Each element is a list with fields used by generate_candidate_logs_one_tree:
+#   diameterPosition  integer vector (cm, multiples of PROFILE_STEP_CM)
+#   DiameterValue     numeric vector (mm)
+#   DBH               numeric scalar (mm)
+#   height_m          numeric scalar (m)
+#   height_cm         integer scalar (cm)
+#   species_group     character scalar
+#   plot_id           character scalar
+#   treid             character scalar
+#   grade             numeric vector, one per position (optional; .hpr stem
+#                     grades, Phase 6: the grade of the cell [pos, pos + 10 cm))
+#
+# @param profiles        data.frame from generate_taper_profiles_for_trees().
+# @param profile_step_cm Profile step in cm; default PROFILE_STEP_CM (10L).
+# @return Named list keyed by treid (character).
 profiles_to_profile_vectors <- function(profiles,
                                          profile_step_cm = PROFILE_STEP_CM) {
   if (is.null(profiles) || nrow(profiles) == 0L) return(list())

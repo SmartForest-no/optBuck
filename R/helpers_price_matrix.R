@@ -32,14 +32,14 @@
 #   prices as one xlsx.
 # ==============================================================================
 
-#' Matrix id of the flat-price table.
+# Matrix id of the flat-price table.
 PM_FLAT_ID <- "flat_prices"
 
-#' Required long-layout columns.
+# Required long-layout columns.
 PM_REQUIRED_COLS <- c("ProductKey", "LengthClass_dm", "PriceDiameterClass_cm",
                       "PriceNOKperM3")
 
-#' Columns of a custom assortment definition (one row per assortment).
+# Columns of a custom assortment definition (one row per assortment).
 ASSORTMENT_COLS <- c("Name", "Class", "Species", "MinTopDiameter_cm",
                      "MaxTopDiameter_cm", "MinButtDiameter_cm", "MaxButtDiameter_cm",
                      "AllowedLengths_cm", "Priority", "DiameterUnderBark",
@@ -47,21 +47,21 @@ ASSORTMENT_COLS <- c("Name", "Class", "Species", "MinTopDiameter_cm",
                      "VolumeDiameterAdjustment", "PriceType", "UseIn")
 
 
-#' Optional hidden column of a price matrix (Phase 7a, 2026-10-30): the
-#' target distribution (percent) of a cell, read from .hpr/.pin files and
-#' written back on export. It is not used by the optimizer. The column exists
-#' only when some cell has a value; NA = the cell has none.
+# Optional hidden column of a price matrix (Phase 7a, 2026-10-30): the
+# target distribution (percent) of a cell, read from .hpr/.pin files and
+# written back on export. It is not used by the optimizer. The column exists
+# only when some cell has a value; NA = the cell has none.
 PM_DISTRIBUTION_COL <- "Distribution"
 
-#' Second optional hidden column (2026-10-30): the lower limit (mm) of the
-#' .hpr/.pin diameter class a whole-cm row was spread from (e.g. 142). Kept
-#' like Distribution; used by price tuning only; never in a run or a price
-#' file; not in the scenario xlsx. NA = not from a file / a new row.
+# Second optional hidden column (2026-10-30): the lower limit (mm) of the
+# .hpr/.pin diameter class a whole-cm row was spread from (e.g. 142). Kept
+# like Distribution; used by price tuning only; never in a run or a price
+# file; not in the scenario xlsx. NA = not from a file / a new row.
 PM_FILE_CLASS_COL <- "FileDiameterClass_mm"
 PM_HIDDEN_COLS <- c(PM_DISTRIBUTION_COL, PM_FILE_CLASS_COL)
 
-#' The four columns Apter uses, typed, from any PriceMatrix_long. A hidden
-#' Distribution column is kept when the matrix has one (see pm_prices()).
+# The four columns Apter uses, typed, from any PriceMatrix_long. A hidden
+# Distribution column is kept when the matrix has one (see pm_prices()).
 pm_minimal <- function(pm) {
   out <- data.frame(
     ProductKey            = as.character(pm$ProductKey),
@@ -77,15 +77,15 @@ pm_minimal <- function(pm) {
   out
 }
 
-#' The price columns only (no hidden Distribution): what runs, the backend and
-#' price files see.
+# The price columns only (no hidden Distribution): what runs, the backend and
+# price files see.
 pm_prices <- function(pm) {
   out <- pm_minimal(pm)
   out[, PM_REQUIRED_COLS, drop = FALSE]
 }
 
-#' rbind of price matrices where a hidden Distribution column may be on one
-#' side only: the other side gets NA.
+# rbind of price matrices where a hidden Distribution column may be on one
+# side only: the other side gets NA.
 pm_bind <- function(...) {
   l <- Filter(function(x) !is.null(x), list(...))
   for (h in PM_HIDDEN_COLS)
@@ -96,7 +96,7 @@ pm_bind <- function(...) {
 
 .is_matrix_row <- function(pm) !is.na(pm$LengthClass_dm)
 
-#' Editable matrix ids: sawlog ProductKeys (spruce before pine) + flat.
+# Editable matrix ids: sawlog ProductKeys (spruce before pine) + flat.
 pm_matrix_ids <- function(pm) {
   saw <- unique(as.character(pm$ProductKey[.is_matrix_row(pm)]))
   sp  <- match(sub("_.*$", "", saw), c("spruce", "pine"))
@@ -104,11 +104,11 @@ pm_matrix_ids <- function(pm) {
 }
 
 
-#' One matrix as a grid in the source layout.
-#'
-#' Sawlog: rows = PriceDiameterClass_cm (row names), columns = LengthClass_dm
-#' (column names), values = PriceNOKperM3 (NA where the matrix has no price).
-#' Flat: rows = ProductKey (row names), one column "PriceNOKperM3".
+# One matrix as a grid in the source layout.
+#
+# Sawlog: rows = PriceDiameterClass_cm (row names), columns = LengthClass_dm
+# (column names), values = PriceNOKperM3 (NA where the matrix has no price).
+# Flat: rows = ProductKey (row names), one column "PriceNOKperM3".
 pm_to_grid <- function(pm, id) {
   if (identical(id, PM_FLAT_ID)) {
     f <- pm[!.is_matrix_row(pm), , drop = FALSE]
@@ -128,7 +128,7 @@ pm_to_grid <- function(pm, id) {
   as.data.frame(m, check.names = FALSE)
 }
 
-#' Long rows for one grid (inverse of pm_to_grid()).
+# Long rows for one grid (inverse of pm_to_grid()).
 .grid_to_long <- function(grid, id) {
   if (identical(id, PM_FLAT_ID))
     return(data.frame(ProductKey = rownames(grid), LengthClass_dm = NA_integer_,
@@ -145,11 +145,11 @@ pm_to_grid <- function(pm, id) {
   pm_drop_empty_cells(out)
 }
 
-#' Drop the empty (NA-price) cells of matrix rows, except where a whole
-#' diameter class is empty: that class keeps its rows with NA prices (an
-#' "empty row", e.g. a class forbidden in an .hpr file), so the classes stay
-#' consecutive and the class is never chosen (its lookup is NA, unpriced).
-#' A class missing altogether is still a gap (validate_scenario_pm()).
+# Drop the empty (NA-price) cells of matrix rows, except where a whole
+# diameter class is empty: that class keeps its rows with NA prices (an
+# "empty row", e.g. a class forbidden in an .hpr file), so the classes stay
+# consecutive and the class is never chosen (its lookup is NA, unpriced).
+# A class missing altogether is still a gap (validate_scenario_pm()).
 pm_drop_empty_cells <- function(long) {
   na <- is.na(long$PriceNOKperM3)
   if (!any(na)) return(long)
@@ -158,14 +158,14 @@ pm_drop_empty_cells <- function(long) {
   long[!na | unname(all_na[cls]), , drop = FALSE]
 }
 
-#' Write a grid back into a (minimal) long price matrix, replacing that
-#' matrix's rows. For the flat table only the products in the grid change.
-#'
-#' @param by_class TRUE for an edit in the grid (R4 D6): a price that differs
-#'   from the old one is set for every whole-cm row of the same length column
-#'   that has the same hidden file diameter class (FileDiameterClass_mm), as
-#'   a target edit does; a row without a file class changes alone. Bulk edits,
-#'   resets and tuning keep the default FALSE.
+# Write a grid back into a (minimal) long price matrix, replacing that
+# matrix's rows. For the flat table only the products in the grid change.
+#
+# @param by_class TRUE for an edit in the grid (R4 D6): a price that differs
+#   from the old one is set for every whole-cm row of the same length column
+#   that has the same hidden file diameter class (FileDiameterClass_mm), as
+#   a target edit does; a row without a file class changes alone. Bulk edits,
+#   resets and tuning keep the default FALSE.
 pm_from_grid <- function(grid, id, pm, by_class = FALSE) {
   pm  <- pm_minimal(pm)
   new <- .grid_to_long(grid, id)
@@ -194,9 +194,9 @@ pm_from_grid <- function(grid, id, pm, by_class = FALSE) {
   pm_minimal(rbind(pm[!drop, , drop = FALSE], new))
 }
 
-#' Logical matrix (grid shape): TRUE where scenario differs from default.
-#' In the flat table, products with no default price (custom assortments
-#' used in the scenario only) have nothing to differ from: FALSE.
+# Logical matrix (grid shape): TRUE where scenario differs from default.
+# In the flat table, products with no default price (custom assortments
+# used in the scenario only) have nothing to differ from: FALSE.
 pm_diff_mask <- function(default, scenario, id) {
   a <- as.matrix(pm_to_grid(default, id)); b <- as.matrix(pm_to_grid(scenario, id))
   if (!identical(dim(a), dim(b)) || !identical(dimnames(a), dimnames(b))) {
@@ -211,11 +211,11 @@ pm_diff_mask <- function(default, scenario, id) {
   matrix(!mapply(.same_price, a, b), nrow(a), ncol(a), dimnames = dimnames(a))
 }
 
-#' The default grid laid over the scenario grid's rows and columns, for the
-#' editor's highlighting (cells are matched by class, not position). Cells
-#' the default lacks are NA (so a filled scenario cell shows as differing);
-#' flat rows without a default take the scenario value (no highlight). With
-#' no default matrix at all, the scenario grid itself (nothing highlighted).
+# The default grid laid over the scenario grid's rows and columns, for the
+# editor's highlighting (cells are matched by class, not position). Cells
+# the default lacks are NA (so a filled scenario cell shows as differing);
+# flat rows without a default take the scenario value (no highlight). With
+# no default matrix at all, the scenario grid itself (nothing highlighted).
 pm_default_aligned <- function(default, scenario, id) {
   b <- as.matrix(pm_to_grid(scenario, id))
   if (!identical(id, PM_FLAT_ID) &&
@@ -234,16 +234,16 @@ pm_default_aligned <- function(default, scenario, id) {
 .same_price <- function(x, y) (is.na(x) && is.na(y)) ||
   (!is.na(x) && !is.na(y) && abs(x - y) <= 1e-9)
 
-#' Number of cells that differ between scenario and default, over the
-#' matrices both have (a custom assortment priced in one run only has no
-#' default to differ from).
+# Number of cells that differ between scenario and default, over the
+# matrices both have (a custom assortment priced in one run only has no
+# default to differ from).
 pm_n_diff <- function(default, scenario) {
   ids <- intersect(pm_matrix_ids(default), pm_matrix_ids(scenario))
   sum(vapply(ids, function(id)
     sum(pm_diff_mask(default, scenario, id)), numeric(1)))
 }
 
-#' Reset one matrix of the scenario to the default.
+# Reset one matrix of the scenario to the default.
 pm_reset <- function(scenario, default, id) {
   pm_from_grid(pm_to_grid(default, id), id, scenario)
 }
@@ -257,12 +257,12 @@ pm_reset <- function(scenario, default, id) {
 
 .matrix_rows <- function(pm, id) pm[pm$ProductKey == id & .is_matrix_row(pm), , drop = FALSE]
 
-#' Add a diameter class below the smallest ("low") or above the largest
-#' ("high") class of matrix `id`.
-#'
-#' @param max_top_cm The assortment's max top diameter (cm): a class above
-#'   floor(max_top_cm) is never used (a log's price class is its top
-#'   diameter rounded down), so it is not added (2026-10-22). Inf: no limit.
+# Add a diameter class below the smallest ("low") or above the largest
+# ("high") class of matrix `id`.
+#
+# @param max_top_cm The assortment's max top diameter (cm): a class above
+#   floor(max_top_cm) is never used (a log's price class is its top
+#   diameter rounded down), so it is not added (2026-10-22). Inf: no limit.
 pm_add_class <- function(pm, id, end = c("low", "high"), max_top_cm = Inf) {
   end <- match.arg(end); pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
   if (nrow(s) == 0L) stop("No matrix '", id, "'.")
@@ -278,7 +278,7 @@ pm_add_class <- function(pm, id, end = c("low", "high"), max_top_cm = Inf) {
   pm_minimal(rbind(pm, new))
 }
 
-#' Remove the smallest ("low") or largest ("high") diameter class of matrix `id`.
+# Remove the smallest ("low") or largest ("high") diameter class of matrix `id`.
 pm_remove_class <- function(pm, id, end = c("low", "high")) {
   end <- match.arg(end); pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
   cls <- unique(s$PriceDiameterClass_cm)
@@ -288,8 +288,8 @@ pm_remove_class <- function(pm, id, end = c("low", "high")) {
                 drop = FALSE])
 }
 
-#' Add length `dm` (whole dm) to matrix `id`, copying the nearest length's
-#' prices (the shorter one on a tie).
+# Add length `dm` (whole dm) to matrix `id`, copying the nearest length's
+# prices (the shorter one on a tie).
 pm_add_length <- function(pm, id, dm) {
   pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
   dm <- suppressWarnings(as.numeric(dm))
@@ -304,7 +304,7 @@ pm_add_length <- function(pm, id, dm) {
   pm_minimal(rbind(pm, new))
 }
 
-#' Remove length `dm` from matrix `id`: that length is no longer allowed.
+# Remove length `dm` from matrix `id`: that length is no longer allowed.
 pm_remove_length <- function(pm, id, dm) {
   pm <- pm_minimal(pm); s <- .matrix_rows(pm, id)
   lens <- unique(s$LengthClass_dm)
@@ -326,8 +326,8 @@ pm_remove_length <- function(pm, id, dm) {
 
 .pm_bulk_price <- function(x) pmax(round(x, 2), 0)
 
-#' Add `value` NOK/m3 ("amount") or `value` % ("percent") to the priced cells
-#' of rows `rows` x columns `cols` (grid indices) of matrix `id`.
+# Add `value` NOK/m3 ("amount") or `value` % ("percent") to the priced cells
+# of rows `rows` x columns `cols` (grid indices) of matrix `id`.
 pm_bulk_adjust <- function(pm, id, rows, cols, mode = c("amount", "percent"), value) {
   mode <- match.arg(mode)
   value <- suppressWarnings(as.numeric(value))
@@ -344,9 +344,9 @@ pm_bulk_adjust <- function(pm, id, rows, cols, mode = c("amount", "percent"), va
   pm_from_grid(g, id, pm)
 }
 
-#' Fill matrix `id`: every priced cell = the price of its diameter class
-#' (`row_prices`, named by class in cm) + the correction of its length class
-#' (`length_corr`, named by dm). Empty cells stay empty.
+# Fill matrix `id`: every priced cell = the price of its diameter class
+# (`row_prices`, named by class in cm) + the correction of its length class
+# (`length_corr`, named by dm). Empty cells stay empty.
 pm_bulk_fill <- function(pm, id, row_prices, length_corr) {
   g <- .pm_matrix_grid(pm, id)
   rp <- suppressWarnings(as.numeric(row_prices[rownames(g)]))
@@ -362,15 +362,15 @@ pm_bulk_fill <- function(pm, id, row_prices, length_corr) {
   pm_from_grid(g, id, pm)
 }
 
-#' Each diameter class's first priced cell (the fill dialog's starting prices);
-#' NA for an empty row.
+# Each diameter class's first priced cell (the fill dialog's starting prices);
+# NA for an empty row.
 pm_row_first_prices <- function(pm, id) {
   m <- as.matrix(.pm_matrix_grid(pm, id))
   stats::setNames(apply(m, 1L, function(r) if (all(is.na(r))) NA_real_ else r[!is.na(r)][1L]),
                   rownames(m))
 }
 
-#' Matrices whose diameter classes have gaps (classes must be consecutive cm).
+# Matrices whose diameter classes have gaps (classes must be consecutive cm).
 .pm_class_gaps <- function(pm) {
   s <- pm[.is_matrix_row(pm) & !is.na(pm$PriceDiameterClass_cm), , drop = FALSE]
   ids <- unique(s$ProductKey)
@@ -383,8 +383,8 @@ pm_row_first_prices <- function(pm, id) {
 
 # ---- assortment table prices (Phase 4c) ---------------------------------------------
 
-#' Starting prices of a new product: a grid of diameter classes
-#' class_lo..class_hi (cm) x lengths (cm, whole dm), or one flat price.
+# Starting prices of a new product: a grid of diameter classes
+# class_lo..class_hi (cm) x lengths (cm, whole dm), or one flat price.
 pm_start_prices <- function(key, price_type, price, class_lo = NA, class_hi = NA,
                             lengths_cm = numeric(0)) {
   if (identical(price_type, "flat"))
@@ -403,18 +403,18 @@ pm_start_prices <- function(key, price_type, price, class_lo = NA, class_hi = NA
                         PriceNOKperM3 = price, stringsAsFactors = FALSE))
 }
 
-#' Give product `from`'s prices to `to` (an assortment renamed or moved to
-#' another species).
+# Give product `from`'s prices to `to` (an assortment renamed or moved to
+# another species).
 pm_rename_key <- function(pm, from, to) {
   pm <- pm_minimal(pm)
   pm$ProductKey[pm$ProductKey == from] <- to
   pm_minimal(pm)
 }
 
-#' Write one scenario (Phase 4d) to an xlsx: sheet "assortments" (the
-#' assortment table, cm; Type is the hidden product type, keep it as it is)
-#' and its prices in the wide layout of pm_template_wide() (one sheet per
-#' matrix, "flat_prices").
+# Write one scenario (Phase 4d) to an xlsx: sheet "assortments" (the
+# assortment table, cm; Type is the hidden product type, keep it as it is)
+# and its prices in the wide layout of pm_template_wide() (one sheet per
+# matrix, "flat_prices").
 # Sheets of a scenario xlsx that carry no price grid.
 SCENARIO_META_SHEETS <- c("assortments", "scenario", "file_classes")
 .is_target_sheet <- function(x) grepl("^target_[0-9]+$", x)
@@ -434,9 +434,9 @@ scenario_export <- function(defs, pm, path) {
   invisible(path)
 }
 
-#' Read a scenario_export() xlsx (assortments plus prices) and check it.
-#'
-#' @return list(ok, defs, pm, errors, warnings).
+# Read a scenario_export() xlsx (assortments plus prices) and check it.
+#
+# @return list(ok, defs, pm, errors, warnings).
 scenario_import <- function(path) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
   sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
@@ -462,9 +462,9 @@ scenario_import <- function(path) {
   list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings)
 }
 
-#' Put the target (sheets target_<n>) and the file diameter classes (sheet
-#' file_classes) of a scenario xlsx back on the price matrix as its hidden
-#' columns. A value with no priced cell to hold it is ignored.
+# Put the target (sheets target_<n>) and the file diameter classes (sheet
+# file_classes) of a scenario xlsx back on the price matrix as its hidden
+# columns. A value with no priced cell to hold it is ignored.
 .pm_attach_hidden <- function(pm, path, sheets, matrix_keys) {
   pm <- pm_minimal(pm)
   key <- function(p) paste(p$ProductKey, p$LengthClass_dm, p$PriceDiameterClass_cm)
@@ -490,11 +490,11 @@ scenario_import <- function(path) {
   pm_minimal(pm)
 }
 
-#' Check a price set: the assortment table with the price matrix it runs
-#' with (validate_assortment_table(), then validate_scenario_pm() against the
-#' products it gives).
-#'
-#' @return list(ok, errors, warnings, pm = minimal matrix or NULL).
+# Check a price set: the assortment table with the price matrix it runs
+# with (validate_assortment_table(), then validate_scenario_pm() against the
+# products it gives).
+#
+# @return list(ok, errors, warnings, pm = minimal matrix or NULL).
 check_price_set <- function(defs, pm) {
   m <- if (all(PM_REQUIRED_COLS %in% names(pm))) suppressWarnings(pm_minimal(pm)) else pm
   v <- validate_assortment_table(defs, m)
@@ -519,13 +519,13 @@ check_price_set <- function(defs, pm) {
   m
 }
 
-#' Row-by-row comparison of one scenario's assortment table (`defs`) with
-#' the other's (`other`).
-#'
-#' @return list(status = per row of `defs` "same" / "changed" / "only" (not
-#'   in the other scenario), diff = logical matrix (rows of `defs` x
-#'   ASSORTMENT_TABLE_COLS) of fields that differ, other_only = keys only in
-#'   the other scenario).
+# Row-by-row comparison of one scenario's assortment table (`defs`) with
+# the other's (`other`).
+#
+# @return list(status = per row of `defs` "same" / "changed" / "only" (not
+#   in the other scenario), diff = logical matrix (rows of `defs` x
+#   ASSORTMENT_TABLE_COLS) of fields that differ, other_only = keys only in
+#   the other scenario).
 assortment_diff <- function(defs, other) {
   k <- assortment_table_keys(defs); ko <- assortment_table_keys(other)
   cols <- setdiff(ASSORTMENT_TABLE_COLS, c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS, "TypeUser"))   # hidden, no effect on runs
@@ -543,21 +543,21 @@ assortment_diff <- function(defs, other) {
   list(status = status, diff = diff, other_only = setdiff(ko, k))
 }
 
-#' TRUE when two assortment tables hold the same rows (order ignored).
+# TRUE when two assortment tables hold the same rows (order ignored).
 same_assortments <- function(a, b) {
   if (nrow(a) != nrow(b)) return(FALSE)
   if (!setequal(assortment_table_keys(a), assortment_table_keys(b))) return(FALSE)
   all(assortment_diff(a, b)$status == "same")
 }
 
-#' TRUE when the two scenarios' prices of `key` are identical (cells, rows
-#' and columns; flat or matrix).
+# TRUE when the two scenarios' prices of `key` are identical (cells, rows
+# and columns; flat or matrix).
 same_prices <- function(pm_a, pm_b, key)
   isTRUE(all.equal(.scenario_rows(pm_a, key), .scenario_rows(pm_b, key), check.attributes = FALSE))
 
-#' TRUE when Scenarios A and B differ: in their assortments (membership or
-#' any field), in the prices of their assortments, or in their stem-grade
-#' options (Phase 6; NULL = both off). Then a run compares them.
+# TRUE when Scenarios A and B differ: in their assortments (membership or
+# any field), in the prices of their assortments, or in their stem-grade
+# options (Phase 6; NULL = both off). Then a run compares them.
 scenarios_differ <- function(defs_a, pm_a, defs_b, pm_b, opts_a = NULL, opts_b = NULL) {
   if (!identical(normalize_grade_opts(opts_a), normalize_grade_opts(opts_b))) return(TRUE)
   if (!same_assortments(defs_a, defs_b)) return(TRUE)
@@ -565,10 +565,10 @@ scenarios_differ <- function(defs_a, pm_a, defs_b, pm_b, opts_a = NULL, opts_b =
   !isTRUE(all.equal(.scenario_rows(pm_a, keys), .scenario_rows(pm_b, keys), check.attributes = FALSE))
 }
 
-#' Copy assortment `key` (its definition and prices) from one scenario to
-#' the other: it replaces the target's row in place, or is added at the end.
-#'
-#' @return list(defs, pm): the target scenario after the copy.
+# Copy assortment `key` (its definition and prices) from one scenario to
+# the other: it replaces the target's row in place, or is added at the end.
+#
+# @return list(defs, pm): the target scenario after the copy.
 copy_assortment <- function(from_defs, from_pm, to_defs, to_pm, key) {
   i <- match(key, assortment_table_keys(from_defs))
   if (is.na(i)) stop("Assortment ", key, " is not in the scenario copied from.")
@@ -581,11 +581,11 @@ copy_assortment <- function(from_defs, from_pm, to_defs, to_pm, key) {
        pm = pm_minimal(pm_bind(t[t$ProductKey != key, , drop = FALSE], f[f$ProductKey == key, , drop = FALSE])))
 }
 
-#' Copy the prices of `keys` from one scenario to the other, where the
-#' assortment is in both and priced the same way (both matrix or both flat).
-#'
-#' @return list(pm (the target's prices), copied, skipped (keys not copied:
-#'   not in both or priced differently)).
+# Copy the prices of `keys` from one scenario to the other, where the
+# assortment is in both and priced the same way (both matrix or both flat).
+#
+# @return list(pm (the target's prices), copied, skipped (keys not copied:
+#   not in both or priced differently)).
 copy_prices <- function(from_defs, from_pm, to_defs, to_pm, keys) {
   kf <- assortment_table_keys(from_defs); kt <- assortment_table_keys(to_defs)
   ok <- keys %in% kf & keys %in% kt
@@ -600,16 +600,16 @@ copy_prices <- function(from_defs, from_pm, to_defs, to_pm, keys) {
 
 # ---- validation -----------------------------------------------------------------
 
-#' Validate a scenario price matrix (long layout).
-#'
-#' Errors block use; warnings do not. Uses the same product checks as the
-#' backend (validate_price_matrix_against_products()).
-#'
-#' @param pm Long price matrix (any columns; the required four are checked).
-#' @param pd ProductData; lc LengthClasses (with LogLength_dm).
-#' @param default Optional default matrix: missing cells relative to it are
-#'   reported as a warning.
-#' @return list(ok, errors, warnings, pm = pm_minimal(pm) or NULL).
+# Validate a scenario price matrix (long layout).
+#
+# Errors block use; warnings do not. Uses the same product checks as the
+# backend (validate_price_matrix_against_products()).
+#
+# @param pm Long price matrix (any columns; the required four are checked).
+# @param pd ProductData; lc LengthClasses (with LogLength_dm).
+# @param default Optional default matrix: missing cells relative to it are
+#   reported as a warning.
+# @return list(ok, errors, warnings, pm = pm_minimal(pm) or NULL).
 validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
   errors <- character(0); warnings <- character(0)
   miss <- setdiff(PM_REQUIRED_COLS, names(pm))
@@ -719,12 +719,12 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
 
 # ---- upload -----------------------------------------------------------------------
 
-#' Parse one wide grid (raw character table incl. header row) to long rows.
-#'
-#' @param raw   data.frame/matrix of character, header row included.
-#' @param id    Matrix id (ProductKey); if NULL, read from the top-left cell.
-#' @param valid_ids Allowed sawlog ProductKeys.
-#' @return list(long = data.frame or NULL, id, errors).
+# Parse one wide grid (raw character table incl. header row) to long rows.
+#
+# @param raw   data.frame/matrix of character, header row included.
+# @param id    Matrix id (ProductKey); if NULL, read from the top-left cell.
+# @param valid_ids Allowed sawlog ProductKeys.
+# @return list(long = data.frame or NULL, id, errors).
 .parse_wide_grid <- function(raw, id = NULL, valid_ids) {
   raw <- as.matrix(raw)
   raw[is.na(raw)] <- ""
@@ -769,15 +769,15 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
   list(long = pm_drop_empty_cells(long), id = id, errors = character(0))
 }
 
-#' Read an uploaded price file; detect long or wide layout.
-#'
-#' @param path     File on disk (e.g. fileInput datapath).
-#' @param filename Original name (for the extension); defaults to path.
-#' @param default  Default/current price matrix (gives the matrix ids).
-#' @param matrix_keys Further matrix ProductKeys accepted in a wide upload
-#'   (matrix-priced custom assortments).
-#' @return list(layout = "long"|"wide", long = data.frame (raw long rows, for
-#'   validation), ids = matrices contained (wide) or all ids (long), errors).
+# Read an uploaded price file; detect long or wide layout.
+#
+# @param path     File on disk (e.g. fileInput datapath).
+# @param filename Original name (for the extension); defaults to path.
+# @param default  Default/current price matrix (gives the matrix ids).
+# @param matrix_keys Further matrix ProductKeys accepted in a wide upload
+#   (matrix-priced custom assortments).
+# @return list(layout = "long"|"wide", long = data.frame (raw long rows, for
+#   validation), ids = matrices contained (wide) or all ids (long), errors).
 read_price_matrix_upload <- function(path, filename = path, default,
                                      matrix_keys = character(0)) {
   ext <- tolower(tools::file_ext(filename))
@@ -848,8 +848,8 @@ read_price_matrix_upload <- function(path, filename = path, default,
   fail(sprintf("Unsupported file type '.%s' (use .csv, .xlsx or .rds).", ext))
 }
 
-#' Apply an upload to the scenario: read, merge (wide replaces only its
-#' matrices), validate. Returns list(ok, pm, layout, ids, errors, warnings).
+# Apply an upload to the scenario: read, merge (wide replaces only its
+# matrices), validate. Returns list(ok, pm, layout, ids, errors, warnings).
 apply_price_upload <- function(path, filename, scenario, default, pd, lc) {
   mk <- if ("PriceType" %in% names(pd)) pd$ProductKey[pd$PriceType %in% "matrix"]
         else character(0)
@@ -873,18 +873,18 @@ apply_price_upload <- function(path, filename, scenario, default, pd, lc) {
 
 # ---- templates and export ---------------------------------------------------------
 
-#' Long CSV of a full price matrix: the four required columns.
+# Long CSV of a full price matrix: the four required columns.
 pm_export <- function(pm, path) {
   readr::write_csv(pm_prices(pm), path, na = "")
   invisible(path)
 }
 
-#' Long-layout template (CSV): the default prices, four columns.
+# Long-layout template (CSV): the default prices, four columns.
 pm_template_long <- function(default, path) pm_export(default, path)
 
-#' Wide-layout template (xlsx): one sheet per sawlog matrix in the source
-#' layout (top-left cell = ProductKey, header = lengths dm, rows = diameter
-#' classes cm) plus a flat_prices sheet; filled with the default prices.
+# Wide-layout template (xlsx): one sheet per sawlog matrix in the source
+# layout (top-left cell = ProductKey, header = lengths dm, rows = diameter
+# classes cm) plus a flat_prices sheet; filled with the default prices.
 pm_template_wide <- function(default, path) {
   writexl::write_xlsx(.pm_wide_sheets(default), path)
   invisible(path)
@@ -961,12 +961,12 @@ pm_template_wide <- function(default, path) {
 }
 
 
-#' Check custom assortment definitions against the base products and each
-#' other. Product rules are those of validate_products().
-#'
-#' @param defs Definition table (ASSORTMENT_COLS).
-#' @param base_pd,base_lc Base ProductData / LengthClasses.
-#' @return list(ok, errors, warnings).
+# Check custom assortment definitions against the base products and each
+# other. Product rules are those of validate_products().
+#
+# @param defs Definition table (ASSORTMENT_COLS).
+# @param base_pd,base_lc Base ProductData / LengthClasses.
+# @return list(ok, errors, warnings).
 validate_assortment_defs <- function(defs, base_pd, base_lc) {
   err <- character(0)
   miss <- setdiff(ASSORTMENT_COLS, names(defs))
@@ -1009,17 +1009,17 @@ validate_assortment_defs <- function(defs, base_pd, base_lc) {
 }
 
 
-#' Starting prices for one custom assortment, long minimal rows.
-#'
-#' Matrix: diameter classes from the minimum top diameter up to the maximum
-#' top diameter (not capped at 50 cm; the largest class is the assortment's
-#' price-diameter cap) x the allowed lengths, all at `price`. A maximum of
-#' Inf needs `max_class_cm`. Flat: one row per species product.
-#'
-#' @param def One definition row (ASSORTMENT_COLS).
-#' @param price Starting price, NOK/m3.
-#' @param max_class_cm Largest diameter class (cm) when MaxTopDiameter_cm is
-#'   Inf or NA.
+# Starting prices for one custom assortment, long minimal rows.
+#
+# Matrix: diameter classes from the minimum top diameter up to the maximum
+# top diameter (not capped at 50 cm; the largest class is the assortment's
+# price-diameter cap) x the allowed lengths, all at `price`. A maximum of
+# Inf needs `max_class_cm`. Flat: one row per species product.
+#
+# @param def One definition row (ASSORTMENT_COLS).
+# @param price Starting price, NOK/m3.
+# @param max_class_cm Largest diameter class (cm) when MaxTopDiameter_cm is
+#   Inf or NA.
 pm_new_assortment_prices <- function(def, price, max_class_cm = NA) {
   r <- custom_assortment_rows(def)
   keys <- r$pd$ProductKey
@@ -1041,19 +1041,19 @@ pm_new_assortment_prices <- function(def, price, max_class_cm = NA) {
 }
 
 
-#' Keep existing prices when an assortment is edited.
-#'
-#' `new` holds the edited assortment's cells at the starting price
-#' (pm_new_assortment_prices()). Every cell that existed before the edit (same
-#' species, length class and diameter class; for a flat price, same species)
-#' takes its price from `pm`; new cells keep the starting price. Cells that no
-#' longer exist are not in `new`, so they are dropped. Matching is by species,
-#' so renaming an assortment keeps its prices.
-#'
-#' @param new     Long minimal rows of the edited assortment.
-#' @param pm      The run's current price matrix (default or scenario).
-#' @param old_def,new_def The definition before and after the edit.
-#' @return `new` with carried-over prices; attribute "n_kept" = cells kept.
+# Keep existing prices when an assortment is edited.
+#
+# `new` holds the edited assortment's cells at the starting price
+# (pm_new_assortment_prices()). Every cell that existed before the edit (same
+# species, length class and diameter class; for a flat price, same species)
+# takes its price from `pm`; new cells keep the starting price. Cells that no
+# longer exist are not in `new`, so they are dropped. Matching is by species,
+# so renaming an assortment keeps its prices.
+#
+# @param new     Long minimal rows of the edited assortment.
+# @param pm      The run's current price matrix (default or scenario).
+# @param old_def,new_def The definition before and after the edit.
+# @return `new` with carried-over prices; attribute "n_kept" = cells kept.
 pm_keep_assortment_prices <- function(new, pm, old_def, new_def) {
   old_r <- custom_assortment_rows(old_def)$pd
   new_r <- custom_assortment_rows(new_def)$pd
@@ -1068,7 +1068,7 @@ pm_keep_assortment_prices <- function(new, pm, old_def, new_def) {
 }
 
 
-#' Custom ProductKeys of a definition table.
+# Custom ProductKeys of a definition table.
 assortment_keys <- function(defs) {
   if (is.null(defs) || nrow(defs) == 0L) return(character(0))
   unlist(lapply(seq_len(nrow(defs)), function(i)
@@ -1076,9 +1076,9 @@ assortment_keys <- function(defs) {
 }
 
 
-#' Write custom assortments with their prices to one xlsx: sheets
-#' "assortments" (definitions), "default_prices" and "scenario_prices" (long
-#' layout, custom ProductKeys only).
+# Write custom assortments with their prices to one xlsx: sheets
+# "assortments" (definitions), "default_prices" and "scenario_prices" (long
+# layout, custom ProductKeys only).
 assortments_export <- function(defs, default_pm, scenario_pm, path) {
   keys <- assortment_keys(defs)
   pick <- function(pm) { m <- pm_minimal(pm); m[m$ProductKey %in% keys, , drop = FALSE] }
@@ -1089,11 +1089,11 @@ assortments_export <- function(defs, default_pm, scenario_pm, path) {
 }
 
 
-#' Read an assortments xlsx (assortments_export() layout) and merge it into
-#' the default and scenario price matrices. The upload replaces all custom
-#' assortments; base prices are kept.
-#'
-#' @return list(ok, defs, default_pm, scenario_pm, errors, warnings).
+# Read an assortments xlsx (assortments_export() layout) and merge it into
+# the default and scenario price matrices. The upload replaces all custom
+# assortments; base prices are kept.
+#
+# @return list(ok, defs, default_pm, scenario_pm, errors, warnings).
 assortments_import <- function(path, base_pd, base_lc, default_pm, scenario_pm) {
   fail <- function(msg) list(ok = FALSE, defs = NULL, default_pm = NULL,
                              scenario_pm = NULL, errors = msg, warnings = character(0))

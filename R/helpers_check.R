@@ -19,29 +19,29 @@
 # Backend text is English (the app translates messages, tr_msg()).
 # ==============================================================================
 
-#' A stem whose recorded logs (waste included) cover less than this share of its measured length is
-#' left out of the check (incomplete data, e.g. one 3 dm waste piece on 6 m of profile).
+# A stem whose recorded logs (waste included) cover less than this share of its measured length is
+# left out of the check (incomplete data, e.g. one 3 dm waste piece on 6 m of profile).
 CHECK_MIN_COVER <- 0.5
 
-#' Value the recorded logs like candidates of the optimiser.
-#'
-#' For each recorded log: top diameter at the product's DiameterTopPosition (under bark if the
-#' product says so), price volume by the product's method, price class floor(top/10), price from
-#' the run's price lookup, value. Diameters at off-grid positions are interpolated (as the engine
-#' does for the Mid method); solid volumes at off-grid positions by interpolating the cumulative
-#' 10 cm cylinder volume.
-#'
-#' @param job     A prepared hpr stems job (prepare_hpr_stems_job()).
-#' @param logs    read_hpr_logs()$logs, restricted to the stems of the job.
-#' @param prodmap data.frame(HprProductKey, Species, key) mapping a file product + species to the
-#'   assortment key of the job's products.
-#' @param rec_prices NULL, or hpr_rec_prices(): the file's own price grid by length class (cm) and diameter row
-#'   (decided 2026-11-04: a recorded log in a "manual only" cell or in a length class the import drops is valued
-#'   with the file's price; the optimiser still cannot choose such cells). NULL: the job's price lookup.
-#' @return data.frame, one row per log of `logs` (same order): ProductKey (assortment key, NA for
-#'   waste or unknown), is_waste, unknown_product, StartPos, StopPos, LogLength, price_volume_m3,
-#'   PriceDiameterClass_cm, PriceNOKperM3, value_nok, commercial_volume_m3, TopUb_calc,
-#'   TopOb_calc, outside (outside the product's limits).
+# Value the recorded logs like candidates of the optimiser.
+#
+# For each recorded log: top diameter at the product's DiameterTopPosition (under bark if the
+# product says so), price volume by the product's method, price class floor(top/10), price from
+# the run's price lookup, value. Diameters at off-grid positions are interpolated (as the engine
+# does for the Mid method); solid volumes at off-grid positions by interpolating the cumulative
+# 10 cm cylinder volume.
+#
+# @param job     A prepared hpr stems job (prepare_hpr_stems_job()).
+# @param logs    read_hpr_logs()$logs, restricted to the stems of the job.
+# @param prodmap data.frame(HprProductKey, Species, key) mapping a file product + species to the
+#   assortment key of the job's products.
+# @param rec_prices NULL, or hpr_rec_prices(): the file's own price grid by length class (cm) and diameter row
+#   (decided 2026-11-04: a recorded log in a "manual only" cell or in a length class the import drops is valued
+#   with the file's price; the optimiser still cannot choose such cells). NULL: the job's price lookup.
+# @return data.frame, one row per log of `logs` (same order): ProductKey (assortment key, NA for
+#   waste or unknown), is_waste, unknown_product, StartPos, StopPos, LogLength, price_volume_m3,
+#   PriceDiameterClass_cm, PriceNOKperM3, value_nok, commercial_volume_m3, TopUb_calc,
+#   TopOb_calc, outside (outside the product's limits).
 value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL, rec_prices = NULL) {
   run <- job$prep$runs[[1L]]; lookup <- run$lookup
   n <- nrow(logs)
@@ -118,10 +118,10 @@ value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL, rec_pri
   out
 }
 
-#' The file's own price grid for valuing recorded logs (decided 2026-11-04): every priced cell of the product,
-#' also cells marked "Only logs bucked manually allowed" and file length classes the import drops (no whole-dm
-#' length inside the class), by the file's length class lower limit (cm) and whole-cm diameter row (the import's
-#' row rule). Forbidden cells and positions outside the matrix have no price. The optimiser never gets the extra cells.
+# The file's own price grid for valuing recorded logs (decided 2026-11-04): every priced cell of the product,
+# also cells marked "Only logs bucked manually allowed" and file length classes the import drops (no whole-dm
+# length inside the class), by the file's length class lower limit (cm) and whole-cm diameter row (the import's
+# row rule). Forbidden cells and positions outside the matrix have no price. The optimiser never gets the extra cells.
 hpr_rec_prices <- function(h, defs) {
   akeys <- assortment_table_keys(defs)
   g <- do.call(rbind, lapply(seq_len(nrow(defs)), function(i) {
@@ -145,22 +145,22 @@ hpr_rec_prices <- function(h, defs) {
 # Share (0-1) helper that returns NA for an empty denominator.
 .share <- function(a, b) if (is.finite(b) && b > 0) a / b else NA_real_
 
-#' The bucking check of one .hpr file.
-#'
-#' @param path        .hpr (or .hpr.gz / .zip with an .hpr).
-#' @param species_map Named character (species group key -> "spruce"/"pine"/"none"); default: guessed.
-#' @param filename    Name for messages.
-#' @param reject_zones TRUE: recorded waste logs are defect zones (the decision of 2026-11-04).
-#' @param used_only  TRUE (default; the tab has no box): the best possible bucking may use only the products
-#'   the harvester cut at least one log of in this file; FALSE: every product of the file's instruction.
-#' @param manual_ok  TRUE (default): the best possible bucking may also use cells marked "Only logs bucked
-#'   manually allowed" (with the file's price): the operator was allowed to cut them. FALSE: as the simulator.
-#' @param stage       "all" (default: prepare, buck, finish in this process); "prepare" returns a `check_prep`
-#'   object (or a final result when the file cannot be checked) without bucking; "finish" takes `prep` and the
-#'   chunk results `b` of buck_job() (the app runs the stages as background jobs: app/helpers_jobs.R).
-#' @param progress    NULL or function(step) called with "read", "opt", "val", "tab".
-#' @return list(ok, errors, warnings, info, no_profile, file, overview, stems, logs, key_figures,
-#'   assortments, length_dist, manual, defect, top, excluded, flagged, control, broken).
+# The bucking check of one .hpr file.
+#
+# @param path        .hpr (or .hpr.gz / .zip with an .hpr).
+# @param species_map Named character (species group key -> "spruce"/"pine"/"none"); default: guessed.
+# @param filename    Name for messages.
+# @param reject_zones TRUE: recorded waste logs are defect zones (the decision of 2026-11-04).
+# @param used_only  TRUE (default; the tab has no box): the best possible bucking may use only the products
+#   the harvester cut at least one log of in this file; FALSE: every product of the file's instruction.
+# @param manual_ok  TRUE (default): the best possible bucking may also use cells marked "Only logs bucked
+#   manually allowed" (with the file's price): the operator was allowed to cut them. FALSE: as the simulator.
+# @param stage       "all" (default: prepare, buck, finish in this process); "prepare" returns a `check_prep`
+#   object (or a final result when the file cannot be checked) without bucking; "finish" takes `prep` and the
+#   chunk results `b` of buck_job() (the app runs the stages as background jobs: app/helpers_jobs.R).
+# @param progress    NULL or function(step) called with "read", "opt", "val", "tab".
+# @return list(ok, errors, warnings, info, no_profile, file, overview, stems, logs, key_figures,
+#   assortments, length_dist, manual, defect, top, excluded, flagged, control, broken).
 bucking_check <- function(path, species_map = NULL, filename = basename(path), reject_zones = TRUE,
                           used_only = TRUE, manual_ok = TRUE, progress = NULL, root = get_root_dir(),
                           stage = "all", prep = NULL, b = NULL) {
@@ -335,8 +335,8 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
 
 # ---- tables ---------------------------------------------------------------------------------------------------
 
-#' Per assortment: logs, settlement (price) volume, commercial volume and value, recorded vs best
-#' possible; sawlog share of commercial volume.
+# Per assortment: logs, settlement (price) volume, commercial volume and value, recorded vs best
+# possible; sawlog share of commercial volume.
 check_assortments <- function(rec, opt, ptype, lg_recorded = rec) {
   agg <- function(key, type, name, pv, com, val) {
     if (length(key) == 0L) return(NULL)
@@ -358,8 +358,8 @@ check_assortments <- function(rec, opt, ptype, lg_recorded = rec) {
   list(recorded = r, optimal = o, saw_share_rec = sh(r), saw_share_opt = sh(o))
 }
 
-#' Manual cuts: share of all logs, of sawlogs, of butt logs that are sawlogs; yield index of stems
-#' with and without manual cuts.
+# Manual cuts: share of all logs, of sawlogs, of butt logs that are sawlogs; yield index of stems
+# with and without manual cuts.
 check_manual <- function(lg, stems) {
   m <- lg$manual %in% TRUE; known <- !is.na(lg$manual)
   saw <- lg$ptype %in% "sawlog"; butt <- lg$LogKey == 1
@@ -376,8 +376,8 @@ check_manual <- function(lg, stems) {
   out
 }
 
-#' Top diameter under bark (cm) of the last log and of the last sawlog (the topmost non-waste log of
-#' each stem), mean per species, recorded vs best possible; both from the stem profile.
+# Top diameter under bark (cm) of the last log and of the last sawlog (the topmost non-waste log of
+# each stem), mean per species, recorded vs best possible; both from the stem profile.
 check_top <- function(job, rec, opt) {
   last <- function(d, key, sp, ptype, top) {
     d <- data.frame(k = d[[key]], sp = d[[sp]], ptype = d[[ptype]], stop = d$StopPos, top = top, stringsAsFactors = FALSE)
@@ -394,10 +394,10 @@ check_top <- function(job, rec, opt) {
   list(last_rec = mean_by(rr$any), last_opt = mean_by(oo$any), sawlast_rec = mean_by(rr$saw), sawlast_opt = mean_by(oo$saw))
 }
 
-#' Defect wood: volume (solid, under bark, 10 cm cells) of cells whose recorded grade no sawlog
-#' product of the species permits: of the total volume up to the top of the last recorded log, of the
-#' volume in sawlog dimensions (under-bark diameter at least the smallest sawlog minimum top
-#' diameter), of the butt log in sawlog dimensions; plus the volume cut as waste by the operator.
+# Defect wood: volume (solid, under bark, 10 cm cells) of cells whose recorded grade no sawlog
+# product of the species permits: of the total volume up to the top of the last recorded log, of the
+# volume in sawlog dimensions (under-bark diameter at least the smallest sawlog minimum top
+# diameter), of the butt log in sawlog dimensions; plus the volume cut as waste by the operator.
 check_defect <- function(job, rec, pd, defs, smap, saw_grades) {
   min_top <- vapply(split(seq_len(nrow(pd)), pd$species_group), function(i) {
     d <- pd[i, , drop = FALSE]; d <- d[d$ProductType %in% "sawlog", , drop = FALSE]
@@ -425,9 +425,9 @@ check_defect <- function(job, rec, pd, defs, smap, saw_grades) {
        share_waste = .share(acc[["waste"]], acc[["total"]]))
 }
 
-#' Length distribution of the sawlog assortments (logs per length class, dm), recorded vs best
-#' possible, and the degree of fit (FG) of the recorded and the best possible outcome where the
-#' product has a target (the file's Distribution).
+# Length distribution of the sawlog assortments (logs per length class, dm), recorded vs best
+# possible, and the degree of fit (FG) of the recorded and the best possible outcome where the
+# product has a target (the file's Distribution).
 check_length_dist <- function(rec, opt, defs, pm, pr, ptype) {
   keys <- names(ptype)[ptype %in% "sawlog"]
   rows <- lapply(keys, function(k) {
@@ -462,8 +462,8 @@ check_length_dist <- function(rec, opt, defs, pm, pr, ptype) {
   list(tally = tab, fg = fg)
 }
 
-#' Control against the harvester's own volumes: Apter's price volume of the recorded logs vs the
-#' file's `m3 (price)`, and the recorded logs outside their product's limits.
+# Control against the harvester's own volumes: Apter's price volume of the recorded logs vs the
+# file's `m3 (price)`, and the recorded logs outside their product's limits.
 check_control <- function(rec) {
   r <- rec[!rec$waste & !is.na(rec$price_volume_m3) & !is.na(rec$m3_price) & rec$m3_price > 0, , drop = FALSE]
   d <- (r$price_volume_m3 - r$m3_price) / r$m3_price

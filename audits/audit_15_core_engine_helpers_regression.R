@@ -71,13 +71,8 @@ root_dir <- local({
   d
 })
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "R", "helpers_products.R"))
-source(file.path(root_dir, "R", "helpers_valuation.R"))
-source(file.path(root_dir, "R", "helpers_taper.R"))
-source(file.path(root_dir, "R", "helpers_candidate_generation.R"))
-source(file.path(root_dir, "R", "helpers_dp_optimizer.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
 
 out_dir  <- path_output("core_engine_helpers_regression", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -111,7 +106,7 @@ helper_files <- c(
   "R/helpers_paths.R",
   "R/helpers_products.R",
   "R/helpers_valuation.R",
-  "R/helpers_audit.R",
+  "audits/helpers_audit.R",
   "R/helpers_taper.R",
   "R/helpers_candidate_generation.R",
   "R/helpers_dp_optimizer.R"
@@ -171,6 +166,8 @@ if (n_accepted == 0L) {
   rec("Check 03: Accepted scripts 00-12 unmodified", "REVIEW",
       "No accepted script files found — cannot verify")
 } else {
+  # Roadmap 8 (2026-11-05): script 00 was edited once on purpose (Oracle placeholders, see audit 14); exempt here.
+  all_accepted <- all_accepted[basename(all_accepted) != "00_prepare_nfi_2024_data.R"]
   mtimes <- file.mtime(all_accepted)
   modified_after <- all_accepted[mtimes > script_15_mtime + 5]  # 5s tolerance
   rec("Check 03: Accepted scripts 00-12 unmodified since script 15",

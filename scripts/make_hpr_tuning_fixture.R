@@ -21,8 +21,8 @@ root <- local({
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-src_file <- file.path(root, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
-out_file <- file.path(root, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+src_file <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+out_file <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
 
 doc <- xml2::read_xml(src_file); xml2::xml_ns_strip(doc)
 m <- xml2::xml_find_first(doc, "./Machine")
@@ -42,7 +42,7 @@ scale_profile <- function(txt, f) {
 # .hpr cleaning (too flat or too steep). Candidates are scaled (0.80-1.20), checked
 # with the app's own reader and cleaning, and the first 120 that pass are kept.
 Sys.setenv(APTER_ROOT = root)
-suppressMessages(source(file.path(root, "scripts", "app_backend", "01_run_sampled_plot_bucking.R")))
+suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
 cand <- seq(0.80, 1.20, length.out = 400L)
 add_stems <- function(factors, keys) for (i in seq_along(factors))
   xml2::xml_add_child(m, xml2::read_xml(sprintf(paste0("<Stem><StemKey>%d</StemKey><SpeciesGroupKey>446</SpeciesGroupKey>",

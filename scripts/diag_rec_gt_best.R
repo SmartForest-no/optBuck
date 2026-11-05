@@ -1,7 +1,7 @@
 # Why is the recorded value above the best possible for some stems? (roadmap 8, part A4; private files;
 # reads the saved checks of scripts/diag_part_a.R, prints aggregates only.)
 root_dir <- "S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter"; Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R")); source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/); 
 for (nm in c("file1", "file4", "file5")) {
   x <- readRDS(sprintf("C:/apter_private/diag/%s_a_after.rds", nm)); s <- x$stems; u <- s$use & s$value_opt > 0
   r <- x$logs$recorded; r <- r[r$stem_key %in% s$StemKey[u], ]

@@ -77,10 +77,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 
 out_dir <- path_output("stanford_export", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -108,7 +107,7 @@ XSD_HPR <- file.path(XSD_DIR, "v31", "HarvestedProduction_V3p1.xsd")
 have_xsd <- file.exists(XSD_PIN) && file.exists(XSD_HPR)
 F5 <- "C:/apter_private/hpr/REDACTED28"
 have5 <- file.exists(F5)
-FULL <- file.path(root_dir, "inputs", "test_fixtures", "pin_full_synthetic.pin")
+FULL <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "pin_full_synthetic.pin")
 
 # XSD validation: list(ok, n, first errors). NA ok when the schemas are missing.
 xsd_check <- function(f, xsd) {

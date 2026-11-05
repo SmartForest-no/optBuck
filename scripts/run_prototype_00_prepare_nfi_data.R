@@ -10,8 +10,8 @@
 #           line with the resolved Apter root, and evaluates the result. The
 #           frozen file and its modification time are left untouched.
 #
-# Requires: Oracle access (ROracle, keyring entry REDACTED41_medium /
-#           REDACTED42_pluss). Writes data_processed/ and logs/ under the root.
+# Requires: Oracle access (ROracle, keyring entry ORACLE_SERVICE /
+#           ORACLE_USER). Writes data_processed/ and logs/ under the root.
 #
 # Usage   : Rscript scripts/run_prototype_00_prepare_nfi_data.R            (run)
 #           Rscript scripts/run_prototype_00_prepare_nfi_data.R --dry-run  (show

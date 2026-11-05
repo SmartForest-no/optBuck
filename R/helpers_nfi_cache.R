@@ -18,21 +18,26 @@ NFI_CACHE_BLOCK_PLOTS    <- 500L
 NFI_CACHE_COLS <- c("plot_id_github", "treid", "sesong", "species_group", "dbh_cm", "height_m",
                     "z_m", "diameter_cm", "DiameterValue", "diameterPosition", "DBH")
 
-#' Folder of the partitioned profile cache.
-nfi_cache_dir <- function(root = get_root_dir())
-  file.path(root, "outputs", "app_cache", "taper_profiles_by_plot_block_github")
+# Folder of the partitioned profile cache.
+nfi_cache_dir <- function(root = get_root_dir()) {
+  o <- getOption("optBuck.cache_dir", "")                       # an explicit folder (servers, tests)
+  if (nzchar(o)) return(o)
+  dev <- file.path(root, "outputs", "app_cache", "taper_profiles_by_plot_block_github")
+  if (dir.exists(dev)) return(dev)                              # development: the cache the earlier scripts built
+  file.path(tools::R_user_dir("optBuck", "cache"), "taper_profiles")
+}
 
-#' TRUE when the cache holds profile files.
+# TRUE when the cache holds profile files.
 nfi_profiles_ready <- function(root = get_root_dir()) {
   d <- nfi_cache_dir(root)
   dir.exists(d) && length(list.files(d, "[.]parquet$", recursive = TRUE)) > 0L
 }
 
-#' The trees to build profiles for (the backend's filter: DBH >= 5 cm, height >= 4.5 m, no tilstand
-#' filter), in the layout generate_taper_profiles_for_trees() takes (plot_id, not plot_id_github).
-#' @param plots NULL (all) or plot IDs (tests).
+# The trees to build profiles for (the backend's filter: DBH >= 5 cm, height >= 4.5 m, no tilstand
+# filter), in the layout generate_taper_profiles_for_trees() takes (plot_id, not plot_id_github).
+# @param plots NULL (all) or plot IDs (tests).
 nfi_cache_tree_data <- function(root = get_root_dir(), plots = NULL) {
-  f <- file.path(root, "data_processed_github", "nfi_tree_plot_stratum_ready_github.parquet")
+  f <- extdata_path("nfi", "nfi_tree_plot_stratum_ready_github.parquet", root_dir = root)
   if (!file.exists(f)) stop("NFI tree table not found: ", f)
   tr <- as.data.frame(arrow::read_parquet(f))
   h <- as.numeric(if ("beregnet_hoyde" %in% names(tr)) tr$beregnet_hoyde else tr$trehoyde) / 10
@@ -44,7 +49,7 @@ nfi_cache_tree_data <- function(root = get_root_dir(), plots = NULL) {
   td
 }
 
-#' Write profiles (generate_taper_profiles_for_trees() result) as the partitioned cache.
+# Write profiles (generate_taper_profiles_for_trees() result) as the partitioned cache.
 nfi_cache_write <- function(profiles, out_dir) {
   if (is.null(profiles) || nrow(profiles) == 0L) stop("No taper profiles to save.")
   names(profiles)[names(profiles) == "plot_id"] <- "plot_id_github"
@@ -57,10 +62,10 @@ nfi_cache_write <- function(profiles, out_dir) {
   invisible(nrow(p))
 }
 
-#' Build the profile cache (sequentially in chunks of `chunk` trees, or on the future workers).
-#'
-#' @param progress NULL or function(done, total) called after each chunk (trees).
-#' @param plots,out_dir NULL / the default folder; tests build a few plots into a temporary folder.
+# Build the profile cache (sequentially in chunks of `chunk` trees, or on the future workers).
+#
+# @param progress NULL or function(done, total) called after each chunk (trees).
+# @param plots,out_dir NULL / the default folder; tests build a few plots into a temporary folder.
 build_nfi_cache <- function(root = get_root_dir(), out_dir = nfi_cache_dir(root), plots = NULL,
                             progress = NULL, chunk = 5000L, workers = 1L) {
   td <- nfi_cache_tree_data(root, plots)
@@ -76,7 +81,7 @@ build_nfi_cache <- function(root = get_root_dir(), out_dir = nfi_cache_dir(root)
   nfi_cache_write(.combine_taper(parts), out_dir)
 }
 
-#' Build the cache when it does not exist (called by the NFI runners before they read it).
+# Build the cache when it does not exist (called by the NFI runners before they read it).
 ensure_nfi_profiles <- function(root = get_root_dir(), progress = NULL, workers = 1L) {
   if (!nfi_profiles_ready(root)) build_nfi_cache(root, progress = progress, workers = workers)
   invisible(TRUE)

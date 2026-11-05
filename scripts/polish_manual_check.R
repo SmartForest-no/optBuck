@@ -19,12 +19,10 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"), local = FALSE)
-source(file.path(root_dir, "R", "helpers_price_tuning.R"))
-source(file.path(root_dir, "R", "helpers_distribution_edit.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+
 # tuning_run() and its constant, without the app's UI code
-for (e in parse(file.path(root_dir, "app", "tuning.R"), keep.source = FALSE))
+for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FALSE))
   if (is.call(e) && identical(as.character(e[[1L]]), "<-") && as.character(e[[2L]]) %in% c("TUNE_MIN_LOGS", "tuning_run")) eval(e)
 
 out <- file.path(root_dir, "outputs", "restructure"); dir.create(out, recursive = TRUE, showWarnings = FALSE)

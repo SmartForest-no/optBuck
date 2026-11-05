@@ -47,7 +47,7 @@ root_dir <- local({
   d
 })
 Sys.setenv(APTER_ROOT = root_dir)
-source(file.path(root_dir, "scripts", "app_backend", "01_run_sampled_plot_bucking.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
 source(file.path(root_dir, "scripts", "performance_cases.R"))
 

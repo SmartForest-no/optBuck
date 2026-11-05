@@ -21,7 +21,7 @@ root <- local({
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-dir <- file.path(root, "inputs", "test_fixtures")
+dir <- file.path(root, "inst", "extdata", "inputs", "test_fixtures")
 
 classes <- function(x) paste0("<DiameterClass><DiameterClassLowerLimit>", x, "</DiameterClassLowerLimit></DiameterClass>", collapse = "")
 lclasses <- function(x) paste0("<LengthClass><LengthClassLowerLimit>", x, "</LengthClassLowerLimit><LengthClassMargin>0</LengthClassMargin></LengthClass>", collapse = "")

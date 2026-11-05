@@ -19,13 +19,13 @@ root_dir <- local({
 Sys.setenv(APTER_ROOT = root_dir, APTER_TUNE_MAX_ITER = "3")
 if (lang == "en") Sys.setenv(APTER_LANG = "en") else Sys.unsetenv("APTER_LANG")
 Sys.unsetenv("APTER_N_PLOTS"); Sys.setenv(NOT_CRAN = "true")
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
 out <- file.path(root_dir, "outputs", "app_smoke", "review", "polish"); dir.create(out, recursive = TRUE, showWarnings = FALSE)
-fx <- file.path(root_dir, "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
+fx <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
 audit_browser_start()
 on.exit(audit_browser_stop(), add = TRUE)
-app <- audit_app_driver(file.path(root_dir, "app"), name = paste0("polish_", lang), load_timeout = 60 * 1000,
+app <- audit_app_driver(file.path(root_dir, "inst", "app"), name = paste0("polish_", lang), load_timeout = 60 * 1000,
                         timeout = 180 * 1000, width = 1400, height = 1000)
 stopifnot(inherits(app, "AppDriver"))
 js <- function(code) tryCatch(app$get_js(code), error = function(e) NA)

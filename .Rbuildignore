@@ -1,0 +1,17 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^audits$
+^scripts$
+^docs$
+^outputs$
+^figures$
+^logs$
+^data_raw$
+^data_processed$
+^app$
+^CLAUDE\.md$
+^LICENSE\.md$
+^CITATION\.cff$
+^\.claude$
+^\.github$
+^README_files$

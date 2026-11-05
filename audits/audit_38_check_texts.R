@@ -39,9 +39,8 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "R", "helpers_i18n.R"))
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
 
 out_dir <- path_output("check", root_dir = root_dir)
 ensure_dir(out_dir)
@@ -62,8 +61,8 @@ cat("  Audit: texts of the bucking check (roadmap 8)\n", file = audit_txt, appen
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-tbl <- i18n_table(file.path(root_dir, "inputs", "i18n", "translations.csv"))
-src_check <- paste(unlist(lapply(c("check.R", "check_report.R"), function(f) readLines(file.path(root_dir, "app", f), warn = FALSE, encoding = "UTF-8"))), collapse = "\n")
+tbl <- i18n_table(file.path(root_dir, "inst", "extdata", "inputs", "i18n", "translations.csv"))
+src_check <- paste(unlist(lapply(c("check.R", "check_report.R"), function(f) readLines(file.path(root_dir, "inst", "app", f), warn = FALSE, encoding = "UTF-8"))), collapse = "\n")
 src_logic <- paste(readLines(file.path(root_dir, "R", "helpers_check.R"), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
 shorten <- function(x, n = 8L) if (length(x) == 0L) "none" else
   paste(c(utils::head(x, n), if (length(x) > n) sprintf("... (%d)", length(x))), collapse = " | ")

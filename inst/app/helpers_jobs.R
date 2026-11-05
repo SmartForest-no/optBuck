@@ -59,21 +59,21 @@
   invisible(NULL)
 }
 
-#' Run one prepare function of the backend on a worker. The worker sources
-#' the backend the first time; options that steer the backend (bark model)
-#' are passed on.
+#' Run one function of the package on a worker. The worker loads the package the first time
+#' (the installed one, or the source folder in development); options that steer the backend
+#' (bark model) are passed on.
 .backend_promise <- function(fun_name, args) {
   .async_future(
     quote({
-      if (!exists(fun_name, mode = "function")) {
+      if (!isNamespaceLoaded("optBuck")) {
         Sys.setenv(APTER_ROOT = root)
-        suppressPackageStartupMessages(
-          source(file.path(root, "scripts", "app_backend", "01_run_sampled_plot_bucking.R")))
+        if (dev) suppressPackageStartupMessages(pkgload::load_all(root, quiet = TRUE))   # development: the source folder
+        else loadNamespace("optBuck")
       }
       options(opts)
-      do.call(fun_name, args)
+      do.call(get(fun_name, envir = asNamespace("optBuck")), args)
     }),
-    globals = list(fun_name = fun_name, args = args, root = ROOT,
+    globals = list(fun_name = fun_name, args = args, root = ROOT, dev = .optbuck_dev(),
                    opts = list(apter.bark_model = getOption("apter.bark_model"))))
 }
 

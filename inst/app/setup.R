@@ -9,7 +9,7 @@
 
 # ---- load plot metadata for stratum availability preview --------------------
 plots_all <- as.data.frame(arrow::read_parquet(
-  file.path(ROOT, "data_processed_github", "nfi_plots_github.parquet")))
+  extdata_path("nfi", "nfi_plots_github.parquet", root_dir = ROOT)))
 
 # ---- default assortments and prices -------------------------------------------
 # The base products as the assortment table (Phase 4c; R/helpers_products.R)
@@ -31,7 +31,7 @@ if (nzchar(Sys.getenv("APTER_TUNE_MAX_ITER")))
 # The NFI trees with the columns select_nfi_trees() (R/helpers_tree_selection.R)
 # needs: the sidebar's live tree counts use the run's own selection code.
 trees_meta <- as.data.frame(arrow::read_parquet(
-  file.path(ROOT, "data_processed_github", "nfi_tree_plot_stratum_ready_github.parquet"),
+  extdata_path("nfi", "nfi_tree_plot_stratum_ready_github.parquet", root_dir = ROOT),
   col_select = c("plot_id_github", "treid", "species_group", "dbh_cm", "trehoyde",
                  "beregnet_hoyde", "hogstkl", "abonitet", "fylnr", "hoh")))
 
@@ -103,8 +103,8 @@ hpr_species_choices <- function(lang)
 APP_LANG <- i18n_lang(Sys.getenv("APTER_LANG", ""))
 i18n_table()
 
-# ---- release version (repo-root VERSION file; internal, not shown) ------------
-APP_VERSION <- trimws(readLines(file.path(ROOT, "VERSION"), n = 1L, warn = FALSE))
+# ---- release version (DESCRIPTION; internal, not shown) -----------------------
+APP_VERSION <- as.character(utils::packageVersion("optBuck"))
 
 # ---- parallel workers (R/helpers_parallel.R) ---------------------------------
 # Started once per app process and shared by all sessions; runs are

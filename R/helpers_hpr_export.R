@@ -22,27 +22,23 @@
 #   HprProductKey); other products get new keys above the existing ones.
 # ==============================================================================
 
-if (!exists("or_default", mode = "function")) {
-  .hx_root <- Sys.getenv("APTER_ROOT", unset = "")
-  if (nzchar(.hx_root)) source(file.path(.hx_root, "R", "helpers_utils.R"))
-}
 
-#' Elements removed from everything copied from a source file.
+# Elements removed from everything copied from a source file.
 HPR_EXPORT_COORD_TAGS <- c("StemCoordinates", "DefaultCoordinate",
                            "GeographicalRestriction", "RestrictionPoint")
 
-#' Any of these left in the written file makes the export fail.
+# Any of these left in the written file makes the export fail.
 HPR_EXPORT_COORD_CHECK <- paste0("<(?:Latitude|Longitude|Altitude|StemCoordinates|",
                                  "DefaultCoordinate|RestrictionPoint|GeographicalRestriction)[\\s>/]")
 
-#' ProductKey of StanForD's unclassified product (never a new key's base).
+# ProductKey of StanForD's unclassified product (never a new key's base).
 HPR_UNCLASSIFIED_KEY <- 999999
 
-#' CuttingReason of the simulated logs.
+# CuttingReason of the simulated logs.
 HPR_EXPORT_CUTTING_REASON <- "Automatic"
 
-#' Metadata copied from the original ClassifiedProductDefinition of a product
-#' with the same key, in file order (before the generated definitions).
+# Metadata copied from the original ClassifiedProductDefinition of a product
+# with the same key, in file order (before the generated definitions).
 HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "ProductClass",
                             "LoggingOrganisation", "ProductDestination", "ProductGroupName",
                             "StemTypeCode", "ProductPresentationOrder", "ProductDescription")
@@ -89,10 +85,10 @@ HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "Pr
 
 # ---- product definitions ----------------------------------------------------------------
 
-#' The LengthDistributionDefinition of an assortment (Phase 7a): its stored
-#' DistributionAllowed, DistributionCategory, MAXDeviation and
-#' DistributionWithinProduct, in the element order of the source files; NULL
-#' when none is stored (then nothing is written, as before).
+# The LengthDistributionDefinition of an assortment (Phase 7a): its stored
+# DistributionAllowed, DistributionCategory, MAXDeviation and
+# DistributionWithinProduct, in the element order of the source files; NULL
+# when none is stored (then nothing is written, as before).
 .hpr_export_length_distribution <- function(d) {
   g <- function(n) if (n %in% names(d)) d[[n]][1L] else NA
   al <- g("DistributionAllowed"); ct <- g("DistributionCategory")
@@ -109,8 +105,8 @@ HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "Pr
 
 # ---- what an imported product keeps (R4 D6) ---------------------------------------------
 
-#' ASCII text for an ID: Norwegian letters transliterated (ae, o, aa), every
-#' other character outside [A-Za-z0-9_-] a "_" (runs squeezed, ends trimmed).
+# ASCII text for an ID: Norwegian letters transliterated (ae, o, aa), every
+# other character outside [A-Za-z0-9_-] a "_" (runs squeezed, ends trimmed).
 ascii_id <- function(x) {
   x <- as.character(x)
   x <- gsub("\u00e6", "ae", x, fixed = TRUE); x <- gsub("\u00c6", "Ae", x, fixed = TRUE)
@@ -121,8 +117,8 @@ ascii_id <- function(x) {
   gsub("^_+|_+$", "", x)
 }
 
-#' Made-unique IDs: the first of a repeated ID keeps it, the others get _2,
-#' _3, ... (never an ID that exists in the list).
+# Made-unique IDs: the first of a repeated ID keeps it, the others get _2,
+# _3, ... (never an ID that exists in the list).
 unique_ids <- function(id) {
   id <- as.character(id); out <- id
   taken <- id[!duplicated(id)]
@@ -134,12 +130,12 @@ unique_ids <- function(id) {
   out
 }
 
-#' Hash of an assortment's imported prices and targets: its matrix cells
-#' (diameter class, length class, price, Distribution) in a fixed order. A
-#' product whose current fingerprint differs from the stored one has been
-#' edited, and gets a new ModificationDate on export.
-#' @param pm  A price matrix (pm_minimal()).
-#' @param key The assortment's ProductKey.
+# Hash of an assortment's imported prices and targets: its matrix cells
+# (diameter class, length class, price, Distribution) in a fixed order. A
+# product whose current fingerprint differs from the stored one has been
+# edited, and gets a new ModificationDate on export.
+# @param pm  A price matrix (pm_minimal()).
+# @param key The assortment's ProductKey.
 product_fingerprint <- function(pm, key) {
   r <- pm[as.character(pm$ProductKey) == key, , drop = FALSE]
   if (nrow(r) == 0L) return(NA_character_)
@@ -234,35 +230,35 @@ EXPORT_MAX_TOP_NONE_MM <- 2000     # DiameterClassMAX is required: no max top di
   out
 }
 
-#' The ProductDefinition elements of a scenario.
-#'
-#' @param defs   Assortment table (ASSORTMENT_TABLE_COLS, with HprProductKey).
-#' @param pm     The scenario's price matrix (pm_minimal()).
-#' @param orig   Named list of the source file's classified ProductDefinition
-#'   texts (names = ProductKey): the fallback for an assortment that has no
-#'   stored SourceXml.
-#' @param groups data.frame(key, species): the header's species groups.
-#' @param used_keys All ProductKeys of the source file (numeric-looking ones
-#'   set the start of the new keys).
-#' @param style  "hpr" (default) or "pin" (Phase 5b): a .pin ProductDefinition
-#'   has the ProductUserID first and a SpeciesGroupUserID last, no ProductKey
-#'   and no SpeciesGroupKey.
-#' @param now    The export time (ModificationDate of edited and new products).
-#' @param ids    Optional ProductUserIDs, one per row of `defs`, instead of the source's
-#'   or the name's (made unique).
-#' @details An imported product keeps its own ModificationDate, ProductUserID,
-#'   SpeciesGroupUserID, metadata, ManualFreeBuck, TopLogFreeBuck,
-#'   ProductCondition, CuttingWindowDefinition, PermittedGradesDefinition and
-#'   LimitationDefinition (hidden SourceXml); its ModificationDate is the
-#'   export time when its prices or targets differ from the imported ones
-#'   (SourceFingerprint). Products without a source get neutral values
-#'   (EXPORT_NEUTRAL_*), a ProductUserID made from the name (ASCII) and the
-#'   SpeciesGroupUserID of an imported product of the same species, else
-#'   "Spruce" / "Pine". ProductUserIDs are unique in the file (_2, _3, ...).
-#'   Prices and shares are whole numbers (the schema's type).
-#' @return list(xml (one text per assortment), keys (named by
-#'   assortment_table_keys(defs): the exported ProductKey), ids (the exported
-#'   ProductUserIDs)).
+# The ProductDefinition elements of a scenario.
+#
+# @param defs   Assortment table (ASSORTMENT_TABLE_COLS, with HprProductKey).
+# @param pm     The scenario's price matrix (pm_minimal()).
+# @param orig   Named list of the source file's classified ProductDefinition
+#   texts (names = ProductKey): the fallback for an assortment that has no
+#   stored SourceXml.
+# @param groups data.frame(key, species): the header's species groups.
+# @param used_keys All ProductKeys of the source file (numeric-looking ones
+#   set the start of the new keys).
+# @param style  "hpr" (default) or "pin" (Phase 5b): a .pin ProductDefinition
+#   has the ProductUserID first and a SpeciesGroupUserID last, no ProductKey
+#   and no SpeciesGroupKey.
+# @param now    The export time (ModificationDate of edited and new products).
+# @param ids    Optional ProductUserIDs, one per row of `defs`, instead of the source's
+#   or the name's (made unique).
+# @details An imported product keeps its own ModificationDate, ProductUserID,
+#   SpeciesGroupUserID, metadata, ManualFreeBuck, TopLogFreeBuck,
+#   ProductCondition, CuttingWindowDefinition, PermittedGradesDefinition and
+#   LimitationDefinition (hidden SourceXml); its ModificationDate is the
+#   export time when its prices or targets differ from the imported ones
+#   (SourceFingerprint). Products without a source get neutral values
+#   (EXPORT_NEUTRAL_*), a ProductUserID made from the name (ASCII) and the
+#   SpeciesGroupUserID of an imported product of the same species, else
+#   "Spruce" / "Pine". ProductUserIDs are unique in the file (_2, _3, ...).
+#   Prices and shares are whole numbers (the schema's type).
+# @return list(xml (one text per assortment), keys (named by
+#   assortment_table_keys(defs): the exported ProductKey), ids (the exported
+#   ProductUserIDs)).
 hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
                                 style = c("hpr", "pin"), now = .pin_time(), ids = NULL) {
   style <- match.arg(style)
@@ -481,19 +477,19 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
              block = blk, stringsAsFactors = FALSE)
 }
 
-#' Write one scenario's result as an .hpr file.
-#'
-#' @param path     Output file.
-#' @param sources  data.frame(path, name): the source file(s) in upload order
-#'   (a stem's `file` is its row).
-#' @param species_by_name Named character: lower-case trimmed species group
-#'   name -> "spruce", "pine" or "none".
-#' @param result   The scenario's backend result (tree_summary,
-#'   selected_logs_all).
-#' @param defs,pm  The scenario's assortment table and price matrix.
-#' @return list(ok, errors, path, n_stems, n_logs, per_file (stems per source
-#'   file), no_profile (stems written without logs), gap_logs (logs of the unclassified product that fill
-#'   gaps between the logs)).
+# Write one scenario's result as an .hpr file.
+#
+# @param path     Output file.
+# @param sources  data.frame(path, name): the source file(s) in upload order
+#   (a stem's `file` is its row).
+# @param species_by_name Named character: lower-case trimmed species group
+#   name -> "spruce", "pine" or "none".
+# @param result   The scenario's backend result (tree_summary,
+#   selected_logs_all).
+# @param defs,pm  The scenario's assortment table and price matrix.
+# @return list(ok, errors, path, n_stems, n_logs, per_file (stems per source
+#   file), no_profile (stems written without logs), gap_logs (logs of the unclassified product that fill
+#   gaps between the logs)).
 hpr_export_result <- function(path, sources, species_by_name, result, defs, pm) {
   fail <- function(msg) { if (file.exists(path)) unlink(path); list(ok = FALSE, errors = msg) }
   ts <- result$tree_summary; lg <- result$selected_logs_all

@@ -98,10 +98,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
 
 out_dir <- path_output("hpr_import", root_dir = root_dir)
@@ -124,7 +123,7 @@ cat("  Audit: import from .hpr (Phase A)\n", file = audit_txt, append = TRUE)
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-FIXTURE <- file.path(root_dir, "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
+FIXTURE <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr")
 fx <- readLines(FIXTURE, warn = FALSE, encoding = "UTF-8")
 # A broken variant of the fixture: `edit` takes and returns its lines.
 variant <- function(edit) {

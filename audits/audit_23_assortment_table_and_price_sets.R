@@ -71,10 +71,9 @@ root_dir <- local({
 })
 Sys.setenv(APTER_ROOT = root_dir)
 
-source(file.path(root_dir, "R", "helpers_paths.R"))
-source(file.path(root_dir, "R", "helpers_audit.R"))
-source(file.path(root_dir, "scripts", "app_backend",
-                 "01_run_sampled_plot_bucking.R"), local = FALSE)
+suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
+source(file.path(root_dir, "audits", "helpers_audit.R"))
+
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
 
 out_dir <- path_output("assortments", root_dir = root_dir)
@@ -136,10 +135,10 @@ rec("Check 02: Default limits (min top / max top / max butt, cm) and pre_phase4c
 
 # ==============================================================================
 section("03. AllowAsFirstLog / AllowAsTopLog removed")
-csv_cols <- names(read.csv(file.path(root_dir, "inputs", "ProductData_spruce_pine_default.csv"),
+csv_cols <- names(read.csv(file.path(root_dir, "inst", "extdata", "inputs", "ProductData_spruce_pine_default.csv"),
                            nrows = 1L, check.names = FALSE))
 live <- c(list.files(file.path(root_dir, "R"), "\\.R$", full.names = TRUE),
-          list.files(file.path(root_dir, "app"), "\\.R$", full.names = TRUE),
+          list.files(file.path(root_dir, "inst", "app"), "\\.R$", full.names = TRUE),
           list.files(file.path(root_dir, "scripts", "app_backend"), "\\.R$", full.names = TRUE))
 hits <- live[vapply(live, function(f) any(grepl("AllowAs(First|Top)Log", readLines(f, warn = FALSE))),
                     logical(1))]
