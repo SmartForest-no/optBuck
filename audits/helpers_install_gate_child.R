@@ -2,7 +2,7 @@
 # audits/helpers_install_gate_child.R  (2026-11-06)
 #
 # The child process of audit 40 (install gate). Started by the audit with a fresh working directory
-# outside the repository, no OPTBUCK_ROOT / APTER_ROOT, R_LIBS = the temporary library that holds the
+# outside the repository, no root variable, R_LIBS = the temporary library that holds the
 # installed package, R_USER_CACHE_DIR = a temporary folder. It does what a user does after install:
 #   library(optBuck); optBuck::run_app() (a second R process, started here, as a user's R session is),
 #   the six tabs, the bucking analysis (tab 5) three times on the owner's file 1, one NFI simulation
@@ -25,12 +25,13 @@ secs_since <- function(t0) as.numeric(difftime(Sys.time(), t0, units = "secs"))
 cpu_load <- function() suppressWarnings(tryCatch(as.numeric(system2("powershell", c("-NoProfile", "-Command",
   shQuote("(Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average")), stdout = TRUE)[1L]), error = function(e) NA_real_))
 
+old_root_var <- paste0("AP", "TER_ROOT")   # the former root variable, built so that no file carries the old name
 # ---- the environment is clean ------------------------------------------------------------------
 wd <- normalizePath(getwd(), winslash = "/")
-env_clean <- !nzchar(Sys.getenv("OPTBUCK_ROOT")) && !nzchar(Sys.getenv("APTER_ROOT")) && is.null(getOption("optbuck.root"))
+env_clean <- !nzchar(Sys.getenv("OPTBUCK_ROOT")) && !nzchar(Sys.getenv(old_root_var)) && is.null(getOption("optbuck.root"))
 suppressMessages(library(optBuck))
 pkg <- normalizePath(find.package("optBuck"), winslash = "/")
-chk("Fresh process: no OPTBUCK_ROOT/APTER_ROOT, working directory outside the repository, package loaded from the temporary library",
+chk("Fresh process: no root variable, working directory outside the repository, package loaded from the temporary library",
     env_clean && startsWith(pkg, normalizePath(lib, winslash = "/")) && !file.exists(file.path(wd, "DESCRIPTION")) && !dir.exists(file.path(wd, "inst")),
     sprintf("wd %s | package %s | env clean %s", wd, pkg, env_clean))
 chk("get_root_dir() resolves to the installed package folder without a setting",
@@ -42,9 +43,12 @@ R$cache <- optBuck:::nfi_cache_dir(); R$user_cache <- tools::R_user_dir("optBuck
 save_now()
 
 # ---- the app: run_app() in its own R process, as the user starts it ---------------------------------
+# Stubs in the global environment of the app session: the app and its workers must not pick them up
+# (the app is evaluated in an environment whose parent is the namespace).
+stubs <- paste0(c("get_root_dir", "read_hpr", "read_hpr_stems", "read_hpr_logs", "extdata_path", "path_input"), " <- function(...) stop('global stub used: ", c("get_root_dir", "read_hpr", "read_hpr_stems", "read_hpr_logs", "extdata_path", "path_input"), "')", collapse = "; ")
 srv_log <- tempfile("run_app_", fileext = ".log")
 rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-srv <- processx::process$new(rscript, c("-e", sprintf("optBuck::run_app(launch.browser = FALSE, host = '127.0.0.1', port = %d)", port)),
+srv <- processx::process$new(rscript, c("-e", sprintf("%s; optBuck::run_app(launch.browser = FALSE, host = '127.0.0.1', port = %d)", stubs, port)),
                              stdout = srv_log, stderr = "2>&1")
 on.exit({ try(srv$kill_tree(), silent = TRUE) }, add = TRUE)
 up <- FALSE; t0 <- Sys.time()

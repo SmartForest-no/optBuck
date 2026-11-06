@@ -1,13 +1,13 @@
 check,result,detail
-Check 01: R CMD build + R CMD INSTALL of the tarball into a fresh temporary library,PASS,69 s; * DONE (optBuck)
-"Check 02.1: Fresh process: no OPTBUCK_ROOT/APTER_ROOT, working directory outside the repository, package loaded from the temporary library",PASS,wd <tmp>/wd | package <tmp>/lib/optBuck | env clean TRUE
+Check 01: R CMD build + R CMD INSTALL of the tarball into a fresh temporary library,PASS,77 s; * DONE (optBuck)
+"Check 02.1: Fresh process: no root variable, working directory outside the repository, package loaded from the temporary library",PASS,wd <tmp>/wd | package <tmp>/lib/optBuck | env clean TRUE
 Check 02.2: get_root_dir() resolves to the installed package folder without a setting,PASS,<tmp>/lib/optBuck
 "Check 02.3: Writable cache is under R_user_dir(), not in the package folder",PASS,<tmp>/user_cache/R/optBuck/taper_profiles
-Check 02.4: run_app() starts and serves the page,PASS,9 s; log: Loading required package: shiny | Warning: package 'reactable' was built under R version 4.5.3 | Warning: package 'rhandsontable' was built under R version 4.5.3 |  | Listening on http://127.0.0.1:31175
+Check 02.4: run_app() starts and serves the page,PASS,10 s; log: Loading required package: shiny | Warning: package 'reactable' was built under R version 4.5.3 | Warning: package 'rhandsontable' was built under R version 4.5.3 |  | Listening on http://127.0.0.1:34244
 "Check 02.5: All six tabs open (stems, prices, simulator, tuning, check, help)",PASS,"opened: stems,prices,simulator,tuning,check,help | error elements: 0"
-Check 02.6: Tab 5 on file 1 finishes three times with a report,PASS,"seconds: 120, 115, 115 | machine CPU load (%) before/after each run: 41.9375/41.3125, 38.3125/32.75, 31.9375/32.1875"
+Check 02.6: Tab 5 on file 1 finishes three times with a report,PASS,"seconds: 130, 113, 111 | machine CPU load (%) before/after each run: 12.9375/19.6875, 7.625/8.8125, 6.3125/26.5"
 Check 02.7: PDF report downloads in Norsk,PASS,"%PDF-, 66673 bytes, text contains 'Hva tallene betyr': TRUE"
 Check 02.8: PDF report downloads in English,PASS,"%PDF-, 68988 bytes, text contains 'What the figures mean': TRUE"
-Check 02.9: NFI simulation runs from the installed package and builds the stem profile cache in R_user_dir(),PASS,"101 s; cache files before 0, after 13 in <tmp>/user_cache/R/optBuck/taper_profiles; cards: Run time 95.8 s Plots 655 Trees 12,427 Trees with logs 10,878 Logs 26,857 Commercial volume (m³ u.b.) 1,889.99 Total val"
-"Check 03: tab 5 on file 1, median of three runs (111-122 s before the conversion; REVIEW above 150 s)",PASS,"runs 120 / 115 / 115 s, median 115 s"
+Check 02.9: NFI simulation runs from the installed package and builds the stem profile cache in R_user_dir(),PASS,"104 s; cache files before 0, after 13 in <tmp>/user_cache/R/optBuck/taper_profiles; cards: Run time 99.1 s Plots 655 Trees 12,427 Trees with logs 10,878 Logs 26,857 Commercial volume (m³ u.b.) 1,889.99 Total val"
+"Check 03: tab 5 on file 1, median of three runs (111-122 s before the conversion; REVIEW above 150 s)",PASS,"runs 130 / 113 / 111 s, median 113 s"
 Check 04: nothing was written into the installed package folder,PASS,78 files before and after; new: 

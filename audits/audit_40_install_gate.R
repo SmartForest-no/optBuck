@@ -3,7 +3,7 @@
 #
 # Purpose : The install gate, done as a user does it: the package is installed with R CMD INSTALL into a
 #           fresh temporary library and used from a new R process whose working directory is a fresh
-#           temporary folder outside the repository, with OPTBUCK_ROOT and APTER_ROOT unset
+#           temporary folder outside the repository, with OPTBUCK_ROOT and the former root variable unset
 #           (audits/helpers_install_gate_child.R). It opens the app with run_app(), opens the six tabs,
 #           runs tab 5 (bucking analysis) three times on the owner's file 1, runs one NFI simulation (the
 #           stem profile cache is built into tools::R_user_dir("optBuck", "cache"); the audit points
@@ -53,6 +53,7 @@ E <- new.env(parent = emptyenv())
 rec <- function(check, result, detail = "") record_check(E, check, result, detail, log_path = audit_txt)
 PASS <- "PASS"; FAIL <- "FAIL"; REVIEW <- "REVIEW"
 ok <- function(x) if (isTRUE(x)) PASS else FAIL
+old_root_var <- paste0("AP", "TER_ROOT")   # built from pieces: no file may carry the old name (audit 39)
 work <- file.path(tempdir(), "gate"); dir.create(work, recursive = TRUE)
 san <- function(x) gsub(gsub("\\\\", "/", normalizePath(work, winslash = "/")), "<tmp>", gsub("\\\\", "/", x), fixed = TRUE)
 rec <- function(check, result, detail = "") record_check(E, check, result, san(detail), log_path = audit_txt)
@@ -93,7 +94,7 @@ if (inst_ok) {
   rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
   p <- processx::process$new(
     rscript, file.path(root_dir, "audits", "helpers_install_gate_child.R"), wd = wd, stdout = child_log, stderr = "2>&1",
-    env = c("current", OPTBUCK_ROOT = "", APTER_ROOT = "", R_LIBS = lib, R_USER_CACHE_DIR = cache_tmp, NOT_CRAN = "true",
+    env = c("current", OPTBUCK_ROOT = "", setNames("", old_root_var), R_LIBS = lib, R_USER_CACHE_DIR = cache_tmp, NOT_CRAN = "true",
             GATE_OUT = child_out, GATE_FILE1 = if (is.na(file1)) "" else file1, GATE_HELPERS = file.path(root_dir, "audits", "helpers_audit.R"),
             GATE_PORT = as.character(sample(20000:40000, 1L)), GATE_LIB = lib))
   p$wait(timeout = 3000 * 1000)

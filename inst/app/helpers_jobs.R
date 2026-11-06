@@ -70,7 +70,8 @@
         else loadNamespace("optBuck")
       }
       options(opts)
-      do.call(get(fun_name, envir = asNamespace("optBuck")), args)
+      # Looked up in the namespace and run from there: nothing is taken from the worker's global environment.
+      do.call(get(fun_name, envir = asNamespace("optBuck"), inherits = FALSE), args)
     }),
     globals = list(fun_name = fun_name, args = args, root = ROOT, dev = .optbuck_dev(),
                    opts = list(optbuck.bark_model = getOption("optbuck.bark_model"))))

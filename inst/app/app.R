@@ -8,9 +8,9 @@
 #           In development (the repository): pkgload::load_all(); optBuck::run_app(), or
 #           shiny::runApp("inst/app") from the repository root.
 #
-# Package : the app uses the package's internal functions, so they are put on the search path
-#           (attach of the namespace's objects). In development the package is loaded from the source
-#           folder with pkgload::load_all().
+# Package : the app uses the package's internal functions: its files are evaluated in an environment
+#           whose parent is the package namespace (not the global environment). In development the
+#           package is loaded from the source folder with pkgload::load_all().
 #
 # Files   : setup.R               data, default assortments and prices, choices
 #           theme.R               design tokens, bslib (Bootstrap 5) theme
@@ -43,20 +43,20 @@ if (!isNamespaceLoaded("optBuck")) {
     suppressPackageStartupMessages(pkgload::load_all(src_root, quiet = TRUE))      # development
   else loadNamespace("optBuck")
 }
-if (!"optBuck_internals" %in% search()) {
-  ns_objects <- as.list(asNamespace("optBuck"), all.names = TRUE)
-  ns_objects <- ns_objects[!startsWith(names(ns_objects), ".__") & names(ns_objects) != ".packageName"]   # not the namespace's bookkeeping
-  attach(ns_objects, name = "optBuck_internals", warn.conflicts = FALSE)
-}
-ROOT <- get_root_dir()      # the package folder (installed) or the repository root (development)
+# The app is evaluated in its own environment whose parent is the optBuck namespace, not the global
+# environment: objects in the user's workspace (a get_root_dir(), a read_hpr(), ...) never mask the
+# package's functions. Lookup order: app environment, namespace, imports, base, then the search path.
+app_env <- new.env(parent = asNamespace("optBuck"))
+app_env$APP_DIR <- APP_DIR
+app_env$ROOT <- asNamespace("optBuck")$get_root_dir()   # the package folder (installed) or the repository root (development)
 
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",
              "helpers_upload.R", "helpers_jobs.R", "tuning.R", "check_report.R", "check.R", "help.R", "app_ui.R", "server_scenarios.R",
              "app_server.R")) {
-  source(file.path(APP_DIR, .f), local = TRUE)
+  sys.source(file.path(APP_DIR, .f), envir = app_env, keep.source = FALSE)
 }
 rm(.f)
 
 # ---- launch -----------------------------------------------------------------
-shinyApp(ui, server)
+shinyApp(app_env$ui, app_env$server)
