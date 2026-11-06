@@ -19,7 +19,7 @@
 # ==============================================================================
 
 
-# Apter's "solid volume" rule, shared by the NOK/m3 denominator and the
+# optBuck's "solid volume" rule, shared by the NOK/m3 denominator and the
 # pulpwood/waste price volume (helpers_candidate_generation.R), so the two
 # cannot diverge (decided 2026-10-12, see CLAUDE.md).
 #

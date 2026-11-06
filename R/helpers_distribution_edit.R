@@ -147,7 +147,7 @@ dist_clear_fields <- function(defs, id) {
 }
 
 # Set DistributionAllowed (the harvester also steers towards the target:
-# apportionment bucking). Only written to exports; Apter's own bucking is pure
+# apportionment bucking). Only written to exports; optBuck's own bucking is pure
 # value bucking.
 dist_set_allowed <- function(defs, id, allowed) {
   defs$DistributionAllowed[.dist_def_row(defs, id)] <- isTRUE(allowed)

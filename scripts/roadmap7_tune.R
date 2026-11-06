@@ -7,7 +7,7 @@
 #           with the best prices and compare.
 #
 # Privacy : LOCAL ONLY. The files are named file1..file5 (alphabetical in
-#           C:/apter_private/hpr/); only product names, counts and numbers are
+#           C:/optbuck_private/hpr/); only product names, counts and numbers are
 #           printed or written, to outputs/roadmap7/ (gitignored).
 #
 # Output  : outputs/roadmap7/tune_summary.csv, tune_trace_R<k>.csv,
@@ -19,16 +19,16 @@
 # ==============================================================================
 
 args <- commandArgs(TRUE)
-folder <- if (length(args) >= 1L) args[1L] else "C:/apter_private/hpr"
+folder <- if (length(args) >= 1L) args[1L] else "C:/optbuck_private/hpr"
 only   <- if (length(args) >= 2L) strsplit(args[2L], ",", fixed = TRUE)[[1L]] else NULL
 root <- local({
-  d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root)
+Sys.setenv(OPTBUCK_ROOT = root)
 suppressPackageStartupMessages(
-  suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
+  suppressMessages(pkgload::load_all(root, quiet = TRUE)))   # the package (R/, inst/)
 source(file.path(root, "scripts", "roadmap7_helpers.R"))     # also sources R/helpers_price_tuning.R
 out_dir <- file.path(root, "outputs", "roadmap7")
 show <- make_show(out_dir)

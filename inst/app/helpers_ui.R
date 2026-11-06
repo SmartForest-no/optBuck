@@ -2,17 +2,17 @@
 #
 # Purpose : UI building blocks in the ForestSens / Redwood style (cards,
 #           read-only fields, tables, plots).
-#           Pure functions returning tags or widgets; styles in www/apter.css,
+#           Pure functions returning tags or widgets; styles in www/optbuck.css,
 #           colours in theme.R.
 
 
 # ---- page chrome ---------------------------------------------------------------
 
 #' Navbar brand: small icon and the name shown in the app ("optBuck";
-#' the code and repository keep the name Apter).
+#' the code and repository keep the name optBuck).
 APP_DISPLAY_NAME <- "optBuck"
 navbar_brand <- function() {
-  tags$span(tags$img(src = "apter-icon.svg", alt = ""), APP_DISPLAY_NAME)
+  tags$span(tags$img(src = "optbuck-icon.svg", alt = ""), APP_DISPLAY_NAME)
 }
 
 
@@ -35,7 +35,7 @@ navbar_logo <- function()
 
 # ---- language (Phase 1, 2026-10-27) ------------------------------------------------
 # Static text is a span carrying its id (and arguments): the page is built in
-# APP_LANG, and www/apter.js swaps the text when the viewer switches language.
+# APP_LANG, and www/optbuck.js swaps the text when the viewer switches language.
 # The server renders its own outputs with tr(..., lang = lang()).
 
 #' A static text by id (R/helpers_i18n.R), switchable in the browser.
@@ -50,12 +50,12 @@ t_ <- function(id, ...) {
 #' Both languages' `ui` texts for the browser, and the start language.
 i18n_head <- function() {
   t <- i18n_table(); u <- t[t$kind == "ui", , drop = FALSE]
-  dict <- lapply(stats::setNames(APTER_LANGS, APTER_LANGS),
+  dict <- lapply(stats::setNames(OPTBUCK_LANGS, OPTBUCK_LANGS),
                  function(l) as.list(stats::setNames(u[[l]], u$id)))
   json <- gsub("</", "<\\/", as.character(jsonlite::toJSON(dict, auto_unbox = TRUE)), fixed = TRUE)
   tagList(
-    tags$meta(name = "apter-lang", content = APP_LANG),
-    tags$script(id = "apter-i18n", type = "application/json", HTML(json)))
+    tags$meta(name = "optbuck-lang", content = APP_LANG),
+    tags$script(id = "optbuck-i18n", type = "application/json", HTML(json)))
 }
 
 #' The language switch in the navbar: Norsk | English.
@@ -66,7 +66,7 @@ lang_switch <- function() {
 }
 
 #' fileInput with a switchable button and placeholder.
-apter_file_input <- function(id, label, accept = NULL, width = "100%") {
+optbuck_file_input <- function(id, label, accept = NULL, width = "100%") {
   htmltools::tagQuery(
     fileInput(id, label, accept = accept, width = width,
               buttonLabel = t_("file_browse"), placeholder = tr("file_none", lang = APP_LANG))
@@ -83,10 +83,10 @@ file_input_lang <- function(id, label, accept, lang, width = "100%", multiple = 
 
 #' A card with a plain header. collapsible = TRUE renders a <details> card
 #' with the disclosure triangle from the reference (open by default).
-apter_card <- function(title, ..., collapsible = FALSE, open = TRUE) {
+optbuck_card <- function(title, ..., collapsible = FALSE, open = TRUE) {
   if (!collapsible)
     return(bslib::card(bslib::card_header(title), bslib::card_body(...)))
-  tags$details(class = "apter-card card", open = if (open) NA else NULL,
+  tags$details(class = "optbuck-card card", open = if (open) NA else NULL,
                tags$summary(class = "card-header", title),
                div(class = "card-body", ...))
 }
@@ -125,7 +125,7 @@ ro_field_row <- function(...) div(class = "ro-row", ...)
 #' Columns are sized to their content (Phase 4d): the width fits the longest
 #' value and the longest word of the header, headers wrap, and the table is
 #' only as wide as its columns.
-apter_reactable <- function(df, digits = NULL, page_size = 10L,
+optbuck_reactable <- function(df, digits = NULL, page_size = 10L,
                             details = NULL, columns = NULL, row_class = NULL,
                             selection = NULL, sortable = TRUE, pagination = TRUE,
                             on_click = NULL, lang = "en", column_groups = NULL) {
@@ -136,10 +136,10 @@ apter_reactable <- function(df, digits = NULL, page_size = 10L,
   }
   columns <- .fit_columns(df, columns)
   if (identical(lang, "no")) columns <- .decimal_comma(df, columns)
-  t <- APTER_TOKENS
+  t <- OPTBUCK_TOKENS
   reactable::reactable(
     df,
-    class           = if (!pagination || nrow(df) <= page_size) "apter-single-page",
+    class           = if (!pagination || nrow(df) <= page_size) "optbuck-single-page",
     details         = details,
     columns         = columns,
     columnGroups    = column_groups,
@@ -289,7 +289,7 @@ paged_table_server <- function(input, output, session, id, data, page_size = 25L
   })
   output[[id]] <- reactable::renderReactable({
     df <- data()
-    apter_reactable(df[rows(), , drop = FALSE], digits = digits, page_size = page_size,
+    optbuck_reactable(df[rows(), , drop = FALSE], digits = digits, page_size = page_size,
                     sortable = FALSE, pagination = FALSE,
                     selection = if (selection) "single", lang = lang())
   })
@@ -310,8 +310,8 @@ paged_table_server <- function(input, output, session, id, data, page_size = 25L
 # ---- base-R plots ----------------------------------------------------------------
 
 #' Set plot chrome to the app style; returns the old par() for on.exit().
-apter_par <- function(mar = c(4, 5, 3, 1)) {
-  ch <- APTER_CHART
+optbuck_par <- function(mar = c(4, 5, 3, 1)) {
+  ch <- OPTBUCK_CHART
   graphics::par(mar = mar, family = "sans", bg = ch$surface,
                 col.axis = ch$muted, col.lab = ch$muted, col.main = ch$ink,
                 fg = ch$baseline, font.main = 1, cex.main = 1, cex.axis = 0.8,
@@ -337,8 +337,8 @@ hbar_height <- function(n, ab = FALSE) 100 + max(n, 1L) * if (ab) 38 else 28
 #'
 #' @param vals   Numeric vector; labels: one name per value.
 #' @param fmt    Function formatting the value labels.
-apter_hbar <- function(vals, labels, title, xlab, fmt = format, col = APTER_CHART$neutral, lang = "en") {
-  ch <- APTER_CHART
+optbuck_hbar <- function(vals, labels, title, xlab, fmt = format, col = OPTBUCK_CHART$neutral, lang = "en") {
+  ch <- OPTBUCK_CHART
   o <- order(vals)                                   # bottom to top: smallest first
   d <- data.frame(name = factor(labels[o], levels = unique(labels[o])), value = vals[o])
   d$lab <- fmt(d$value)
@@ -348,11 +348,11 @@ apter_hbar <- function(vals, labels, title, xlab, fmt = format, col = APTER_CHAR
     ggplot2::geom_col(fill = col, width = 0.7) +
     ggplot2::geom_vline(xintercept = 0, colour = ch$baseline, linewidth = 0.4) +
     ggplot2::geom_text(ggplot2::aes(label = lab, hjust = hjust), colour = ch$ink2, size = 3,
-                       family = APTER_PLOT_FONT) +
+                       family = OPTBUCK_PLOT_FONT) +
     ggplot2::scale_x_continuous(labels = .hbar_fmt_axis(lang),
                                 expand = ggplot2::expansion(mult = c(if (neg) 0.2 else 0.02, if (pos) 0.2 else 0.02))) +
     ggplot2::labs(x = xlab, y = NULL, title = title) +
-    theme_apter() +
+    theme_optbuck() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(),
                    panel.grid.major.x = ggplot2::element_line(colour = ch$grid, linewidth = 0.4),
                    axis.line.x = ggplot2::element_blank(),
@@ -362,8 +362,8 @@ apter_hbar <- function(vals, labels, title, xlab, fmt = format, col = APTER_CHAR
 #' Scenario A and B side by side per assortment, horizontal, sorted by the
 #' larger of the two values (largest on top). NA (not in that scenario):
 #' no bar and no label.
-apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en", names = c("A", "B")) {
-  ch <- APTER_CHART
+optbuck_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en", names = c("A", "B")) {
+  ch <- OPTBUCK_CHART
   sc <- tr("scenario_x", names, lang = lang)
   o <- order(pmax(a, b, na.rm = TRUE))
   lv <- unique(labels[o])
@@ -378,12 +378,12 @@ apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en", 
   ggplot2::ggplot(d, ggplot2::aes(x = value, y = name, fill = Scenario)) +
     ggplot2::geom_col(position = dodge, width = 0.75) +
     ggplot2::geom_text(ggplot2::aes(label = lab, group = Scenario), position = dodge, hjust = -0.12,
-                       colour = ch$ink2, size = 2.8, family = APTER_PLOT_FONT) +
+                       colour = ch$ink2, size = 2.8, family = OPTBUCK_PLOT_FONT) +
     ggplot2::scale_fill_manual(values = stats::setNames(c(ch$series1, ch$series2), sc), breaks = sc) +
     ggplot2::scale_x_continuous(labels = .hbar_fmt_axis(lang), limits = c(0, NA),
                                 expand = ggplot2::expansion(mult = c(0, 0.18))) +
     ggplot2::labs(x = xlab, y = NULL, title = title) +
-    theme_apter() +
+    theme_optbuck() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(),
                    panel.grid.major.x = ggplot2::element_line(colour = ch$grid, linewidth = 0.4),
                    axis.line.x = ggplot2::element_blank(),
@@ -403,13 +403,13 @@ apter_hbar_ab <- function(a, b, labels, title, xlab, fmt = format, lang = "en", 
 #' @param height_m Tree height (m), for the x-axis extent.
 #' @param title    Plot title.
 #' @param lang     Language of the axis, legend and note.
-apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lang = "en", names = c("A", "B"), labels = NULL) {
-  ch  <- APTER_CHART
+optbuck_stem_compare <- function(logs_default, logs_scenario, height_m, title, lang = "en", names = c("A", "B"), labels = NULL) {
+  ch  <- OPTBUCK_CHART
   # Custom assortment classes share the charcoal "other" fill (theme.R); their
   # label names the class.
   types  <- unique(as.character(c(logs_default$ProductType, logs_scenario$ProductType)))
   custom <- length(setdiff(types, names(ch$assortment))) > 0L
-  old <- apter_par(mar = c(3.5, 7.5, 3, 1)); on.exit(graphics::par(old))
+  old <- optbuck_par(mar = c(3.5, 7.5, 3, 1)); on.exit(graphics::par(old))
   x_max <- max(c(height_m, logs_default$StopPos / 100, logs_scenario$StopPos / 100), na.rm = TRUE)
   two <- !is.null(logs_scenario)
   graphics::plot(NA, xlim = c(0, x_max), ylim = if (two) c(0.4, 2.9) else c(1.2, 2.9), axes = FALSE,
@@ -422,7 +422,7 @@ apter_stem_compare <- function(logs_default, logs_scenario, height_m, title, lan
   graphics::axis(2, at = if (two) c(2, 1) else 2, labels = if (two) sc else sc[1L],
                  col = NA, col.ticks = NA, col.axis = ch$ink)
   draw <- function(l, y) {
-    graphics::rect(0, y - 0.32, height_m, y + 0.32, col = APTER_TOKENS$panel, border = NA)
+    graphics::rect(0, y - 0.32, height_m, y + 0.32, col = OPTBUCK_TOKENS$panel, border = NA)
     if (nrow(l) == 0L) return(invisible())
     type <- as.character(l$ProductType)
     is_custom <- !type %in% names(ch$assortment)
@@ -467,7 +467,7 @@ function(instance, td, row, col, prop, value, cellProperties) {
 
 
 # ---- ggplot2 figures (layout-and-figures) -------------------------------------------
-# Styled by theme_apter() (theme.R): Inter, white background, light grid.
+# Styled by theme_optbuck() (theme.R): Inter, white background, light grid.
 
 #' DBH and height distributions side by side (2026-10-23, Trees tab): two
 #' panels of overlapping density curves per species (alpha 0.45, thin
@@ -477,9 +477,9 @@ function(instance, td, row, col, prop, value, cellProperties) {
 #' @param dbh,height Numeric per tree (cm, m); species: "spruce"/"pine".
 #' @param height_lbl Panel title of the heights ("Height (m)", or "Measured
 #'   length (m)" for .hpr stems), in `lang`.
-apter_distribution_figure <- function(dbh, height, species, height_lbl = "Height (m)", lang = "en") {
+optbuck_distribution_figure <- function(dbh, height, species, height_lbl = "Height (m)", lang = "en") {
   panels <- c(tr("col_dbh_cm", lang = lang), height_lbl)
-  sp <- factor(tools::toTitleCase(species), levels = names(APTER_SPECIES))
+  sp <- factor(tools::toTitleCase(species), levels = names(OPTBUCK_SPECIES))
   d <- rbind(data.frame(panel = panels[1], x = dbh, Species = sp),
              data.frame(panel = panels[2], x = height, Species = sp))
   d$panel <- factor(d$panel, panels)
@@ -491,14 +491,14 @@ apter_distribution_figure <- function(dbh, height, species, height_lbl = "Height
   ggplot2::ggplot(d, ggplot2::aes(x = x, fill = Species, colour = Species)) +
     ggplot2::geom_density(alpha = 0.45, linewidth = 0.5) +
     ggplot2::facet_wrap(ggplot2::vars(panel), nrow = 1L, scales = "free") +
-    ggplot2::scale_fill_manual(values = APTER_SPECIES, drop = TRUE, labels = function(x) tr_value(x, lang)) +
-    ggplot2::scale_colour_manual(values = APTER_SPECIES, drop = TRUE) +
+    ggplot2::scale_fill_manual(values = OPTBUCK_SPECIES, drop = TRUE, labels = function(x) tr_value(x, lang)) +
+    ggplot2::scale_colour_manual(values = OPTBUCK_SPECIES, drop = TRUE) +
     ggplot2::scale_x_continuous(labels = .hbar_fmt_axis(lang)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.05)), labels = .hbar_fmt_axis(lang)) +
     ggplot2::guides(fill = if (two_sp) ggplot2::guide_legend(title = tr("col_species", lang = lang)) else "none",
                     colour = "none") +
     ggplot2::labs(x = NULL, y = tr("fig_density", lang = lang), title = tr("fig_distributions", lang = lang)) +
-    theme_apter()
+    theme_optbuck()
 }
 
 #' NOK per m³ by DBH class (2026-10-23: lines only; the tree counts are in
@@ -506,12 +506,12 @@ apter_distribution_figure <- function(dbh, height, species, height_lbl = "Height
 #' Scenario A solid, B dashed after a comparison.
 #'
 #' @param a,b dbh_class_summary() of Scenario A and (optionally) B.
-apter_dbh_class_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")) {
+optbuck_dbh_class_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")) {
   scn <- tr("scenario_x", names, lang = lang)
   cls <- function(d) d[d$dbh_class != "All", , drop = FALSE]
   a <- cls(a); if (nrow(a) == 0L) return(NULL)
   lv <- unique(a$dbh_class[order(a$class_lo)])
-  sp <- function(x) factor(tools::toTitleCase(x), levels = names(APTER_SPECIES))
+  sp <- function(x) factor(tools::toTitleCase(x), levels = names(OPTBUCK_SPECIES))
   nok <- function(d, nm) data.frame(class = factor(d$dbh_class, lv), Species = sp(d$species_group),
                                     Scenario = nm, value = d$nok_per_m3)
   lines <- rbind(nok(a, scn[1L]), if (!is.null(b)) nok(cls(b), scn[2L]))
@@ -523,7 +523,7 @@ apter_dbh_class_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")
                                       group = interaction(Species, Scenario))) +
     ggplot2::geom_line(linewidth = 0.7) +
     ggplot2::geom_point(size = 1.8) +
-    ggplot2::scale_colour_manual(values = APTER_SPECIES, drop = TRUE, labels = function(x) tr_value(x, lang)) +
+    ggplot2::scale_colour_manual(values = OPTBUCK_SPECIES, drop = TRUE, labels = function(x) tr_value(x, lang)) +
     ggplot2::scale_linetype_manual(values = stats::setNames(c("solid", "22"), scn), drop = TRUE) +
     ggplot2::scale_x_discrete(labels = function(x) i18n_decimals(x, lang)) +
     ggplot2::scale_y_continuous(labels = .hbar_fmt_axis(lang)) +
@@ -531,7 +531,7 @@ apter_dbh_class_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")
                     linetype = if (!is.null(b)) "legend" else "none") +
     ggplot2::labs(x = tr("col_dbh_class_cm", lang = lang), y = tr("unit_nok_m3", lang = lang),
                   colour = NULL, linetype = NULL, title = tr("fig_nok_by_dbh_class", lang = lang)) +
-    theme_apter()
+    theme_optbuck()
 }
 
 #' Log length distribution (Logs tab): logs per length class (dm), stacked by
@@ -539,13 +539,13 @@ apter_dbh_class_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")
 #' two panels, A above B, on shared axes.
 #'
 #' @param a,b log_length_distribution() of Scenario A and (optionally) B.
-apter_log_length_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")) {
+optbuck_log_length_figure <- function(a, b = NULL, lang = "en", names = c("A", "B")) {
   scn <- tr("scenario_x", names, lang = lang)
   d <- rbind(if (nrow(a)) cbind(a, Scenario = scn[1L]),
              if (!is.null(b) && nrow(b)) cbind(b, Scenario = scn[2L]))
   if (is.null(d) || nrow(d) == 0L) return(NULL)
   d$Scenario <- factor(d$Scenario, scn)
-  ch <- APTER_CHART
+  ch <- OPTBUCK_CHART
   cols <- c(Sawlog = ch$assortment[["sawlog"]], Pulpwood = ch$assortment[["pulpwood"]], Other = ch$other)
   p <- ggplot2::ggplot(d, ggplot2::aes(x = length_class_dm, y = logs, fill = type)) +
     ggplot2::geom_col(width = 0.8) +
@@ -556,7 +556,7 @@ apter_log_length_figure <- function(a, b = NULL, lang = "en", names = c("A", "B"
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.05)), labels = .hbar_fmt_axis(lang)) +
     ggplot2::labs(x = tr("col_length_class_dm", lang = lang), y = tr("tally_logs", lang = lang),
                   title = tr("fig_log_lengths", lang = lang)) +
-    theme_apter()
+    theme_optbuck()
   if (!is.null(b)) p <- p + ggplot2::facet_wrap(ggplot2::vars(Scenario), ncol = 1L)
   p
 }

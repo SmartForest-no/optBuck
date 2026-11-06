@@ -55,4 +55,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/tree_lists/audit_21_tree_lists_and_heights.csv
+Audit CSV: <repo>/outputs/tree_lists/audit_21_tree_lists_and_heights.csv

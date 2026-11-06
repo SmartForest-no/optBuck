@@ -5,11 +5,11 @@
 #           docs/design_reference/optbuck_design_directions.html (2026-10-16):
 #           white page and navbar, hairline rules, forest green for actions,
 #           grey-green tables and summary boxes. Component CSS lives in
-#           www/apter.css; keep the two in sync.
+#           www/optbuck.css; keep the two in sync.
 
 
 #' Design tokens shared by the theme, the CSS and the base-R plots.
-APTER_TOKENS <- list(
+OPTBUCK_TOKENS <- list(
   page_bg     = "#F3F4F3",   # page background behind the cards (2026-10-19)
   surface     = "#FFFFFF",   # cards, sidebar, navbar, dialogs
   border      = "#E6E6E6",   # navbar rule, card borders
@@ -50,7 +50,7 @@ APTER_TOKENS <- list(
 #' (2.6:1) and waste (1.6:1) are below 3:1 contrast on white, so every log
 #' carries a text label, bars carry value labels and the legend names each
 #' colour: colour is never the only cue.
-APTER_CHART <- list(
+OPTBUCK_CHART <- list(
   series1  = "#3F6E58",   # single-series bars, Scenario A
   series2  = "#C09A66",   # Scenario B
   neutral  = "#6A726E",   # delta bars (sign is carried by position)
@@ -74,12 +74,12 @@ APTER_CHART <- list(
 #' surface): CVD dE 22.2 (protan), normal dE 27.1, both pass; pine is 2.2:1
 #' on white and both fall below the chroma floor (muted by design), so the
 #' curves have an outline and a legend names each colour.
-APTER_SPECIES <- c(Spruce = "#3F6E58", Pine = "#C9A97A")
+OPTBUCK_SPECIES <- c(Spruce = "#3F6E58", Pine = "#C9A97A")
 
 #' Font of the ggplot2 figures: the app's Inter, from the TTFs next to the
 #' web fonts (www/fonts, SIL OFL), registered with systemfonts; Shiny draws
 #' plots with ragg, which uses it. "sans" if the files or packages are missing.
-APTER_PLOT_FONT <- local({
+OPTBUCK_PLOT_FONT <- local({
   f <- file.path(APP_DIR, "www", "fonts", c("inter-latin-400-normal.ttf", "inter-latin-600-normal.ttf"))
   ok <- all(file.exists(f)) && requireNamespace("systemfonts", quietly = TRUE) &&
         requireNamespace("ragg", quietly = TRUE)
@@ -90,9 +90,9 @@ APTER_PLOT_FONT <- local({
 
 #' ggplot2 theme of the figures: Inter, white background, light grid, muted
 #' axes, legend on top, bold left-aligned facet labels.
-theme_apter <- function(base_size = 11) {
-  ch <- APTER_CHART
-  ggplot2::theme_minimal(base_size = base_size, base_family = APTER_PLOT_FONT) +
+theme_optbuck <- function(base_size = 11) {
+  ch <- OPTBUCK_CHART
+  ggplot2::theme_minimal(base_size = base_size, base_family = OPTBUCK_PLOT_FONT) +
     ggplot2::theme(
       plot.background  = ggplot2::element_rect(fill = ch$surface, colour = NA),
       panel.background = ggplot2::element_rect(fill = ch$surface, colour = NA),
@@ -114,11 +114,11 @@ theme_apter <- function(base_size = 11) {
 
 
 #' The app's Bootstrap 5 theme.
-apter_theme <- function() {
-  t <- APTER_TOKENS
+optbuck_theme <- function() {
+  t <- OPTBUCK_TOKENS
   bslib::bs_theme(
     version   = 5,
-    bg        = t$surface,   # Bootstrap body-bg = card background; the page grey is set in apter.css
+    bg        = t$surface,   # Bootstrap body-bg = card background; the page grey is set in optbuck.css
     fg        = t$ink,
     primary   = t$primary,
     secondary = t$secondary,

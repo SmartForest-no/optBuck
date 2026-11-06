@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: performance equivalence
-  Run: 2026-11-05 10:50:06.904129
+  Run: 2026-11-06 10:26:28.330845
 ============================================================= 
 
 --- 01. 1 worker vs N workers ---
@@ -35,4 +35,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/performance/audit_22_performance_equivalence.csv
+Audit CSV: <repo>/outputs/performance/audit_22_performance_equivalence.csv

@@ -2,7 +2,7 @@
 # R/helpers_taper.R
 #
 # Purpose : Taper profile generation using taperNOR (over-bark, Norwegian
-#           equations) for the Apter bucking simulation.
+#           equations) for the optBuck bucking simulation.
 #
 # Accepted conventions (see CLAUDE.md):
 #   - taperNOR over-bark  (with_bark = TRUE)

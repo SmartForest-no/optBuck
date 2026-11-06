@@ -9,7 +9,7 @@
 #' Write a price matrix to a temporary long CSV for the backend. The caller
 #' removes the file after the run.
 write_price_file <- function(pm) {
-  path <- tempfile(pattern = "apter_prices_", fileext = ".csv")
+  path <- tempfile(pattern = "optbuck_prices_", fileext = ".csv")
   pm_export(pm_prices(pm), path)       # never the hidden Distribution column
   path
 }

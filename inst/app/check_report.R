@@ -39,7 +39,7 @@ chk_tables <- function(r, lang = "en") {
     df(data.frame(pct(m$all), pct(m$sawlogs), pct(m$butt_sawlogs)), c(L("chk_m_all"), L("chk_m_saw"), L("chk_m_butt")))
   else df(data.frame(pct(m$all), pct(m$sawlogs), pct(m$butt_sawlogs), pct(m$yield_with), pct(m$yield_without)),
           c(L("chk_m_all"), L("chk_m_saw"), L("chk_m_butt"), L("chk_m_with"), L("chk_m_without")))
-  limits <- c("chk_lim_a", "chk_lim_b", "chk_lim_c", "chk_lim_e", "chk_lim_g", "chk_lim_i", "chk_lim_h")
+  limits <- c("chk_lim_a", "chk_lim_b", "chk_lim_c", "chk_lim_e", "chk_lim_g", "chk_lim_i", "chk_lim_j", "chk_lim_h")
   out$limits <- vapply(limits, L, "")
   if (isTRUE(r$no_profile)) {
     a <- r$assortments$recorded
@@ -88,17 +88,17 @@ chk_tables <- function(r, lang = "en") {
 #' density plots on 1 Stammer). NULL when there are too few stems.
 chk_fig_density <- function(r, lang = "en", pdf = FALSE) {
   s <- r$stems[r$stems$use & is.finite(r$stems$yield), , drop = FALSE]
-  d <- data.frame(Species = factor(tools::toTitleCase(s$species_group), levels = names(APTER_SPECIES)), x = 100 * s$yield)
+  d <- data.frame(Species = factor(tools::toTitleCase(s$species_group), levels = names(OPTBUCK_SPECIES)), x = 100 * s$yield)
   n <- table(d$Species); d <- d[n[as.character(d$Species)] >= 2L, , drop = FALSE]
   if (nrow(d) == 0L) return(NULL)
   ggplot2::ggplot(d, ggplot2::aes(x = x, fill = Species, colour = Species)) +
     ggplot2::geom_density(alpha = 0.45, linewidth = 0.5) +
-    ggplot2::scale_fill_manual(values = APTER_SPECIES, drop = TRUE, labels = function(x) tr_value(x, lang)) +
-    ggplot2::scale_colour_manual(values = APTER_SPECIES, drop = TRUE) +
+    ggplot2::scale_fill_manual(values = OPTBUCK_SPECIES, drop = TRUE, labels = function(x) tr_value(x, lang)) +
+    ggplot2::scale_colour_manual(values = OPTBUCK_SPECIES, drop = TRUE) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.05))) +
     ggplot2::guides(fill = if (length(unique(d$Species)) > 1L) ggplot2::guide_legend(title = tr("col_species", lang = lang)) else "none", colour = "none") +
     ggplot2::labs(title = tr("chk_fig_degree", lang = lang), x = tr("chk_ax_degree", lang = lang), y = tr("chk_ax_density", lang = lang)) +
-    ggplot2::coord_cartesian(xlim = c(0, 130)) + theme_apter() + .chk_font(pdf)      # a few stems with a tiny best value reach several hundred %
+    ggplot2::coord_cartesian(xlim = c(0, 130)) + theme_optbuck() + .chk_font(pdf)      # a few stems with a tiny best value reach several hundred %
 }
 
 #' Number of facets (assortments) of the length distribution figure.
@@ -113,9 +113,9 @@ chk_fig_length <- function(r, lang = "en", pdf = FALSE) {
   thin <- function(x) x[seq(1L, length(x), by = max(1L, ceiling(length(x) / 12L)))]      # readable x ticks
   ggplot2::ggplot(long, ggplot2::aes(factor(length_dm), n, fill = src)) +
     ggplot2::geom_col(position = "dodge", width = 0.8) + ggplot2::facet_wrap(~name, scales = "free", ncol = 1) +
-    ggplot2::scale_fill_manual(values = setNames(c(APTER_CHART$series1, APTER_CHART$series2), c(tr("chk_c_recorded", lang = lang), tr("chk_c_best", lang = lang)))) +
+    ggplot2::scale_fill_manual(values = setNames(c(OPTBUCK_CHART$series1, OPTBUCK_CHART$series2), c(tr("chk_c_recorded", lang = lang), tr("chk_c_best", lang = lang)))) +
     ggplot2::scale_x_discrete(breaks = thin) + ggplot2::scale_y_continuous(breaks = function(l) pretty(l, n = 4L)) +
-    ggplot2::labs(x = tr("chk_ax_class", lang = lang), y = tr("chk_ax_logs", lang = lang), fill = NULL) + theme_apter() + .chk_font(pdf)
+    ggplot2::labs(x = tr("chk_ax_class", lang = lang), y = tr("chk_ax_logs", lang = lang), fill = NULL) + theme_optbuck() + .chk_font(pdf)
 }
 
 #' The report as a PDF in language `lang`: title, file name, date and the sections and figures of the

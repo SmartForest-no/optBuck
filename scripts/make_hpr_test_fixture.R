@@ -21,7 +21,7 @@
 args <- commandArgs(TRUE)
 if (length(args) < 1L) stop("Usage: Rscript scripts/make_hpr_test_fixture.R <example.hpr>")
 root <- local({
-  d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })

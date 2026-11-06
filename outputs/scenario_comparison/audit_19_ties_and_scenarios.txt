@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: tie-breaking and price-matrix scenarios
-  Run: 2026-11-04 16:07:22.126734
+  Run: 2026-11-06 10:28:23.453738
 ============================================================= 
 
 --- 01. Synthetic ties ---
@@ -53,4 +53,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/scenario_comparison/audit_19_ties_and_scenarios.csv
+Audit CSV: <repo>/outputs/scenario_comparison/audit_19_ties_and_scenarios.csv

@@ -152,7 +152,7 @@ hpr_scenario <- function(path, species_map = NULL, manual_ok = FALSE) {
 #' }
 #' @export
 buck_hpr <- function(path, species_map = NULL, workers = NULL) {
-  if (!is.null(workers)) { old <- options(apter.workers = as.integer(workers)); on.exit(options(old), add = TRUE) }
+  if (!is.null(workers)) { old <- options(optbuck.workers = as.integer(workers)); on.exit(options(old), add = TRUE) }
   h <- read_hpr(path); if (!isTRUE(h$ok)) stop(paste(h$errors, collapse = " "), call. = FALSE)
   smap <- if (is.null(species_map)) .species_map_of(h) else species_map
   st <- read_hpr_stems(path, defs = h); if (!isTRUE(st$ok)) stop(paste(st$errors, collapse = " "), call. = FALSE)
@@ -262,7 +262,7 @@ write_hpr <- function(result, source, path, scenario = NULL) {
 #'
 #' The built-in NFI source needs taperNOR profiles of 101,156 trees. They are built on first use; this
 #' builds them in advance (about 3 minutes on one core, about 200 MB of parquet in
-#' `tools::R_user_dir("optBuck", "cache")`, or the folder in `options(optBuck.cache_dir)`).
+#' `tools::R_user_dir("optBuck", "cache")`, or the folder in `options(optbuck.cache_dir)`).
 #'
 #' @name build_nfi_cache
 #' @param root Package root (default: found automatically).

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: R/14_validate_first_helpers.R
-  Run: 2026-11-05 10:54:53.555709
+  Run: 2026-11-06 10:30:37.071413
 ============================================================= 
 
 --- 1. Helper files ---
@@ -64,4 +64,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/helper_validation/audit_14_validate_first_helpers.csv
+Audit CSV: <repo>/outputs/helper_validation/audit_14_validate_first_helpers.csv

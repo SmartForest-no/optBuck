@@ -16,9 +16,9 @@ root_dir <- local({
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir, APTER_TUNE_MAX_ITER = "3")
-if (lang == "en") Sys.setenv(APTER_LANG = "en") else Sys.unsetenv("APTER_LANG")
-Sys.unsetenv("APTER_N_PLOTS"); Sys.setenv(NOT_CRAN = "true")
+Sys.setenv(OPTBUCK_ROOT = root_dir, OPTBUCK_TUNE_MAX_ITER = "3")
+if (lang == "en") Sys.setenv(OPTBUCK_LANG = "en") else Sys.unsetenv("OPTBUCK_LANG")
+Sys.unsetenv("OPTBUCK_N_PLOTS"); Sys.setenv(NOT_CRAN = "true")
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
 out <- file.path(root_dir, "outputs", "app_smoke", "review", "polish"); dir.create(out, recursive = TRUE, showWarnings = FALSE)

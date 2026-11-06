@@ -18,16 +18,16 @@
 # ==============================================================================
 
 args <- commandArgs(TRUE)
-hpr_file <- if (length(args) >= 1L) args[1L] else "C:/apter_private/hpr/REDACTED28"
+hpr_file <- if (length(args) >= 1L) args[1L] else "C:/optbuck_private/hpr/REDACTED28"
 reps     <- if (length(args) >= 2L) as.integer(args[2L]) else 3L
 root <- local({
-  d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root)
+Sys.setenv(OPTBUCK_ROOT = root)
 suppressPackageStartupMessages(
-  suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
+  suppressMessages(pkgload::load_all(root, quiet = TRUE)))   # the package (R/, inst/)
 
 out_dir <- file.path(root, "outputs", "roadmap7")
 source(file.path(root, "scripts", "roadmap7_helpers.R"))   # shared helpers (hand check runs here)
@@ -50,7 +50,7 @@ cat(sprintf("Product import (read_hpr + hpr_to_scenario): %.1f s, %d assortments
 
 # ---- 1a. reading + cleaning + preprocessing, once --------------------------------------
 
-workers <- apter_workers()
+workers <- optbuck_workers()
 t_read <- secs(st <- read_hpr_stems(hpr_file))
 stopifnot(isTRUE(st$ok))
 smap <- setNames(guess_hpr_species(st$species$name, st$species$user_id), st$species$key)

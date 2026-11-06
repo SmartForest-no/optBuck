@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: import from .hpr (Phase A)
-  Run: 2026-10-28 14:57:48.531739
+  Run: 2026-11-06 10:29:31.715573
 ============================================================= 
 
 --- 01. Reading ---
@@ -59,4 +59,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/hpr_import/audit_25_hpr_import.csv
+Audit CSV: <repo>/outputs/hpr_import/audit_25_hpr_import.csv

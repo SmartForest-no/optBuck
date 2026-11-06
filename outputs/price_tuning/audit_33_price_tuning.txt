@@ -17,7 +17,7 @@
   [PASS  ] Check 3: neutral and long sum to 100 per class (NA where unavailable); real = 0/30/45/25 on 37/43/49/55 dm; long = 10/20/30/40 | grid 4 lengths x 13 classes; neutral/long TRUE, real TRUE, long weights TRUE
 
 --- 4. apply_grid_prices round trip ---
-  [PASS  ] Check 4: tuning_grid(apply_grid_prices(P))$price == P; other products and unavailable cells untouched; the original grid reproduces pm | 92 Apter rows of the product
+  [PASS  ] Check 4: tuning_grid(apply_grid_prices(P))$price == P; other products and unavailable cells untouched; the original grid reproduces pm | 92 optBuck rows of the product
 
 --- 5. tune_prices determinism ---
   [PASS  ] Check 5: tune_prices twice (real, n = 200, seed 1, max_iter 3) gives an identical trace and best_price | iterations 3, best iteration 3, FG 75.04 -> 83.44 -> 88.18
@@ -60,4 +60,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/price_tuning/audit_33_price_tuning.csv
+Audit CSV: <repo>/outputs/price_tuning/audit_33_price_tuning.csv

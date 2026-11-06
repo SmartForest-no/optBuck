@@ -18,11 +18,11 @@
 args <- commandArgs(TRUE)
 if (length(args) < 1L) stop("Usage: Rscript scripts/hpr_stems_benchmark.R <folder> [workers] [out.txt]")
 root <- local({
-  d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root)
+Sys.setenv(OPTBUCK_ROOT = root)
 
 if (identical(args[1L], "--one")) {
   # One file, in this process: one line of results.

@@ -17,7 +17,7 @@
 # ==============================================================================
 
 root <- local({
-  d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
@@ -41,7 +41,7 @@ scale_profile <- function(txt, f) {
 # Scaling rounds the diameters to whole mm, so some scaled profiles fail the
 # .hpr cleaning (too flat or too steep). Candidates are scaled (0.80-1.20), checked
 # with the app's own reader and cleaning, and the first 120 that pass are kept.
-Sys.setenv(APTER_ROOT = root)
+Sys.setenv(OPTBUCK_ROOT = root)
 suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
 cand <- seq(0.80, 1.20, length.out = 400L)
 add_stems <- function(factors, keys) for (i in seq_along(factors))

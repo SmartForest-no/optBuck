@@ -7,7 +7,7 @@
 #           S:/.../optBuck/nfiBuck root and may not be edited (audit 14
 #           checks 19-20 assert the prototype scripts are unmodified). This
 #           wrapper reads its text, replaces only the `root_dir <- "..."`
-#           line with the resolved Apter root, and evaluates the result. The
+#           line with the resolved optBuck root, and evaluates the result. The
 #           frozen file and its modification time are left untouched.
 #
 # Requires: Oracle access (ROracle, keyring entry ORACLE_SERVICE /
@@ -16,23 +16,23 @@
 # Usage   : Rscript scripts/run_prototype_00_prepare_nfi_data.R            (run)
 #           Rscript scripts/run_prototype_00_prepare_nfi_data.R --dry-run  (show
 #           the substituted line and exit, no Oracle needed)
-#           Run from the project root, or set APTER_ROOT.
+#           Run from the project root, or set OPTBUCK_ROOT.
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d

@@ -14,20 +14,20 @@
 # Checks  :
 #  1.  shinytest2 and chromote are installed and a Chrome is found
 #  2.  Split app files exist (app.R, app_ui.R, app_server.R,
-#      server_scenarios.R, setup.R, theme.R, helpers_*.R, www/apter.css,
-#      www/apter.js, www/apter-icon.svg) and app/
+#      server_scenarios.R, setup.R, theme.R, helpers_*.R, www/optbuck.css,
+#      www/optbuck.js, www/optbuck-icon.svg) and app/
 #      has no ui.R/server.R (Shiny would treat those as a second app format;
 #      shinytest2 refuses to start)
 #  3.  Root resolution (no browser):
-#        a. APTER_ROOT unset              -> parent of app/ (project root)
-#        b. APTER_ROOT = empty temp dir   -> clear error
-#        c. APTER_ROOT = project root     -> project root
+#        a. OPTBUCK_ROOT unset              -> parent of app/ (project root)
+#        b. OPTBUCK_ROOT = empty temp dir   -> clear error
+#        c. OPTBUCK_ROOT = project root     -> project root
 #  4.  Pure helpers (no browser):
 #        a. write_price_file() + upload_price_set(): a long file of A x1.2
 #           uploads back unchanged into A; into B it makes every product
 #           "own" and B differs from A
 #        b. build_run_params(): HKL "4" -> c(41L, 42L), "__all__" -> NULL,
-#           all plots (APTER_N_PLOTS instead samples that many, seed 42)
+#           all plots (OPTBUCK_N_PLOTS instead samples that many, seed 42)
 #        c. count_eligible_plots() matches a direct filter of plots_prod
 #        d. the default assortment table gives the base ProductData
 #        e. live tree counts (layout-and-figures): select_nfi_trees() gives
@@ -196,7 +196,7 @@
 #      SCA Sagtømmer (screenshots 20-21)
 #
 # Language (Phase 1, 2026-10-27): checks 05-33 drive the page in English
-# (APTER_LANG=en); checks 34-39 a second session that starts in Norsk, the
+# (OPTBUCK_LANG=en); checks 34-39 a second session that starts in Norsk, the
 # app's default (screenshots in outputs/app_smoke/review/audit17/, prefix no_):
 # 34.  Norsk by default: html lang nb, Norsk active on the switch, the tabs,
 #      Run button, window title and the server-rendered assortment table in
@@ -249,19 +249,19 @@
 # ==============================================================================
 suppressPackageStartupMessages(library(readr))
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
@@ -312,7 +312,7 @@ rec("Check 01: shinytest2 + chromote installed and Chrome found",
 section("02. Split app files exist")
 app_files <- c("app.R", "app_ui.R", "app_server.R", "server_scenarios.R", "setup.R",
                "theme.R", "helpers_ui.R", "helpers_validation.R",
-               "helpers_upload.R", "www/apter.css", "www/apter.js", "www/apter-icon.svg")
+               "helpers_upload.R", "www/optbuck.css", "www/optbuck.js", "www/optbuck-icon.svg")
 missing_app  <- app_files[!file.exists(file.path(app_dir, app_files))]
 conflicting  <- c("ui.R", "server.R", "global.R")
 conflicting  <- conflicting[file.exists(file.path(app_dir, conflicting))]
@@ -327,29 +327,29 @@ rec("Check 02: Split app files exist",
 # ==============================================================================
 section("03. Root resolution")
 # Roadmap 8: the app no longer has its own root resolution (helpers_root.R is gone); it uses get_root_dir() of the package.
-saved_root  <- Sys.getenv("APTER_ROOT", unset = NA)
+saved_root  <- Sys.getenv("OPTBUCK_ROOT", unset = NA)
 restore_env <- function() {
-  if (is.na(saved_root)) Sys.unsetenv("APTER_ROOT")
-  else Sys.setenv(APTER_ROOT = saved_root)
+  if (is.na(saved_root)) Sys.unsetenv("OPTBUCK_ROOT")
+  else Sys.setenv(OPTBUCK_ROOT = saved_root)
 }
 # a. unset -> the package folder (here the source folder, load_all())
-Sys.unsetenv("APTER_ROOT")
+Sys.unsetenv("OPTBUCK_ROOT")
 r_a <- tryCatch(get_root_dir(), error = function(e) paste("ERROR:", conditionMessage(e)))
 rec("Check 03a: Env unset -> resolves to the package root",
     if (identical(r_a, root_dir)) PASS else FAIL,
     sprintf("resolved '%s' (expected '%s')", r_a, root_dir))
-# b. APTER_ROOT = empty temp dir -> clear error
+# b. OPTBUCK_ROOT = empty temp dir -> clear error
 bad_dir <- file.path(tempdir(), "audit17_not_a_root")
 dir.create(bad_dir, showWarnings = FALSE)
-Sys.setenv(APTER_ROOT = bad_dir)
+Sys.setenv(OPTBUCK_ROOT = bad_dir)
 r_b <- tryCatch({ get_root_dir(); NULL }, error = function(e) conditionMessage(e))
-rec("Check 03b: APTER_ROOT = temp dir -> clear error",
+rec("Check 03b: OPTBUCK_ROOT = temp dir -> clear error",
     if (!is.null(r_b) && grepl("does not contain inst/extdata/inputs", r_b, fixed = TRUE)) PASS else FAIL,
     if (is.null(r_b)) "resolved without error (expected stop())" else sprintf("error: %s", r_b))
-# c. APTER_ROOT = real root -> resolves
-Sys.setenv(APTER_ROOT = root_dir)
+# c. OPTBUCK_ROOT = real root -> resolves
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 r_c <- tryCatch(get_root_dir(), error = function(e) paste("ERROR:", conditionMessage(e)))
-rec("Check 03c: APTER_ROOT = project root -> resolves",
+rec("Check 03c: OPTBUCK_ROOT = project root -> resolves",
     if (identical(r_c, root_dir)) PASS else FAIL,
     sprintf("resolved '%s'", r_c))
 restore_env()
@@ -360,8 +360,8 @@ section("04. Pure app helpers")
 # Same load order as app.R: backend (global), then app files into one env.
 H <- new.env()
 H$ROOT <- root_dir; H$APP_DIR <- file.path(root_dir, "inst", "app")
-saved_np <- Sys.getenv("APTER_N_PLOTS", unset = NA)
-Sys.unsetenv("APTER_N_PLOTS")
+saved_np <- Sys.getenv("OPTBUCK_N_PLOTS", unset = NA)
+Sys.unsetenv("OPTBUCK_N_PLOTS")
 helpers_err <- tryCatch({
   suppressPackageStartupMessages(library(shiny))
   
@@ -370,7 +370,7 @@ helpers_err <- tryCatch({
     source(file.path(app_dir, f), local = H)
   ""
 }, error = function(e) conditionMessage(e))
-if (!is.na(saved_np)) Sys.setenv(APTER_N_PLOTS = saved_np)
+if (!is.na(saved_np)) Sys.setenv(OPTBUCK_N_PLOTS = saved_np)
 if (!nzchar(helpers_err)) {
   # a. price file round trip into A and into B
   defs0 <- H$APP_DEFS; pm0 <- H$APP_PM_DEFAULT
@@ -398,7 +398,7 @@ if (!nzchar(helpers_err)) {
           identical(p_fyl$n_plots, 5L) && identical(p_fyl$all_plots, FALSE) &&
           identical(unname(p_fyl$hogstkl), c(31L, 32L, 51L, 52L)) &&
           identical(p_fyl$fylnr, some_fyl)
-  rec("Check 04b: build_run_params(): HKL groups, county, all plots (or APTER_N_PLOTS), seed 42",
+  rec("Check 04b: build_run_params(): HKL groups, county, all plots (or OPTBUCK_N_PLOTS), seed 42",
       if (ok_b) PASS else FAIL,
       sprintf("HKL '4' -> %s; '__all__' -> %s; all plots %s, seed %d; HKL '3','5' -> %s; fylnr '%s' -> %s",
               paste(p_all$hogstkl, collapse = ","),
@@ -631,12 +631,12 @@ if (!browser_ok) {
   # AppDriver$new() skips (as "On CRAN") outside interactive sessions unless set.
   Sys.setenv(NOT_CRAN = "true")
   # NFI runs sample 5 plots instead of all (setup.R), to keep the audit short.
-  Sys.setenv(APTER_N_PLOTS = "5")
+  Sys.setenv(OPTBUCK_N_PLOTS = "5")
   # The Price tuning tab runs 2 iterations (test-only, app/setup.R).
-  Sys.setenv(APTER_TUNE_MAX_ITER = "2")
-  # Checks 05-33 drive the English page (test-only APTER_LANG, setup.R; the
+  Sys.setenv(OPTBUCK_TUNE_MAX_ITER = "2")
+  # Checks 05-33 drive the English page (test-only OPTBUCK_LANG, setup.R; the
   # app starts in Norsk otherwise); checks 34-39 a second session in Norsk.
-  Sys.setenv(APTER_LANG = "en")
+  Sys.setenv(OPTBUCK_LANG = "en")
   # chromote waits 10 s for Chrome by default; cold starts on the remote
   # desktop can exceed that. 30 s per attempt, and audit_app_driver() retries
   # once on a fresh Chrome and profile (helpers_audit.R).
@@ -698,7 +698,7 @@ if (!browser_ok) {
                            ".map(function(a){ return a.textContent.trim(); }).join('|')"))
     active <- js(app, "document.querySelector('#main_nav .nav-link.active').textContent.trim()")
     body0 <- js(app, "document.body.textContent")
-    n_old <- js(app, "document.querySelectorAll('.status-tile, .apter-footer, .apter-hero').length")
+    n_old <- js(app, "document.querySelectorAll('.status-tile, .optbuck-footer, .optbuck-hero').length")
     stripe <- js(app, "document.querySelectorAll('.banner-strip').length")
     # The look (option 3 "Combination"), as computed by the browser.
     css <- function(sel, prop) js(app, sprintf(
@@ -763,7 +763,7 @@ if (!browser_ok) {
       identical(active, "1 Stems") && identical(n_old, 0L) &&
       !grepl("AVAILABLE|PLANNED|Release ", body0) && !grepl("\\bHome\\b", body0) &&
       identical(stripe, 0L) && look_ok && grepl("optBuck", title, fixed = TRUE) && identical(brand, "optBuck") &&
-      !grepl("Apter", paste(title, brand), fixed = TRUE) &&
+      !grepl(paste0("Ap", "ter"), paste(title, brand), fixed = TRUE) &&
       grepl("NFI data", texts6, fixed = TRUE) && !grepl("NFI sample", texts6, fixed = TRUE) &&
       !grepl("(^|[^0-9.])2021([^0-9]|$)", texts6) && !grepl("wide or long", texts6, fixed = TRUE) &&
       !grepl("runs use Scenario A only|runs compare both", texts6) &&
@@ -976,11 +976,23 @@ if (!browser_ok) {
     e12 <- try_drv({
       # bonitet 17 from check 26 above; Run is on the Simulator tab
       app$set_inputs(main_nav = "simulator", wait_ = FALSE); app$wait_for_idle()
+      # Deterministic sampling (2026-11-06): a MutationObserver in the page records the state of
+      # Run and of the status line on every change, so the busy state is seen whenever it occurs,
+      # however fast the run is. No polling, no retry, no extra waiting.
+      js(app, paste0(
+        "(function(){ var b = document.getElementById('run_btn'), s = document.getElementById('run_status');",
+        " window.__run12 = {disabled: false, status: ''};",
+        " var rec = function(){ if (b.disabled) { window.__run12.disabled = true;",
+        "   var t = s ? s.innerText.trim() : ''; if (t) window.__run12.status = t; } };",
+        " window.__run12_obs = new MutationObserver(rec);",
+        " window.__run12_obs.observe(b, {attributes: true});",
+        " if (s) window.__run12_obs.observe(s, {childList: true, subtree: true, characterData: true, attributes: true}); })()"))
       app$click("run_btn")
       app$wait_for_idle(timeout = 120 * 1000)
-      busy_disabled <- isTRUE(js(app, "document.getElementById('run_btn').disabled"))
-      busy_status   <- txt(app, "#run_status")
       wait_run(app)
+      busy_disabled <- isTRUE(js(app, "window.__run12.disabled"))
+      busy_status   <- js(app, "window.__run12.status")
+      js(app, "window.__run12_obs.disconnect()")
     })
     after_enabled <- !isTRUE(js(app, "document.getElementById('run_btn').disabled"))
     cards <- txt(app, "#summary_cards")
@@ -1464,11 +1476,11 @@ if (!browser_ok) {
         sprintf("box: '%s' (run: %s plots, %s trees) | both species: '%s' | back to spruce: same %s | tree list: '%s'%s",
                 gsub("\\s+", " ", trimws(c26$spruce)), plots_val, n_trees_run, gsub("\\s+", " ", trimws(c26$both)),
                 identical(c26$back, c26$spruce), gsub("\\s+", " ", trimws(c26$tl)), err_txt(e26)))
-    # 28. altitude slider (the app samples APTER_N_PLOTS plots, so the band is
+    # 28. altitude slider (the app samples OPTBUCK_N_PLOTS plots, so the band is
     # compared with the selection code's own text for that band)
     in28  <- list(species_group = "spruce", hkl_group = "4", abonitet = "17", fylnr_sel = "__all__")
     sel28 <- select_nfi_trees(H$trees_meta, H$build_run_params(
-      c(in28, list(hoh_range = c(200, 400))), n_plots = as.integer(Sys.getenv("APTER_N_PLOTS", "5"))))
+      c(in28, list(hoh_range = c(200, 400))), n_plots = as.integer(Sys.getenv("OPTBUCK_N_PLOTS", "5"))))
     exp28 <- H$tree_counts(sel28$trees$species_group, length(sel28$plots))$text
     ok28 <- !nzchar(e28) && identical(as.numeric(c28$start), as.numeric(H$HOH_RANGE)) &&
       grepl(exp28, c28$band, fixed = TRUE) && !identical(c28$band, c26$spruce) &&
@@ -1898,7 +1910,7 @@ if (!browser_ok) {
     # 43. Price tuning tab (roadmap 7, session 3): without .hpr stems only the
     # message; with the invented tuning fixture (120 spruce stems) as the stem
     # source and its products imported into A, tune spruce 140 SCA with the
-    # even target for two iterations (APTER_TUNE_MAX_ITER); table, plot and
+    # even target for two iterations (OPTBUCK_TUNE_MAX_ITER); table, plot and
     # price-change table appear; Use tuned prices in scenario B replaces B with
     # A's assortments and the tuned prices.
     c43 <- list(msg = "", extra = NA_integer_, boxes = "", rows = "", price_cells = 0L, use = "", q = "",
@@ -2164,7 +2176,7 @@ if (!browser_ok) {
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(species_group = "both", hkl_group = "5", fylnr_sel = "11", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(abonitet = c("11", "14", "17"), hoh_range = c(0, 1000), wait_ = FALSE); app$wait_for_idle(); Sys.sleep(1)
-      c47$intro <- txt(app, ".apter-page .page-intro")
+      c47$intro <- txt(app, ".optbuck-page .page-intro")
       c47$btn <- trimws(txt(app, "#stems_use_nfi"))
       c47$rows_before <- vis_rows(app, "stem_summary")
       c47$plot_before <- vis_img(app, "fig_stem_dists")
@@ -2230,7 +2242,7 @@ if (!browser_ok) {
     # Checks 34-39: a second session in Norsk (Phase 1, 2026-10-27)
     # ==========================================================================
     section("34-39. Norsk")
-    Sys.unsetenv("APTER_LANG")                       # the app's default language
+    Sys.unsetenv("OPTBUCK_LANG")                       # the app's default language
     if (!exists("i18n_table", mode = "function")) {
     }
     tr_tbl <- i18n_table(file.path(root_dir, "inst", "extdata", "inputs", "i18n", "translations.csv"))
@@ -2278,7 +2290,7 @@ if (!browser_ok) {
         c34$state <- lang_state(app); c34$nav <- nav_txt(app)
         c34$run <- trimws(txt(app, "#run_btn")); c34$title <- js(app, "document.title")
         c34$hdr <- hdr_a(app); c34$row1 <- rows_txt(app, "tbl_asm_a")
-        app$run_js("window.__apter17 = 1;")
+        app$run_js("window.__optbuck17 = 1;")
         lshot(app, "01_prices_no")
         switch_to(app, "en")
         c34$state_en <- lang_state(app); c34$nav_en <- nav_txt(app); c34$run_en <- trimws(txt(app, "#run_btn"))
@@ -2286,7 +2298,7 @@ if (!browser_ok) {
         lshot(app, "02_prices_en")
         switch_to(app, "no")
         c34$state_back <- lang_state(app); c34$hdr_back <- hdr_a(app)
-        c34$marker <- js(app, "window.__apter17 === 1")
+        c34$marker <- js(app, "window.__optbuck17 === 1")
       })
       ok34 <- !nzchar(e34) && identical(c34$state, "nb|no") && identical(c34$nav, "1 Stammer|2 Sortimentskrav og priser|3 Simulator|4 Pristilpasning|5 Apteringsanalyse|Hjelp") &&
         identical(c34$run, "Kjør optimering") && grepl("apteringssimulator", or_default(c34$title, "")) &&
@@ -2420,7 +2432,7 @@ if (!browser_ok) {
                                        pa$LengthClass_dm %in% 31]
         app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
         app$wait_for_js("!!document.querySelector('#tree_counts .tree-counts-n')", timeout = 60 * 1000)
-        c35$sidebar <- vis_text(app, ".apter-page")
+        c35$sidebar <- vis_text(app, ".optbuck-page")
         c35$counts <- trimws(txt(app, "#tree_counts"))
         c35$species <- js(app, "$('#species_group')[0].selectize.getItem($('#species_group')[0].selectize.getValue()).text()")
         c35$county <- js(app, "$('#fylnr_sel')[0].selectize.getItem('__all__').text()")
@@ -2570,7 +2582,7 @@ if (!browser_ok) {
         c39$flat_b <- js(app, "document.querySelector('#flat_price_b') ? document.querySelector('#flat_price_b').value : ''")
         app$upload_file(scen_b_upload = c38$f_scen); app$wait_for_idle()
         c39$msg <- trimws(txt(app, "#msg_b"))
-        c39$stored <- js(app, "window.localStorage.getItem('apter.lang')")
+        c39$stored <- js(app, "window.localStorage.getItem('optbuck.lang')")
         app$run_js("location.reload();")
         Sys.sleep(2)
         app$wait_for_js("!!document.querySelector('.lang-btn.is-active')",   # the app opens on Stems after a reload

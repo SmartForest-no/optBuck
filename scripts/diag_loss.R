@@ -3,21 +3,21 @@
 #
 # Purpose : Decompose the value loss (best possible minus recorded) of the bucking check
 #           of one of the owner's .hpr files, from the saved bucking_check() results
-#           (scripts/diag_save_check.R -> C:/apter_private/diag/<file>_rz.rds / _norz.rds).
-#           Parts a-i of the task. Output: C:/apter_private/diag/<file>_loss.txt (private:
+#           (scripts/diag_save_check.R -> C:/optbuck_private/diag/<file>_rz.rds / _norz.rds).
+#           Parts a-i of the task. Output: C:/optbuck_private/diag/<file>_loss.txt (private:
 #           stem keys) and <file>_loss_table.csv (aggregates only).
 # Usage   : Rscript scripts/diag_loss.R file5 [file1 file4]
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
-dirp <- "C:/apter_private/hpr"; dg <- "C:/apter_private/diag"
+dirp <- "C:/optbuck_private/hpr"; dg <- "C:/optbuck_private/diag"
 cfg <- list(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], file3 = file.path(dirp, "REDACTED33"),
             file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))
 args <- commandArgs(trailingOnly = TRUE)
@@ -68,7 +68,7 @@ for (nm in intersect(names(cfg), args)) {
   reason[nopr & ru$h_crit %in% "Forbidden to buck the log even manually"] <- "forbidden cell"
   reason[nopr & is.na(reason) & ru$h_crit %in% "Only logs bucked manually allowed"] <- "manual-only cell"
   reason[nopr & is.na(reason) & !ru$h_cell] <- "outside the matrix (diameter or length)"
-  reason[nopr & is.na(reason)] <- "no price in Apter's grid (other)"
+  reason[nopr & is.na(reason)] <- "no price in optBuck's grid (other)"
   say("a. Recorded logs valued 0 (not waste): %d of %d non-waste logs (%s of their harvester price volume)", sum(zero), sum(nw), pc(sum(ru$m3_price[zero], na.rm = TRUE), sum(ru$m3_price[nw], na.rm = TRUE)))
   for (r in sort(unique(reason[!is.na(reason)]))) {
     k <- which(reason == r); pot <- sum(ru$h_value[k])

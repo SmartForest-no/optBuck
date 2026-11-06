@@ -1,6 +1,6 @@
-# Apter
+# optBuck
 
-Apter is a bucking simulator for Norway spruce and Scots pine. For each stem,
+optBuck is a bucking simulator for Norway spruce and Scots pine. For each stem,
 it finds the cutting pattern that gives the highest value under your product
 definitions and price matrix. Use it to compare price matrices and to plan
 bucking: see how a change in prices or product specifications changes the
@@ -125,7 +125,7 @@ above the other on narrow screens). Each card runs from top to bottom: the
 assortment table, the selected assortment with its prices, and the
 scenario's own buttons (add, reset, copy from the other scenario, download,
 upload, import from .hpr/.pin). Each
-scenario has its own assortments and its own price matrices. Apter ships
+scenario has its own assortments and its own price matrices. optBuck ships
 with this base set and the 2021 price matrices for spruce and pine
 (diameters under bark); both scenarios start from it:
 
@@ -410,7 +410,7 @@ Start the app from the project folder:
 shiny::runApp("inst/app")
 ```
 
-To start it from another folder, set the environment variable `APTER_ROOT`
+To start it from another folder, set the environment variable `OPTBUCK_ROOT`
 to the project folder first (for example in `~/.Renviron`).
 
 The NFI data used by the app are included in the repository in a
@@ -451,7 +451,7 @@ Repository layout, tests and the data pipeline are described in
 
 ## Acknowledgement
 
-Apter is developed by NIBIO within SFI SmartForest (smartforest.no), funded by the
+optBuck is developed by NIBIO within SFI SmartForest (smartforest.no), funded by the
 Research Council of Norway (RCN project no. 309671).
 
 Stem profiles come from [taperNOR](https://github.com/SmartForest-no/taperNOR).

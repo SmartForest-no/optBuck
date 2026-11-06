@@ -107,7 +107,7 @@ PERF_COMPARISONS <- list(
 perf_run_comparison <- function(a, b, root, ...) {
   path_b <- "default_2021"
   if (!is.null(b$pm)) {
-    path_b <- tempfile(pattern = "apter_perf_pm_", fileext = ".csv")
+    path_b <- tempfile(pattern = "optbuck_perf_pm_", fileext = ".csv")
     pm_export(b$pm, path_b)
     on.exit(unlink(path_b), add = TRUE)
   }
@@ -151,7 +151,7 @@ perf_compare <- function(r, b) {
 perf_run_case <- function(case, root, ...) {
   path <- "default_2021"
   if (!is.null(case$pm)) {
-    path <- tempfile(pattern = "apter_perf_pm_", fileext = ".csv")
+    path <- tempfile(pattern = "optbuck_perf_pm_", fileext = ".csv")
     pm_export(case$pm, path)
     on.exit(unlink(path), add = TRUE)
   }

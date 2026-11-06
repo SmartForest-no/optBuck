@@ -9,19 +9,19 @@
 #           (hpr_export_products(), source_xml_build(), product_fingerprint()),
 #           R/helpers_pin_export.R, R/helpers_hpr.R, pm_from_grid(by_class).
 #
-# XSD     : the Skogforsk StanForD 2010 schemas in C:/apter_private/stanford_xsd/
+# XSD     : the Skogforsk StanForD 2010 schemas in C:/optbuck_private/stanford_xsd/
 #           (v33/ProductInstruction_V3p3.xsd for .pin, v31/HarvestedProduction_V3p1.xsd
 #           for the .hpr of file5), downloaded from skogforsk.se; they carry no
 #           licence text and are never committed. Checks that need them are
 #           REVIEW when they are missing.
 #
-# Private : C:/apter_private/hpr/REDACTED28 (file5) for checks 9-11 (REVIEW
+# Private : C:/optbuck_private/hpr/REDACTED28 (file5) for checks 9-11 (REVIEW
 #           when missing). Checks 1-8 use the synthetic pin_full_synthetic.pin
 #           and the app's default assortments only.
 #
 # Checks  :
 #  1.  The XSD files are available (REVIEW otherwise)
-#  2.  An Apter-made scenario (default assortments plus a custom one with
+#  2.  An optBuck-made scenario (default assortments plus a custom one with
 #      Norwegian letters) exports a valid .pin: neutral values, ASCII unique
 #      ProductUserIDs, SpeciesGroupUserID Spruce / Pine, ModificationDate = export time
 #  3.  pin_full fixture: ProductUserID and SpeciesGroupUserID survive import -> export,
@@ -58,24 +58,24 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -101,11 +101,11 @@ cat("  Audit: StanForD exports (R4 D6)\n", file = audit_txt, append = TRUE)
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-XSD_DIR <- "C:/apter_private/stanford_xsd"
+XSD_DIR <- "C:/optbuck_private/stanford_xsd"
 XSD_PIN <- file.path(XSD_DIR, "v33", "ProductInstruction_V3p3.xsd")
 XSD_HPR <- file.path(XSD_DIR, "v31", "HarvestedProduction_V3p1.xsd")
 have_xsd <- file.exists(XSD_PIN) && file.exists(XSD_HPR)
-F5 <- "C:/apter_private/hpr/REDACTED28"
+F5 <- "C:/optbuck_private/hpr/REDACTED28"
 have5 <- file.exists(F5)
 FULL <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "pin_full_synthetic.pin")
 
@@ -142,13 +142,13 @@ by_name <- function(d, tag) {   # ProductName -> text of the product's child `ta
 
 # ==============================================================================
 section("01. The schemas")
-rec("Check 01: The StanForD 2010 XSD files (.pin 3.3, .hpr 3.1) are in C:/apter_private/stanford_xsd/",
+rec("Check 01: The StanForD 2010 XSD files (.pin 3.3, .hpr 3.1) are in C:/optbuck_private/stanford_xsd/",
     if (have_xsd) PASS else REVIEW,
     sprintf("pin schema %s, hpr schema %s%s", file.exists(XSD_PIN), file.exists(XSD_HPR),
             if (have_xsd) "" else " (download them from skogforsk.se, Released schemas; they are not committed)"))
 
 # ==============================================================================
-section("02. An Apter-made scenario")
+section("02. An optBuck-made scenario")
 t0 <- Sys.time()
 defs0 <- defs_from_products(load_products()); pm0 <- pm_minimal(load_price_matrix_long())
 cust <- .type_assortment_table(data.frame(
@@ -170,7 +170,7 @@ ok2 <- length(ids2) == sum(defs2$Type != "waste") && !anyDuplicated(ids2) && all
   all(txt_of(d2, "//ProductCondition") == "Buck always") &&
   all(txt_of(d2, "//LimitationDefinition/LimitationCategory") == "No limitation") &&
   !any(grepl("Latitude|Longitude|Coordinate", paste(readLines(x2$path, warn = FALSE), collapse = "")))
-with_xsd("Check 02: An Apter-made scenario exports a valid .pin with neutral values, unique ASCII ProductUserIDs, SpeciesGroupUserID Spruce/Pine and the export time as ModificationDate",
+with_xsd("Check 02: An optBuck-made scenario exports a valid .pin with neutral values, unique ASCII ProductUserIDs, SpeciesGroupUserID Spruce/Pine and the export time as ModificationDate",
          ok2, v2, sprintf("%d products | ids %s | XSD errors %s %s", length(ids2), paste(ids2, collapse = ","), v2$n, v2$first))
 
 # ==============================================================================
@@ -361,7 +361,7 @@ if (!have5) {
       raw <- readBin(H, "raw", 3e6); tx <- iconv(rawToChar(raw[raw != as.raw(0L)]), "UTF-8", "UTF-8", sub = "")
       sort(sub(">.*$", "", sub("^<ProductUserID[^>]*>", "", regmatches(tx, gregexpr("<ProductUserID[^>]*>[^<]*", tx))[[1L]])))
     } else character(0)
-    # every imported product's ProductUserID is in the file (the waste rows are Apter's own: neutral IDs)
+    # every imported product's ProductUserID is in the file (the waste rows are optBuck's own: neutral IDs)
     want <- sort(unlist(lapply(sc5$defs$SourceXml[!is.na(sc5$defs$SourceXml)], function(x) {
       e <- source_xml_part(x, "uid"); if (nzchar(e)) { u <- .hx_text(e, "ProductUserID"); Encoding(u) <- "UTF-8"; u } else NULL })))
     ok10 <- isTRUE(xh$ok) && length(want) > 0L && all(want %in% hid) && !anyDuplicated(hid)

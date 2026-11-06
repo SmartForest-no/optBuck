@@ -2,7 +2,7 @@
 # audits/audit_37_check_vs_old.R
 #
 # Purpose : R3 (roadmap 8, task 2): the new reader, profiles and permitted grades against the SAVED
-#           output of the old optBuck (C:/apter_private/optbuck_reference/, never re-run), on the owner's
+#           output of the old optBuck (C:/optbuck_private/optbuck_reference/, never re-run), on the owner's
 #           private files file1, file3, file4 and file5 (patched copy file5p). Private files: REVIEW
 #           when they are absent. The work is scripts/verify_r3.R (parts a-d; part e, the ablation on
 #           file4, is a report there and not asserted); this audit runs it and asserts:
@@ -19,7 +19,7 @@
 #  3.  Permitted grades (c): identical per product; the only difference is the unclassified product
 #  4.  B5-3(i) (d): the new optimum is never below the new value of an old optimal pattern the
 #      optimiser could have chosen (0 violations); the number of eligible stems is reported (the old
-#      patterns cut lengths off Apter's length lattice in most stems, so the test has little power on
+#      patterns cut lengths off optBuck's length lattice in most stems, so the test has little power on
 #      file1 and file5)
 #
 # Verdict : PASS / FAIL, REVIEW without the private files (helpers_audit.R)
@@ -34,18 +34,18 @@
 
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
-    if (!is_root(d)) stop("Project root '", d, "' (from APTER_ROOT) does not contain R/helpers_paths.R.", call. = FALSE)
+    if (!is_root(d)) stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
-    if (!is_root(d)) stop("Cannot locate the project root: set APTER_ROOT, or run from inside the project directory.", call. = FALSE)
+    if (!is_root(d)) stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -65,14 +65,14 @@ cat("  Audit: bucking check against the saved old optBuck output (R3)\n", file =
 cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
-ref <- "C:/apter_private/optbuck_reference"; dirp <- "C:/apter_private/hpr"
+ref <- "C:/optbuck_private/optbuck_reference"; dirp <- "C:/optbuck_private/hpr"
 need <- c(file.path(ref, c("file1", "file3", "file4", "file5p"), "ck_getLogs.rds"), file.path(dirp, c("REDACTED33", "REDACTED27", "REDACTED28")))
 checks <- c("Check 01: Reader against the old getLogs() (>= 99.9 % per field; StartPos and file5's unclassified key named)",
             "Check 02: Stem profiles equal the old getStemprofile() points",
             "Check 03: Permitted grades equal the old table except the unclassified product",
             "Check 04: B5-3(i): the new optimum is never below the new value of an eligible old optimal pattern")
 if (!all(file.exists(need)) || length(list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$")) == 0L) {
-  for (ck in checks) rec(ck, REVIEW, "the private files (C:/apter_private/hpr, C:/apter_private/optbuck_reference) are not here")
+  for (ck in checks) rec(ck, REVIEW, "the private files (C:/optbuck_private/hpr, C:/optbuck_private/optbuck_reference) are not here")
 } else {
   Sys.setenv(R3_SOURCE_ONLY = "1")
   res <- tryCatch({ source(file.path(root_dir, "scripts", "verify_r3.R"), local = TRUE); NULL }, error = function(e) e)

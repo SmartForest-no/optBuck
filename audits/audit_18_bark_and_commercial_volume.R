@@ -12,7 +12,7 @@
 #      every height; the number of floored points is reported (the B >= 0
 #      floor is PROVISIONAL, pending the taperNOR authors)
 #  3.  Swappable: a registered constant-10 mm test model selected with
-#      options(apter.bark_model) gives d_ub = d_ob - 10 mm; option restored
+#      options(optbuck.bark_model) gives d_ub = d_ob - 10 mm; option restored
 #  4.  dbh_from_profile() on a taperNOR profile equals taperNOR(1.3)
 #  5.  Synthetic stems, checked by hand:
 #        a. cylinder d_ub 300 mm, one 4 m sawlog -> pi * 0.15^2 * 4 m3
@@ -48,19 +48,19 @@
 suppressPackageStartupMessages(library(readr))
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
@@ -142,16 +142,16 @@ rec("Check 02: Double bark >= 0 and d_ub <= d_ob everywhere (pine 45 cm / 25 m)"
 # ==============================================================================
 section("03. Swappable bark model")
 
-old_opt <- getOption("apter.bark_model")
+old_opt <- getOption("optbuck.bark_model")
 BARK_MODELS$audit18_const10 <- function(d_cm, dbh_cm, species_group) rep(10, length(d_cm))
-options(apter.bark_model = "audit18_const10")
+options(optbuck.bark_model = "audit18_const10")
 ub3 <- under_bark_diameter(g2$ob, 450, "pine")
 active3 <- identical(get_bark_model(), BARK_MODELS$audit18_const10)
-options(apter.bark_model = old_opt)
+options(optbuck.bark_model = old_opt)
 BARK_MODELS$audit18_const10 <- NULL
 big <- g2$ob > 10
 dev3 <- max(abs(ub3[big] - (g2$ob[big] - 10)))
-rec("Check 03: Registered model via options(apter.bark_model) is used",
+rec("Check 03: Registered model via options(optbuck.bark_model) is used",
     if (active3 && dev3 <= 1e-12 &&
         identical(get_bark_model(), BARK_MODELS$barkNOR)) PASS else FAIL,
     sprintf("test model active: %s | max |d_ub - (d_ob - 10)| = %.2e mm | restored to barkNOR: %s",

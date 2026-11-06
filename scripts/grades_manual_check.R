@@ -1,7 +1,7 @@
 # ==============================================================================
 # scripts/grades_manual_check.R (R5 "Kvalitetskoder og sortimenttyper", 2026-11-03)
 #
-# The owner's private .hpr files (C:/apter_private/hpr, read in place, never
+# The owner's private .hpr files (C:/optbuck_private/hpr, read in place, never
 # copied) run the way the app runs them, without the browser:
 #   stems from one file, assortments imported from another (or the same), the
 #   same-instruction test (hpr_same_instruction()), the grade options with the
@@ -19,7 +19,7 @@ root_dir <- local({
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FALSE))
@@ -27,7 +27,7 @@ for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FA
 
 args <- commandArgs(trailingOnly = TRUE)
 cases <- if (length(args)) strsplit(args[1L], ",")[[1L]] else c("a", "b", "c", "d", "e", "f")
-dirp <- "C:/apter_private/hpr"
+dirp <- "C:/optbuck_private/hpr"
 F1 <- list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L]   # file1, REDACTED45
 F3 <- file.path(dirp, "REDACTED33")                                          # file3, Gobakken
 F5 <- file.path(dirp, "REDACTED28")                                       # file5

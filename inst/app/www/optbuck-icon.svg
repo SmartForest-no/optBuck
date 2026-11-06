@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Apter">
-  <!-- Apter icon: a tapering stem cut into logs, on a forest-green tile. Original artwork. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="optBuck">
+  <!-- optBuck icon: a tapering stem cut into logs, on a forest-green tile. Original artwork. -->
   <rect width="64" height="64" rx="12" fill="#3F6E58"/>
   <!-- stem: wide butt at the bottom, narrow top -->
   <path d="M27.5 10 L36.5 10 L41 54 L23 54 Z" fill="#F4EFE6"/>

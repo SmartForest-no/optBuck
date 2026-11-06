@@ -87,7 +87,7 @@ finnhoyde_height <- function(d_cm, species) {
   if (n_plots >= 2L) {
     t0 <- proc.time()[["elapsed"]]
     # fieldPlot's own timeout is disabled (Inf): it never interrupts nlme and
-    # would only skip it; Apter's time limit does the interrupting.
+    # would only skip it; optBuck's time limit does the interrupting.
     m <- tryCatch(suppressMessages(.with_time_limit(
            fieldPlot::fitHD_Plot(d, h, sp = 1L, plotID = plot, timeout = Inf),
            timeout_s)), error = function(e) e)

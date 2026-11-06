@@ -25,19 +25,21 @@ pkg_root <- function() {
 
 # Return the root directory.
 #
+# Installed use needs no setting: the package folder is the root (read-only data via
+# system.file(); writable files, such as the NFI profile cache, go to tools::R_user_dir()).
 # Resolution order (first hit wins):
-#   1. Environment variable  APTER_ROOT  (development: the repository root)
-#   2. R option              apter.root
+#   1. Environment variable  OPTBUCK_ROOT  (development only: the repository root)
+#   2. R option              optbuck.root   (development only)
 #   3. The package folder (installed package, or the source folder under load_all())
 #   4. Walk up from getwd() to the first folder with inst/extdata/inputs (scripts run from the repository)
 # A root from 1-2 must hold the data files; otherwise the function stops with a clear message.
 get_root_dir <- function() {
-  explicit <- c(Sys.getenv("APTER_ROOT", unset = ""), getOption("apter.root", default = ""))
+  explicit <- c(Sys.getenv("OPTBUCK_ROOT", unset = ""), getOption("optbuck.root", default = ""))
   explicit <- explicit[nzchar(explicit)]
   if (length(explicit) > 0L) {
     root <- normalizePath(explicit[1L], winslash = "/", mustWork = FALSE)
     if (!.is_root(root))
-      stop("Project root '", root, "' (from APTER_ROOT or option apter.root) does not contain inst/extdata/inputs.", call. = FALSE)
+      stop("Project root '", root, "' (from OPTBUCK_ROOT or option optbuck.root) does not contain inst/extdata/inputs.", call. = FALSE)
     return(root)
   }
   p <- pkg_root()
@@ -49,23 +51,40 @@ get_root_dir <- function() {
     if (identical(parent, d)) break
     d <- parent
   }
-  stop("Cannot locate the optBuck data files: install the package, set APTER_ROOT, or run from inside the repository.", call. = FALSE)
+  stop("Cannot locate the optBuck data files: reinstall the package, or (development) run from inside the repository.", call. = FALSE)
 }
 
-# A path under the data folder (inst/extdata in development, extdata when installed).
-extdata_path <- function(..., root_dir = get_root_dir()) {
-  dev <- file.path(root_dir, "inst", "extdata")
-  file.path(if (dir.exists(dev)) dev else file.path(root_dir, "extdata"), ...)
+# A path under the data folder (read-only): by default the installed package's extdata (system.file();
+# under load_all() inst/extdata), else the data folder of `root_dir` (inst/extdata or extdata).
+extdata_path <- function(..., root_dir = NULL) {
+  base <- if (is.null(root_dir)) system.file("extdata", package = "optBuck") else ""
+  if (!nzchar(base)) {
+    root_dir <- if (is.null(root_dir)) get_root_dir() else root_dir
+    dev <- file.path(root_dir, "inst", "extdata")
+    base <- if (dir.exists(dev)) dev else file.path(root_dir, "extdata")
+  }
+  file.path(base, ...)
 }
 
-# The shiny app folder (inst/app in development, app when installed).
-app_dir <- function(root_dir = get_root_dir()) {
+# The shiny app folder (read-only): the installed package's app (inst/app in development).
+app_dir <- function(root_dir = NULL) {
+  base <- if (is.null(root_dir)) system.file("app", package = "optBuck") else ""
+  if (nzchar(base)) return(base)
+  root_dir <- if (is.null(root_dir)) get_root_dir() else root_dir
   dev <- file.path(root_dir, "inst", "app")
   if (dir.exists(dev)) dev else file.path(root_dir, "app")
 }
 
 # A path under the inputs folder (default products, prices, translations, test fixtures).
-path_input <- function(..., root_dir = get_root_dir()) extdata_path("inputs", ..., root_dir = root_dir)
+path_input <- function(..., root_dir = NULL) extdata_path("inputs", ..., root_dir = root_dir)
+
+# A writable per-user folder of the package, created on demand ("cache": the NFI profiles;
+# "data": files that should survive; never inside the installed package folder).
+user_dir <- function(which = c("cache", "data")) {
+  d <- tools::R_user_dir("optBuck", match.arg(which))
+  if (!dir.exists(d)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  d
+}
 
 # A path under the repository's outputs/ folder (audits and scripts only; the folder exists in development).
 path_output <- function(..., root_dir = get_root_dir()) file.path(root_dir, "outputs", ...)

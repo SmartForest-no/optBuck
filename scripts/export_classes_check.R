@@ -2,7 +2,7 @@
 # scripts/export_classes_check.R (R4 polish, task 5, 2026-11-03)
 #
 # For the owner's private files (file1..file5 = the .hpr files in
-# C:/apter_private/hpr alphabetically, hand.pin, real.pin): import every product,
+# C:/optbuck_private/hpr alphabetically, hand.pin, real.pin): import every product,
 # export the scenario as a .pin and compare, per product (by ProductUserID), the
 # diameter class lower limits of the source with those written. Result table in
 # outputs/polish/export_classes.txt (gitignored); nothing from the files is copied.
@@ -16,7 +16,7 @@ root_dir <- local({
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 out <- file.path(root_dir, "outputs", "polish"); dir.create(out, recursive = TRUE, showWarnings = FALSE)
@@ -25,8 +25,8 @@ say <- function(...) { x <- sprintf(...); cat(x, "\n"); cat(x, "\n", file = log,
 
 files <- c(file1 = "REDACTED1", file2 = "REDACTED40", file3 = "REDACTED33",
            file4 = "REDACTED27", file5 = "REDACTED28")
-paths <- c(setNames(file.path("C:/apter_private/hpr", files), names(files)),
-           real.pin = "C:/apter_private/pin/real.pin", hand.pin = "C:/apter_private/pin/hand.pin")
+paths <- c(setNames(file.path("C:/optbuck_private/hpr", files), names(files)),
+           real.pin = "C:/optbuck_private/pin/real.pin", hand.pin = "C:/optbuck_private/pin/hand.pin")
 say("%-9s %-34s %7s %7s  %s", "file", "product", "source", "written", "equal / missing in export")
 tot <- 0L; bad <- 0L
 for (nm in names(paths)) {

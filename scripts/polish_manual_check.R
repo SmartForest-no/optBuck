@@ -18,7 +18,7 @@ root_dir <- local({
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 # tuning_run() and its constant, without the app's UI code

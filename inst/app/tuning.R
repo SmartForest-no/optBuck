@@ -14,7 +14,7 @@
 #           taperNOR for a tree list, .hpr profiles on a worker); the tuning loop then
 #           runs in this process (tune_prices() is synchronous and uses the workers
 #           for every bucking), so the session is busy while it runs (PLAN.md,
-#           deployment). Seed 1, max_iter = getOption("apter.tune_max_iter", 30),
+#           deployment). Seed 1, max_iter = getOption("optbuck.tune_max_iter", 30),
 #           early_stop = FALSE, targets always the assortments' own (R3.2).
 #           The results are cleared when the tuned scenario, the assortment
 #           selection or the stems change, not when the other scenario does.
@@ -104,7 +104,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     pr <- products_from_defs(d, pm)
     products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
     path <- write_price_file(pm_prices(pm))
-    max_iter <- as.integer(getOption("apter.tune_max_iter", 30L))
+    max_iter <- as.integer(getOption("optbuck.tune_max_iter", 30L))
     l <- isolate(lang())
     spec <- stem_spec(); sid <- stem_id(); requested <- input$tn_products
     spec$path <- path; spec$pd <- pr$pd; spec$lc <- pr$lc; spec$scenario <- NULL
@@ -199,7 +199,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
                  fg2 = reactable::colDef(name = L("tn_col_fg"), width = 120, align = "right"),
                  v2 = reactable::colDef(name = L("tn_col_vol"), width = 100, align = "right"),
                  st = reactable::colDef(name = " ", minWidth = 420))
-    apter_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
+    optbuck_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
                     column_groups = list(reactable::colGroup(L("tn_grp_before"), c("fg1", "v1")),
                                          reactable::colGroup(L("tn_grp_after"), c("fg2", "v2"))))
   })
@@ -217,7 +217,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       d = c(chg(r$orig$value, r$tuned$value, 0L), chg(r$orig$saw_vol, r$tuned$saw_vol, 1L)),
       stringsAsFactors = FALSE)
     names(df) <- c(" ", L("tn_col_before"), L("tn_col_after"), L("tn_col_change"))
-    apter_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
+    optbuck_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
   })
   # One line per tuned assortment (degree of fit by iteration), the best iteration marked.
   # Colours are the app's chart colours (the first is the primary green); with more
@@ -228,7 +228,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     d <- do.call(rbind, lapply(seq_along(ks), function(i)
       data.frame(it = r$trace$r, fg = r$by[[ks[i]]]$fg_iter, a = lab[i], stringsAsFactors = FALSE)))
     d$a <- factor(d$a, levels = lab)
-    pal <- c(APTER_CHART$series1, APTER_CHART$series2, APTER_CHART$other, APTER_CHART$neutral)
+    pal <- c(OPTBUCK_CHART$series1, OPTBUCK_CHART$series2, OPTBUCK_CHART$other, OPTBUCK_CHART$neutral)
     lt <- c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
     col <- setNames(rep_len(pal, length(ks)), lab)
     lty <- setNames(lt[((seq_along(ks) - 1L) %/% length(pal)) %% length(lt) + 1L], lab)
@@ -239,7 +239,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       ggplot2::scale_colour_manual(values = col) + ggplot2::scale_linetype_manual(values = lty) +
       ggplot2::scale_x_continuous(breaks = function(x) { b <- pretty(x); b[b == round(b)] }) +
       ggplot2::labs(x = L("tn_iteration"), y = L("tn_col_fg"), title = L("tn_fig_title"), colour = NULL, linetype = NULL) +
-      theme_apter() + ggplot2::theme(legend.position = "bottom")
+      theme_optbuck() + ggplot2::theme(legend.position = "bottom")
   })
   # The matrix of the chosen assortment in the chosen view: shares in whole percent per
   # file diameter class (rows) and length class (columns); the outcome views have the
@@ -259,7 +259,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       df$fg <- ifelse(is.na(mv$fg), "", fmt1(mv$fg))
       cols$fg <- reactable::colDef(name = L("tn_col_fg"), width = 150, align = "right")
     }
-    apter_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
+    optbuck_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
                     column_groups = list(reactable::colGroup(L("tn_col_length_cm"), lc)))
   })
   output$tn_matrix_note <- renderUI({

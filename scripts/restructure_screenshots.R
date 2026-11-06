@@ -9,8 +9,8 @@
 args <- commandArgs(TRUE); lang <- if (length(args)) args[1L] else "en"
 root <- normalizePath(getwd(), winslash = "/")
 stopifnot(file.exists(file.path(root, "R", "helpers_paths.R")), lang %in% c("en", "no"))
-Sys.setenv(APTER_ROOT = root, NOT_CRAN = "true", APTER_N_PLOTS = "5", APTER_TUNE_MAX_ITER = "3")
-if (lang == "en") Sys.setenv(APTER_LANG = "en") else Sys.unsetenv("APTER_LANG")
+Sys.setenv(OPTBUCK_ROOT = root, NOT_CRAN = "true", OPTBUCK_N_PLOTS = "5", OPTBUCK_TUNE_MAX_ITER = "3")
+if (lang == "en") Sys.setenv(OPTBUCK_LANG = "en") else Sys.unsetenv("OPTBUCK_LANG")
 options(chromote.timeout = 60)
 suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/); source(file.path(root, "audits", "helpers_audit.R"))
 dir <- file.path(root, "outputs", "app_smoke", "review", "restructure"); dir.create(dir, recursive = TRUE, showWarnings = FALSE)

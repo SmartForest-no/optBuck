@@ -15,11 +15,11 @@
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
 source(file.path(root_dir, "scripts", "performance_cases.R"))

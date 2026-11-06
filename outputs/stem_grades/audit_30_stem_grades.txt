@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: stem grades and cut at grade changes (Phase 6)
-  Run: 2026-11-03 14:36:56.541403
+  Run: 2026-11-06 10:32:15.505757
 ============================================================= 
 
 --- 1. Grades read and put on the grid ---
@@ -79,4 +79,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/stem_grades/audit_30_stem_grades.csv
+Audit CSV: <repo>/outputs/stem_grades/audit_30_stem_grades.csv

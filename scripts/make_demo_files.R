@@ -18,16 +18,16 @@
 # ==============================================================================
 
 root_dir <- local({
-  r <- Sys.getenv("APTER_ROOT", "")
+  r <- Sys.getenv("OPTBUCK_ROOT", "")
   if (nzchar(r)) return(normalizePath(r, winslash = "/"))
   d <- normalizePath(getwd(), winslash = "/")
   repeat {
     if (file.exists(file.path(d, "R", "helpers_paths.R"))) return(d)
-    p <- dirname(d); if (identical(p, d)) stop("Set APTER_ROOT to the project root.")
+    p <- dirname(d); if (identical(p, d)) stop("Set OPTBUCK_ROOT to the project root.")
     d <- p
   }
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 out <- file.path(root_dir, "inst", "extdata", "demo")

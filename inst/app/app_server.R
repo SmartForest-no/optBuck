@@ -3,7 +3,7 @@
 # Purpose : Shiny server function (`server`). Sourced by app.R after setup.R
 #           and the app helpers (helpers_ui.R, helpers_validation.R,
 #           helpers_upload.R, helpers_jobs.R). Styling via CSS classes
-#           (www/apter.css) and APTER_CHART colours (theme.R); no inline colours.
+#           (www/optbuck.css) and OPTBUCK_CHART colours (theme.R); no inline colours.
 #           Not named server.R: Shiny/shinytest2 reject ui.R/server.R next to app.R.
 #
 # State   : Scenarios A and B (assortments and prices) live in
@@ -22,7 +22,7 @@ server <- function(input, output, session) {
 
   # ---- language (Phase 1, 2026-10-27) ----------------------------------------
   # The browser sends input$lang (the navbar switch, remembered per browser;
-  # www/apter.js). Until it arrives: the page's start language.
+  # www/optbuck.js). Until it arrives: the page's start language.
   lang <- reactive(i18n_lang(or_default(input$lang, APP_LANG)))
   L <- function(id, ...) tr(id, ..., lang = lang())
   fmt_int <- function(x) fmt_num(x, 0L, lang())
@@ -206,7 +206,7 @@ server <- function(input, output, session) {
       div(class = "section-hdr", L("hdr_species_groups")),
       tags$table(class = "hpr-table hs-species",
         tags$thead(tags$tr(tags$th(L("col_species_group")), tags$th(L("col_stems")),
-                           tags$th(L("col_apter_species")))),
+                           tags$th(L("col_optbuck_species")))),
         tags$tbody(lapply(seq_len(nrow(g)), function(i) tags$tr(
           tags$td(g$name[i]),
           tags$td(fmt_int(g$n[i])),
@@ -299,7 +299,7 @@ server <- function(input, output, session) {
   # DBH and height per species (moved here from Simulator > Trees).
   output$fig_stem_dists <- renderPlot(res = 96, {
     d <- stem_data()$trees
-    apter_distribution_figure(d$dbh_cm, d$height_m, d$species_group,
+    optbuck_distribution_figure(d$dbh_cm, d$height_m, d$species_group,
                               L(if (identical(input$tree_source, "hpr")) "col_measured_length_m" else "col_height_m"),
                               lang = lang())
   })
@@ -309,7 +309,7 @@ server <- function(input, output, session) {
     l <- lang()
     d$species <- vapply(d$species, function(x) L(paste0("sp_", x)), "")
     names(d) <- c(L("col_species"), L("col_stems"), L("col_mean_dbh"), L("col_mean_height"), L("col_excluded"))
-    apter_reactable(d, digits = 1L, pagination = FALSE, lang = l)
+    optbuck_reactable(d, digits = 1L, pagination = FALSE, lang = l)
   })
   output$stems_use_ui <- renderUI({
     own <- hs_own(); st <- hs_stems()
@@ -395,7 +395,7 @@ server <- function(input, output, session) {
   # The backend runs on the workers (R/helpers_parallel.R) as an
   # ExtendedTask: the app stays responsive, the run status shows progress
   # and Run is disabled while a task is running. The browser shows the bar
-  # as soon as Run is clicked (www/apter.js); the server replaces it with
+  # as soon as Run is clicked (www/optbuck.js); the server replaces it with
   # staged progress: loading (NFI data and taper profiles, or taperNOR for
   # tree lists), bucking, summarising.
   run_progress <- reactiveVal(NULL)
@@ -428,7 +428,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_btn, {
     t_click <- Sys.time()
     reject <- function(msg) {
-      session$sendCustomMessage("apter_progress_clear", TRUE)
+      session$sendCustomMessage("optbuck_progress_clear", TRUE)
       showNotification(msg, type = "error", duration = 10); run_rejected(TRUE)
     }
     src <- if (input$tree_source %in% c("list", "hpr")) input$tree_source else "nfi"
@@ -690,13 +690,13 @@ server <- function(input, output, session) {
     df <- data.frame(vapply(unname(lab), L, "", USE.NAMES = FALSE), f(cmp$a), f(cmp$b), f(cmp$diff),
                      fmt_num(cmp$pct, 1L, l, big = FALSE), stringsAsFactors = FALSE)
     names(df) <- c(" ", L("sum_col_a"), L("sum_col_b"), L("sum_col_diff"), L("sum_col_diff_pct"))
-    apter_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
+    optbuck_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
   })
   # Value by assortment type (Sawlog, Pulpwood, Other): A and B side by side.
   output$bar_value_by_type <- renderPlot(res = 96, height = function() hbar_height(3L, ab = TRUE), {
     req(compared())
     x <- compare_by_type(result(), result_b())
-    apter_hbar_ab(x$value_a, x$value_b, tr_value(x$type, lang()), title = L("sum_fig_title"),
+    optbuck_hbar_ab(x$value_a, x$value_b, tr_value(x$type, lang()), title = L("sum_fig_title"),
                   xlab = L("sum_unit_value"), fmt = fmt_int, lang = lang(), names = c("A", "B"))
   })
 
@@ -746,7 +746,7 @@ server <- function(input, output, session) {
   }
   output$tbl_products <- renderReactable({
     df <- products_df(); num <- names(df)[-1L]
-    apter_reactable(df, columns = setNames(lapply(num, function(n) reactable::colDef(na = "–")), num),
+    optbuck_reactable(df, columns = setNames(lapply(num, function(n) reactable::colDef(na = "–")), num),
                     page_size = 25L, lang = lang())
   })
   output$dl_products <- downloadHandler(
@@ -755,7 +755,7 @@ server <- function(input, output, session) {
 
   # NOK/m3 and volume share by assortment type (Sawlog, Pulpwood, Other) per
   # scope; always by type (per assortment is the table above).
-  output$tbl_per_m3_type <- renderReactable(apter_reactable(local({
+  output$tbl_per_m3_type <- renderReactable(optbuck_reactable(local({
     req(has_result())
     x <- compare_per_m3(result(), if (compared()) result_b() else result(), by = "type")
     out <- data.frame(scope_label(x$scope), tr_value(x$assortment, lang()), stringsAsFactors = FALSE)
@@ -783,10 +783,10 @@ server <- function(input, output, session) {
     x <- contrib_fig(); req(nrow(x) > 0L)
     ttl <- L("fig_nok_by_assortment"); xl <- L("unit_nok_m3")
     if (compared())
-      return(apter_hbar_ab(x$contrib_a, x$contrib_b, asm_label(x$key), title = ttl, xlab = xl,
+      return(optbuck_hbar_ab(x$contrib_a, x$contrib_b, asm_label(x$key), title = ttl, xlab = xl,
                            fmt = fmt_nok1, lang = lang(), names = c(nm("A"), nm("B"))))
-    apter_hbar(x$contrib_a, asm_label(x$key), title = ttl, xlab = xl, fmt = fmt_nok1,
-               col = APTER_CHART$series1, lang = lang())
+    optbuck_hbar(x$contrib_a, asm_label(x$key), title = ttl, xlab = xl, fmt = fmt_nok1,
+               col = OPTBUCK_CHART$series1, lang = lang())
   })
 
   # Value change (B − A) of the assortments both scenarios have (waste left
@@ -813,7 +813,7 @@ server <- function(input, output, session) {
   })
   output$bar_cmp_delta <- renderPlot(res = 96, height = function() hbar_height(length(delta_shared()$value)), {
     x <- delta_shared(); req(length(x$value) > 0L)
-    apter_hbar(x$value, x$label, title = L("fig_value_change"), xlab = L("unit_nok"), fmt = delta_fmt,
+    optbuck_hbar(x$value, x$label, title = L("fig_value_change"), xlab = L("unit_nok"), fmt = delta_fmt,
                lang = lang())
   })
 
@@ -879,7 +879,7 @@ server <- function(input, output, session) {
     i <- or_default(tree_sel(), 1L); row <- ts[i, , drop = FALSE]; k <- tree_key(row)
     l1 <- result()$selected_logs_all; l1 <- l1[tree_key(l1) == k, , drop = FALSE]
     l2 <- if (compared()) { l <- result_b()$selected_logs_all; l[tree_key(l) == k, , drop = FALSE] }
-    apter_stem_compare(l1, l2, row$height_m,
+    optbuck_stem_compare(l1, l2, row$height_m,
                        L(if (isTRUE(is_hpr())) "stem_title_stem" else "stem_title_tree",
                          row$treid, tr_value(row$species_group, lang()),
                          fmt_num(row$dbh_cm, 1L, lang(), big = FALSE), fmt_num(row$height_m, 1L, lang(), big = FALSE)),
@@ -942,7 +942,7 @@ server <- function(input, output, session) {
     content  = function(file) write_result_csv(dbh_table(), file))
   output$fig_dbh_class <- renderPlot(res = 96, height = function() 320, {
     req(has_result())
-    apter_dbh_class_figure(dbh_a(), if (compared()) dbh_b(), lang = lang(), names = c(nm("A"), nm("B")))
+    optbuck_dbh_class_figure(dbh_a(), if (compared()) dbh_b(), lang = lang(), names = c(nm("A"), nm("B")))
   })
 
 
@@ -959,8 +959,8 @@ server <- function(input, output, session) {
   output$tbl_selected_logs <- renderReactable({
     req(has_result()); sl <- result()$selected_logs_all
     if (nrow(sl) == 0L)
-      return(apter_reactable(stats::setNames(data.frame(L("no_logs")), L("col_message")), lang = lang()))
-    apter_reactable(readable_logs(utils::head(sl, LOG_PREVIEW_N)), sortable = FALSE, pagination = FALSE,
+      return(optbuck_reactable(stats::setNames(data.frame(L("no_logs")), L("col_message")), lang = lang()))
+    optbuck_reactable(readable_logs(utils::head(sl, LOG_PREVIEW_N)), sortable = FALSE, pagination = FALSE,
                     lang = lang())
   })
   output$dl_logs <- downloadHandler(
@@ -1032,7 +1032,7 @@ server <- function(input, output, session) {
   # Log length distribution (A, and B below it after a comparison).
   output$fig_log_lengths <- renderPlot(res = 96, height = function() if (compared()) 440 else 260, {
     req(has_result())
-    apter_log_length_figure(log_length_distribution(result()$selected_logs_all),
+    optbuck_log_length_figure(log_length_distribution(result()$selected_logs_all),
                             if (compared()) log_length_distribution(result_b()$selected_logs_all),
                             lang = lang(), names = c(nm("A"), nm("B")))
   })
@@ -1074,7 +1074,7 @@ server <- function(input, output, session) {
     names(show)[1L] <- if (identical(g[[1L]][1L], "All diameters")) " " else L("col_diameter_symbol_cm")
     cols <- setNames(lapply(names(show)[-1L], function(n) reactable::colDef(align = "right")), names(show)[-1L])
     last <- nrow(show)
-    apter_reactable(show, columns = cols, sortable = FALSE, pagination = FALSE,
+    optbuck_reactable(show, columns = cols, sortable = FALSE, pagination = FALSE,
                     row_class = function(i) if (i == last) "tally-total", lang = l)
   })
   output$dl_tally_xlsx <- downloadHandler(

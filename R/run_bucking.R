@@ -1,7 +1,7 @@
 # ==============================================================================
 # R/run_bucking.R (was scripts/app_backend/01_run_sampled_plot_bucking.R before the package conversion)
 #
-# Purpose : Sampled-plot bucking backend for Apter (Shiny app v1 support).
+# Purpose : Sampled-plot bucking backend for optBuck (Shiny app v1 support).
 #           Exposes a single function:
 #             run_sampled_plot_bucking(params, price_matrix_path, root)
 #
@@ -319,7 +319,7 @@ BACKEND_MAX_PRICE_DIAMETER_CLASS_CM <- 50L   # default matrices' cap; runs cap p
 #   for a second run on the same trees (a comparison). Both runs are priced
 #   from one candidate pass per tree; the scenario's result is returned as
 #   `$scenario` (the same structure).
-# @param workers Number of parallel workers (apter_workers(); 1 = in this
+# @param workers Number of parallel workers (optbuck_workers(); 1 = in this
 #   process). Results do not depend on it.
 #
 # @return Named list with run outputs, summaries, diagnostics, and label.
@@ -330,7 +330,7 @@ run_sampled_plot_bucking <- function(
     products = NULL,
     length_classes = NULL,
     scenario = NULL,
-    workers = apter_workers()) {
+    workers = optbuck_workers()) {
   job <- prepare_sampled_job(params, price_matrix_path, root, products,
                              length_classes, scenario)
   finish_job(job, buck_job(job, workers))
@@ -599,7 +599,7 @@ run_tree_list_bucking <- function(prepared,
                                   length_classes = NULL,
                                   params = list(),
                                   scenario = NULL,
-                                  workers = apter_workers()) {
+                                  workers = optbuck_workers()) {
   job <- prepare_tree_list_job(prepared, price_matrix_path, root, products,
                                length_classes, params, scenario, workers)
   finish_job(job, buck_job(job, workers))
@@ -686,7 +686,7 @@ run_hpr_bucking <- function(prepared,
                             length_classes = NULL,
                             params = list(),
                             scenario = NULL,
-                            workers = apter_workers(),
+                            workers = optbuck_workers(),
                             grade_opts = NULL) {
   job <- prepare_hpr_job(prepared, price_matrix_path, root, products,
                          length_classes, params, scenario, grade_opts)
@@ -856,13 +856,13 @@ subset_job_stems <- function(job, idx) {
        prep = .prepare_runs(lapply(pps, function(pp)
          list(pd = pp$pd, lc = pp$lc, lookup = pp$lookup, opts = pp$grade_opts))),
        stump_cm = stump_cm, step_cm = step_cm, timings = timings, meta = meta,
-       bark_model = getOption("apter.bark_model", DEFAULT_BARK_MODEL))
+       bark_model = getOption("optbuck.bark_model", DEFAULT_BARK_MODEL))
 }
 
 # Step 9 of a job: the per-tree loop (.buck_trees(), R/helpers_bucking_core.R),
 # in this process (workers = 1) or in chunks on parallel workers
 # (R/helpers_parallel.R). Returns .buck_trees()'s structure for all trees.
-buck_job <- function(job, workers = apter_workers()) {
+buck_job <- function(job, workers = optbuck_workers()) {
   out <- if (workers <= 1L || length(job$pvs) == 0L)
     .buck_trees(job$pvs, job$tree_data, job$prep, job$stump_cm, job$step_cm)
   else .combine_chunks(lapply(.chunk_futures(job, workers), future::value))

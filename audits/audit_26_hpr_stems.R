@@ -72,24 +72,24 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -383,7 +383,7 @@ srt <- function(x) { x <- x[do.call(order, x[intersect(c("treid", "StartPos", "P
                      rownames(x) <- NULL; x }
 tabs12 <- c("tree_summary", "selected_logs_all", "per_m3_summary", "per_m3_by_assortment")
 r_w1 <- run_hpr_bucking(p, scenario = list(price_matrix_path = "default_2021"), workers = 1L)
-old <- options(apter.chunk_size = 2L)
+old <- options(optbuck.chunk_size = 2L)
 r_w2 <- run_hpr_bucking(p, scenario = list(price_matrix_path = "default_2021"), workers = 2L)
 options(old)
 same12 <- vapply(tabs12, function(t) identical(srt(r_w1[[t]]), srt(r_w2[[t]])) &&

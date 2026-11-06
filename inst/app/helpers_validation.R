@@ -26,7 +26,7 @@ selected_hoh <- function(hoh_range, full = HOH_RANGE) {
 #' Map sidebar inputs to the params list for run_sampled_plot_bucking().
 #'
 #' NFI runs use all plots of the stratum (Phase 4d): APP_N_PLOTS is NA,
-#' unless the test-only APTER_N_PLOTS sets a number of plots to sample with
+#' unless the test-only OPTBUCK_N_PLOTS sets a number of plots to sample with
 #' APP_SEED (42); setup.R.
 #'
 #' @param input_list Shiny `input` (or a plain list) with species_group,

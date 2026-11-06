@@ -6,12 +6,12 @@
 #
 # Layout  : bslib page_navbar (Bootstrap 5) with four numbered tabs (1 Stems,
 #           2 Assortment specifications and prices with Scenario A and B,
-#           3 Simulator, 4 Price tuning) and Help. Styling is in www/apter.css and theme.R;
+#           3 Simulator, 4 Price tuning) and Help. Styling is in www/optbuck.css and theme.R;
 #           no inline colours here. The app shows the name "optBuck".
 #
 # Text    : every text is an id of the translation table (t_(), helpers_ui.R;
 #           inputs/i18n/translations.csv). The page is built in APP_LANG; the
-#           browser switches language without a reload (www/apter.js), and
+#           browser switches language without a reload (www/optbuck.js), and
 #           the server re-renders its outputs in the chosen language.
 
 # ---- 2 Assortment specifications and prices --------------------------------------------------------
@@ -27,7 +27,7 @@ scenario_column <- function(s) {
   btn <- function(id, label, cls = "btn-secondary btn-sm") actionButton(id, label, class = cls)
   dl  <- function(id, label) downloadButton(id, label, class = "btn-secondary btn-sm")
   state <- function(cond) sprintf("output.asm_state_%s %s", s, cond)
-  apter_card(uiOutput(paste0("scen_title_", s), inline = TRUE),
+  optbuck_card(uiOutput(paste0("scen_title_", s), inline = TRUE),
     div(class = "section-hdr", t_("hdr_assortments")),
     reactableOutput(paste0("tbl_asm_", s)),
 
@@ -68,7 +68,7 @@ scenario_column <- function(s) {
           btn(paste0("pm_", s, "_reset"), t_("btn_reset_prices")),
           dl(paste0("dl_", s, "_wide"), t_("btn_prices_xlsx")),
           dl(paste0("dl_", s, "_long"), t_("btn_prices_csv"))),
-        apter_file_input(paste0("pm_", s, "_upload"), t_("lbl_upload_asm_prices"),
+        optbuck_file_input(paste0("pm_", s, "_upload"), t_("lbl_upload_asm_prices"),
                          accept = c(".csv", ".xlsx")))
     )),
     uiOutput(paste0("msg_", s)),
@@ -80,7 +80,7 @@ scenario_column <- function(s) {
       btn(paste0("scen_copy_", s), t_("btn_copy_from", O)),
       dl(paste0("dl_scen_", s), t_("btn_download_scenario")),
       dl(paste0("dl_pin_", s), t_("btn_download_pin"))),
-    apter_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
+    optbuck_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
                      accept = c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip")),
 
     # Stem grades (Phase 6): run options of this scenario, only for .hpr stems.
@@ -94,7 +94,7 @@ scenario_column <- function(s) {
 
 prices_page <- nav_panel(
   t_("tab_prices"), value = "prices",
-  div(class = "apter-page",
+  div(class = "optbuck-page",
     p(class = "page-intro", t_("page_intro", APP_DISPLAY_NAME)),
     layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(6, 6)),
                    scenario_column("a"), scenario_column("b"))
@@ -148,7 +148,7 @@ stems_inputs <- tagList(
     actionButton("stems_use_nfi", t_("btn_use_selection"), class = "btn-primary btn-sm")
   ),
   conditionalPanel("input.tree_source == 'list'",
-    apter_file_input("tl_upload", t_("lbl_tree_list"), accept = c(".csv", ".xlsx")),
+    optbuck_file_input("tl_upload", t_("lbl_tree_list"), accept = c(".csv", ".xlsx")),
     div(class = "note-muted",
         t_("tl_columns"), " ",
         downloadLink("dl_tree_template", t_("lnk_tree_template"))),
@@ -166,11 +166,11 @@ stems_inputs <- tagList(
 
 stems_page <- nav_panel(
   t_("tab_stems"), value = "stems",
-  div(class = "apter-page",
+  div(class = "optbuck-page",
     p(class = "page-intro", t_("intro_stems")),
     layout_columns(col_widths = breakpoints(sm = c(12, 12), lg = c(5, 7)),
-      apter_card(t_("hdr_trees"), stems_inputs),
-      apter_card(t_("hdr_stem_summary"),
+      optbuck_card(t_("hdr_trees"), stems_inputs),
+      optbuck_card(t_("hdr_stem_summary"),
         uiOutput("stem_summary"),
         plotOutput("fig_stem_dists", height = "320px", fill = FALSE),
         uiOutput("stems_use_ui"))))
@@ -258,15 +258,15 @@ ui <- page_navbar(
   id           = "main_nav",
   title        = navbar_brand(),
   window_title = tr("window_title", APP_DISPLAY_NAME, lang = APP_LANG),
-  theme        = apter_theme(),
+  theme        = optbuck_theme(),
   fillable     = FALSE,
   selected     = "stems",
   header = tagList(
     tags$head(
-      tags$link(rel = "stylesheet", href = asset_url("apter.css")),
-      tags$link(rel = "icon", type = "image/svg+xml", href = "apter-icon.svg"),
+      tags$link(rel = "stylesheet", href = asset_url("optbuck.css")),
+      tags$link(rel = "icon", type = "image/svg+xml", href = "optbuck-icon.svg"),
       i18n_head(),                                   # the ui texts of both languages
-      tags$script(src = asset_url("apter.js"))
+      tags$script(src = asset_url("optbuck.js"))
     )
   ),
   stems_page,

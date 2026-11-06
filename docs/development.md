@@ -1,12 +1,14 @@
-# Apter (the R package optBuck) development notes
+# optBuck (the R package optBuck) development notes
 
-These notes are for developers working on Apter. The partner-facing overview
+These notes are for developers working on optBuck. The partner-facing overview
 is in [README.md](../README.md). AI-assistant context (domain terms,
 load-bearing assumptions, data-privacy rules) is in [CLAUDE.md](../CLAUDE.md).
 The development roadmap is in [docs/plans/PLAN.md](plans/PLAN.md).
 
-Apter was called **nfiBuck** until the 2026-10 rename. The GitHub repository
-was renamed to `lennartnoordermeer/Apter`; old URLs redirect.
+optBuck was called **nfiBuck** until the 2026-10 rename, and had another working
+name until 2026-11-06 (renamed in code, files and docs). The GitHub
+repository is still `lennartnoordermeer/Apter` until the roadmap 8 B8 transfer to
+`SmartForest-no/optBuck`; the local folder can be renamed freely.
 
 ---
 
@@ -51,7 +53,7 @@ inst/app/                    Shiny app, files sourced explicitly by app.R
   app.R                     Entry point: loads the package (load_all() in development), attaches its internals,
                             sources the files below, calls shinyApp(ui, server)
   setup.R                   Data, default assortments and prices (APP_DEFS, APP_PM_DEFAULT),
-                            HKL/bonitet/county choices, all plots (APTER_N_PLOTS for tests),
+                            HKL/bonitet/county choices, all plots (OPTBUCK_N_PLOTS for tests),
                             tree counts for the large-run note, APP_VERSION
   theme.R                   Design tokens, chart colours, bslib (Bootstrap 5) theme
   helpers_ui.R              Cards, summary boxes, reactable tables (columns sized
@@ -66,10 +68,10 @@ inst/app/                    Shiny app, files sourced explicitly by app.R
   server_scenarios.R        scenario_server(): the Assortment specifications and prices tab (Scenarios A and B)
   app_server.R              `server`: Simulator (tree sources, runs, results)
   www/
-    apter.css               Component styles (option 3 "Combination" look)
-    apter.js                Shows the progress bar as soon as Run is clicked; the language
+    optbuck.css               Component styles (option 3 "Combination" look)
+    optbuck.js                Shows the progress bar as soon as Run is clicked; the language
                             switch (static texts by data-i18n id, remembered per browser)
-    apter-icon.svg          App icon and favicon (original artwork)
+    optbuck-icon.svg          App icon and favicon (original artwork)
     fonts/                  Inter and Source Serif 4 (.woff2, SIL OFL 1.1; licences alongside);
                             Inter .ttf (400/600) for the ggplot2 figures (registered with systemfonts)
 
@@ -87,7 +89,7 @@ R/                          Core engine helpers
   helpers_dp_optimizer.R    Reference dynamic-programming bucking optimizer
   helpers_bucking_core.R    Backend per-tree core: candidates, pricing and DP on vectors,
                             one candidate pass for the runs of a comparison
-  helpers_parallel.R        Workers (apter.workers), chunks, futures; the core shipped to workers
+  helpers_parallel.R        Workers (optbuck.workers), chunks, futures; the core shipped to workers
   helpers_bark.R            Swappable bark model (default taperNOR::barkNOR, B >= 0 floor)
   helpers_commercial_volume.R  NOK/m3 denominator and per-m3 summaries
   helpers_price_matrix.R    Price matrices: grids, diff, rows/columns, upload (long/wide), export;
@@ -131,6 +133,8 @@ audits/
   audit_36_bucking_check.R                   Bucking check on the synthetic fixture (reader, valuation, waste zones, broken top, used products only, stages, NFI profiles on demand)
   audit_37_check_vs_old.R                    Reader, profiles and permitted grades against the saved old optBuck output, private files (REVIEW when absent)
   audit_38_check_texts.R                     Texts of tab 5 and of the NFI profile build in both languages
+  audit_39_name_and_paths.R               The tool name (no old name left but Norwegian words and the remote's address) and the path rules (read-only: system.file(), writable: R_user_dir())
+  audit_40_install_gate.R                    The install gate: fresh library and working directory, no root variables, run_app(), six tabs, tab 5 three times, NFI run, PDF in both languages
   audit_30_stem_grades.R                     .hpr stem grades and cut at grade changes (grade grid, StartGrade fallback, permitted grades, forced cuts, workers)
   prototype_reference/      Frozen audits 05–12
 
@@ -212,14 +216,14 @@ docs/
 No path is hardcoded. The app, backend, scripts and audits resolve the
 project root in this order:
 
-1. `APTER_ROOT` environment variable (`get_root_dir()` then also reads the
-   option `apter.root`)
+1. `OPTBUCK_ROOT` environment variable (`get_root_dir()` then also reads the
+   option `optbuck.root`)
 2. Fallback: the app uses the parent of `inst/app/`; `get_root_dir()`
    (`R/helpers_paths.R`), the backend, scripts and audits walk up from the
    working directory to the first folder containing `R/helpers_paths.R`
 
 If the resolved folder does not contain `R/helpers_paths.R`, they stop with a
-clear error. The app exports the resolved root as `APTER_ROOT` so the backend
+clear error. The app exports the resolved root as `OPTBUCK_ROOT` so the backend
 agrees. Scripts that run before `R/helpers_paths.R` is sourced carry an
 inline copy of the same logic.
 
@@ -233,9 +237,9 @@ read (removed in the 2026-10 rename).
 The look is option 3 "Combination" of
 `docs/design_reference/optbuck_design_directions.html` (restyle,
 2026-10-16; it replaced the ForestSens-like "Forest & sand" look and its
-stripe). Since 2026-10-19 the page is light grey `#F3F4F3` (`--apter-page`)
+stripe). Since 2026-10-19 the page is light grey `#F3F4F3` (`--optbuck-page`)
 behind white cards: Scenario A and B, the Simulator sidebar (a card of its
-own) and the results card (`--apter-surface`; bs_theme `bg` stays white,
+own) and the results card (`--optbuck-surface`; bs_theme `bg` stays white,
 because Bootstrap's cards take their background from it). The navbar is
 white with a hairline `#E6E6E6` rule, the
 navbar tabs are grey with a black active tab, and cards have a 1 px border
@@ -246,8 +250,8 @@ Table headers are grey-green (`#6A726E` on `#F7F8F7`), A/B differences
 pale green `#EAF3EE`, and the summary boxes `#F7F8F7` without a border.
 Audit 17 check 6 reads these colours back from the browser.
 Everything is our own: colours
-are the tokens in `inst/app/theme.R` (`APTER_TOKENS`, `APTER_CHART`), component
-styles are in `inst/app/www/apter.css`, and building blocks are in
+are the tokens in `inst/app/theme.R` (`OPTBUCK_TOKENS`, `OPTBUCK_CHART`), component
+styles are in `inst/app/www/optbuck.css`, and building blocks are in
 `inst/app/helpers_ui.R`. No inline colours in `app_ui.R` / `app_server.R`, and no
 Oracle or ForestSens assets.
 
@@ -267,7 +271,7 @@ Oracle or ForestSens assets.
   green and B sand `#C09A66` (CVD dE 17.9). The delta chart uses a neutral
   grey because the sign is shown by bar direction. Log labels are dark on
   sand and grey.
-- Figures (2026-10-19): ggplot2 with `theme_apter()` (Inter, white
+- Figures (2026-10-19): ggplot2 with `theme_optbuck()` (Inter, white
   background, light grid). Height density per species in the Trees card
   (spruce `#3F6E58`, pine `#C9A97A`: CVD dE 22.2, normal dE 27.1). Since
   2026-10-22 the DBH density and the two Selected-logs bar figures are
@@ -287,11 +291,11 @@ Oracle or ForestSens assets.
 
 The app starts in Norsk (bokmål); the navbar switch changes to English
 without a reload, and the browser remembers the choice (localStorage
-`apter.lang`; `?lang=en` in the URL forces a language). Every text is in
+`optbuck.lang`; `?lang=en` in the URL forces a language). Every text is in
 one table, `inst/extdata/inputs/i18n/translations.csv` (`id, kind, en, no, note`):
 
 - **ui**: app text, looked up by id. Static UI uses `t_(id, ...)`
-  (`inst/app/helpers_ui.R`): a span carrying the id, swapped by `www/apter.js`
+  (`inst/app/helpers_ui.R`): a span carrying the id, swapped by `www/optbuck.js`
   from the JSON of both languages in the page head. The server uses
   `tr(id, ..., lang = lang())`, so its outputs re-render on a switch.
 - **msg**: backend message templates, matched by their English text (the
@@ -330,7 +334,7 @@ name unchanged keeps the stored name, so the key stays.
 
 ## Running the audits
 
-Run from the project root, or set `APTER_ROOT`. Each audit writes a CSV and a
+Run from the project root, or set `OPTBUCK_ROOT`. Each audit writes a CSV and a
 text log under `outputs/` and ends with a verdict: PASS, ACCEPTED WITH
 REVIEW, or FAIL. Re-run all audits (14–28) at the end of every development phase.
 
@@ -359,8 +363,8 @@ then the total time; exit status 1 if anything FAILs.
     Rscript scripts/run_audits.R --17-last       # audit 17 alone at the end
 
 Audit 17 (browser, about 4 min) starts first and takes one of the slots; the
-others follow longest first. Each process gets `APTER_WORKERS` = `max(2, (cores - 1)
-%/% jobs)` workers (`apter_workers()` reads it when the option `apter.workers` is
+others follow longest first. Each process gets `OPTBUCK_WORKERS` = `max(2, (cores - 1)
+%/% jobs)` workers (`optbuck_workers()` reads it when the option `optbuck.workers` is
 not set), so the processes do not oversubscribe the cores. Logs: `outputs/audit_runs/`
 (gitignored). During a phase run only the affected audits; run the full suite once
 before asking for a merge.
@@ -402,7 +406,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 14 — first helpers | `Rscript audits/audit_14_validate_first_helpers.R` | Nothing beyond the repo |
 | 15 — engine regression | `Rscript audits/audit_15_core_engine_helpers_regression.R` | `outputs/stem_profiles/stem_profiles_example_500trees.parquet` (from frozen prototype script 02, which needs `data_processed/`) |
 | 16 — backend smoke | `Rscript audits/audit_16_sampled_plot_backend_smoke.R` | Taper profile cache (`scripts/app_backend/00_…`) |
-| 17 — app smoke | `Rscript audits/audit_17_app_smoke.R` | shinytest2, chromote, Chrome; use `Rscript`, not `source()`; runs the app with `APTER_N_PLOTS=5` |
+| 17 — app smoke | `Rscript audits/audit_17_app_smoke.R` | shinytest2, chromote, Chrome; use `Rscript`, not `source()`; runs the app with `OPTBUCK_N_PLOTS=5` |
 | 18 — bark and commercial volume | `Rscript audits/audit_18_bark_and_commercial_volume.R` | taperNOR; taper profile cache for its backend runs |
 | 19 — ties and scenarios | `Rscript audits/audit_19_ties_and_scenarios.R` | readxl, writexl; taper profile cache |
 | 20 — assortments and volume methods | `Rscript audits/audit_20_assortments_and_volume_methods.R` | readxl, writexl, taperNOR; taper profile cache; `outputs/assortments/baseline_phase4b_default.rds` |
@@ -417,8 +421,10 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 30 — stem grades | `Rscript audits/audit_30_stem_grades.R` | xml2, writexl, readxl, taperNOR, future; `inst/extdata/inputs/test_fixtures/hpr_grades_synthetic.hpr` |
 | 31 — hpr export | `Rscript audits/audit_31_hpr_export.R` | xml2, zip, taperNOR, future; `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr` (variants in tempfiles) |
 | 36 — bucking check | `Rscript audits/audit_36_bucking_check.R` | xml2, arrow, future, taperNOR; `inst/extdata/inputs/test_fixtures/hpr_check_synthetic.hpr` (scripts/make_hpr_check_fixture.R) |
-| 37 — check vs old optBuck | `Rscript audits/audit_37_check_vs_old.R` | private files in `C:/apter_private/` (REVIEW without them) |
+| 37 — check vs old optBuck | `Rscript audits/audit_37_check_vs_old.R` | private files in `C:/optbuck_private/` (REVIEW without them) |
 | 38 — check texts | `Rscript audits/audit_38_check_texts.R` | none |
+| 39 — name and paths | `Rscript audits/audit_39_name_and_paths.R` | git (falls back to every file) |
+| 40 — install gate | `Rscript audits/audit_40_install_gate.R` | Chrome, shinytest2, processx; the owner's file 1 in `C:/optbuck_private/hpr/` (REVIEW without it); about 10 minutes |
 | 32 — pin import and export | `Rscript audits/audit_32_pin_import_export.R` | xml2; `inst/extdata/inputs/test_fixtures/pin_minimal_synthetic.pin`, `pin_full_synthetic.pin` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree
@@ -467,12 +473,12 @@ summary in `outputs/performance/profile_summary.txt`.
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `apter.workers` | `parallel::detectCores() - 1` | Parallel workers. 1 runs in the calling process without `future`. |
-| `apter.chunk_size` | `max(25, ceiling(n / (4 × workers)))` | Trees per chunk |
+| `optbuck.workers` | `parallel::detectCores() - 1` | Parallel workers. 1 runs in the calling process without `future`. |
+| `optbuck.chunk_size` | `max(25, ceiling(n / (4 × workers)))` | Trees per chunk |
 
 The `cores − 1` default assumes **one** R process on the machine. On a
 multi-user server with several R processes (e.g. several app processes, or
-an app plus batch jobs), set `apter.workers` so that processes × workers ≤
+an app plus batch jobs), set `optbuck.workers` so that processes × workers ≤
 cores. One app process starts its workers once (`inst/app/setup.R`) and shares
 them between its sessions.
 
@@ -657,7 +663,7 @@ These keep the old name on purpose:
   base keys, so a renamed base waste row is valid. The Phase 4b format keeps
   that rule in `validate_assortment_defs()` (audit 20 check 10).
 - **All plots.** `build_run_params()` sends `all_plots = TRUE` (when
-  `APTER_N_PLOTS` is unset), and `prepare_sampled_job()` then takes every
+  `OPTBUCK_N_PLOTS` is unset), and `prepare_sampled_job()` then takes every
   eligible plot without RNG. The old path (`n_plots`, default 10, capped at 50,
   seed 42) is unchanged, so the baselines and audits 16, 20 and 22 are
   unaffected. The app used to ask for 200 plots, but the cap meant it got 50.
@@ -677,7 +683,7 @@ These keep the old name on purpose:
   process. The app's earlier ~2 min was mostly `compare_cutting_patterns()`
   (61.7 s: a per-tree loop with a quadratic lookup). It is vectorised now
   (0.8 s, identical output on all 12,427 trees).
-- **Progress.** `www/apter.js` draws an indeterminate bar on click. The server
+- **Progress.** `www/optbuck.js` draws an indeterminate bar on click. The server
   then reports stages: loading NFI data and taper profiles (indeterminate),
   taperNOR chunks (tree lists, 0–40 %), bucking, and summarising.
 
@@ -768,7 +774,7 @@ These keep the old name on purpose:
 - **App.** Third radio choice; `hs_*` outputs; reading on a worker as an
   ExtendedTask; the imported file is kept in the session's `imported/`
   folder, uploads in `upload/`.
-- **Owner's files** (local, `C:/apter_private/hpr/`; 2026-10-21, 15 workers):
+- **Owner's files** (local, `C:/optbuck_private/hpr/`; 2026-10-21, 15 workers):
 
   | File | Stems (about) | Read | A/B run |
   |---|---|---|---|

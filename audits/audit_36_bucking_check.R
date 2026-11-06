@@ -44,18 +44,18 @@
 
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
-    if (!is_root(d)) stop("Project root '", d, "' (from APTER_ROOT) does not contain R/helpers_paths.R.", call. = FALSE)
+    if (!is_root(d)) stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
-    if (!is_root(d)) stop("Cannot locate the project root: set APTER_ROOT, or run from inside the project directory.", call. = FALSE)
+    if (!is_root(d)) stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -81,7 +81,7 @@ cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
 FIXTURE <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_check_synthetic.hpr")
-options(apter.workers = 2L)
+options(optbuck.workers = 2L)
 x <- bucking_check(FIXTURE)
 st <- x$stems; rec_l <- x$logs$recorded; opt_l <- x$logs$optimal
 s_of <- function(k) st[st$StemKey == as.character(k), , drop = FALSE]
@@ -208,8 +208,8 @@ rec("Check 11: prepare, buck_job() and finish (the stages of the app's backgroun
 
 # ---- 12 --------------------------------------------------------------------------------------------
 section("12. Workers")
-options(apter.workers = 1L); x1 <- bucking_check(FIXTURE)
-options(apter.workers = 4L); x4 <- bucking_check(FIXTURE)
+options(optbuck.workers = 1L); x1 <- bucking_check(FIXTURE)
+options(optbuck.workers = 4L); x4 <- bucking_check(FIXTURE)
 rec("Check 12: results are identical with 1 and 4 workers",
     ok(identical(x1$key_figures, x4$key_figures) && identical(x1$stems$value_opt, x4$stems$value_opt) && identical(x1$stems$value_opt, x$stems$value_opt)),
     sprintf("yield %.12f / %.12f", x1$key_figures$yield[1L], x4$key_figures$yield[1L]))

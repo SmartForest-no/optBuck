@@ -45,24 +45,24 @@
 suppressPackageStartupMessages(library(readr))
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -104,7 +104,7 @@ base   <- readRDS(base_f)
 differs <- function(a, b) TABLES[!vapply(TABLES, function(k) identical(a[[k]], b[[k]]), logical(1))]
 same_txt <- function(d) if (length(d) == 0L) "all tables identical" else paste("differ:", paste(d, collapse = ", "))
 with_chunk <- function(size, expr) {
-  old <- options(apter.chunk_size = size); on.exit(options(old)); expr
+  old <- options(optbuck.chunk_size = size); on.exit(options(old)); expr
 }
 
 
@@ -220,7 +220,7 @@ rec("Check 06: workers = 1 sets no future plan and records 1 worker",
 section("07. App background job")
 ROOT <- root_dir
 source(file.path(root_dir, "inst", "app", "helpers_jobs.R"))
-old_w <- options(apter.workers = N_WORKERS)
+old_w <- options(optbuck.workers = N_WORKERS)
 await <- function(p) {
   done <- FALSE; val <- NULL; err <- NULL
   promises::then(p, function(v) { val <<- v; done <<- TRUE },

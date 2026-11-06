@@ -34,7 +34,7 @@
 
 
 # The languages, in the order of the switch; the first is the default.
-APTER_LANGS <- c("no", "en")
+OPTBUCK_LANGS <- c("no", "en")
 
 .i18n <- new.env(parent = emptyenv())
 .i18n$misses <- character(0)
@@ -42,7 +42,7 @@ APTER_LANGS <- c("no", "en")
 # The translation table (read once per process).
 #
 # @param path inputs/i18n/translations.csv by default (project root from
-#   get_root_dir() when available, else option apter.root / APTER_ROOT).
+#   get_root_dir() when available, else option optbuck.root / OPTBUCK_ROOT).
 i18n_table <- function(path = NULL) {
   if (!is.null(.i18n$table) && is.null(path)) return(.i18n$table)
   if (is.null(path)) {
@@ -68,8 +68,8 @@ i18n_table <- function(path = NULL) {
 
 # Is `lang` a language of the app? Anything else falls back to the default.
 i18n_lang <- function(lang) {
-  lang <- as.character(or_default(lang, APTER_LANGS[1L]))[1L]
-  if (lang %in% APTER_LANGS) lang else APTER_LANGS[1L]
+  lang <- as.character(or_default(lang, OPTBUCK_LANGS[1L]))[1L]
+  if (lang %in% OPTBUCK_LANGS) lang else OPTBUCK_LANGS[1L]
 }
 
 # A `ui` text by id, filled with sprintf(). Unknown ids are an error.
@@ -95,7 +95,7 @@ tr_value <- function(x, lang = "en") {
 
 # The display name of an assortment: the species ("Spruce" / "Gran") and the name. A product
 # name from a file is shown exactly as written (case unchanged); only the base names
-# (Sawlog, Pulpwood, Waste), which Apter translates, start in lower case ("Spruce sawlog",
+# (Sawlog, Pulpwood, Waste), which optBuck translates, start in lower case ("Spruce sawlog",
 # "Gran sagtømmer").
 # @param species "spruce" / "pine"; @param name the assortment's Name; @param lang "en" / "no".
 assortment_display_name <- function(species, name, lang = "en") {
@@ -219,13 +219,13 @@ i18n_df <- function(df, lang = "en") {
 # A text to render later, in the language of the moment: the id of a `ui`
 # text and its arguments (themselves texts, numbers or English backend
 # text).
-i18n_text <- function(id, ...) structure(list(id = id, args = list(...)), class = "apter_text")
+i18n_text <- function(id, ...) structure(list(id = id, args = list(...)), class = "optbuck_text")
 
 # Render an i18n_text(), English backend text (tr_msg()), or a list of
 # them (one string each).
 render_text <- function(x, lang = "en") {
   if (is.null(x)) return(NULL)
-  if (inherits(x, "apter_text"))
+  if (inherits(x, "optbuck_text"))
     return(do.call(tr, c(list(x$id), lapply(x$args, function(a)
       if (is.numeric(a)) a else render_text(a, lang)), list(lang = lang))))
   if (is.list(x)) return(vapply(x, function(e) paste(render_text(e, lang), collapse = "\n"), ""))

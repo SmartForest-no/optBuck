@@ -62,4 +62,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/check/audit_36_bucking_check.csv
+Audit CSV: <repo>/outputs/check/audit_36_bucking_check.csv

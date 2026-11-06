@@ -4,7 +4,7 @@
 ============================================================= 
 
 --- 01. Backend script exists ---
-  [PASS  ] Check 01: Backend script exists | found: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/R/run_bucking.R
+  [PASS  ] Check 01: Backend script exists | found: <repo>/R/run_bucking.R
 
 --- 02. Backend sources without error ---
   [PASS  ] Check 02: Backend sources without error | source() completed without error
@@ -54,4 +54,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/sampled_plot_backend_smoke/audit_16_sampled_plot_backend_smoke.csv
+Audit CSV: <repo>/outputs/sampled_plot_backend_smoke/audit_16_sampled_plot_backend_smoke.csv

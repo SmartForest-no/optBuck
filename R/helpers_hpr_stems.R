@@ -46,7 +46,7 @@ HPR_STEM_RECORD_RE <- "<Stem(?:\\s[^>]*)?>\\s*<StemKey>"
 # DBH height above ground (cm).
 HPR_DBH_ABOVE_GROUND_CM <- 130
 
-# Stump offset (cm) when a species group has no DBHHeight: Apter's stump.
+# Stump offset (cm) when a species group has no DBHHeight: optBuck's stump.
 HPR_DEFAULT_STUMP_CM <- 10
 
 # Largest accepted stump offset (cm).
@@ -302,7 +302,7 @@ hpr_clean_flags <- function(idx, pos, d, n, check = seq_len(n)) {
   data.frame(broken_top = broken, too_flat = flat, too_steep = steep)
 }
 
-# Which read stems Apter bucks, with the species map (species group key ->
+# Which read stems optBuck bucks, with the species map (species group key ->
 # "spruce" / "pine" / "none"); cheap (no profiles built), for the app's
 # message as the map changes.
 #
@@ -391,7 +391,7 @@ hpr_stem_checks <- function(st, species_map) {
             if (length(used_groups))
               sprintf("Height above ground = position + %g cm (130 cm - DBHHeight %s) for %s.",
                       sp$offset_cm[used_groups],
-                      ifelse(is.na(sp$dbh_height[used_groups]), "not given; Apter's stump",
+                      ifelse(is.na(sp$dbh_height[used_groups]), "not given; optBuck's stump",
                              sprintf("%g cm", sp$dbh_height[used_groups])),
                       sp$name[used_groups]))
   errors <- if (length(use) == 0L)
@@ -425,7 +425,7 @@ hpr_grade_grid <- function(g, gpos, gval, start_grade, step = HPR_PROFILE_STEP_C
   out
 }
 
-# Turn read stems into the stems Apter bucks (hpr_stem_checks(), then the
+# Turn read stems into the stems optBuck bucks (hpr_stem_checks(), then the
 # profiles). Kept stems get a 10 cm profile from 0 to the last measured
 # position rounded down to 10 cm (interpolated where positions are off the
 # grid; local diameter increases are kept), and DBH = the over-bark profile

@@ -11,16 +11,16 @@
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "scripts", "performance_tree_lists.R"))
 source(file.path(root_dir, "scripts", "performance_cases.R"))
 mode <- commandArgs(trailingOnly = TRUE)[1L]
-ref_file <- "C:/apter_private/diag/plot_perm_before.rds"
+ref_file <- "C:/optbuck_private/diag/plot_perm_before.rds"
 tabs <- c("selected_logs_all", "tree_summary", "product_summary", "per_m3_summary")
 run_all <- function() lapply(PERF_NFI_STRATA, function(s) {
   s$all_plots <- TRUE
@@ -33,7 +33,7 @@ if (identical(mode, "before")) {
   saveRDS(run_all(), ref_file); cat("reference written\n")
 } else {
   b <- readRDS(ref_file); a <- run_all()
-  map <- readRDS("C:/apter_private/nfi_plot_id_map.rds")
+  map <- readRDS("C:/optbuck_private/nfi_plot_id_map.rds")
   ok <- TRUE
   for (n in names(a)) for (t in tabs) {
     x <- a[[n]][[t]]

@@ -7,7 +7,7 @@
 #           swap_job_prices() / subset_job_stems().
 #
 # Private data : checks 3-8 read the owner's real .hpr file5 (REDACTED28
-#           in C:/apter_private/hpr/, outside the repository, read in place).
+#           in C:/optbuck_private/hpr/, outside the repository, read in place).
 #           No audit before this one reads a private file. When the file is
 #           missing these checks are recorded as REVIEW ("skipped", verdict
 #           ACCEPTED WITH REVIEW), not FAIL. Only counts and numbers are written.
@@ -67,24 +67,24 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -198,10 +198,10 @@ rec("Check 16: tuning_matrix_view(): classes in rows and lengths (cm) in columns
 
 # ==============================================================================
 # Private data: file5 (REDACTED28)
-f5 <- "C:/apter_private/hpr/REDACTED28"
+f5 <- "C:/optbuck_private/hpr/REDACTED28"
 have5 <- file.exists(f5)
 skipped <- function(n, what) rec(sprintf("Check %d: %s", n, what), REVIEW,
-                                 "skipped: file5 (C:/apter_private/hpr/REDACTED28) is not available")
+                                 "skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available")
 if (!have5) {
   skipped(3, "targets on file5 spruce 140 SCA"); skipped(4, "apply_grid_prices round trip on file5")
   skipped(5, "tune_prices determinism on file5"); skipped(6, "iteration-1 value check on file5")
@@ -259,7 +259,7 @@ if (!have5) {
     identical(products$pm[other, ], prod2$pm[other, ]) && na_same &&
     identical(apply_grid_prices(products, grid, grid$price)$pm, products$pm)
   rec("Check 4: tuning_grid(apply_grid_prices(P))$price == P; other products and unavailable cells untouched; the original grid reproduces pm",
-      ok(ok4), sprintf("%d Apter rows of the product", sum(!other)))
+      ok(ok4), sprintf("%d optBuck rows of the product", sum(!other)))
 
   # ============================================================================
   section("5. tune_prices determinism")
@@ -408,7 +408,7 @@ if (!have5) {
 section("12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5)")
 files12 <- c(file1 = "REDACTED1", file3 = "REDACTED33",
              file4 = "REDACTED27", file5 = "REDACTED28")
-paths12 <- file.path("C:/apter_private/hpr", files12)
+paths12 <- file.path("C:/optbuck_private/hpr", files12)
 if (!all(file.exists(paths12))) {
   rec("Check 12: tuning_hpr_info equals the file's classes and targets for every tunable product (file1, 3, 4, 5)", REVIEW,
       sprintf("skipped: missing %s", paste(names(files12)[!file.exists(paths12)], collapse = ", ")))

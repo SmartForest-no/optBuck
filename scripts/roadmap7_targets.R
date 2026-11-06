@@ -15,19 +15,19 @@
 # ==============================================================================
 
 args <- commandArgs(TRUE)
-folder  <- if (length(args) >= 1L) args[1L] else "C:/apter_private/hpr"
+folder  <- if (length(args) >= 1L) args[1L] else "C:/optbuck_private/hpr"
 workers <- if (length(args) >= 2L) as.integer(args[2L]) else NULL
 root <- local({
-  d <- normalizePath(Sys.getenv("APTER_ROOT", getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", getwd()), winslash = "/", mustWork = FALSE)
   while (!file.exists(file.path(d, "R", "helpers_paths.R")) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root)
+Sys.setenv(OPTBUCK_ROOT = root)
 suppressPackageStartupMessages(
-  suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/)
+  suppressMessages(pkgload::load_all(root, quiet = TRUE)))   # the package (R/, inst/)
 source(file.path(root, "scripts", "roadmap7_helpers.R"))
 show <- make_show(file.path(root, "outputs", "roadmap7"))
-if (is.null(workers)) workers <- apter_workers()
+if (is.null(workers)) workers <- optbuck_workers()
 options(width = 250)
 
 files <- sort(list.files(folder, pattern = "\\.hpr$", full.names = TRUE, ignore.case = TRUE))

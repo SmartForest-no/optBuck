@@ -79,24 +79,24 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -624,7 +624,7 @@ imp16 <- isTRUE(r16$ok) && identical(h16$products[["7949"]]$volume_method, "Mid"
   length(c(h16$warnings, r16$warnings)) == 0L && nrow(d16) == 1L &&
   identical(d16$VolumeDiameterCategory, "Mid") &&
   identical(d16$PriceLengths_cm, row(K_PINE_SAW)$PriceLengths_cm) &&
-  any(grepl("REDACTED23: Volume diameter 'Measured diameter in mm': Apter rounds the mid diameter",
+  any(grepl("REDACTED23: Volume diameter 'Measured diameter in mm': optBuck rounds the mid diameter",
             r16$info, fixed = TRUE))
 # Candidates on check 8's pine stem: a 37 dm log is priced on the under-bark
 # diameter at the middle of the cut log, over the class lower limit (365 cm);

@@ -3,7 +3,7 @@
 #
 # Purpose : Before/after report for the ProductCondition rule ("Buck butt-log only" /
 #           "Do not buck butt log") in the shared engine. For each harvester file (the
-#           owner's five private files in C:/apter_private/hpr, read in place, and the
+#           owner's five private files in C:/optbuck_private/hpr, read in place, and the
 #           synthetic fixtures) the assortments of the file itself are imported and the
 #           file's own stems bucked twice: "before" = every ButtCondition blanked (the
 #           old behaviour), "after" = as in the file. Also price tuning of file5's
@@ -13,12 +13,12 @@
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FALSE))
@@ -26,7 +26,7 @@ for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FA
 skip_tuning <- "skip_tuning" %in% commandArgs(trailingOnly = TRUE)
 only <- sub("^only=", "", grep("^only=", commandArgs(trailingOnly = TRUE), value = TRUE))   # e.g. only=file5
 
-dirp <- "C:/apter_private/hpr"
+dirp <- "C:/optbuck_private/hpr"
 files <- c(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L],
            file2 = file.path(dirp, "REDACTED40"), file3 = file.path(dirp, "REDACTED33"),
            file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))

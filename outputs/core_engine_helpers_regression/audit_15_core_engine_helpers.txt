@@ -30,4 +30,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/core_engine_helpers_regression/audit_15_core_engine_helpers.csv
+Audit CSV: <repo>/outputs/core_engine_helpers_regression/audit_15_core_engine_helpers.csv

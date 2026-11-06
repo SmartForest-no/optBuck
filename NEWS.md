@@ -1,6 +1,6 @@
 # optBuck 0.3.0
 
-First release of the package (the repository, called Apter until now, is the package).
+First release of the package (the repository, called optBuck until now, is the package).
 
 * Bucking simulator for harvester files: .hpr stems, NFI trees (sanitized data included) and tree lists, two scenarios of
   assortments and prices compared on the same stems.

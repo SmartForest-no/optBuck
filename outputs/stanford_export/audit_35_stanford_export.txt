@@ -4,10 +4,10 @@
 ============================================================= 
 
 --- 01. The schemas ---
-  [PASS  ] Check 01: The StanForD 2010 XSD files (.pin 3.3, .hpr 3.1) are in C:/apter_private/stanford_xsd/ | pin schema TRUE, hpr schema TRUE
+  [PASS  ] Check 01: The StanForD 2010 XSD files (.pin 3.3, .hpr 3.1) are in C:/optbuck_private/stanford_xsd/ | pin schema TRUE, hpr schema TRUE
 
---- 02. An Apter-made scenario ---
-  [PASS  ] Check 02: An Apter-made scenario exports a valid .pin with neutral values, unique ASCII ProductUserIDs, SpeciesGroupUserID Spruce/Pine and the export time as ModificationDate | 5 products | ids Sawlog,Pulpwood,Sawlog_2,Pulpwood_2,Sagtommer_Aas | XSD errors 0 
+--- 02. An optBuck-made scenario ---
+  [PASS  ] Check 02: An optBuck-made scenario exports a valid .pin with neutral values, unique ASCII ProductUserIDs, SpeciesGroupUserID Spruce/Pine and the export time as ModificationDate | 5 products | ids Sawlog,Pulpwood,Sawlog_2,Pulpwood_2,Sagtommer_Aas | XSD errors 0 
 
 --- 03. IDs and source elements survive ---
   [PASS  ] Check 03: ProductUserID, SpeciesGroupUserID, ModificationDate, metadata, ManualFreeBuck, TopLogFreeBuck, ProductCondition and LimitationDefinition survive import -> .pin export; the export is valid | ids PULP_Pine,SAW_Spruce | species ids SE1_Tall_SoundKnot,SE1_Gran_Sound | XSD errors 0 
@@ -42,4 +42,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/stanford_export/audit_35_stanford_export.csv
+Audit CSV: <repo>/outputs/stanford_export/audit_35_stanford_export.csv

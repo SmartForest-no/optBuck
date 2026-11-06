@@ -15,7 +15,7 @@
 # Files   : setup.R               data, default assortments and prices, choices
 #           theme.R               design tokens, bslib (Bootstrap 5) theme
 #           helpers_ui.R          cards, read-only fields, reactable and plot styling
-#           www/                  apter.css, icon, self-hosted fonts (OFL)
+#           www/                  optbuck.css, icon, self-hosted fonts (OFL)
 #           helpers_validation.R  inputs -> backend params, stratum counts
 #           helpers_upload.R      price files for runs, uploads to A or B
 #           helpers_jobs.R        runs as background jobs (ExtendedTask, workers)
@@ -48,8 +48,7 @@ if (!"optBuck_internals" %in% search()) {
   ns_objects <- ns_objects[!startsWith(names(ns_objects), ".__") & names(ns_objects) != ".packageName"]   # not the namespace's bookkeeping
   attach(ns_objects, name = "optBuck_internals", warn.conflicts = FALSE)
 }
-ROOT <- get_root_dir()
-Sys.setenv(APTER_ROOT = ROOT)
+ROOT <- get_root_dir()      # the package folder (installed) or the repository root (development)
 
 # ---- app files ---------------------------------------------------------------
 for (.f in c("setup.R", "theme.R", "helpers_ui.R", "helpers_validation.R",

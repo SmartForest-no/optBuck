@@ -8,16 +8,16 @@
 #           touched, so performance_check.R must still report "identical"; the
 #           original baseline file is not changed. Tree-list cases (tl*) have their
 #           own synthetic ids and are copied as they are.
-# Needs   : C:/apter_private/nfi_id_map.rds (private; never committed).
+# Needs   : C:/optbuck_private/nfi_id_map.rds (private; never committed).
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-map <- readRDS("C:/apter_private/nfi_id_map.rds")
+map <- readRDS("C:/optbuck_private/nfi_id_map.rds")
 to_new <- setNames(sprintf("%d", as.integer(map$treid_new)), sprintf("%.0f", map$treid_old))
 f_old <- file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d.rds")
 f_new <- file.path(root_dir, "outputs", "performance", "baseline_main_3fa0a9d_newids.rds")

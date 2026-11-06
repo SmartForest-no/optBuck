@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr export (Phase 5a)
-  Run: 2026-10-28 15:41:41.214409
+  Run: 2026-11-06 10:32:42.577188
 ============================================================= 
 
 --- 01. Round trip ---
@@ -41,4 +41,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/hpr_export/audit_31_hpr_export.csv
+Audit CSV: <repo>/outputs/hpr_export/audit_31_hpr_export.csv

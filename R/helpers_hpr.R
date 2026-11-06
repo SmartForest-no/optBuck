@@ -34,7 +34,7 @@ HPR_SPECIES_PATTERNS <- list(
 # Bucking criterion of a price cell that may not be cut: left empty.
 HPR_FORBIDDEN <- "Forbidden to buck the log even manually"
 
-# Bucking criterion of a price cell for logs bucked by hand only. Apter
+# Bucking criterion of a price cell for logs bucked by hand only. optBuck
 # simulates automatic bucking, so such cells are left empty too (decided
 # 2026-10-29, Phase 5b). "The log is excluded from apportionment bucking,
 # only bucking according to value allowed" stays priced.
@@ -43,7 +43,7 @@ HPR_MANUAL <- "Only logs bucked manually allowed"
 # Criteria of cells the optimiser may not use (left empty).
 HPR_UNAVAILABLE <- c(HPR_FORBIDDEN, HPR_MANUAL)
 
-# StanForD volume categories Apter computes (others become solid volume).
+# StanForD volume categories optBuck computes (others become solid volume).
 HPR_VOLUME_METHODS <- c("Top", "Calculated Norwegian mid", "Mid", "All diameters (solid volume)")
 
 # Volume method of a .pin product without a PriceDefinition: the default of a
@@ -78,7 +78,7 @@ HPR_PULPWOOD_NAME_TOKENS <- c("masse", "rmasse", "t\u00f8rr", "torr")
   t[nzchar(t)]
 }
 
-# Guess Apter's species of a species group from its name and user ID:
+# Guess optBuck's species of a species group from its name and user ID:
 # "spruce", "pine", or "none" (no match, or both).
 guess_hpr_species <- function(name, user_id = NA) {
   vapply(seq_along(name), function(i) {
@@ -166,7 +166,7 @@ guess_hpr_species <- function(name, user_id = NA) {
 }
 
 # The hidden SourceCells text (R4 polish): the cells of the source diameter classes
-# that have no whole-cm row in Apter (two classes inside one cm, classes below the
+# that have no whole-cm row in optBuck (two classes inside one cm, classes below the
 # min or above the max top diameter), so an export can write every class of the
 # source. One row per cell "d_mm|l_cm|price|dist|limit|criteria" joined by ";"
 # (criteria percent-encoded); a class without cells gets one row with empty fields
@@ -334,8 +334,8 @@ read_hpr <- function(path, filename = basename(path)) {
     return(fail(sprintf("%s is a StanForD '%s' message, not hpr.", filename, mt)))
   errors <- character(0); warnings <- src$warnings
   du <- unname(att["diameterUnit"]); lu <- unname(att["lengthUnit"])
-  if (!is.na(du) && du != "mm") errors <- c(errors, sprintf("Diameter unit is '%s'; Apter reads mm only (no conversion).", du))
-  if (!is.na(lu) && lu != "cm") errors <- c(errors, sprintf("Length unit is '%s'; Apter reads cm only (no conversion).", lu))
+  if (!is.na(du) && du != "mm") errors <- c(errors, sprintf("Diameter unit is '%s'; optBuck reads mm only (no conversion).", du))
+  if (!is.na(lu) && lu != "cm") errors <- c(errors, sprintf("Length unit is '%s'; optBuck reads cm only (no conversion).", lu))
   if (is.na(du) || is.na(lu)) warnings <- c(warnings, "The file does not state its units; read as mm and cm.")
   machine <- xml2::xml_find_first(x, "./Machine")
   if (inherits(machine, "xml_missing")) errors <- c(errors, "The file has no Machine element.")
@@ -424,8 +424,8 @@ read_pin <- function(path, filename = basename(path)) {
     return(fail(sprintf("%s is a StanForD '%s' message, not pin.", filename, mt)))
   errors <- character(0); warnings <- character(0)
   du <- unname(att["diameterUnit"]); lu <- unname(att["lengthUnit"])
-  if (!is.na(du) && du != "mm") errors <- c(errors, sprintf("Diameter unit is '%s'; Apter reads mm only (no conversion).", du))
-  if (!is.na(lu) && lu != "cm") errors <- c(errors, sprintf("Length unit is '%s'; Apter reads cm only (no conversion).", lu))
+  if (!is.na(du) && du != "mm") errors <- c(errors, sprintf("Diameter unit is '%s'; optBuck reads mm only (no conversion).", du))
+  if (!is.na(lu) && lu != "cm") errors <- c(errors, sprintf("Length unit is '%s'; optBuck reads cm only (no conversion).", lu))
   if (length(errors) > 0L) return(list(ok = FALSE, errors = errors, warnings = warnings))
 
   pds <- xml2::xml_find_all(x, "./ProductDefinition[ClassifiedProductDefinition]")
@@ -571,7 +571,7 @@ hpr_product_table <- function(hpr, species_map) {
 
 # ---- one product -> assortment row and prices ------------------------------------------
 
-# The price grid of one product in Apter's layout: whole-cm diameter rows x
+# The price grid of one product in optBuck's layout: whole-cm diameter rows x
 # whole-dm length columns. Returns list(pm (long), limits (kept class lower
 # limits, cm), lengths (cm), errors, warnings (something lost), info (not
 # shown: what follows the documented rules, e.g. rounding)).
@@ -706,7 +706,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, man
       }
       if (method != "All diameters (solid volume)" && !is.na(p$volume_adjustment) &&
           !identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM))
-        pinfo <- c(pinfo, sprintf("Volume diameter '%s': Apter rounds the %s diameter down to whole cm for this method.",
+        pinfo <- c(pinfo, sprintf("Volume diameter '%s': optBuck rounds the %s diameter down to whole cm for this method.",
                             p$volume_adjustment, if (method == "Mid") "mid" else "top"))
       len_rule <- or_default(p$volume_length, "Physical length cm")
       class_len <- identical(len_rule, "Length as defined in LengthClasses") &&
@@ -715,9 +715,9 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, man
                            "Rounded downwards to nearest dm-module"))
         pw <- c(pw, sprintf("Volume length '%s' is not available; the cut length is used.", len_rule))
       if (!identical(tolower(or_default(p$dia_under_bark, "true")), "true"))
-        pw <- c(pw, "Diameters over bark in the file; Apter reads all limits under bark.")
+        pw <- c(pw, "Diameters over bark in the file; optBuck reads all limits under bark.")
       if (!identical(tolower(or_default(p$volume_under_bark, "true")), "true"))
-        pw <- c(pw, "Price volume over bark in the file; Apter prices volume under bark.")
+        pw <- c(pw, "Price volume over bark in the file; optBuck prices volume under bark.")
       if (!is.na(p$volume_top_pos) && !is.na(p$top_pos) && p$volume_top_pos != p$top_pos)
         pw <- c(pw, sprintf("Volume top position %g cm differs from the diameter top position %g cm; %g cm used.",
                             p$volume_top_pos, p$top_pos, p$top_pos))

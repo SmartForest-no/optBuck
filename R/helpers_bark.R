@@ -20,14 +20,14 @@
 #
 # Swap    : register a function(d_cm, dbh_cm, species_group) -> double bark
 #           in mm in BARK_MODELS and select it with
-#           options(apter.bark_model = "<name>").
+#           options(optbuck.bark_model = "<name>").
 #
 # Usage   : pv <- add_under_bark_profile(pv)        # adds pv$DiameterValueUB
 #           d_ub <- under_bark_diameter(d_ob_mm, dbh_ob_mm, "pine")
 # ==============================================================================
 
 
-# barkNOR as an Apter bark model.
+# barkNOR as an optBuck bark model.
 #
 # taperNOR::barkNOR() type-checks h and h_top but does not use them
 # (verified 2026-10-12), so they are passed as numeric placeholders.
@@ -51,8 +51,8 @@ BARK_MODELS$barkNOR <- bark_model_barkNOR
 # Name of the default bark model.
 DEFAULT_BARK_MODEL <- "barkNOR"
 
-# The active bark model function (option apter.bark_model, else barkNOR).
-get_bark_model <- function(name = getOption("apter.bark_model", DEFAULT_BARK_MODEL)) {
+# The active bark model function (option optbuck.bark_model, else barkNOR).
+get_bark_model <- function(name = getOption("optbuck.bark_model", DEFAULT_BARK_MODEL)) {
   fn <- BARK_MODELS[[name]]
   if (!is.function(fn))
     stop("Unknown bark model '", name, "'. Registered: ",

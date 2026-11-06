@@ -1,7 +1,7 @@
 # ==============================================================================
 # R/helpers_audit.R
 #
-# Purpose : Shared audit utilities for Apter audit scripts.
+# Purpose : Shared audit utilities for optBuck audit scripts.
 #
 # Usage   : source("R/helpers_audit.R")
 #
@@ -11,7 +11,7 @@
 # ==============================================================================
 
 
-# or_default() (Apter's "value or default" rule) lives in R/helpers_utils.R,
+# or_default() (optBuck's "value or default" rule) lives in R/helpers_utils.R,
 # shared with the app, the backend and its workers. Audits do not define
 # `%||%`: base R's (NULL only) is left alone.
 if (!exists("or_default", mode = "function"))
@@ -73,6 +73,23 @@ init_audit_log <- function(log_path) {
 # Check recording
 # ------------------------------------------------------------------------------
 
+# The repository's absolute path is machine-specific (and the local folder name is not the package's):
+# the committed audit files show it as "<repo>" (2026-11-06).
+.audit_repo_root <- function() {
+  cand <- c(Sys.getenv("OPTBUCK_ROOT", ""), getOption("optbuck.root", ""))
+  d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+  repeat {
+    if (file.exists(file.path(d, "audits", "helpers_audit.R"))) { cand <- c(cand, d); break }
+    parent <- dirname(d); if (identical(parent, d)) break; d <- parent
+  }
+  cand <- cand[nzchar(cand)]
+  unique(c(cand, normalizePath(cand, winslash = "/", mustWork = FALSE)))
+}
+.redact_root <- function(x) {
+  for (r in .audit_repo_root()) x <- gsub(r, "<repo>", x, fixed = TRUE)
+  x
+}
+
 #' Append one check result to a results list stored in an environment.
 #'
 #' Rather than using a global variable (<<-), callers pass an environment
@@ -84,6 +101,8 @@ init_audit_log <- function(log_path) {
 #' @param detail Optional detail string.
 #' @param log_path If non-NULL, the check line is also written to the log file.
 record_check <- function(env, check, result, detail = "", log_path = NULL) {
+  detail <- .redact_root(detail)
+  check  <- .redact_root(check)
   tag <- sprintf("  [%-6s] %s", result, check)
   if (nchar(detail) > 0L) tag <- paste0(tag, " | ", detail)
 
@@ -200,7 +219,7 @@ write_audit_outputs <- function(results, audit_csv, log_path) {
 
   prev_csv <- .read_raw(audit_csv)
   readr::write_csv(results, audit_csv)
-  cat(sprintf("\nAudit CSV: %s\n", audit_csv), file = log_path, append = TRUE)
+  cat(sprintf("\nAudit CSV: %s\n", .redact_root(audit_csv)), file = log_path, append = TRUE)
   .keep_if_only_timestamp(log_path, audit_csv, prev_csv)
   cat(sprintf("\n[%s] Audit complete.\n", verdict))
   invisible(verdict)
@@ -226,7 +245,7 @@ audit_browser_start <- function() {
   if (!requireNamespace("chromote", quietly = TRUE))
     stop("chromote is not installed.", call. = FALSE)
   audit_browser_stop()                                   # a start after a start begins clean
-  dir <- tempfile("apter-chrome-profile-")
+  dir <- tempfile("optbuck-chrome-profile-")
   dir.create(dir, recursive = TRUE)
   chromote::set_chrome_args(c(chromote::default_chrome_args(),
                               paste0("--user-data-dir=", normalizePath(dir, winslash = "/")),

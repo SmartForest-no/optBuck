@@ -1,7 +1,7 @@
 check,result,detail
-Check 01: every id app/check.R uses is a ui row with an English and a Norsk text,PASS,74 ids; missing or empty: none
-Check 02: every chk_* ui row is used in app/check.R,PASS,76 rows; unused: none
+Check 01: every id app/check.R uses is a ui row with an English and a Norsk text,PASS,75 ids; missing or empty: none
+Check 02: every chk_* ui row is used in app/check.R,PASS,77 rows; unused: none
 "Check 03: every reason the check gives for a stem left out, and the failure message, has a msg row in both languages",PASS,6 messages; without a row: none
-"Check 04: tab_check, help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages",PASS,missing: none
+"Check 04: tab_check, chk_lim_j (recorded value can exceed best possible), help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages",PASS,missing: none
 Check 05: the progress texts of the NFI profile build and of the job translate to Norsk (and differ from English); the four check steps have both texts,PASS,Norsk: Bygger stammeprofiler for Landsskogtakseringen (bare første gang) | Lagrer stammeprofiler for Landsskogtakseringen | Laster data fra Landsskogtakseringen og stammeprofiler | Apterer trær
 Check 06: English and Norsk text of every chk_* row have the same placeholders,PASS,differing: none

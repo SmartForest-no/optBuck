@@ -50,4 +50,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/pin_import_export/audit_32_pin_import_export.csv
+Audit CSV: <repo>/outputs/pin_import_export/audit_32_pin_import_export.csv

@@ -80,7 +80,7 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
   num <- function(x, d = 0L) fmt_num(x, d, lang())
   pct <- function(x, d = 1L) ifelse(is.na(x), "–", fmt_num(100 * x, d, lang()))
   sp_name <- function(x) tr_value(tools::toTitleCase(as.character(x)), lang())
-  tbl <- function(df, ...) apter_reactable(df, pagination = nrow(df) > 15L, page_size = 15L, lang = lang(), ...)
+  tbl <- function(df, ...) optbuck_reactable(df, pagination = nrow(df) > 15L, page_size = 15L, lang = lang(), ...)
 
   output$chk_results <- renderUI({
     r <- res(); if (is.null(r)) return(NULL)
@@ -127,7 +127,7 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
     names(d) <- c("StemKey", L("chk_c_species"), paste(L("chk_c_recorded"), "–", L("chk_c_value")),
                   paste(L("chk_c_best"), "–", L("chk_c_value")), L("chk_c_degree"))
     d$.key <- s$StemKey
-    apter_reactable(d, page_size = 10L, lang = lang(), sortable = FALSE,
+    optbuck_reactable(d, page_size = 10L, lang = lang(), sortable = FALSE,
                     columns = list(.key = reactable::colDef(show = FALSE)),
                     on_click = reactable::JS("function(rowInfo) { Shiny.setInputValue('chk_click', rowInfo.original['.key'], {priority: 'event'}); }"))
   })
@@ -139,7 +139,7 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
     rec <- data.frame(ProductType = ifelse(rec$waste, "waste", r$ptype[rec$akey]), StartPos = rec$StartPos, StopPos = rec$StopPos,
                       LengthClass_dm = round(rec$LogLength / 10), stringsAsFactors = FALSE)
     h <- max(c(rec$StopPos, opt$StopPos), na.rm = TRUE) / 100
-    apter_stem_compare(rec, opt, h, sprintf("%s %s", L("chk_stem_title"), k), lang = lang(),
+    optbuck_stem_compare(rec, opt, h, sprintf("%s %s", L("chk_stem_title"), k), lang = lang(),
                        labels = c(L("chk_stem_recorded"), L("chk_stem_best")))
   })
 

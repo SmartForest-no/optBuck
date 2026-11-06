@@ -2,24 +2,24 @@
 # scripts/verify_vs_old_lite.R  (roadmap 8, step 5 LITE, 2026-11-04)
 #
 # Purpose : First comparison of the new recorded-log valuation (bucking_check()) with the saved
-#           actual values of the old optBuck (C:/apter_private/optbuck_reference/<file>/per_stem.csv)
+#           actual values of the old optBuck (C:/optbuck_private/optbuck_reference/<file>/per_stem.csv)
 #           per stem, for file1, file3, file4 and file5 (patched copy). It reads the saved RDS/CSV only;
 #           the old package is never run. NOT the full R3 verification: the "old-rules mode"
 #           (a re-implementation of the old valuation on the new reader's data, B5-1) and the
 #           one-rule-at-a-time attribution (B5-2) are not done yet (PLAN.md, Blocked items).
-# Output  : C:/apter_private/optbuck_reference/r3_lite.csv and stem-level files r3_lite_<file>.csv
+# Output  : C:/optbuck_private/optbuck_reference/r3_lite.csv and stem-level files r3_lite_<file>.csv
 # Usage   : Rscript scripts/verify_vs_old_lite.R [file1 file3 ...]
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
-dirp <- "C:/apter_private/hpr"; ref <- "C:/apter_private/optbuck_reference"
+dirp <- "C:/optbuck_private/hpr"; ref <- "C:/optbuck_private/optbuck_reference"
 cfg <- list(file1 = c(list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L], "file1"),
             file3 = c(file.path(dirp, "REDACTED33"), "file3"),
             file4 = c(file.path(dirp, "REDACTED27"), "file4"),

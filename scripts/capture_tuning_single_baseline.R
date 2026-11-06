@@ -12,19 +12,19 @@
 
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   d <- if (nzchar(env)) normalizePath(env, winslash = "/", mustWork = FALSE) else
     normalizePath(getwd(), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 source(file.path(root_dir, "scripts", "roadmap7_helpers.R"))
 
-f5 <- "C:/apter_private/hpr/REDACTED28"
+f5 <- "C:/optbuck_private/hpr/REDACTED28"
 if (!file.exists(f5)) stop("file5 not available: ", f5)
 
 hp <- read_hpr(f5); stopifnot(isTRUE(hp$ok))

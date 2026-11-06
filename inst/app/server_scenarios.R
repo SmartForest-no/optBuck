@@ -110,7 +110,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   # (the assortment may be gone when it is shown): "Spruce sawlog and Pine
   # sawlog"; price files also name "Flat prices".
   fixed_text <- function(f)
-    structure(lapply(stats::setNames(APTER_LANGS, APTER_LANGS), f), class = "apter_fixed")
+    structure(lapply(stats::setNames(OPTBUCK_LANGS, OPTBUCK_LANGS), f), class = "optbuck_fixed")
   key_text <- function(keys)
     fixed_text(function(l) paste(key_label(keys, l), collapse = tr("word_and", lang = l)))
   price_file_text <- function(ids)
@@ -119,8 +119,8 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   render_msg <- function(x) {
     l <- lang()
     one <- function(e) {
-      if (inherits(e, "apter_fixed")) return(e[[l]])
-      if (inherits(e, "apter_text"))
+      if (inherits(e, "optbuck_fixed")) return(e[[l]])
+      if (inherits(e, "optbuck_text"))
         return(do.call(tr, c(list(e$id), lapply(e$args, function(a) if (is.numeric(a)) a else one(a)),
                              list(lang = l))))
       if (is.list(e)) return(paste(vapply(e, one, ""), collapse = "\n"))
@@ -235,7 +235,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       cell = type_select_js(tolower(side), disp$.key, l))
     cls <- paste(cls, ifelse(disp$.key == or_default(selected(), ""), "asm-selected", ""))
     cols$.key <- reactable::colDef(show = FALSE)
-    apter_reactable(disp, page_size = 20L, columns = cols, sortable = FALSE,
+    optbuck_reactable(disp, page_size = 20L, columns = cols, sortable = FALSE,
                     row_class = function(index) cls[index],
                     on_click = reactable::JS(
                       "function(rowInfo) { Shiny.setInputValue('asm_click', rowInfo.original['.key'], {priority: 'event'}); }"),
@@ -654,7 +654,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       div(class = "section-hdr", L("hdr_species_groups")),
       tags$table(class = "hpr-table",
         tags$thead(tags$tr(tags$th(L("col_key")), tags$th(L("col_species_group")), tags$th(L("col_user_id")),
-                           tags$th(L("col_products")), tags$th(L("col_apter_species")))),
+                           tags$th(L("col_products")), tags$th(L("col_optbuck_species")))),
         tags$tbody(lapply(seq_len(nrow(d$species)), function(i) tags$tr(
           tags$td(d$species$key[i]), tags$td(d$species$name[i]),
           tags$td(or_default(d$species$user_id[i], "")), tags$td(d$species$n_products[i]),
@@ -804,7 +804,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   observeEvent(input$pm_b, apply_grid_edit(input$pm_b, "B"))
 
   # Flat price edits arrive as input$flat_edit = {side, key, value}
-  # (www/apter.js, on change of the field), so the key travels with the
+  # (www/optbuck.js, on change of the field), so the key travels with the
   # value, as the matrix id does with a grid.
   observeEvent(input$flat_edit, {
     e <- input$flat_edit; side <- toupper(or_default(e$side, "")); k <- e$key
@@ -1072,7 +1072,7 @@ function(instance, td, row, col, prop, value, cellProperties) {
       theirs <- if (sel_state(o) == "flat") flat_price(o, k) else NA_real_
       # Only an assortment both scenarios have can differ.
       differs <- sel_state(o) != "none" && !isTRUE(all.equal(mine, theirs))
-      session$sendCustomMessage("apter_toggle_class",
+      session$sendCustomMessage("optbuck_toggle_class",
                                 list(id = paste0("flat_wrap_", s), cls = "is-diff", on = differs))
       span(class = paste("asm-flat-other", if (differs) "asm-diff"),
            if (is.na(theirs)) L("flat_none_other", o)
@@ -1131,7 +1131,7 @@ function(instance, td, row, col, prop, value, cellProperties) {
     # The box is disabled (and unticked) when no stem file has the scenario's instruction.
     observe({
       dis <- grade_disabled(side)
-      session$sendCustomMessage("apter-disable", list(id = paste0("grade_use_", s), disabled = dis))
+      session$sendCustomMessage("optbuck-disable", list(id = paste0("grade_use_", s), disabled = dis))
       if (dis && isTRUE(isolate(input[[paste0("grade_use_", s)]])))
         updateCheckboxInput(session, paste0("grade_use_", s), value = FALSE)
     })

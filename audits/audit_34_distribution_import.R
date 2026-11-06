@@ -11,7 +11,7 @@
 #           R/helpers_hpr_export.R, R/helpers_pin_export.R, app/helpers_upload.R.
 #           Fixtures: inputs/test_fixtures/distribution_synthetic.hpr/.pin
 #           (scripts/make_distribution_fixture.R). Checks 20-29 read the owner's
-#           private files in C:/apter_private (read in place, never copied;
+#           private files in C:/optbuck_private (read in place, never copied;
 #           printed as file1..file5, hand.pin, real.pin) and are skipped with a
 #           note when a file is missing.
 #
@@ -65,24 +65,24 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -421,7 +421,7 @@ unlink(c(f11a, f11b, f11c, f11d, f_def_path))
 # ==============================================================================
 # Private files (checks 20-29): read in place, skipped with a note when missing.
 # ==============================================================================
-PRIV_HPR <- "C:/apter_private/hpr"; PRIV_PIN <- "C:/apter_private/pin"
+PRIV_HPR <- "C:/optbuck_private/hpr"; PRIV_PIN <- "C:/optbuck_private/pin"
 hpr_files <- if (dir.exists(PRIV_HPR)) sort(list.files(PRIV_HPR, "[.]hpr$", full.names = TRUE)) else character(0)
 names(hpr_files) <- if (length(hpr_files)) paste0("file", seq_along(hpr_files)) else character(0)
 pin_files <- c(hand.pin = file.path(PRIV_PIN, "hand.pin"), real.pin = file.path(PRIV_PIN, "real.pin"))

@@ -22,7 +22,7 @@
 #       "Calculated Norwegian mid".
 #       "Mid"         : cylinder at the diameter at the log's middle,
 #                       (StartPos + StopPos)/2, interpolated from the profile.
-#       "All diameters (solid volume)" (default pulpwood, waste): Apter's
+#       "All diameters (solid volume)" (default pulpwood, waste): optBuck's
 #                       solid volume (section_volume_fun(), shared with the
 #                       NOK/m3 denominator); not rounded (2026-10-12).
 #   - Measuring top diameter: read DiameterTopPosition cm below the cut (0
@@ -248,7 +248,7 @@ price_len_of <- function(p, log_len)
 
   # One diameter series (over or under bark): interpolation function
   # (rule = 2: extrapolate with boundary values), its values on the grid,
-  # and Apter's solid volume (section_volume_fun(), shared with the NOK/m3
+  # and optBuck's solid volume (section_volume_fun(), shared with the NOK/m3
   # denominator).
   make_series <- function(diam_val) {
     fun <- stats::approxfun(diam_pos, diam_val, method = "linear", rule = 2)

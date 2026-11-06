@@ -11,7 +11,7 @@
 #      16.642749 m; pine d 9.9, 10, 34.9, 35, 50 -> 7.780144, 7.845600,
 #      17.160302, 17.095000, 18.700000 m
 #  2.  Spruce-only and pine-only lists impute without error (guards
-#      fieldPlot's absent-species failure, which Apter's wrapper avoids)
+#      fieldPlot's absent-species failure, which optBuck's wrapper avoids)
 #  3.  >= 10 measured heights -> fieldPlot ("fieldPlot (plot)" in plots with
 #      measured heights, "fieldPlot (species curve)" in a plot without);
 #      no heights -> "FinnHoyde (uncalibrated)"; measured heights unchanged
@@ -48,24 +48,24 @@
 suppressPackageStartupMessages(library(readr))
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))

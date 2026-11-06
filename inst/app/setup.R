@@ -4,7 +4,7 @@
 #           default assortments and prices, HKL/bonitet/county choice
 #           mappings, fixed sampling settings and the release version
 #           (internal). Styling is in theme.R and
-#           www/apter.css.
+#           www/optbuck.css.
 #           Sourced by app.R after ROOT is resolved and the backend is loaded.
 
 # ---- load plot metadata for stratum availability preview --------------------
@@ -13,7 +13,7 @@ plots_all <- as.data.frame(arrow::read_parquet(
 
 # ---- default assortments and prices -------------------------------------------
 # The base products as the assortment table (Phase 4c; R/helpers_products.R)
-# and the default prices in Apter's minimal long form. Both scenarios start
+# and the default prices in optBuck's minimal long form. Both scenarios start
 # from these; "Reset to defaults" and "Reset to default prices" restore them.
 APP_PRODUCTS   <- load_products(ROOT)
 APP_PM_DEFAULT <- pm_minimal(load_price_matrix_long(ROOT))
@@ -21,12 +21,12 @@ APP_DEFS       <- defs_from_products(APP_PRODUCTS)
 
 # ---- NFI plots (Phase 4d) -------------------------------------------------------
 # NFI runs use every plot of the selected stratum (no sampling). The test-only
-# APTER_N_PLOTS samples that many plots instead (seed 42; audit 17 runs with 5).
-APP_N_PLOTS <- suppressWarnings(as.integer(Sys.getenv("APTER_N_PLOTS")))   # NA = all plots
+# OPTBUCK_N_PLOTS samples that many plots instead (seed 42; audit 17 runs with 5).
+APP_N_PLOTS <- suppressWarnings(as.integer(Sys.getenv("OPTBUCK_N_PLOTS")))   # NA = all plots
 APP_SEED    <- 42L
 # Test-only: the number of tuning iterations of the Price tuning tab (audit 17).
-if (nzchar(Sys.getenv("APTER_TUNE_MAX_ITER")))
-  options(apter.tune_max_iter = as.integer(Sys.getenv("APTER_TUNE_MAX_ITER")))
+if (nzchar(Sys.getenv("OPTBUCK_TUNE_MAX_ITER")))
+  options(optbuck.tune_max_iter = as.integer(Sys.getenv("OPTBUCK_TUNE_MAX_ITER")))
 
 # The NFI trees with the columns select_nfi_trees() (R/helpers_tree_selection.R)
 # needs: the sidebar's live tree counts use the run's own selection code.
@@ -84,23 +84,23 @@ fylnr_choices <- function(lang) {
 # ---- upload limit (Import from .hpr) -------------------------------------------
 # Harvester files are large (real .hpr files: 3-151 MB). Shiny has one upload
 # limit for all inputs; the other uploads are small. Default 200 MB; set the
-# option apter.hpr_max_mb or the environment variable APTER_HPR_MAX_MB.
+# option optbuck.hpr_max_mb or the environment variable OPTBUCK_HPR_MAX_MB.
 HPR_MAX_UPLOAD_MB <- local({
-  env <- suppressWarnings(as.numeric(Sys.getenv("APTER_HPR_MAX_MB", "")))
-  as.numeric(getOption("apter.hpr_max_mb", if (is.na(env)) 200 else env))
+  env <- suppressWarnings(as.numeric(Sys.getenv("OPTBUCK_HPR_MAX_MB", "")))
+  as.numeric(getOption("optbuck.hpr_max_mb", if (is.na(env)) 200 else env))
 })
 options(shiny.maxRequestSize = HPR_MAX_UPLOAD_MB * 1024^2)
 
-# Apter species of an .hpr species group (import dialog and ".hpr stems").
+# optBuck species of an .hpr species group (import dialog and ".hpr stems").
 species_group_choices <- function(lang)
   stats::setNames(c("spruce", "pine", "both"), tr(c("sp_spruce", "sp_pine", "sp_both"), lang = lang))
 hpr_species_choices <- function(lang)
   stats::setNames(c("spruce", "pine", "none"), tr(c("sp_spruce", "sp_pine", "sp_not_used"), lang = lang))
 
 # ---- language (Phase 1, 2026-10-27; R/helpers_i18n.R) -------------------------
-# The language the page starts in: Norsk, or the test-only APTER_LANG. The
-# browser then applies the viewer's own choice (www/apter.js).
-APP_LANG <- i18n_lang(Sys.getenv("APTER_LANG", ""))
+# The language the page starts in: Norsk, or the test-only OPTBUCK_LANG. The
+# browser then applies the viewer's own choice (www/optbuck.js).
+APP_LANG <- i18n_lang(Sys.getenv("OPTBUCK_LANG", ""))
 i18n_table()
 
 # ---- release version (DESCRIPTION; internal, not shown) -----------------------
@@ -108,7 +108,7 @@ APP_VERSION <- as.character(utils::packageVersion("optBuck"))
 
 # ---- parallel workers (R/helpers_parallel.R) ---------------------------------
 # Started once per app process and shared by all sessions; runs are
-# background tasks on them (helpers_jobs.R). Option apter.workers sets the
+# background tasks on them (helpers_jobs.R). Option optbuck.workers sets the
 # number (default detectCores() - 1, meant for one R process per machine).
-APP_WORKERS <- apter_workers()
+APP_WORKERS <- optbuck_workers()
 .ensure_plan(APP_WORKERS)

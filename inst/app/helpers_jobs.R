@@ -66,7 +66,6 @@
   .async_future(
     quote({
       if (!isNamespaceLoaded("optBuck")) {
-        Sys.setenv(APTER_ROOT = root)
         if (dev) suppressPackageStartupMessages(pkgload::load_all(root, quiet = TRUE))   # development: the source folder
         else loadNamespace("optBuck")
       }
@@ -74,20 +73,20 @@
       do.call(get(fun_name, envir = asNamespace("optBuck")), args)
     }),
     globals = list(fun_name = fun_name, args = args, root = ROOT, dev = .optbuck_dev(),
-                   opts = list(apter.bark_model = getOption("apter.bark_model"))))
+                   opts = list(optbuck.bark_model = getOption("optbuck.bark_model"))))
 }
 
 #' Read the stems of an .hpr file on a worker (read_hpr_stems(),
 #' R/helpers_hpr_stems.R): large files take 10-20 s.
 read_hpr_stems_async <- function(path, filename) {
-  .ensure_plan(apter_workers())
+  .ensure_plan(optbuck_workers())
   .backend_promise("read_hpr_stems", list(path, filename))
 }
 
 #' Read the stems of several .hpr files on a worker, one after the other
 #' (read_hpr_stem_files(), R/helpers_hpr_stems.R).
 read_hpr_stem_files_async <- function(paths, filenames) {
-  .ensure_plan(apter_workers())
+  .ensure_plan(optbuck_workers())
   .backend_promise("read_hpr_stem_files", list(paths, filenames))
 }
 
@@ -106,7 +105,7 @@ read_hpr_stem_files_async <- function(paths, filenames) {
 #' @param spec,progress As for run_job_async().
 #' @return A promise of the prepared job (prepare_*_job()).
 prepare_job_async <- function(spec, progress = function(done, total, what) NULL) {
-  workers <- apter_workers()
+  workers <- optbuck_workers()
   .ensure_plan(workers)
 
   if (identical(spec$src, "list")) {
@@ -164,7 +163,7 @@ prepare_job_async <- function(spec, progress = function(done, total, what) NULL)
 #' @param progress function(done, total, what) for the progress display.
 #' @return A promise of the backend result (with $scenario for a comparison).
 run_job_async <- function(spec, progress = function(done, total, what) NULL) {
-  workers <- apter_workers()
+  workers <- optbuck_workers()
   p_job <- prepare_job_async(spec, progress)
 
   promises::then(p_job, function(job) {
@@ -193,7 +192,7 @@ run_job_async <- function(spec, progress = function(done, total, what) NULL) {
 #' @param progress function(step, done, total), step "read", "opt", "val" or "tab".
 #' @return A promise of the bucking_check() result.
 run_check_async <- function(spec, progress = function(step, done, total) NULL) {
-  workers <- apter_workers()
+  workers <- optbuck_workers()
   .ensure_plan(workers)
   progress("read", 0L, NA_integer_)
   p0 <- .backend_promise("bucking_check", list(

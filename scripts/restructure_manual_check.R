@@ -7,7 +7,7 @@
 #      FG on all stems about 83 -> 94, value change about -0.2 %),
 #   2. spruce 140 SCA together with spruce 148 (Even target set with the
 #      editor's helpers): FG per assortment, value change, runtime.
-# file5 is read in place (C:/apter_private/hpr), the result goes to
+# file5 is read in place (C:/optbuck_private/hpr), the result goes to
 # outputs/restructure/manual_check.txt (gitignored).
 #
 # Usage: Rscript scripts/restructure_manual_check.R
@@ -19,14 +19,14 @@ root_dir <- local({
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 # tuning_run() and its constant, without the app's UI code
 for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FALSE))
   if (is.call(e) && identical(as.character(e[[1L]]), "<-") && as.character(e[[2L]]) %in% c("TUNE_MIN_LOGS", "tuning_run")) eval(e)
 
-f5 <- "C:/apter_private/hpr/REDACTED28"
+f5 <- "C:/optbuck_private/hpr/REDACTED28"
 stopifnot(file.exists(f5))
 out <- file.path(root_dir, "outputs", "restructure"); dir.create(out, recursive = TRUE, showWarnings = FALSE)
 log <- file.path(out, "manual_check.txt"); unlink(log)

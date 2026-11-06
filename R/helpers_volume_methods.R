@@ -6,7 +6,7 @@
 #           StanForD categories as implemented in optBuck's PriceVolumeCalc.R
 #           (https://github.com/SmartForest-no/optBuck):
 #
-#   "Top cylinder"   Apter's sawlog rule (not a StanForD value; until Phase 4b
+#   "Top cylinder"   optBuck's sawlog rule (not a StanForD value; until Phase 4b
 #                    labelled "Top"): cylinder at the top diameter,
 #                    pi * (Dt/2)^2 * L.
 #   "Top"            StanForD/optBuck "Top": frustum from the top diameter Dt
@@ -14,7 +14,7 @@
 #                    V = pi * L * (Dt^2 + Dt*Db + Db^2) / 12. optBuck had
 #                    LogLength * 0.01 (a bug); 1 cm/m decided 2026-10-12.
 #   "All diameters (solid volume)"
-#                    Apter's solid volume: 10 cm cylinders at each section's
+#                    optBuck's solid volume: 10 cm cylinders at each section's
 #                    top diameter, not rounded (section_volume_fun(),
 #                    helpers_commercial_volume.R; decided 2026-10-12). Differs
 #                    from optBuck, which sums one section too many and rounds.
@@ -28,7 +28,7 @@
 #                    V = 3.14/4 * Dmid^2 * L_cm / 1e8 m3. Uses 3.14, not pi,
 #                    to reproduce the official volume (Lennart, 2026-10-13);
 #                    not rounded to whole dm3. optBuck rounds Dt to whole mm
-#                    and adds 0.5 mm (units bug); Apter follows optBuck with
+#                    and adds 0.5 mm (units bug); optBuck follows optBuck with
 #                    the units fixed. Set DiameterTopPosition = 10 for the
 #                    rule's measuring point.
 #   "Mid"            StanForD 2010 VolumeDiameterCategory 3 (2026-10-21):
@@ -51,7 +51,7 @@
 #   "Calculated Norwegian mid" always floors (part of the rule). Solid volume
 #   never rounds; the combination is rejected by validate_products().
 #
-#   VolumeLengthCategory has no effect: Apter cuts logs at exactly their
+#   VolumeLengthCategory has no effect: optBuck cuts logs at exactly their
 #   class length (no trim allowance), so physical, rounded-down and
 #   length-class lengths are the same.
 #

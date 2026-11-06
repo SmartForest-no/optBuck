@@ -2,7 +2,7 @@
 # scripts/verify_r3.R  (roadmap 8, task 2, 2026-11-04)
 #
 # Purpose : Verification of the new reader and valuation against the SAVED output of the old optBuck
-#           (C:/apter_private/optbuck_reference/<file>/, nothing is re-run), on the owner's private
+#           (C:/optbuck_private/optbuck_reference/<file>/, nothing is re-run), on the owner's private
 #           files. R3 counts as passed when a-d pass:
 #             a  read_hpr_logs() vs the old getLogs() per log and field (target >= 99.9 % equal)
 #             b  new stem profile points vs the old getStemprofile() per stem
@@ -10,20 +10,20 @@
 #             d  B5-3(i): the new optimum is never below the new value of an eligible old optimal pattern
 #             e  ablation on file4: old bark rule and old over-bark price lookup move the recorded total
 #                toward the old total (report, no threshold)
-# Output  : C:/apter_private/diag/r3_verification.txt (printed too) and r3_*.csv with the listed differences
+# Output  : C:/optbuck_private/diag/r3_verification.txt (printed too) and r3_*.csv with the listed differences
 #           (private; stem keys). Only aggregates go into PLAN.md.
 # Usage   : Rscript scripts/verify_r3.R [a b c d e] [file1 file3 file4 file5]
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
-dirp <- "C:/apter_private/hpr"; ref <- "C:/apter_private/optbuck_reference"; dg <- "C:/apter_private/diag"
+dirp <- "C:/optbuck_private/hpr"; ref <- "C:/optbuck_private/optbuck_reference"; dg <- "C:/optbuck_private/diag"
 dir.create(dg, showWarnings = FALSE, recursive = TRUE)
 cfg <- list(file1 = list(path = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], ref = "file1"),
             file3 = list(path = file.path(dirp, "REDACTED33"), ref = "file3"),
@@ -152,7 +152,7 @@ part_d <- function(nm) {
   vr <- value_recorded_logs(x$job, lg, x$prodmap, hpr_products = h$products)
   vr$stem_key <- lg$stem_key
   # A pattern the optimiser could have chosen: every log on the 10 cm grid, of a length the product allows in
-  # Apter's grid (the import rounds file length classes up to whole dm: a 375 cm log in class 365 is not a candidate),
+  # optBuck's grid (the import rounds file length classes up to whole dm: a 375 cm log in class 365 is not a candidate),
   # inside the product limits, priced in the optimiser's own lookup.
   plan_len <- function(sp, ak) { pl <- x$job$prep$runs[[1L]]$own_plan[[sp]]; if (is.null(pl) || !is.null(pl$error)) return(numeric(0))
     pk <- vapply(pl$products, `[[`, "", "pk"); i <- match(ak, pk); if (is.na(i)) numeric(0) else pl$products[[i]]$lengths }
@@ -190,7 +190,7 @@ part_e <- function() {
   }
   x0 <- get_check(nm)
   BARK_MODELS$spruce_all <- function(d_cm, dbh_cm, species_group) bark_model_barkNOR(d_cm, dbh_cm, rep("spruce", length(species_group)))
-  options(apter.bark_model = "spruce_all"); x1 <- bucking_check(cfg[[nm]]$path); options(apter.bark_model = NULL)
+  options(optbuck.bark_model = "spruce_all"); x1 <- bucking_check(cfg[[nm]]$path); options(optbuck.bark_model = NULL)
   r <- list(`new rules (barkNOR per species, under-bark price)` = tot(x0), `old bark rule (spruce for all species)` = tot(x1),
             `old price lookup (over-bark top)` = tot(x0, TRUE), `both old rules` = tot(x1, TRUE))
   say("e. file4 ablation, recorded value of %d stems; old optBuck actual total %.0f", r[[1]]$n, r[[1]]$old)

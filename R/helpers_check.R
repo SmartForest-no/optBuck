@@ -77,7 +77,7 @@ value_recorded_logs <- function(job, logs, prodmap, hpr_products = NULL, rec_pri
       ser <- if (isTRUE(p$ub)) f_ub else f_ob
       top <- ser(lk$StopPos - p$top_offset); butt <- ser(lk$StartPos)
       # The log's length class: the file's own class (largest lower limit <= the length; margins are
-      # 0 in the owner's files), mapped to Apter's whole-dm column by the import's rule (rounded up).
+      # 0 in the owner's files), mapped to optBuck's whole-dm column by the import's rule (rounded up).
       # Without the file's classes the cut length decides.
       hp <- if (!is.null(hpr_products)) hpr_products[[lk$ProductKey]]
       lcl <- if (!is.null(hp) && length(hp$len_classes)) hp$len_classes[hp$len_classes <= lk$LogLength] else numeric(0)
@@ -462,7 +462,7 @@ check_length_dist <- function(rec, opt, defs, pm, pr, ptype) {
   list(tally = tab, fg = fg)
 }
 
-# Control against the harvester's own volumes: Apter's price volume of the recorded logs vs the
+# Control against the harvester's own volumes: optBuck's price volume of the recorded logs vs the
 # file's `m3 (price)`, and the recorded logs outside their product's limits.
 check_control <- function(rec) {
   r <- rec[!rec$waste & !is.na(rec$price_volume_m3) & !is.na(rec$m3_price) & rec$m3_price > 0, , drop = FALSE]
@@ -474,7 +474,7 @@ check_control <- function(rec) {
     data.frame(key = levels(f), logs = as.integer(table(f)), m3 = as.numeric(tapply(ifelse(is.na(rec$m3_price[unp]), 0, rec$m3_price[unp]), f, sum)),
                share_pct = 100 * as.numeric(tapply(ifelse(is.na(rec$m3_price[unp]), 0, rec$m3_price[unp]), f, sum)) / as.numeric(tot), stringsAsFactors = FALSE) } else NULL
   list(unpriced_by_product = by_prod, unpriced_share_pct = 100 * .share(sum(ifelse(is.na(rec$m3_price[unp]), 0, rec$m3_price[unp])), sum(ifelse(is.na(rec$m3_price[nw]), 0, rec$m3_price[nw]))),
-       n = nrow(r), harvester_m3 = sum(r$m3_price), apter_m3 = sum(r$price_volume_m3),
+       n = nrow(r), harvester_m3 = sum(r$m3_price), optbuck_m3 = sum(r$price_volume_m3),
        diff_pct = 100 * (sum(r$price_volume_m3) / sum(r$m3_price) - 1), share_above_2pct = 100 * mean(abs(d) > 0.02),
        mean_abs_pct = 100 * mean(abs(d)), n_outside = sum(rec$outside, na.rm = TRUE), n_unknown = sum(rec$unknown_product),
        n_unpriced = sum(!rec$waste & !is.na(rec$akey) & is.na(rec$PriceNOKperM3)))   # no price cell for the log's class: valued 0

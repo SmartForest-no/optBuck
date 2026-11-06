@@ -26,18 +26,18 @@
 
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
-    if (!is_root(d)) stop("Project root '", d, "' (from APTER_ROOT) does not contain R/helpers_paths.R.", call. = FALSE)
+    if (!is_root(d)) stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
-    if (!is_root(d)) stop("Cannot locate the project root: set APTER_ROOT, or run from inside the project directory.", call. = FALSE)
+    if (!is_root(d)) stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -93,10 +93,10 @@ rec("Check 03: every reason the check gives for a stem left out, and the failure
     ok(length(reasons) >= 5L && all(has_msg)), sprintf("%d messages; without a row: %s", length(reasons), shorten(reasons[!has_msg])))
 
 section("04. Other ids")
-others <- list(c("tab_check", "ui"), c("chk_dl_pdf", "ui"), c("chk_left_out", "ui"), c("chk_lim_g", "ui"), c("chk_lim_h", "ui"), c("help_use_5", "ui"), c("asm_c_butt", "ui"), c("v_butt_only", "value"), c("v_butt_not", "value"),
+others <- list(c("tab_check", "ui"), c("chk_dl_pdf", "ui"), c("chk_left_out", "ui"), c("chk_lim_g", "ui"), c("chk_lim_h", "ui"), c("chk_lim_j", "ui"), c("help_use_5", "ui"), c("asm_c_butt", "ui"), c("v_butt_only", "value"), c("v_butt_not", "value"),
                c("v_stage_nfi_build", "value"), c("v_stage_nfi_save", "value"))
 bad4 <- vapply(others, function(o) !filled(o[1L], o[2L]), NA)
-rec("Check 04: tab_check, help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages",
+rec("Check 04: tab_check, chk_lim_j (recorded value can exceed best possible), help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages",
     ok(!any(bad4)), sprintf("missing: %s", shorten(vapply(others[bad4], `[`, "", 1L))))
 
 section("05. Progress texts")

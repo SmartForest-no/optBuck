@@ -1,5 +1,5 @@
 check,result,detail
-Check 01: Backend script exists,PASS,found: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/R/run_bucking.R
+Check 01: Backend script exists,PASS,found: <repo>/R/run_bucking.R
 Check 02: Backend sources without error,PASS,source() completed without error
 Check 03: Smoke call completes without error,PASS,completed in 4.0 s
 Check 04: Return object has all required names,PASS,all 19 required names present

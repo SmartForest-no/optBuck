@@ -13,14 +13,14 @@
 #             2026-11-04, PLAN.md Roadmap 8; the rank order of the original plot IDs
 #             stays recoverable in principle, which is accepted.)
 #           The old -> new tree number map is written ONLY to
-#           C:/apter_private/nfi_id_map.rds (never committed); the original
-#           tables are copied to C:/apter_private/nfi_original/ first.
+#           C:/optbuck_private/nfi_id_map.rds (never committed); the original
+#           tables are copied to C:/optbuck_private/nfi_original/ first.
 #
 # Usage   : Rscript scripts/sanitize_nfi_table.R   (run once; refuses to run twice)
 # ==============================================================================
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   if (!is_root(d)) stop("Cannot locate the project root.", call. = FALSE)
   d
@@ -29,7 +29,7 @@ suppressPackageStartupMessages(library(arrow))
 gh <- file.path(root_dir, "inst", "extdata", "nfi")
 f_tree <- file.path(gh, "nfi_tree_plot_stratum_ready_github.parquet")
 f_plot <- file.path(gh, "nfi_plots_github.parquet")
-priv <- "C:/apter_private"
+priv <- "C:/optbuck_private"
 bak <- file.path(priv, "nfi_original"); map_file <- file.path(priv, "nfi_id_map.rds")
 if (file.exists(map_file)) stop("Already sanitized (", map_file, " exists).", call. = FALSE)
 

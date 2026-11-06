@@ -10,14 +10,14 @@
 Sys.setenv(NOT_CRAN = "true")
 root_dir <- local({
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  d <- normalizePath(Sys.getenv("APTER_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
+  d <- normalizePath(Sys.getenv("OPTBUCK_ROOT", unset = getwd()), winslash = "/", mustWork = FALSE)
   while (!is_root(d) && dirname(d) != d) d <- dirname(d)
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 args <- commandArgs(trailingOnly = TRUE)
 which_file <- if (length(args)) args[1L] else "file4"
-dirp <- "C:/apter_private/hpr"
+dirp <- "C:/optbuck_private/hpr"
 path <- switch(which_file,
   file1 = list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L], file3 = file.path(dirp, "REDACTED33"),
   file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"), file2 = file.path(dirp, "REDACTED40"))

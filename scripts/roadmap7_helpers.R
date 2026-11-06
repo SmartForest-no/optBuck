@@ -36,7 +36,7 @@ cat("FG hand check passed: FG = 90\n")
 overall <- function(f, which) { w <- f$N; ok <- w > 0
   if (!any(ok)) NA_real_ else sum(w[ok] * f[[which]][ok]) / sum(w[ok]) }
 
-# Counts [length x diameter] of a product's logs on the Apter price grid, the
+# Counts [length x diameter] of a product's logs on the optBuck price grid, the
 # availability of its cells, and FG per diameter class for the neutral and the
 # long target.
 fg_for <- function(k, tal, pm) {
@@ -58,7 +58,7 @@ fg_for <- function(k, tal, pm) {
 }
 
 # FG against the file's own Distribution target. `cells` = the product's cells
-# (d_mm, l_cm, avail, dist); the logs of the Apter grid (tally rows of key k)
+# (d_mm, l_cm, avail, dist); the logs of the optBuck grid (tally rows of key k)
 # are assigned to the file's diameter classes (file_class_of_cm) and length
 # classes (ceiling(l_cm / 10) dm). Returns list(D, L, N, fg, S, W, dist, avail)
 # over the file's classes; classes without a target are left out of the FG.

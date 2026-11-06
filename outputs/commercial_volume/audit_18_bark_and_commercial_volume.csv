@@ -1,7 +1,7 @@
 check,result,detail
 Check 01: under_bark_diameter() equals taperNOR(with_bark = FALSE) for spruce,PASS,690 heights over 3 trees; max |diff| = 1.14e-13 mm
 Check 02: Double bark >= 0 and d_ub <= d_ob everywhere (pine 45 cm / 25 m),PASS,"40 of 250 heights floored (raw barkNOR < 0, min -15.3 mm, from 21.1 m up); floor is provisional"
-Check 03: Registered model via options(apter.bark_model) is used,PASS,test model active: TRUE | max |d_ub - (d_ob - 10)| = 0.00e+00 mm | restored to barkNOR: TRUE
+Check 03: Registered model via options(optbuck.bark_model) is used,PASS,test model active: TRUE | max |d_ub - (d_ob - 10)| = 0.00e+00 mm | restored to barkNOR: TRUE
 Check 04: dbh_from_profile() equals taperNOR(1.3),PASS,profile 310.8410 mm | taperNOR(1.3) 310.8410 mm
 "Check 05a: Cylinder d 300 mm, 4 m sawlog = pi * 0.15^2 * 4",PASS,"got 0.2827433388 m3, expected 0.2827433388 m3"
 Check 05b: Linear cone = sum of top-diameter cylinders,PASS,"got 0.4283325964 m3, hand 0.4283325964 m3"

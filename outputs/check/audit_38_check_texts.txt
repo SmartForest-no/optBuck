@@ -1,19 +1,19 @@
 ============================================================= 
   Audit: texts of the bucking check (roadmap 8)
-  Run: 2026-11-05 10:37:39.315769
+  Run: 2026-11-06 10:37:03.193003
 ============================================================= 
 
 --- 01. Ids used by app/check.R ---
-  [PASS  ] Check 01: every id app/check.R uses is a ui row with an English and a Norsk text | 74 ids; missing or empty: none
+  [PASS  ] Check 01: every id app/check.R uses is a ui row with an English and a Norsk text | 75 ids; missing or empty: none
 
 --- 02. No unused chk_* text ---
-  [PASS  ] Check 02: every chk_* ui row is used in app/check.R | 76 rows; unused: none
+  [PASS  ] Check 02: every chk_* ui row is used in app/check.R | 77 rows; unused: none
 
 --- 03. Backend messages ---
   [PASS  ] Check 03: every reason the check gives for a stem left out, and the failure message, has a msg row in both languages | 6 messages; without a row: none
 
 --- 04. Other ids ---
-  [PASS  ] Check 04: tab_check, help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages | missing: none
+  [PASS  ] Check 04: tab_check, chk_lim_j (recorded value can exceed best possible), help_use_5, asm_c_butt, v_butt_only, v_butt_not and the two NFI build progress texts exist in both languages | missing: none
 
 --- 05. Progress texts ---
   [PASS  ] Check 05: the progress texts of the NFI profile build and of the job translate to Norsk (and differ from English); the four check steps have both texts | Norsk: Bygger stammeprofiler for Landsskogtakseringen (bare første gang) | Lagrer stammeprofiler for Landsskogtakseringen | Laster data fra Landsskogtakseringen og stammeprofiler | Apterer trær
@@ -29,4 +29,4 @@
   Verdict: PASS 
 ============================================================= 
 
-Audit CSV: S:/Prosjekter/52106_SFI_SmartForest/optBuck/Apter/outputs/check/audit_38_check_texts.csv
+Audit CSV: <repo>/outputs/check/audit_38_check_texts.csv

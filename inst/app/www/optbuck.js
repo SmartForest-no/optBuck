@@ -1,18 +1,18 @@
-/* app/www/apter.js
+/* app/www/optbuck.js
    Shows the run progress bar as soon as Run is clicked, before the server
    answers (Phase 4d); the server's run_status output then replaces it with
    staged progress. Cleared when the server rejects the run.
    Also: class toggles and flat price edits for the Assortment specifications and prices tab (tab 2).
    Language (Phase 1, 2026-10-27): the navbar switch (Norsk | English). The
    choice comes from ?lang= in the URL, else the browser's last choice
-   (localStorage), else the page's start language (meta apter-lang). Static
+   (localStorage), else the page's start language (meta optbuck-lang). Static
    texts carry data-i18n (their id in the translation table) and are swapped
    here; the server re-renders its own outputs from input$lang. */
 (function () {
   var dict = null, lang = null;
   function texts() {
     if (!dict) {
-      var el = document.getElementById('apter-i18n');
+      var el = document.getElementById('optbuck-i18n');
       try { dict = el ? JSON.parse(el.textContent) : {}; } catch (e) { dict = {}; }
     }
     return dict;
@@ -34,10 +34,10 @@
     var q = new URLSearchParams(window.location.search).get('lang');
     if (q === 'no' || q === 'en') return q;
     try {
-      var s = window.localStorage.getItem('apter.lang');
+      var s = window.localStorage.getItem('optbuck.lang');
       if (s === 'no' || s === 'en') return s;
     } catch (e) { /* no storage: the page's language */ }
-    var m = document.querySelector('meta[name="apter-lang"]');
+    var m = document.querySelector('meta[name="optbuck-lang"]');
     return m ? m.getAttribute('content') : 'no';
   }
   function apply() {
@@ -78,7 +78,7 @@
     .observe(document.documentElement, {childList: true, subtree: true, characterData: true});
   function setLang(l, remember) {
     lang = l;
-    if (remember) { try { window.localStorage.setItem('apter.lang', l); } catch (e) { } }
+    if (remember) { try { window.localStorage.setItem('optbuck.lang', l); } catch (e) { } }
     apply();
     if (window.Shiny && Shiny.setInputValue) Shiny.setInputValue('lang', l);
   }
@@ -95,11 +95,11 @@
   $(document).on('shiny:sessioninitialized', function () { if (lang) apply(); });
   $(document).on('shiny:connected', function () {
     Shiny.setInputValue('lang', lang || startLang());
-    Shiny.addCustomMessageHandler('apter_progress_clear', function (msg) {
+    Shiny.addCustomMessageHandler('optbuck_progress_clear', function (msg) {
       $('#run_status').empty();
     });
     // Highlight a block (e.g. a flat price that differs from the other scenario).
-    Shiny.addCustomMessageHandler('apter_toggle_class', function (msg) {
+    Shiny.addCustomMessageHandler('optbuck_toggle_class', function (msg) {
       $('#' + msg.id).toggleClass(msg.cls, !!msg.on);
     });
   });
@@ -115,7 +115,7 @@
 // Disable or enable an input by id (R5: "Use stem grades" when no stem file has the scenario's instruction).
 (function() {
   var register = function() {
-    Shiny.addCustomMessageHandler("apter-disable", function(m) {
+    Shiny.addCustomMessageHandler("optbuck-disable", function(m) {
       var el = document.getElementById(m.id);
       if (el) { el.disabled = !!m.disabled; }
     });

@@ -205,7 +205,7 @@ source_xml_part <- function(src, tag) {
   txt
 }
 
-# Neutral values for what a product created in Apter has no source for (R4 D6).
+# Neutral values for what a product created in optBuck has no source for (R4 D6).
 EXPORT_NEUTRAL_MID <- paste0("<ManualFreeBuck>false</ManualFreeBuck><TopLogFreeBuck>false</TopLogFreeBuck>",
                              "<ProductCondition>Buck always</ProductCondition>")
 EXPORT_NEUTRAL_LIMIT <- paste0('<LimitationDefinition modificationRestricted="false"><LimitationCategory>',
@@ -544,7 +544,7 @@ hpr_export_result <- function(path, sources, species_by_name, result, defs, pm) 
   okeys <- vapply(blocks, .hx_text, "", "ProductKey", USE.NAMES = FALSE)
   orig <- setNames(as.list(cls), vapply(cls, .hx_text, "", "ProductKey", USE.NAMES = FALSE))
   prod <- hpr_export_products(defs, pm, orig, grp, used_keys = okeys)
-  mark <- "@@APTER_PRODUCTS@@"
+  mark <- "@@OPTBUCK_PRODUCTS@@"
   for (k in seq_along(cls))
     txt <- sub(cls[k], if (k == 1L) mark else "", txt, fixed = TRUE, useBytes = TRUE)
   if (length(cls) == 0L) return(fail("The source file has no classified products."))

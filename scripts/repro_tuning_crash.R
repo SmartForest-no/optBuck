@@ -5,17 +5,17 @@
 # with the import dialog, load file5 as .hpr stems, open the Price tuning tab,
 # open the product dropdown, run tuning. The app runs as its own R process
 # (log in the scratch folder given as argument 1); a headless Chrome with its
-# own profile drives it. Reads file5 in place (C:/apter_private/hpr), writes
+# own profile drives it. Reads file5 in place (C:/optbuck_private/hpr), writes
 # nothing into the repository.
 #
 # Usage: Rscript scripts/repro_tuning_crash.R <scratch folder> [file]
 # ==============================================================================
 args <- commandArgs(TRUE)
 scratch <- if (length(args) >= 1L) args[1L] else tempdir()
-f5 <- if (length(args) >= 2L) args[2L] else "C:/apter_private/hpr/REDACTED28"
+f5 <- if (length(args) >= 2L) args[2L] else "C:/optbuck_private/hpr/REDACTED28"
 root <- normalizePath(getwd(), winslash = "/")
 stopifnot(file.exists(file.path(root, "R", "helpers_paths.R")), file.exists(f5))
-Sys.setenv(APTER_ROOT = root, NOT_CRAN = "true", APTER_LANG = "en", APTER_TUNE_MAX_ITER = "3")
+Sys.setenv(OPTBUCK_ROOT = root, NOT_CRAN = "true", OPTBUCK_LANG = "en", OPTBUCK_TUNE_MAX_ITER = "3")
 suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/); source(file.path(root, "audits", "helpers_audit.R"))
 log <- file.path(scratch, "repro_app.log")
 srv <- processx::process$new(file.path(R.home("bin"), "Rscript.exe"),

@@ -1,7 +1,7 @@
 # ==============================================================================
 # R/helpers_products.R
 #
-# Purpose : Load and validate ProductData and LengthClasses for the Apter
+# Purpose : Load and validate ProductData and LengthClasses for the optBuck
 #           bucking simulation.
 #
 # Accepted assumptions (see CLAUDE.md):
@@ -31,7 +31,7 @@
 # Constants
 # ------------------------------------------------------------------------------
 
-# The six active ProductKey values recognised by Apter.
+# The six active ProductKey values recognised by optBuck.
 ACTIVE_PRODUCT_KEYS <- c(
   "spruce_sawlog", "spruce_pulpwood", "spruce_waste",
   "pine_sawlog",   "pine_pulpwood",   "pine_waste"
@@ -411,7 +411,7 @@ pre_phase4c_limits <- function(pd) {
 # The app edits all assortments, base and custom, in one table with one row
 # per product (ProductKey = "<Species>_<slug of Name>", so "Sawlog" / spruce
 # is spruce_sawlog). Units are the app's: cm. Hidden ProductData columns are
-# generated: ProductName, VolumeLengthCategory (no effect in Apter),
+# generated: ProductName, VolumeLengthCategory (no effect in optBuck),
 # DiameterUnderBark (always TRUE), DiameterSource and Priority (derived:
 # matrix-priced 1, flat-priced commercial 2, waste 99). A matrix-priced
 # product's lengths are the columns of the run's price matrix; a flat-priced
@@ -456,7 +456,7 @@ DISTRIBUTION_DEF_COLS <- c("DistributionAllowed", "DistributionCategory",
                            "DistributionWithinProduct", "MAXDeviation")
 
 # Two more hidden fields keep what the StanForD export needs of an imported
-# product (R4 D6): SourceXml, the source product's own elements that Apter does
+# product (R4 D6): SourceXml, the source product's own elements that optBuck does
 # not edit (ProductUserID, SpeciesGroupUserID, ModificationDate, ManualFreeBuck,
 # TopLogFreeBuck, ProductCondition, CuttingWindowDefinition, LimitationDefinition, ...;
 # R/helpers_hpr_export.R, source_xml_parts()), and SourceFingerprint, a hash of

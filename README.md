@@ -8,12 +8,14 @@ with a Shiny app.
 ## Install
 
 ```r
-# the app and the stem models need these packages
 install.packages("remotes")
-remotes::install_github("SmartForest-no/optBuck", dependencies = TRUE)
-remotes::install_github("SmartForest-no/taperNOR")              # Norwegian taper and bark models
-remotes::install_github("lennartnoordermeer/fieldPlot")        # tree-list heights (optional)
+# dependencies = TRUE also installs the app stack and the GitHub-only packages in DESCRIPTION's
+# Remotes (taperNOR: Norwegian taper and bark models; fieldPlot: tree-list heights)
+remotes::install_github("lennartnoordermeer/Apter@optbuck-merge", dependencies = TRUE)
 ```
+
+Until the repository is transferred to `SmartForest-no/optBuck`, install from the address above;
+after the transfer the line becomes `remotes::install_github("SmartForest-no/optBuck", dependencies = TRUE)`.
 
 ## Use
 

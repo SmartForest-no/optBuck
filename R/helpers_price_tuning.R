@@ -8,8 +8,8 @@
 #
 # Terms   : "grid" = one product's length classes x diameter classes. For an
 #           .hpr-imported product the diameter classes are the file's own
-#           classes (each Apter whole-cm row maps to the file class it was
-#           priced from, file_class_of_cm()); for other products every Apter
+#           classes (each optBuck whole-cm row maps to the file class it was
+#           priced from, file_class_of_cm()); for other products every optBuck
 #           diameter row is its own class. All matrices are length x diameter
 #           on that grid; NA = unavailable (no price) or no target.
 #
@@ -34,7 +34,7 @@ real_target <- function(dist, avail) {
   sweep(w, 2L, ifelse(s > 0, s, NA_real_), "/") * 100
 }
 
-# The Apter diameter row (whole cm) -> the file's diameter class (lower limit
+# The optBuck diameter row (whole cm) -> the file's diameter class (lower limit
 # mm): the largest class <= c * 10 mm, as the import maps prices (the smallest
 # class below it).
 file_class_of_cm <- function(cm, d_file) {
@@ -62,10 +62,10 @@ hpr_tuning_info <- function(dst, key)
 # @param product_id ProductKey of a matrix-priced product.
 # @param hpr NULL, or list(cells (d_mm, l_cm, dist), category) from
 #   hpr_tuning_info(): the file's diameter classes, its Distribution and its
-#   DistributionCategory. File length classes map to Apter's by the import's
+#   DistributionCategory. File length classes map to optBuck's by the import's
 #   rule (rounded up to whole dm).
 # @return list(product_id, name, lengths (dm), diam_classes, price (length x
-#   diameter, NA = unavailable), species, cm_map (named by Apter cm row: the
+#   diameter, NA = unavailable), species, cm_map (named by optBuck cm row: the
 #   grid column it belongs to), basis_default ("volume" when the file's
 #   DistributionCategory is "Volume of logs", else "number"), distribution
 #   (NULL, or the file's Distribution on the grid)).
@@ -101,7 +101,7 @@ tuning_grid <- function(products, product_id, hpr = NULL) {
        distribution = dist)
 }
 
-# Products with every Apter cell of the product set from its grid cell.
+# Products with every optBuck cell of the product set from its grid cell.
 # Unavailable cells (NA in the grid or in the price matrix) stay as they are.
 apply_grid_prices <- function(products, grid, price) {
   pm <- products$pm
@@ -294,7 +294,7 @@ update_prices <- function(P, P1, S, S_prev, W, r, eligible, floor, V, V1) {
 #   product with its own, single-product-shaped results and `fg` by iteration).
 tune_prices <- function(job, products, product_id, target_type, distribution = NULL,
                         n = 1000, seed = 1, max_iter = 30, min_logs = 20, basis = NULL,
-                        hpr = NULL, workers = apter_workers(), early_stop = TRUE, on_iter = NULL) {
+                        hpr = NULL, workers = optbuck_workers(), early_stop = TRUE, on_iter = NULL) {
   ids <- as.character(product_id); multi <- length(ids) > 1L
   if (anyDuplicated(ids)) stop("tune_prices(): a product is listed twice.", call. = FALSE)
   st <- lapply(seq_along(ids), function(k) {

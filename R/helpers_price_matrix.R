@@ -6,7 +6,7 @@
 #           automatically) with validation, templates and export.
 #
 # Layouts :
-#   - Long  : PriceMatrix_long rows; the four columns Apter needs are
+#   - Long  : PriceMatrix_long rows; the four columns optBuck needs are
 #             ProductKey, LengthClass_dm, PriceDiameterClass_cm (sawlogs),
 #             PriceNOKperM3. Flat products (pulpwood, waste) have empty
 #             LengthClass_dm / PriceDiameterClass_cm. A long upload replaces
@@ -60,7 +60,7 @@ PM_DISTRIBUTION_COL <- "Distribution"
 PM_FILE_CLASS_COL <- "FileDiameterClass_mm"
 PM_HIDDEN_COLS <- c(PM_DISTRIBUTION_COL, PM_FILE_CLASS_COL)
 
-# The four columns Apter uses, typed, from any PriceMatrix_long. A hidden
+# The four columns optBuck uses, typed, from any PriceMatrix_long. A hidden
 # Distribution column is kept when the matrix has one (see pm_prices()).
 pm_minimal <- function(pm) {
   out <- data.frame(

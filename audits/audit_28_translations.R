@@ -45,24 +45,24 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
 })
-Sys.setenv(APTER_ROOT = root_dir)
+Sys.setenv(OPTBUCK_ROOT = root_dir)
 
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 source(file.path(root_dir, "audits", "helpers_audit.R"))
@@ -127,7 +127,7 @@ section("02. Ids used in the code")
 code_files <- c(Sys.glob(file.path(root_dir, "inst", "app", "*.R")),
                 file.path(root_dir, "R", c("helpers_result_tables.R", "helpers_hpr_stems.R")))   # warning texts: grade_warning_text()
 code <- unlist(lapply(code_files, readLines, encoding = "UTF-8", warn = FALSE))
-js <- readLines(file.path(root_dir, "inst", "app", "www", "apter.js"), warn = FALSE)
+js <- readLines(file.path(root_dir, "inst", "app", "www", "optbuck.js"), warn = FALSE)
 # Literal ids in tr(), t_(), L(), M(), T_() calls (also c("a", "b") inside them).
 calls <- regmatches(code, gregexpr("\\b(tr|t_|L|M|T_)\\((c\\()?\"[a-z][a-z0-9_]*\"(, *\"[a-z][a-z0-9_]*\")*", code, perl = TRUE))
 lit_ids <- unique(unlist(lapply(unlist(calls), function(x)
@@ -146,7 +146,7 @@ built <- c(
   "msg_added", "msg_added_both", "msg_imported", "msg_imported_1", "stem_title_tree", "stem_title_stem",
   "logs_preview", "logs_preview_ab", "tally_caption", "tally_caption_flat",
   "tl_heights_line", "tl_heights_line_ratio",
-  "window_title", "run_starting")                        # read by www/apter.js
+  "window_title", "run_starting")                        # read by www/optbuck.js
 used <- unique(c(lit_ids, built))
 missing_ids <- setdiff(used, tbl$id)
 quoted <- unique(unlist(regmatches(c(code, js), gregexpr("[\"'][a-z][a-z0-9_]*[\"']", c(code, js)))))

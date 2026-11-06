@@ -11,9 +11,9 @@
 #   what        audit numbers (16 20), ranges (14-20), names (audit_16_...),
 #               `perf` (scripts/performance_check.R) or `all`.
 #               Default: all = every audits/audit_NN_*.R from 14 up and perf.
-#   --jobs N    processes at a time (default 3, audit 17 included)
+#   --jobs N    processes at a time (default 3, audit 17 included; audit 40, the install gate, always runs alone and last)
 #   --workers N future workers per process (default max(2, (cores - 1) %/%
-#               jobs), passed as APTER_WORKERS so the processes do not
+#               jobs), passed as OPTBUCK_WORKERS so the processes do not
 #               oversubscribe the cores)
 #   --17-last   run audit 17 alone after all others, instead of first and
 #               alongside them (the fallback if it is flaky under load)
@@ -32,19 +32,19 @@
 # ==============================================================================
 
 root_dir <- local({
-  # APTER_ROOT -> walk up from getwd() -> stop()
+  # OPTBUCK_ROOT -> walk up from getwd() -> stop()
   is_root <- function(d) file.exists(file.path(d, "R", "helpers_paths.R"))
-  env <- Sys.getenv("APTER_ROOT", unset = "")
+  env <- Sys.getenv("OPTBUCK_ROOT", unset = "")
   if (nzchar(env)) {
     d <- normalizePath(env, winslash = "/", mustWork = FALSE)
     if (!is_root(d))
-      stop("Project root '", d, "' (from APTER_ROOT) does not contain ",
+      stop("Project root '", d, "' (from OPTBUCK_ROOT) does not contain ",
            "R/helpers_paths.R.", call. = FALSE)
   } else {
     d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
     while (!is_root(d) && dirname(d) != d) d <- dirname(d)
     if (!is_root(d))
-      stop("Cannot locate the project root: set APTER_ROOT, or run from ",
+      stop("Cannot locate the project root: set OPTBUCK_ROOT, or run from ",
            "inside the project directory.", call. = FALSE)
   }
   d
@@ -98,6 +98,9 @@ w <- ifelse(is.na(items$num), weight[["performance_check"]], weight[as.character
 w[is.na(w)] <- 10
 rest <- items[!is17, , drop = FALSE][order(-w[!is17]), , drop = FALSE]
 queue <- if (last17) rbind(rest, items[is17, , drop = FALSE]) else rbind(items[is17, , drop = FALSE], rest)
+# Audit 40 (the install gate) times tab 5, so it runs alone, after everything else (2026-11-06).
+is40 <- !is.na(queue$num) & queue$num == 40L
+queue <- rbind(queue[!is40, , drop = FALSE], queue[is40, , drop = FALSE])
 
 dir.create(log_dir, recursive = TRUE, showWarnings = FALSE)
 rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
@@ -114,7 +117,7 @@ start_one <- function(it) {
   log <- file.path(log_dir, paste0(it$name, ".log"))
   p <- processx::process$new(
     rscript, it$script, wd = root_dir, stdout = log, stderr = "2>&1",
-    env = c("current", APTER_ROOT = root_dir, APTER_WORKERS = as.character(workers), NOT_CRAN = "true"))
+    env = c("current", OPTBUCK_ROOT = root_dir, OPTBUCK_WORKERS = as.character(workers), NOT_CRAN = "true"))
   list(it = it, p = p, log = log, t0 = Sys.time())
 }
 
@@ -168,11 +171,12 @@ tryCatch(repeat {
   }
   running <- running[!finished]
   # Start more. While audit 17 runs it takes one slot (the others get jobs - 1).
-  alone17 <- last17 && k < nrow(queue) && !is.na(queue$num[k + 1L]) && queue$num[k + 1L] == 17L
+  alone_next <- function() k < nrow(queue) && !is.na(queue$num[k + 1L]) && (queue$num[k + 1L] == 40L || (last17 && queue$num[k + 1L] == 17L))
+  alone17 <- alone_next()
   while (k < nrow(queue) && length(running) < jobs && !(alone17 && length(running) > 0L)) {
     k <- k + 1L
     running[[length(running) + 1L]] <- start_one(queue[k, , drop = FALSE])
-    alone17 <- last17 && k < nrow(queue) && !is.na(queue$num[k + 1L]) && queue$num[k + 1L] == 17L
+    alone17 <- alone_next()
   }
   if (k >= nrow(queue) && length(running) == 0L) break
   Sys.sleep(0.5)
