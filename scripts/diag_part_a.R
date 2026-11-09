@@ -11,7 +11,8 @@ Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 dirp <- "C:/optbuck_private/hpr"
-cfg <- list(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path(dirp, m$file[match(id, m$id)]) }   # the real names are private (not in the repository)
+cfg <- list(file1 = priv_hpr("file1"), file4 = priv_hpr("file4"), file5 = priv_hpr("file5"))
 for (nm in intersect(names(cfg), commandArgs(TRUE))) for (mo in c(FALSE, TRUE)) {
   t0 <- Sys.time(); x <- bucking_check(cfg[[nm]], manual_ok = mo)
   saveRDS(x, sprintf("C:/optbuck_private/diag/%s_a_%s.rds", nm, if (mo) "after" else "before"))

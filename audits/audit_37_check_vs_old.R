@@ -66,12 +66,12 @@ cat(sprintf("  Run: %s\n", Sys.time()), file = audit_txt, append = TRUE)
 cat(paste(rep("=", 61), collapse = ""), "\n", file = audit_txt, append = TRUE)
 
 ref <- "C:/optbuck_private/optbuck_reference"; dirp <- "C:/optbuck_private/hpr"
-need <- c(file.path(ref, c("file1", "file3", "file4", "file5p"), "ck_getLogs.rds"), file.path(dirp, c("REDACTED33", "REDACTED27", "REDACTED28")))
+need <- c(file.path(ref, c("file1", "file3", "file4", "file5p"), "ck_getLogs.rds"), private_hpr(c("file1", "file3", "file4", "file5")))
 checks <- c("Check 01: Reader against the old getLogs() (>= 99.9 % per field; StartPos and file5's unclassified key named)",
             "Check 02: Stem profiles equal the old getStemprofile() points",
             "Check 03: Permitted grades equal the old table except the unclassified product",
             "Check 04: B5-3(i): the new optimum is never below the new value of an eligible old optimal pattern")
-if (!all(file.exists(need)) || length(list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$")) == 0L) {
+if (!all(file.exists(need))) {
   for (ck in checks) rec(ck, REVIEW, "the private files (C:/optbuck_private/hpr, C:/optbuck_private/optbuck_reference) are not here")
 } else {
   Sys.setenv(R3_SOURCE_ONLY = "1")

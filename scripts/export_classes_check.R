@@ -23,9 +23,10 @@ out <- file.path(root_dir, "outputs", "polish"); dir.create(out, recursive = TRU
 log <- file.path(out, "export_classes.txt"); unlink(log)
 say <- function(...) { x <- sprintf(...); cat(x, "\n"); cat(x, "\n", file = log, append = TRUE) }
 
-files <- c(file1 = "REDACTED1", file2 = "REDACTED40", file3 = "REDACTED33",
-           file4 = "REDACTED27", file5 = "REDACTED28")
-paths <- c(setNames(file.path("C:/optbuck_private/hpr", files), names(files)),
+# the real file names are private (C:/optbuck_private/hpr_files.csv), not in the repository
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path("C:/optbuck_private/hpr", m$file[match(id, m$id)]) }
+files <- paste0("file", 1:5); names(files) <- files
+paths <- c(setNames(vapply(files, priv_hpr, ""), names(files)),
            real.pin = "C:/optbuck_private/pin/real.pin", hand.pin = "C:/optbuck_private/pin/hand.pin")
 say("%-9s %-34s %7s %7s  %s", "file", "product", "source", "written", "equal / missing in export")
 tot <- 0L; bad <- 0L

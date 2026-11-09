@@ -38,12 +38,14 @@ files <- sort(list.files(folder, pattern = "\\.hpr$", full.names = TRUE, ignore.
 files <- files[order(basename(files), method = "radix")]
 stopifnot(length(files) == 5L)
 
+# the buyer words of two sawlog products in the real files are private (C:/optbuck_private/words.csv)
+buyer_pat <- paste0("sag - ", utils::read.csv("C:/optbuck_private/words.csv", stringsAsFactors = FALSE, encoding = "UTF-8")$value)
 # run, file, species, product name pattern (regex on ProductName), target, n
 runs <- data.frame(
   run = paste0("R", 1:10), file = c(5, 3, 4, 5, 5, 1, 1, 1, 3, 5),
   species = c(rep("spruce", 7), "pine", "pine", "spruce"),
-  pattern = c("140.*sagt", "140.*sagt", "140.*sagt", "140.*sagt", "140.*sagt", "sag - REDACTED37",
-              "sag - REDACTED37", "sag - REDACTED48", "240 sag", "140.*sagt"),
+  pattern = c("140.*sagt", "140.*sagt", "140.*sagt", "140.*sagt", "140.*sagt", buyer_pat[1L],
+              buyer_pat[1L], buyer_pat[2L], "240 sag", "140.*sagt"),
   target = c("real", "real", "real", "neutral", "long", "neutral", "long", "neutral", "neutral", "real"),
   n = c(rep(1000, 9), Inf), early_stop = TRUE, stringsAsFactors = FALSE)
 # early_stop = FALSE: always 30 iterations (R2b, R4b, R5b, R8b = R2, R4, R5, R8 without the stop rule;

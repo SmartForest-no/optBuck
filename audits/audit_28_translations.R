@@ -383,15 +383,15 @@ rec("Check 07: tree_counts() in English as before Phase 1 and inflected in Norsk
 
 section("08. Product names from files keep their case")
 dn <- function(sp, nm, l) assortment_display_name(sp, nm, l)
-ok8 <- identical(dn("spruce", "SAG - REDACTED35", "no"), "Gran SAG - REDACTED35") &&
-  identical(dn("spruce", "SAG - REDACTED35", "en"), "Spruce SAG - REDACTED35") &&
+ok8 <- identical(dn("spruce", "SAG - Buyer A", "no"), "Gran SAG - Buyer A") &&
+  identical(dn("spruce", "SAG - Buyer A", "en"), "Spruce SAG - Buyer A") &&
   identical(dn("pine", "MASSE FRISK", "no"), "Furu MASSE FRISK") &&
   identical(dn("spruce", "140 Sagtømmer gran", "no"), "Gran 140 Sagtømmer gran") &&
   identical(dn("spruce", "eNERGI 50-90%", "en"), "Spruce eNERGI 50-90%") &&
   identical(dn("spruce", "Sawlog", "en"), "Spruce sawlog") && identical(dn("spruce", "Sawlog", "no"), "Gran sagtømmer") &&
   identical(dn("pine", "Waste", "no"), "Furu vrak")
-rec("Check 08: a product name from a file is shown as written ('SAG - REDACTED35' -> 'Gran SAG - ...' / 'Spruce SAG - ...', '140 Sagtømmer gran' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case",
-    ok(ok8), paste(dn("spruce", "SAG - REDACTED35", "no"), "|", dn("spruce", "SAG - REDACTED35", "en"), "|", dn("spruce", "Sawlog", "no")))
+rec("Check 08: a product name from a file is shown as written ('SAG - Buyer A' -> 'Gran SAG - ...' / 'Spruce SAG - ...', '140 Sagtømmer gran' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case",
+    ok(ok8), paste(dn("spruce", "SAG - Buyer A", "no"), "|", dn("spruce", "SAG - Buyer A", "en"), "|", dn("spruce", "Sawlog", "no")))
 
 
 # ==============================================================================

@@ -18,7 +18,7 @@
 #      REVIEW above 150 s: the cause is reported; PASS up to 150 s)
 #  4.  Nothing was written into the installed package folder (no cache, no outputs)
 #
-# Needs   : the owner's file C:/optbuck_private/hpr/REDACTED46_REDACTED45*.hpr (REVIEW "skipped" when missing),
+# Needs   : the owner's file C:/optbuck_private/hpr (file1, see private_hpr()) (REVIEW "skipped" when missing),
 #           Chrome, shinytest2, processx. About 10 minutes.
 # Verdict : PASS / ACCEPTED WITH REVIEW / FAIL (helpers_audit.R)
 # Outputs : outputs/install_gate/audit_40_install_gate.{csv,txt}
@@ -86,7 +86,7 @@ rec("Check 01: R CMD build + R CMD INSTALL of the tarball into a fresh temporary
 pkg_files_before <- sort(list.files(file.path(lib, "optBuck"), recursive = TRUE))
 
 # ---- 2 the child ----------------------------------------------------------------------------------------
-file1 <- list.files("C:/optbuck_private/hpr", "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L]
+file1 <- private_hpr("file1"); if (!is.na(file1) && !file.exists(file1)) file1 <- NA_character_
 child_out <- file.path(work, "gate_result.rds")
 res <- NULL
 if (inst_ok) {

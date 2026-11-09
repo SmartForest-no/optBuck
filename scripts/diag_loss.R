@@ -18,8 +18,9 @@ Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 dirp <- "C:/optbuck_private/hpr"; dg <- "C:/optbuck_private/diag"
-cfg <- list(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], file3 = file.path(dirp, "REDACTED33"),
-            file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path(dirp, m$file[match(id, m$id)]) }   # the real names are private (not in the repository)
+cfg <- list(file1 = priv_hpr("file1"), file3 = priv_hpr("file3"),
+            file4 = priv_hpr("file4"), file5 = priv_hpr("file5"))
 args <- commandArgs(trailingOnly = TRUE)
 tag <- Sys.getenv("DIAG_TAG", "rz")      # which saved check: rz (default), used (best possible with the used products only)
 

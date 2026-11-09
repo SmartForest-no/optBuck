@@ -123,6 +123,21 @@ init_audit_log <- function(log_path) {
   }
   x
 }
+# The owner's private .hpr files are called file1 ... file5 everywhere in the repository. Their real names (which
+# name landowners) are in the private C:/optbuck_private/hpr_files.csv (columns id, file), read at run time (2026-11-09);
+# private_word(key) gives other private words (C:/optbuck_private/words.csv, columns key, value), e.g. buyer names that
+# a product name of those files contains. NA when the private files are not on the machine.
+private_hpr <- function(id, dir = "C:/optbuck_private/hpr", map = "C:/optbuck_private/hpr_files.csv") {
+  if (!file.exists(map)) return(rep(NA_character_, length(id)))
+  m <- utils::read.csv(map, stringsAsFactors = FALSE, encoding = "UTF-8")
+  f <- m$file[match(id, m$id)]
+  ifelse(is.na(f), NA_character_, file.path(dir, f))
+}
+private_word <- function(key, map = "C:/optbuck_private/words.csv") {
+  if (!file.exists(map)) return(rep(NA_character_, length(key)))
+  m <- utils::read.csv(map, stringsAsFactors = FALSE, encoding = "UTF-8")
+  m$value[match(key, m$key)]
+}
 .redact_root <- function(x) {
   for (r in .audit_repo_root()) x <- gsub(r, "<repo>", x, fixed = TRUE)
   .redact_names(x)

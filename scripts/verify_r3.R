@@ -24,11 +24,12 @@ Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 dirp <- "C:/optbuck_private/hpr"; ref <- "C:/optbuck_private/optbuck_reference"; dg <- "C:/optbuck_private/diag"
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path(dirp, m$file[match(id, m$id)]) }   # the real names are private (not in the repository)
 dir.create(dg, showWarnings = FALSE, recursive = TRUE)
-cfg <- list(file1 = list(path = list.files(dirp, "^REDACTED46_REDACTED45.*[.]hpr$", full.names = TRUE)[1L], ref = "file1"),
-            file3 = list(path = file.path(dirp, "REDACTED33"), ref = "file3"),
-            file4 = list(path = file.path(dirp, "REDACTED27"), ref = "file4"),
-            file5 = list(path = file.path(dirp, "REDACTED28"), ref = "file5p"))
+cfg <- list(file1 = list(path = priv_hpr("file1"), ref = "file1"),
+            file3 = list(path = priv_hpr("file3"), ref = "file3"),
+            file4 = list(path = priv_hpr("file4"), ref = "file4"),
+            file5 = list(path = priv_hpr("file5"), ref = "file5p"))
 args <- commandArgs(trailingOnly = TRUE)
 parts <- intersect(args, c("a", "b", "c", "d", "e")); if (!length(parts)) parts <- c("a", "b", "c", "d", "e")
 files <- intersect(args, names(cfg)); if (!length(files)) files <- names(cfg)

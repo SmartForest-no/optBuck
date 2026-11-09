@@ -14,7 +14,7 @@
 #  6.  The file is valid against the StanForD 2010 HarvestedProduction schema 3.1 (REVIEW when the schema is missing)
 #  7.  The scripted search for the original's identifying strings (made when the file was built, in the private
 #      folder) found none (REVIEW when that record is missing)
-#  8.  No buyer, company or place word of the original files (private lists in C:/optbuck_private/example_check/,
+#  8.  No buyer, company, landowner, file-name or place word of the original files (private lists in C:/optbuck_private/example_check/,
 #      REVIEW without them) in any tracked text file
 #
 # Verdict : PASS / ACCEPTED WITH REVIEW / FAIL (helpers_audit.R)
@@ -133,7 +133,7 @@ if (file.exists(rds)) {
 }
 
 # ---- 8 ------------------------------------------------------------------------------------------
-# No buyer, company or place word of the original files in any tracked text file. The words are in private files
+# No buyer, company, landowner, file-name or place word of the original files in any tracked text file. The words are in private files
 # (name_map.csv: tokens; product_name_map.csv: the old product names); the repository does not hold them.
 priv <- "C:/optbuck_private/example_check"
 nm_f <- file.path(priv, "name_map.csv"); pm_f <- file.path(priv, "product_name_map.csv")
@@ -146,7 +146,7 @@ if (file.exists(nm_f) && file.exists(pm_f)) {
   # ... but only the words that are not in the new names or in the generic type words
   generic <- unique(c(unlist(strsplit(pmap$new_name, " - | ")), unlist(strsplit(pmap$new_uid, "_")), "Sag", "Små", "Laft", "-", "21"))
   words <- setdiff(words, generic)
-  words <- words[nchar(words) >= 2L & !grepl("^[0-9_]+$", words)]
+  words <- words[nchar(words) >= 2L & (!grepl("^[0-9_]+$", words) | nchar(words) >= 8L)]   # short numbers occur everywhere as data
   tracked <- tryCatch(system2("git", c("-c", "safe.directory=*", "-C", shQuote(root_dir), "ls-files"), stdout = TRUE, stderr = FALSE),
                       error = function(e) character(0), warning = function(w) character(0))
   tracked <- tracked[!grepl("\\.(rds|png|jpe?g|ttf|woff2?|xlsx|parquet|zip|gz|pdf|ico|svg)$", tracked, ignore.case = TRUE)]
@@ -161,12 +161,12 @@ if (file.exists(nm_f) && file.exists(pm_f)) {
       if (grepl(pat, x, perl = TRUE, ignore.case = nchar(w) >= 3L)) hits[[length(hits) + 1L]] <- c(f, match(w, words))
     }
   }
-  rec("Check 08: no buyer, company or place word of the original files in any tracked text file",
+  rec("Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file",
       ok(length(hits) == 0L), sprintf("%d words searched in %d tracked files; files with a hit: %d%s", length(words), length(tracked),
                                        length(unique(vapply(hits, `[`, "", 1L))),
                                        if (length(hits)) paste0(" (", paste(utils::head(unique(vapply(hits, `[`, "", 1L)), 6L), collapse = ", "), ")") else ""))
 } else {
-  rec("Check 08: no buyer, company or place word of the original files in any tracked text file", REVIEW,
+  rec("Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file", REVIEW,
       "the private word lists are not on this machine (C:/optbuck_private/example_check/): skipped")
 }
 

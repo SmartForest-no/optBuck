@@ -406,9 +406,8 @@ if (!have5) {
 
 # ==============================================================================
 section("12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5)")
-files12 <- c(file1 = "REDACTED1", file3 = "REDACTED33",
-             file4 = "REDACTED27", file5 = "REDACTED28")
-paths12 <- file.path("C:/optbuck_private/hpr", files12)
+files12 <- c(file1 = "file1", file3 = "file3", file4 = "file4", file5 = "file5")   # the real names: private_hpr() (helpers_audit.R)
+paths12 <- private_hpr(files12)
 if (!all(file.exists(paths12))) {
   rec("Check 12: tuning_hpr_info equals the file's classes and targets for every tunable product (file1, 3, 4, 5)", REVIEW,
       sprintf("skipped: missing %s", paste(names(files12)[!file.exists(paths12)], collapse = ", ")))

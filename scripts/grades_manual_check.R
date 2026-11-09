@@ -28,9 +28,10 @@ for (e in parse(file.path(root_dir, "inst", "app", "tuning.R"), keep.source = FA
 args <- commandArgs(trailingOnly = TRUE)
 cases <- if (length(args)) strsplit(args[1L], ",")[[1L]] else c("a", "b", "c", "d", "e", "f")
 dirp <- "C:/optbuck_private/hpr"
-F1 <- list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L]   # file1, REDACTED45
-F3 <- file.path(dirp, "REDACTED33")                                          # file3, Gobakken
-F5 <- file.path(dirp, "REDACTED28")                                       # file5
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path(dirp, m$file[match(id, m$id)]) }   # the real names are private (not in the repository)
+F1 <- priv_hpr("file1")   # file1
+F3 <- priv_hpr("file3")                                          # file3
+F5 <- priv_hpr("file5")                                       # file5
 stopifnot(file.exists(F1), file.exists(F3), file.exists(F5))
 out <- file.path(root_dir, "outputs", "restructure"); dir.create(out, recursive = TRUE, showWarnings = FALSE)
 log <- file.path(out, "grades_manual_check.txt"); unlink(log)
@@ -81,38 +82,39 @@ run_case <- function(label, stem_path, defs, pm, use, cut) {
 
 if ("a" %in% cases) {
   sc1 <- scenario_of(F1)
-  a <- run_case("a. REDACTED45 stems + REDACTED45 assortments, grades + cut on", F1, sc1$defs, sc1$pm, TRUE, TRUE)
+  a <- run_case("a. file1 stems + file1 assortments, grades + cut on", F1, sc1$defs, sc1$pm, TRUE, TRUE)
 }
 if ("b" %in% cases) {
   sc3 <- scenario_of(F3)
-  b <- run_case("b. Gobakken stems + Gobakken assortments, grades + cut on", F3, sc3$defs, sc3$pm, TRUE, TRUE)
+  b <- run_case("b. file3 stems + file3 assortments, grades + cut on", F3, sc3$defs, sc3$pm, TRUE, TRUE)
 }
 if ("c" %in% cases) {
   sc3 <- scenario_of(F3)
-  c1 <- run_case("c. REDACTED45 stems + Gobakken assortments, grades + cut on", F1, sc3$defs, sc3$pm, TRUE, TRUE)
+  c1 <- run_case("c. file1 stems + file3 assortments, grades + cut on", F1, sc3$defs, sc3$pm, TRUE, TRUE)
   c0 <- run_case("c. (reference) the same with both options off", F1, sc3$defs, sc3$pm, FALSE, FALSE)
   say("   c equals both-off: %s", isTRUE(all.equal(c1$value, c0$value)) && identical(nrow(c1$logs), nrow(c0$logs)))
 }
 if ("d" %in% cases) {
   sc1 <- scenario_of(F1)
-  d1 <- run_case("d. Gobakken stems + REDACTED45 assortments, grades + cut on", F3, sc1$defs, sc1$pm, TRUE, TRUE)
+  d1 <- run_case("d. file3 stems + file1 assortments, grades + cut on", F3, sc1$defs, sc1$pm, TRUE, TRUE)
   d0 <- run_case("d. (reference) the same with both options off", F3, sc1$defs, sc1$pm, FALSE, FALSE)
   say("   d equals both-off: %s", isTRUE(all.equal(d1$value, d0$value)) && identical(nrow(d1$logs), nrow(d0$logs)))
   ty <- sc1$defs[, c("Name", "Species", "Type")]; ty$shown <- type_choice(ty$Type)
-  say("   REDACTED45 types as scenario: %s", paste(sprintf("%s/%s=%s", ty$Name, ty$Species, ty$shown), collapse = "; "))
+  say("   file1 types as scenario: %s", paste(sprintf("%s/%s=%s", ty$Name, ty$Species, ty$shown), collapse = "; "))
 }
 if ("e" %in% cases) {
   sc1 <- scenario_of(F1)
-  # B: a copy of A with "SAG - REDACTED35" at a fixed price of 400 (the assortment form: flat pricing)
+  # B: a copy of A with "SAG - Buyer A" at a fixed price of 400 (the assortment form: flat pricing)
   defs <- sc1$defs; pm <- pm_minimal(sc1$pm)
   ks <- assortment_table_keys(defs)
-  hit <- which(grepl("Mj\u00f8sbrukene", defs$Name))
+  buyer_a <- utils::read.csv("C:/optbuck_private/words.csv", stringsAsFactors = FALSE, encoding = "UTF-8")$value[1L]   # the buyer word of the real product name
+  hit <- which(grepl(buyer_a, defs$Name, fixed = TRUE))
   for (i in hit) {
     defs$PriceType[i] <- "flat"
     pm <- pm_minimal(pm_bind(pm[pm$ProductKey != ks[i], , drop = FALSE], pm_start_prices(ks[i], "flat", 400)))
   }
   v <- check_price_set(defs, pm); stopifnot(v$ok)
-  e <- run_case("e. REDACTED45 stems + REDACTED45 assortments, SAG - Mj\u00f8sbrukene fixed 400 (scenario B), grades + cut on",
+  e <- run_case("e. file1 stems + file1 assortments, SAG - Buyer A fixed 400 (scenario B), grades + cut on",
                 F1, defs, v$pm, TRUE, TRUE)
 }
 if ("f" %in% cases) {

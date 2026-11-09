@@ -20,10 +20,11 @@ Sys.setenv(OPTBUCK_ROOT = root_dir)
 suppressMessages(pkgload::load_all(root_dir, quiet = TRUE))   # the package (R/, inst/)
 
 dirp <- "C:/optbuck_private/hpr"; ref <- "C:/optbuck_private/optbuck_reference"
-cfg <- list(file1 = c(list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L], "file1"),
-            file3 = c(file.path(dirp, "REDACTED33"), "file3"),
-            file4 = c(file.path(dirp, "REDACTED27"), "file4"),
-            file5 = c(file.path(dirp, "REDACTED28"), "file5p"))
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path(dirp, m$file[match(id, m$id)]) }   # the real names are private (not in the repository)
+cfg <- list(file1 = c(priv_hpr("file1"), "file1"),
+            file3 = c(priv_hpr("file3"), "file3"),
+            file4 = c(priv_hpr("file4"), "file4"),
+            file5 = c(priv_hpr("file5"), "file5p"))
 args <- commandArgs(trailingOnly = TRUE); if (length(args)) cfg <- cfg[names(cfg) %in% args]
 out <- list()
 for (nm in names(cfg)) {

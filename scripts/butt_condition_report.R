@@ -27,9 +27,10 @@ skip_tuning <- "skip_tuning" %in% commandArgs(trailingOnly = TRUE)
 only <- sub("^only=", "", grep("^only=", commandArgs(trailingOnly = TRUE), value = TRUE))   # e.g. only=file5
 
 dirp <- "C:/optbuck_private/hpr"
-files <- c(file1 = list.files(dirp, "^REDACTED46_REDACTED45.*\\.hpr$", full.names = TRUE)[1L],
-           file2 = file.path(dirp, "REDACTED40"), file3 = file.path(dirp, "REDACTED33"),
-           file4 = file.path(dirp, "REDACTED27"), file5 = file.path(dirp, "REDACTED28"))
+priv_hpr <- function(id) { m <- utils::read.csv("C:/optbuck_private/hpr_files.csv", stringsAsFactors = FALSE, encoding = "UTF-8"); file.path(dirp, m$file[match(id, m$id)]) }   # the real names are private (not in the repository)
+files <- c(file1 = priv_hpr("file1"),
+           file2 = priv_hpr("file2"), file3 = priv_hpr("file3"),
+           file4 = priv_hpr("file4"), file5 = priv_hpr("file5"))
 fx <- list.files(file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures"), "\\.hpr$", full.names = TRUE)
 names(fx) <- paste0("fixture:", sub("\\.hpr$", "", basename(fx)))
 files <- c(files[file.exists(files)], fx)
