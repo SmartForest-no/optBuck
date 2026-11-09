@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="optBuck">
   <!-- optBuck icon: a tapering stem cut into logs, on a forest-green tile. Original artwork. -->
-  <rect width="64" height="64" rx="12" fill="#3F6E58"/>
+  <rect width="64" height="64" rx="12" fill="#00564b"/>
   <!-- stem: wide butt at the bottom, narrow top -->
   <path d="M27.5 10 L36.5 10 L41 54 L23 54 Z" fill="#F4EFE6"/>
   <!-- cut marks between logs (tile colour shows through) -->
-  <path d="M21 25.5 L43 23.5" stroke="#3F6E58" stroke-width="3" stroke-linecap="round"/>
-  <path d="M20 40 L44 38" stroke="#3F6E58" stroke-width="3" stroke-linecap="round"/>
+  <path d="M21 25.5 L43 23.5" stroke="#00564b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M20 40 L44 38" stroke="#00564b" stroke-width="3" stroke-linecap="round"/>
 </svg>

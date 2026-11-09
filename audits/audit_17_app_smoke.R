@@ -724,7 +724,7 @@ if (!browser_ok) {
                   tab_active = "rgb(17, 17, 17)", tab_line = "rgb(17, 17, 17)",
                   card_border = "rgb(230, 230, 230)", card_shadow = "none",
                   card_bg = "rgb(255, 255, 255)", sidebar_bg = "rgb(255, 255, 255)",
-                  primary = "rgb(63, 110, 88)", secondary = "rgb(238, 240, 239)",
+                  primary = "rgb(0, 86, 75)", secondary = "rgb(238, 240, 239)",
                   label = "uppercase", label_col = "rgb(138, 138, 138)")
     look_ok <- identical(unname(unlist(look)), unname(look_exp))
     title <- js(app, "document.title")

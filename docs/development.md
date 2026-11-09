@@ -245,10 +245,10 @@ because Bootstrap's cards take their background from it). The navbar is
 white with a hairline `#E6E6E6` rule, the
 navbar tabs are grey with a black active tab, and cards have a 1 px border
 and no shadow. Section labels are small uppercase grey, and forest green
-`#3F6E58` is the only strong colour (primary buttons, focus, progress, the
+`#00564b` (`OPTBUCK_GREEN`, one constant; was `#3F6E58` until 2026-11-09) is the only strong colour (primary buttons, focus, progress, the
 result tabs' underline). Secondary buttons are `#EEF0EF`, inputs `#F3F4F3`.
 Table headers are grey-green (`#6A726E` on `#F7F8F7`), A/B differences
-pale green `#EAF3EE`, and the summary boxes `#F7F8F7` without a border.
+a pale green derived from the green, and the summary boxes `#F7F8F7` without a border.
 Audit 17 check 6 reads these colours back from the browser.
 Everything is our own: colours
 are the tokens in `inst/app/theme.R` (`OPTBUCK_TOKENS`, `OPTBUCK_CHART`), component
@@ -266,7 +266,7 @@ Oracle or ForestSens assets.
 - Chart colours were checked with the dataviz palette validator (headless
   Chrome, all pairs, white surface; 2026-10-16). The requested pulpwood
   `#C9A97A` and waste `#B9BFBC` failed (normal-vision dE 8.7, floor 15), so
-  they were shifted slightly. The result is sawlog green `#3F6E58`, pulpwood
+  they were shifted slightly. The result is sawlog green the green (`#00564b` since 2026-11-09), pulpwood
   sand `#C09A66`, waste grey `#CBD0CD` and custom assortments charcoal
   `#3A3836`: worst CVD dE 15.5, worst normal-vision dE 16.5. Scenario A is
   green and B sand `#C09A66` (CVD dE 17.9). The delta chart uses a neutral
@@ -274,7 +274,7 @@ Oracle or ForestSens assets.
   sand and grey.
 - Figures (2026-10-19): ggplot2 with `theme_optbuck()` (Inter, white
   background, light grid). Height density per species in the Trees card
-  (spruce `#3F6E58`, pine `#C9A97A`: CVD dE 22.2, normal dE 27.1). Since
+  (spruce `#00564b`, pine `#c0704a` since 2026-11-09; before `#3F6E58` and `#C9A97A` at CVD dE 22.2, normal dE 27.1). Since
   2026-10-22 the DBH density and the two Selected-logs bar figures are
   replaced by the result tables (below): the DBH-class figure (trees and
   NOK/m³ per class, same species colours, A solid / B dashed) and the log

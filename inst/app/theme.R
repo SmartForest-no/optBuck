@@ -8,6 +8,31 @@
 #           www/optbuck.css; keep the two in sync.
 
 
+#' THE green of the app (2026-11-09): one constant. The theme, the CSS (through the variables written by
+#' `optbuck_css_vars()`), the chart and species colours and the PDF report all take it from here. The one
+#' static copy is the icon file www/optbuck-icon.svg (an image, it cannot read R); tests/testthat/test-theme.R
+#' checks that it holds this value.
+OPTBUCK_GREEN <- "#00564b"
+#' The pine colour of the species figures (spruce is the green).
+OPTBUCK_PINE  <- "#c0704a"
+
+#' Mix two colours: (1 - weight) * `hex` + weight * `other` (sRGB channels). The shades of the green are derived
+#' with it, as the old green's shades were: the hover colour is the green with 18 % black, the pale
+#' difference/selection fill the green with 90 % white, the focus ring the green at 18 % opacity.
+optbuck_mix <- function(hex, other = "#FFFFFF", weight = 0.5) {
+  a <- grDevices::col2rgb(hex)[, 1L]; b <- grDevices::col2rgb(other)[, 1L]
+  m <- round((1 - weight) * a + weight * b)
+  sprintf("#%02X%02X%02X", m[1L], m[2L], m[3L])
+}
+OPTBUCK_GREEN_HOVER <- optbuck_mix(OPTBUCK_GREEN, "#000000", 0.18)   # buttons on hover / focus
+OPTBUCK_GREEN_PALE  <- optbuck_mix(OPTBUCK_GREEN, "#FFFFFF", 0.90)   # A/B differences, selected dropdown option
+OPTBUCK_GREEN_RING  <- sprintf("rgba(%s, 0.18)", paste(grDevices::col2rgb(OPTBUCK_GREEN)[, 1L], collapse = ", "))   # focus ring
+
+#' The CSS variables that carry the green into www/optbuck.css (written once into the page head).
+optbuck_css_vars <- function()
+  sprintf(":root { --optbuck-primary: %s; --optbuck-primary-hover: %s; --optbuck-diff: %s; --optbuck-focus-ring: %s; }",
+          OPTBUCK_GREEN, OPTBUCK_GREEN_HOVER, OPTBUCK_GREEN_PALE, OPTBUCK_GREEN_RING)
+
 #' Design tokens shared by the theme, the CSS and the base-R plots.
 OPTBUCK_TOKENS <- list(
   page_bg     = "#F3F4F3",   # page background behind the cards (2026-10-19)
@@ -20,13 +45,13 @@ OPTBUCK_TOKENS <- list(
   table_row   = "#EDF0EE",   # table row borders
   table_head  = "#E3E6E4",   # rule under table headers
   field       = "#F3F4F3",   # selects and inputs
-  diff        = "#EAF3EE",   # A/B differences
-  # Forest green is the only strong colour (primary buttons, focus,
+  diff        = OPTBUCK_GREEN_PALE,   # A/B differences (derived from the green)
+  # The green is the only strong colour (primary buttons, focus,
   # progress, the result tabs' underline).
-  primary     = "#3F6E58",
+  primary     = OPTBUCK_GREEN,
   secondary   = "#EEF0EF",   # secondary buttons
-  accent      = "#3F6E58",
-  icon_green  = "#3F6E58",   # app icon tile
+  accent      = OPTBUCK_GREEN,
+  icon_green  = OPTBUCK_GREEN,   # app icon tile
   danger      = "#B3261E",
   warning     = "#9A5B00",
   success     = "#2F6B3A"
@@ -35,7 +60,8 @@ OPTBUCK_TOKENS <- list(
 #' Chart colours (option 3 "Combination", 2026-10-16). Ink and grid follow
 #' the page's grey-green chrome.
 #'
-#' Requested: sawlog #3F6E58, pulpwood #C9A97A, waste #B9BFBC. Checked with
+#' (Sawlog was #3F6E58 when this was validated; it is now the green, OPTBUCK_GREEN, which has not been re-run.)
+#' Requested: sawlog green, pulpwood #C9A97A, waste #B9BFBC. Checked with
 #' the dataviz skill's validator (validate_palette.js) in headless Chrome via
 #' chromote, on the white surface, all pairs (in the stem diagram any two
 #' assortments can touch). Pulpwood and waste as requested failed the
@@ -51,7 +77,7 @@ OPTBUCK_TOKENS <- list(
 #' carries a text label, bars carry value labels and the legend names each
 #' colour: colour is never the only cue.
 OPTBUCK_CHART <- list(
-  series1  = "#3F6E58",   # single-series bars, Scenario A
+  series1  = OPTBUCK_GREEN,   # single-series bars, Scenario A
   series2  = "#C09A66",   # Scenario B
   neutral  = "#6A726E",   # delta bars (sign is carried by position)
   ink      = "#111111",
@@ -62,19 +88,17 @@ OPTBUCK_CHART <- list(
   surface  = "#FFFFFF",
   # Assortments in the stem diagram. Custom assortment classes fold into the
   # charcoal "other" fill and are named by their label.
-  assortment = c(sawlog = "#3F6E58", pulpwood = "#C09A66", waste = "#CBD0CD"),
+  assortment = c(sawlog = OPTBUCK_GREEN, pulpwood = "#C09A66", waste = "#CBD0CD"),
   other      = "#3A3836",
   # Log label colour per fill (dark ink on the light sand and grey).
   label_on   = c(sawlog = "#FFFFFF", pulpwood = "#111111", waste = "#111111", other = "#FFFFFF")
 )
 
 
-#' Species colours in the tree figures (layout-and-figures, 2026-10-19):
-#' spruce #3F6E58, pine #C9A97A as requested. Validator (as above, white
-#' surface): CVD dE 22.2 (protan), normal dE 27.1, both pass; pine is 2.2:1
-#' on white and both fall below the chroma floor (muted by design), so the
-#' curves have an outline and a legend names each colour.
-OPTBUCK_SPECIES <- c(Spruce = "#3F6E58", Pine = "#C9A97A")
+#' Species colours in all figures, the app's and the PDF report's (the one place, 2026-11-09): spruce is the
+#' green (#00564b), pine #c0704a. (Before: #3F6E58 and #C9A97A, validated as above in 2026-10-19; the new pair
+#' has not been run through the validator.) The curves have an outline and a legend names each colour.
+OPTBUCK_SPECIES <- c(Spruce = OPTBUCK_GREEN, Pine = OPTBUCK_PINE)
 
 #' Font of the ggplot2 figures: the app's Inter, from the TTFs next to the
 #' web fonts (www/fonts, SIL OFL), registered with systemfonts; Shiny draws

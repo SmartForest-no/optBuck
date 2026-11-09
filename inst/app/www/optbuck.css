@@ -26,13 +26,13 @@
   --optbuck-tab: #6B6B6B;           /* inactive navbar tabs */
   --optbuck-label: #8A8A8A;         /* small uppercase section labels */
   --optbuck-muted: #6A726E;         /* grey-green: table headers, captions */
-  --optbuck-primary: #3F6E58;       /* forest green: primary buttons, focus */
+  /* --optbuck-primary, --optbuck-primary-hover, --optbuck-diff and --optbuck-focus-ring: the green and its derived
+     shades are written into the page head from theme.R (optbuck_css_vars()), one constant for the whole app */
   --optbuck-secondary: #EEF0EF;     /* secondary buttons */
   --optbuck-field: #F3F4F3;         /* selects and inputs */
   --optbuck-panel: #F7F8F7;         /* table headers, summary boxes */
   --optbuck-row: #EDF0EE;           /* table row borders */
   --optbuck-head-rule: #E3E6E4;     /* under table headers */
-  --optbuck-diff: #EAF3EE;          /* A/B differences */
   --optbuck-danger: #B3261E;
   --optbuck-warning: #9A5B00;
   --optbuck-success: #2F6B3A;
@@ -194,13 +194,13 @@ details.optbuck-card { margin-bottom: 16px; }
 .selectize-input.full, .selectize-input input { background: var(--optbuck-field) !important; }
 .form-control:focus, .selectize-input.focus {
   border-color: var(--optbuck-primary) !important;
-  box-shadow: 0 0 0 2px rgba(63, 110, 88, 0.18) !important;
+  box-shadow: 0 0 0 2px var(--optbuck-focus-ring) !important;
 }
 .selectize-dropdown { border: 1px solid var(--optbuck-rule); border-radius: 5px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08); }
 .selectize-dropdown .active { background: var(--optbuck-panel); color: var(--optbuck-ink); }
 .selectize-dropdown .selected { background: var(--optbuck-diff); color: var(--optbuck-ink); }
 .form-check-input:checked { background-color: var(--optbuck-primary); border-color: var(--optbuck-primary); }
-.form-check-input:focus { box-shadow: 0 0 0 2px rgba(63, 110, 88, 0.18); border-color: var(--optbuck-primary); }
+.form-check-input:focus { box-shadow: 0 0 0 2px var(--optbuck-focus-ring); border-color: var(--optbuck-primary); }
 /* file input on the input background */
 .shiny-input-container .input-group:has(.btn-file) {
   border: none; border-radius: 5px; padding: 6px; background: var(--optbuck-field);
@@ -220,7 +220,7 @@ details.optbuck-card { margin-bottom: 16px; }
 /* After .btn-default and more specific: actionButton(class = "btn-primary")
    carries both classes. */
 .btn.btn-primary { background: var(--optbuck-primary); border-color: var(--optbuck-primary); color: #FFFFFF; font-weight: 600; }
-.btn.btn-primary:hover, .btn.btn-primary:focus { background: #335A48; border-color: #335A48; color: #FFFFFF; }
+.btn.btn-primary:hover, .btn.btn-primary:focus { background: var(--optbuck-primary-hover); border-color: var(--optbuck-primary-hover); color: #FFFFFF; }
 .btn-sm { padding: 4px 10px; font-size: 0.82rem; }
 
 /* ---- result tabs: grey, active dark with a forest-green underline ------------- */
