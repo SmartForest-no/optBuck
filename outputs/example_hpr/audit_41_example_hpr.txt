@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: the anonymised example file inst/extdata/example.hpr
-  Run: 2026-11-09 13:10:42.354967
+  Run: 2026-11-09 13:46:40.747065
 ============================================================= 
   [PASS  ] Check 01: example.hpr exists and is at most 5,000,000 bytes | 4,951,240 bytes
   [PASS  ] Check 02: well-formed XML, no coordinate elements | coordinate elements: 0
@@ -9,7 +9,7 @@
   [PASS  ] Check 05: bucking_check() works; yield index between 0.5 and 1.1 | stems checked 318, yield index 0.9449, 6.7 s
   [PASS  ] Check 06: valid against the StanForD 2010 HarvestedProduction schema 3.1 | errors: 0
   [PASS  ] Check 07: the scripted search for the original's identifying strings found none | 50 strings searched when the file was built, 0 found
-  [PASS  ] Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file | 38 words searched in 280 tracked files; files with a hit: 0
+  [PASS  ] Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file | 42 words searched in 280 tracked files; files with a hit: 0
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

@@ -456,7 +456,7 @@ ok13a <- identical(ty("FRISK", "MASSE FRISK"), "pulpwood") && identical(ty("0-20
   identical(ty("TØRR", "TØRRGRAN - Fallende"), "pulpwood") && identical(ty("FRISK", "SAG - Buyer A"), "sawlog") &&
   identical(ty("Tømmer", "140 Sagtømmer gran"), "sawlog") && identical(ty("Massevirke", "200 Massevirke"), "pulpwood") &&
   identical(type_choice(ty("0-20%", "RMB 0-20%")), "other") && identical(type_choice(ty("MASSE", "BJØRK")), "other") &&
-  identical(ty("MASSE", "MASSE - REDACTED54"), "pulpwood")
+  identical(ty("MASSE", "MASSE - Buyer C"), "pulpwood")
 rec("Check 13a: .hpr_type(): MASSE FRISK, RMASSE 0-20%, TØRRGRAN - Fallende and 200 Massevirke are pulpwood; SAG - Buyer A and 140 Sagtømmer gran sawlog; RMB 0-20% and BJØRK (group MASSE) custom",
     ok(ok13a))
 dT <- sc$defs; kT <- "spruce_140_sagt_mmer_gran"

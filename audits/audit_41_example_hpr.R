@@ -140,7 +140,7 @@ nm_f <- file.path(priv, "name_map.csv"); pm_f <- file.path(priv, "product_name_m
 if (file.exists(nm_f) && file.exists(pm_f)) {
   nmap <- utils::read.csv(nm_f, encoding = "UTF-8", stringsAsFactors = FALSE, na.strings = character(0))
   pmap <- utils::read.csv(pm_f, encoding = "UTF-8", stringsAsFactors = FALSE, na.strings = character(0))
-  words <- unique(c(nmap$token, unlist(strsplit(nmap$token, "[ _]")),
+  words <- unique(c(nmap$token, unlist(strsplit(nmap$token, "_")),
                     unlist(strsplit(pmap$orig_name[pmap$orig_name != pmap$new_name], " - | ")),   # words of the old names ...
                     pmap$orig_uid[pmap$orig_uid != pmap$new_uid]))
   # ... but only the words that are not in the new names or in the generic type words
