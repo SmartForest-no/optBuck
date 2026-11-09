@@ -1,3 +1,10 @@
+# optBuck (development version)
+
+* New example file `system.file("extdata", "example.hpr", package = "optBuck")`: 376 whole stems and their recorded logs
+  (measurements unchanged) from a real harvester file, with seven products, prices multiplied by 1.15 and rounded to the
+  nearest 5 NOK, and every name, id, date (shifted, year kept) and coordinate removed or replaced. It is a valid StanForD 2010
+  `.hpr` (v3.1) and works in all five tabs; `scripts/make_example_hpr.R` shows how it was made.
+
 # optBuck 0.3.0
 
 First release of the package (the repository, called optBuck until now, is the package).

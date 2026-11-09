@@ -1,0 +1,21 @@
+============================================================= 
+  Audit: the anonymised example file inst/extdata/example.hpr
+  Run: 2026-11-09 10:02:02.628953
+============================================================= 
+  [PASS  ] Check 01: example.hpr exists and is at most 5,000,000 bytes | 4,951,260 bytes
+  [PASS  ] Check 02: well-formed XML, no coordinate elements | coordinate elements: 0
+  [PASS  ] Check 03: identity fields hold only neutral placeholders, empty values or numbers | 33 values in 24 fields; not neutral: 0
+  [PASS  ] Check 04: read_hpr(), read_hpr_stems(), read_hpr_logs() work; every classified product has a recorded log | products 7, with logs 7; logs 772 on 376 stems
+  [PASS  ] Check 05: bucking_check() works; yield index between 0.5 and 1.1 | stems checked 318, yield index 0.9449, 6.3 s
+  [PASS  ] Check 06: valid against the StanForD 2010 HarvestedProduction schema 3.1 | errors: 0
+  [PASS  ] Check 07: the scripted search for the original's identifying strings found none | 50 strings searched when the file was built, 0 found
+============================================================= 
+  AUDIT FINAL SUMMARY
+============================================================= 
+  result n
+1   PASS 7
+
+  Verdict: PASS 
+============================================================= 
+
+Audit CSV: <repo>/outputs/example_hpr/audit_41_example_hpr.csv

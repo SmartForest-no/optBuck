@@ -135,6 +135,7 @@ audits/
   audit_38_check_texts.R                     Texts of tab 5 and of the NFI profile build in both languages
   audit_39_name_and_paths.R               The tool name (no old name left but Norwegian words and the remote's address) and the path rules (read-only: system.file(), writable: R_user_dir())
   audit_40_install_gate.R                    The install gate: fresh library and working directory, no root variables, run_app(), six tabs, tab 5 three times, NFI run, PDF in both languages
+  audit_41_example_hpr.R                     The anonymised example file inst/extdata/example.hpr: size, no coordinates, neutral identity fields, readers, bucking check, schema
   audit_30_stem_grades.R                     .hpr stem grades and cut at grade changes (grade grid, StartGrade fallback, permitted grades, forced cuts, workers)
   prototype_reference/      Frozen audits 05–12
 
@@ -425,6 +426,7 @@ Chrome or set `CHROMOTE_CHROME` to a Chromium-based browser.
 | 38 — check texts | `Rscript audits/audit_38_check_texts.R` | none |
 | 39 — name and paths | `Rscript audits/audit_39_name_and_paths.R` | git (falls back to every file) |
 | 40 — install gate | `Rscript audits/audit_40_install_gate.R` | Chrome, shinytest2, processx; the owner's file 1 in `C:/optbuck_private/hpr/` (REVIEW without it); about 10 minutes |
+| 41 — example file | `Rscript audits/audit_41_example_hpr.R` | xml2; the XSD and the build record in `C:/optbuck_private/` (REVIEW without them) |
 | 32 — pin import and export | `Rscript audits/audit_32_pin_import_export.R` | xml2; `inst/extdata/inputs/test_fixtures/pin_minimal_synthetic.pin`, `pin_full_synthetic.pin` |
 
 Audit 16 checks 14–15 rebuild every tree's priced input with the per-tree

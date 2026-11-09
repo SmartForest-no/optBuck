@@ -39,11 +39,14 @@ The tabs:
 The same work from R:
 
 ```r
-f <- system.file("extdata", "inputs", "test_fixtures", "hpr_check_synthetic.hpr", package = "optBuck")
-x <- bucking_check(f)                 # recorded against best possible bucking (invented example stems)
+f <- system.file("extdata", "example.hpr", package = "optBuck")
+x <- bucking_check(f)                 # recorded against best possible bucking (takes about 10 s)
 x$key_figures
 r <- buck_hpr(f)                      # the best bucking of the measured stems under the file's instruction
 ```
+
+`example.hpr` (376 stems, 5 MB) is an anonymised extract of a real harvester file; use it with the app too
+(tab 1 and tab 5). The help examples use a much smaller invented file, so they run in a fraction of a second.
 
 Other functions: `read_hpr()`, `read_hpr_stems()`, `read_hpr_logs()`, `hpr_permitted_grades()`, `hpr_scenario()`,
 `buck_stem()`, `write_hpr()`, `write_pin()`, `build_nfi_cache()`. The NFI stem profiles are built on first use
@@ -55,7 +58,8 @@ of the built-in NFI source (about 3 minutes, once).
 * The sanitized NFI tables in `inst/extdata/nfi`: CC BY 4.0, attribution "Landsskogtakseringen, NIBIO"
   (`inst/extdata/nfi/LICENSE-data.md`). Tree and plot numbers are random; there are no coordinates.
 * Fonts of the app: Inter, SIL Open Font License.
-* The test files are invented; no real harvester data is part of the package.
+* The test files are invented. `inst/extdata/example.hpr` holds the stem and log measurements of 376 stems from a real
+  harvester file; all names, ids, dates and coordinates were removed or replaced and the prices were changed.
 
 ## Citation
 

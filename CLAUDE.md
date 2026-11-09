@@ -166,7 +166,13 @@ still out of bounds.
 **.hpr files carry exact stem coordinates and personal names** (StemCoordinates
 with WGS84 latitude/longitude, ObjectName, operators, contacts). The parser
 (`R/helpers_hpr.R`) must never read those elements, and no real .hpr file goes
-into the repository (optBuck's `example.hpr` included). Tests use
+into the repository (the old optBuck's `example.hpr` included). **One authorised exception
+(2026-11-09):** `inst/extdata/example.hpr` is an anonymised extract (376 whole stems, 7 products) of one
+of the owner's real files, made by `scripts/make_example_hpr.R`: stem and log measurements unchanged,
+coordinates removed, prices x 1.15 rounded to 5 NOK, every name, id and free text replaced, dates shifted
+(year kept); the words that name buyers and places live only in the private
+`C:/optbuck_private/example_check/name_map.csv`, never in the script. Audit 41 checks it. Do not enlarge
+it or replace it without the same steps. Tests use
 `inst/extdata/inputs/test_fixtures/hpr_example_synthetic.hpr`, built by
 `scripts/make_hpr_test_fixture.R` from a whitelist (species groups, products,
 prices) plus one invented stem; that script refuses to write a file containing
