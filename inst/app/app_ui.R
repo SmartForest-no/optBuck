@@ -265,7 +265,7 @@ ui <- page_navbar(
     tags$head(
       tags$style(HTML(optbuck_css_vars())),          # the green and its shades (theme.R), used by optbuck.css
       tags$link(rel = "stylesheet", href = asset_url("optbuck.css")),
-      tags$link(rel = "icon", type = "image/svg+xml", href = "optbuck-icon.svg"),
+      tags$link(rel = "icon", type = "image/svg+xml", href = asset_url("optbuck-icon.svg")),
       i18n_head(),                                   # the ui texts of both languages
       tags$script(src = asset_url("optbuck.js"))
     )

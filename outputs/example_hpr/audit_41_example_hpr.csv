@@ -6,4 +6,4 @@ check,result,detail
 Check 05: bucking_check() works; yield index between 0.5 and 1.1,PASS,"stems checked 318, yield index 0.9449, 6.7 s"
 Check 06: valid against the StanForD 2010 HarvestedProduction schema 3.1,PASS,errors: 0
 Check 07: the scripted search for the original's identifying strings found none,PASS,"50 strings searched when the file was built, 0 found"
-"Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file",PASS,42 words searched in 280 tracked files; files with a hit: 0
+"Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file",PASS,42 words searched in 281 tracked files; files with a hit: 0

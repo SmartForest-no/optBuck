@@ -266,10 +266,10 @@ Oracle or ForestSens assets.
 - Chart colours were checked with the dataviz palette validator (headless
   Chrome, all pairs, white surface; 2026-10-16). The requested pulpwood
   `#C9A97A` and waste `#B9BFBC` failed (normal-vision dE 8.7, floor 15), so
-  they were shifted slightly. The result is sawlog green the green (`#00564b` since 2026-11-09), pulpwood
-  sand `#C09A66`, waste grey `#CBD0CD` and custom assortments charcoal
+  they were shifted slightly. The result is sawlog the green (`#00564b` since 2026-11-09), pulpwood
+  sand `#C09A66` (since 2026-11-09 the pine colour `#c0704a`, `OPTBUCK_PINE`), waste grey `#CBD0CD` and custom assortments charcoal
   `#3A3836`: worst CVD dE 15.5, worst normal-vision dE 16.5. Scenario A is
-  green and B sand `#C09A66` (CVD dE 17.9). The delta chart uses a neutral
+  green and B sand `#C09A66` (since 2026-11-09 the pine colour; CVD dE 17.9 was for the sand). The delta chart uses a neutral
   grey because the sign is shown by bar direction. Log labels are dark on
   sand and grey.
 - Figures (2026-10-19): ggplot2 with `theme_optbuck()` (Inter, white

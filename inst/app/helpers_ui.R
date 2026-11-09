@@ -12,7 +12,7 @@
 #' the code and repository keep the name optBuck).
 APP_DISPLAY_NAME <- "optBuck"
 navbar_brand <- function() {
-  tags$span(tags$img(src = "optbuck-icon.svg", alt = ""), APP_DISPLAY_NAME)
+  tags$span(tags$img(src = asset_url("optbuck-icon.svg"), alt = ""), APP_DISPLAY_NAME)   # versioned: a browser never keeps an old icon
 }
 
 

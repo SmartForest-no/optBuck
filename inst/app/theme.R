@@ -60,7 +60,9 @@ OPTBUCK_TOKENS <- list(
 #' Chart colours (option 3 "Combination", 2026-10-16). Ink and grid follow
 #' the page's grey-green chrome.
 #'
-#' (Sawlog was #3F6E58 when this was validated; it is now the green, OPTBUCK_GREEN, which has not been re-run.)
+#' NOTE (2026-11-09): sawlog is now the green (OPTBUCK_GREEN) and pulpwood and Scenario B / "best possible" are
+#' the pine colour (OPTBUCK_PINE); the validation below was made for the earlier colours (sawlog #3F6E58,
+#' pulpwood sand #C09A66) and has not been re-run for the new set.
 #' Requested: sawlog green, pulpwood #C9A97A, waste #B9BFBC. Checked with
 #' the dataviz skill's validator (validate_palette.js) in headless Chrome via
 #' chromote, on the white surface, all pairs (in the stem diagram any two
@@ -78,7 +80,7 @@ OPTBUCK_TOKENS <- list(
 #' colour: colour is never the only cue.
 OPTBUCK_CHART <- list(
   series1  = OPTBUCK_GREEN,   # single-series bars, Scenario A
-  series2  = "#C09A66",   # Scenario B
+  series2  = OPTBUCK_PINE,   # Scenario B, "best possible" (the pine colour; was a sand #C09A66 until 2026-11-09)
   neutral  = "#6A726E",   # delta bars (sign is carried by position)
   ink      = "#111111",
   ink2     = "#4A4F4C",   # value labels
@@ -88,7 +90,7 @@ OPTBUCK_CHART <- list(
   surface  = "#FFFFFF",
   # Assortments in the stem diagram. Custom assortment classes fold into the
   # charcoal "other" fill and are named by their label.
-  assortment = c(sawlog = OPTBUCK_GREEN, pulpwood = "#C09A66", waste = "#CBD0CD"),
+  assortment = c(sawlog = OPTBUCK_GREEN, pulpwood = OPTBUCK_PINE, waste = "#CBD0CD"),   # pulpwood was sand #C09A66
   other      = "#3A3836",
   # Log label colour per fill (dark ink on the light sand and grey).
   label_on   = c(sawlog = "#FFFFFF", pulpwood = "#111111", waste = "#111111", other = "#FFFFFF")
