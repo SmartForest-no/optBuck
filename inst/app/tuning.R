@@ -46,7 +46,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     tuning_sawlog_status(defs_of(side()), pm_of(side()))
   })
   prods <- reactive({ st <- status(); st[st$reason == "ok", , drop = FALSE] })
-  # "Gran – REDACTED25": the species and the assortment's name in the viewer's language.
+  # "Gran – 140 Sagtømmer gran": the species and the assortment's name in the viewer's language.
   disp_name <- function(species, name, l = lang())
     sprintf("%s – %s", tr_value(tools::toTitleCase(as.character(species)), l), tr_value(as.character(name), l))
   disp_key <- function(r, k, l = lang()) {

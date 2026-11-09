@@ -1,7 +1,7 @@
 test_that("a harvester file becomes a scenario and a product instruction", {
   sc <- hpr_scenario(fixture("hpr_example_synthetic.hpr"))
   expect_true(sc$ok)
-  expect_true(any(grepl("^140 SCA Sagt.mmer$", sc$defs$Name)))
+  expect_true(any(grepl("^140 Sagt.mmer gran$", sc$defs$Name)))
   out <- write_pin(sc, tempfile(fileext = ".pin"))
   expect_true(out$ok)
   expect_true(file.exists(out$path))

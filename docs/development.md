@@ -721,10 +721,10 @@ These keep the old name on purpose:
   `inst/extdata/example.hpr`).
 - **Example file contents** (optBuck @ 33ec887): species groups 445 FURU,
   446 GRAN, 447 LAUV, 448 BIOVIRKE (grades 1–16, best 1, StartGrade 2);
-  8 classified products (REDACTED23, 200 Massevirke for FURU;
-  197 Massevirke, 100 Energi, 154 Kubb, REDACTED25 for GRAN;
+  8 classified products (240 Sagtømmer furu, 200 Massevirke for FURU;
+  197 Massevirke, 100 Energi, 154 Kubb, 140 Sagtømmer gran for GRAN;
   345 Bjørk; 987 Biovirke), all under bark with the top diameter 10 cm below
-  the cut; 35 forbidden cells in REDACTED23; 2 GRAN stems over bark
+  the cut; 35 forbidden cells in 240 Sagtømmer furu; 2 GRAN stems over bark
   every 10 cm from the felling cut (25.0 and 22.2 m measured).
 
 ## .hpr stems (hpr Phase B, 2026-10-21)

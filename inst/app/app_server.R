@@ -562,7 +562,7 @@ server <- function(input, output, session) {
 
   # ---- readable labels ----------------------------------------------------------
   # "spruce_sawlog" -> "Spruce sawlog"; assortment classes ("sawlog") -> "Sawlog".
-  # From the assortment's own name where a scenario has it ("Spruce 140 SCA
+  # From the assortment's own name where a scenario has it ("Spruce 140 Sagtømmer gran
   # Sagtømmer", file names as written; only the base names start in lower case, "Spruce
   # sawlog"), else from the key (2026-10-22: keys drop ø, å and capitals).
   # In Norsk the species and the base names (Sawlog, Pulpwood, Waste) are

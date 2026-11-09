@@ -103,7 +103,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     a <- isolate(defs("A")); b <- isolate(defs("B"))
     d <- rbind(a, b[!keys_of(b) %in% keys_of(a), , drop = FALSE])
     k <- keys_of(d); i <- match(keys, k)
-    # File names as written; only the base names start in lower case: "Spruce sawlog", "Spruce REDACTED25".
+    # File names as written; only the base names start in lower case: "Spruce sawlog", "Spruce 140 Sagtømmer gran".
     ifelse(is.na(i), keys, assortment_display_name(d$Species[i], d$Name[i], l))
   }
   # Labels in a message, taken in both languages when the message is made

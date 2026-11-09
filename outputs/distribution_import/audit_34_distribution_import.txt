@@ -36,10 +36,10 @@
 --- 11. FileDiameterClass_mm never reaches a run ---
   [PASS  ] Check 11: write_price_file() is byte-identical with and without FileDiameterClass_mm; pm_prices() has only the price columns; the backend loader drops the column | price file identical TRUE | backend pm identical TRUE
 
---- 20-22. file5, file3, file4: spruce 140 SCA Sagtomer ---
-  [PASS  ] Check 20: file5 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class, 0 on 370; Volume of logs, MAXDeviation 4, allowed | lengths 37:0 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 92 rows
-  [PASS  ] Check 21: file3 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed | lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows
-  [PASS  ] Check 22: file4 spruce REDACTED25: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed | lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows
+--- 20-22. file5, file3, file4: spruce 140 Sagtomer gran ---
+  [PASS  ] Check 20: file5 spruce 140 Sagtømmer gran: Distribution 30/45/25 on 430/490/550 cm in every diameter class, 0 on 370; Volume of logs, MAXDeviation 4, allowed | lengths 37:0 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 92 rows
+  [PASS  ] Check 21: file3 spruce 140 Sagtømmer gran: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed | lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows
+  [PASS  ] Check 22: file4 spruce 140 Sagtømmer gran: Distribution 30/45/25 on 430/490/550 cm in every diameter class (no 370 column); Volume of logs, MAXDeviation 4, allowed | lengths 43:30 49:45 55:25 | Volume of logs, max deviation 4, allowed TRUE | 69 rows
 
 --- 23. file1: sawlog products ---
   [PASS  ] Check 23: file1 sawlog products: all Distribution 0; DistributionAllowed as in the file (false for all but one product, which is true with all Distribution 0) | 3 sawlog assortments, 508 cells all 0, DistributionAllowed false for 2, true for 1
@@ -57,8 +57,8 @@
   [PASS  ] Check 27: Round trip import -> export -> import identical for all 5 .hpr files (products written and re-read) | file1 same (9 assortments) | file2 same (16 assortments) | file3 same (6 assortments) | file4 same (6 assortments) | file5 same (21 assortments)
   [PASS  ] Check 28: Round trip import -> export -> import identical for both .pin files | hand.pin same (4 assortments) | real.pin same (1 assortments)
 
---- 12. FileDiameterClass_mm on file5 spruce 140 SCA Sagtommer ---
-  [PASS  ] Check 12: file5 spruce 140 SCA Sagtommer: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits | 13 distinct values in 92 rows; file classes 13; equal TRUE
+--- 12. FileDiameterClass_mm on file5 spruce 140 Sagtommer gran ---
+  [PASS  ] Check 12: file5 spruce 140 Sagtommer gran: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits | 13 distinct values in 92 rows; file classes 13; equal TRUE
 
 --- 30. Editor: class-wide cell edit, prices untouched ---
   [PASS  ] Check 30: A cell edit sets every whole-cm row of the same file class (rows without a file class: only that row), NA clears, prices unchanged, dist_grid() has the price grid's shape | class-wide TRUE | own class TRUE | clear TRUE | grid TRUE

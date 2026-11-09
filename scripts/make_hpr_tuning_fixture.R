@@ -4,7 +4,7 @@
 # Purpose : Build inputs/test_fixtures/hpr_tuning_synthetic.hpr, the .hpr file
 #           audit 17 uses for the Price tuning tab (roadmap 7, session 3): the
 #           same species groups and products as hpr_example_synthetic.hpr
-#           (spruce 140 SCA Sagtommer has three length classes, 23 diameter
+#           (spruce 140 Sagtommer gran has three length classes, 23 diameter
 #           classes and a Distribution), but 80 invented spruce stems, enough
 #           logs for the tab to tune (at least 20 logs in a diameter class).
 #

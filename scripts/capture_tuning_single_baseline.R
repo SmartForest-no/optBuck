@@ -1,6 +1,6 @@
 # ==============================================================================
 # Capture the single-product tune_prices() result on the owner's file5 (spruce
-# 140 SCA), with the code as it is when this script runs. Audit 33 check 14
+# 140 Sagtømmer gran), with the code as it is when this script runs. Audit 33 check 14
 # compares later versions of tune_prices() against it.
 #
 # The result is derived from a real buyer's price list, so it is written to
@@ -34,7 +34,7 @@ pm <- pm_minimal(sc$pm); pr <- products_from_defs(sc$defs, pm)
 products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
 dst <- read_hpr_distribution(f5)
 key <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" &
-                                grepl("140 sca", products$pd$ProductName, ignore.case = TRUE)][1L]
+                                grepl("140 .*sagt", products$pd$ProductName, ignore.case = TRUE)][1L]
 hk <- sc$defs$HprProductKey[match(key, assortment_table_keys(sc$defs))]
 hpr <- hpr_tuning_info(dst, hk)
 st <- read_hpr_stems(f5); stopifnot(isTRUE(st$ok))

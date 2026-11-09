@@ -119,7 +119,7 @@ if ("f" %in% cases) {
   h <- read_hpr(F5); sc <- hpr_to_scenario(h, setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key))
   pm <- pm_minimal(sc$pm); pr <- products_from_defs(sc$defs, pm)
   products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
-  k140 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" & grepl("140 sca", products$pd$ProductName, ignore.case = TRUE)][1L]
+  k140 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" & grepl("140 .*sagt", products$pd$ProductName, ignore.case = TRUE)][1L]
   st <- read_hpr_stems(F5); stopifnot(isTRUE(st$ok))
   smap <- setNames(guess_hpr_species(st$species$name, st$species$user_id), st$species$key)
   price_path <- tempfile(fileext = ".csv"); pm_export(pm, price_path)
@@ -127,7 +127,7 @@ if ("f" %in% cases) {
   rm(st); invisible(gc())
   t0 <- proc.time()[["elapsed"]]
   r1 <- tuning_run(job, products, sc$defs, k140, 30L, list(use_grades = FALSE, cut_at_changes = FALSE))
-  say("f. file5 tuning, spruce 140 SCA alone: n %d | FG %.1f -> %.1f | value %.0f -> %.0f NOK (%+.2f %%) | %.0f s",
+  say("f. file5 tuning, spruce 140 Sagtømmer gran alone: n %d | FG %.1f -> %.1f | value %.0f -> %.0f NOK (%+.2f %%) | %.0f s",
       as.integer(r1$n_logs[[k140]]), r1$by[[k140]]$fg_o, r1$by[[k140]]$fg_t, r1$orig$value, r1$tuned$value,
       100 * (r1$tuned$value - r1$orig$value) / r1$orig$value, proc.time()[["elapsed"]] - t0)
 }

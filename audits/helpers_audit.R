@@ -85,9 +85,47 @@ init_audit_log <- function(log_path) {
   cand <- cand[nzchar(cand)]
   unique(c(cand, normalizePath(cand, winslash = "/", mustWork = FALSE)))
 }
+# Product names printed from the owner's private files can name buyers and places (2026-11-09): when the
+# private word lists exist, their old names are shown by the neutral ones in the committed audit files.
+# The lists are read at run time from C:/optbuck_private/example_check/ (the repository does not hold them).
+.audit_name_rules <- local({
+  cache <- NULL
+  function() {
+    if (!is.null(cache)) return(cache)
+    d <- "C:/optbuck_private/example_check"
+    f1 <- file.path(d, "product_name_map.csv"); f2 <- file.path(d, "name_map.csv")
+    rules <- list()
+    if (file.exists(f1)) {
+      pm <- utils::read.csv(f1, encoding = "UTF-8", stringsAsFactors = FALSE, na.strings = character(0))
+      slug <- function(x) gsub("^_+|_+$", "", gsub("[^a-z0-9]+", "_", tolower(trimws(x))))
+      ch <- pm[pm$orig_name != pm$new_name, , drop = FALSE]
+      pairs <- rbind(data.frame(o = ch$orig_name, n = ch$new_name), data.frame(o = pm$orig_uid, n = pm$new_uid),
+                     data.frame(o = slug(ch$orig_name), n = slug(ch$new_name)))
+      pairs <- pairs[pairs$o != pairs$n, , drop = FALSE]
+      pairs <- pairs[order(-nchar(pairs$o)), , drop = FALSE]
+      rules <- c(rules, lapply(seq_len(nrow(pairs)), function(i) list(pairs$o[i], pairs$n[i], TRUE)))
+    }
+    if (file.exists(f2)) {
+      nm <- utils::read.csv(f2, encoding = "UTF-8", stringsAsFactors = FALSE, na.strings = character(0))
+      for (t in unique(nm$token)) {
+        if (!nzchar(t)) next
+        pat <- paste0("(?<![\\p{L}\\p{N}])", gsub("([.()])", "\\\\\\1", t), "(?![\\p{L}\\p{N}])")
+        rules[[length(rules) + 1L]] <- list(pat, "[name]", FALSE)
+      }
+    }
+    cache <<- rules
+    rules
+  }
+})
+.redact_names <- function(x) {
+  for (r in .audit_name_rules()) {
+    x <- if (r[[3L]]) gsub(r[[1L]], r[[2L]], x, fixed = TRUE) else gsub(r[[1L]], r[[2L]], x, perl = TRUE)
+  }
+  x
+}
 .redact_root <- function(x) {
   for (r in .audit_repo_root()) x <- gsub(r, "<repo>", x, fixed = TRUE)
-  x
+  .redact_names(x)
 }
 
 #' Append one check result to a results list stored in an environment.

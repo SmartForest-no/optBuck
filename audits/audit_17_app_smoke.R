@@ -193,7 +193,7 @@
 #      the Waste rows, so Products shows no value-change figure ("No
 #      assortments in both scenarios."), lists A's and B's assortments (no
 #      "(type)" rows) and the type table; the tally offers only B for 140
-#      SCA Sagtømmer (screenshots 20-21)
+#      140 Sagtømmer gran (screenshots 20-21)
 #
 # Language (Phase 1, 2026-10-27): checks 05-33 drive the page in English
 # (OPTBUCK_LANG=en); checks 34-39 a second session that starts in Norsk, the
@@ -1651,7 +1651,7 @@ if (!browser_ok) {
       grepl("Imported 6 assortments from hpr_example_synthetic.hpr into Scenario B.", c29$msg, fixed = TRUE) &&
       !grepl("Warning", c29$msg, fixed = TRUE) && !grepl("Not taken over", c29$dialog, fixed = TRUE) &&
       !grepl("Only for grades set by the operator", c29$dialog, fixed = TRUE) &&
-      grepl("REDACTED23", c29$b_rows, fixed = TRUE) && !grepl("Sawlog Spruce", c29$b_rows, fixed = TRUE) &&
+      grepl("240 Sagtømmer furu", c29$b_rows, fixed = TRUE) && !grepl("Sawlog Spruce", c29$b_rows, fixed = TRUE) &&
       identical(c29$a_after, c29$a_before) && identical(c29$marks, 0L) && identical(n_err_notif(app), 0L)
     rec(browser_checks[25], if (ok29) PASS else FAIL,
         sprintf("from A: '%s'; broken file: '%s', Replace disabled %s | from B: species %s, ticked %s, Replace enabled %s | after Replace: dialog open %s, '%s' | B rows: %s | A unchanged %s | highlighted %s%s",
@@ -1674,7 +1674,7 @@ if (!browser_ok) {
                                  ".map(function(r){ return r.querySelector('.rt-td').textContent.trim(); }).join('|')"))
       shoot(app, "20_hpr_B_products")
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
-      app$set_inputs(tally_key = "spruce_140_sca_sagt_mmer", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tally_key = "spruce_140_sagt_mmer_gran", wait_ = FALSE); app$wait_for_idle()
       c33$radio <- js(app, "Array.from(document.querySelectorAll('#tally_scenario input')).map(function(i){ return i.value; }).join(',')")
       shoot(app, "21_hpr_B_tally_B_only")
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
@@ -1685,10 +1685,10 @@ if (!browser_ok) {
     ok33 <- !nzchar(e33) && grepl("No assortments in both scenarios.", c33$hdr, fixed = TRUE) &&
       identical(c33$shared_fig, 0L) && isTRUE(c33$type_fig >= 2L) &&
       length(rows33) >= 4L && !any(grepl("(type)", rows33, fixed = TRUE)) &&
-      any(grepl("140 SCA", rows33, fixed = TRUE)) && any(startsWith(rows33, "Spruce sawlog")) &&
+      any(grepl("140 Sagtømmer gran", rows33, fixed = TRUE)) && any(startsWith(rows33, "Spruce sawlog")) &&
       identical(c33$radio, "B") && identical(n_err_notif(app), 0L)
     rec(browser_checks[29], if (ok33) PASS else FAIL,
-        sprintf("value change: '%s' | value-change figure %s | type table rows %s | products rows: %s | tally REDACTED25: %s | error notifications %s%s",
+        sprintf("value change: '%s' | value-change figure %s | type table rows %s | products rows: %s | tally 140 Sagtømmer gran: %s | error notifications %s%s",
                 trimws(c33$hdr), c33$shared_fig, c33$type_fig, paste(rows33, collapse = ", "),
                 c33$radio, n_err_notif(app), err_txt(e33)))
 
@@ -1909,7 +1909,7 @@ if (!browser_ok) {
                 grepl("<ProductInstruction", or_default(c42$pin, ""), fixed = TRUE), c42$nerr, err_txt(e42)))
     # 43. Price tuning tab (roadmap 7, session 3): without .hpr stems only the
     # message; with the invented tuning fixture (120 spruce stems) as the stem
-    # source and its products imported into A, tune spruce 140 SCA with the
+    # source and its products imported into A, tune spruce 140 Sagtømmer gran with the
     # even target for two iterations (OPTBUCK_TUNE_MAX_ITER); table, plot and
     # price-change table appear; Use tuned prices in scenario B replaces B with
     # A's assortments and the tuned prices.
@@ -1918,7 +1918,7 @@ if (!browser_ok) {
                 plot_w = NA, plot_h = NA, views = list(), kept = FALSE, cleared = FALSE, radio = "")
     e43 <- try_drv({
       fx43 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
-      key43 <- "spruce_140_sca_sagt_mmer"
+      key43 <- "spruce_140_sagt_mmer_gran"
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
       c43$msg <- txt(app, "#tn_main")
@@ -2001,7 +2001,7 @@ if (!browser_ok) {
       grepl(paste0(key43, "+"), c43$boxes, fixed = TRUE) && !grepl("-", c43$boxes, fixed = TRUE) && identical(c43$radio, 0L) &&
       grepl("^Prices were tuned on [0-9,]+ of [0-9,]+ stems; the figures below are for all [0-9,]+ stems\\.$", trimws(c43$scope)) &&
       grepl("has apportionment bucking switched on (maximum allowed loss of value 4 %)", c43$apport, fixed = TRUE) &&
-      grepl("Tuned", c43$rows, fixed = TRUE) && grepl(" \u2013 ", c43$rows, fixed = TRUE) && !grepl("sca sagt", c43$rows, fixed = TRUE) &&
+      grepl("Tuned", c43$rows, fixed = TRUE) && grepl(" \u2013 ", c43$rows, fixed = TRUE) && !grepl("sagt mmer", c43$rows, fixed = TRUE) &&
       all(vapply(c("Before tuning", "After tuning", "Assortment", "Logs", "Degree of fit (%)", "Volume (m\u00b3)"),
                  function(w) grepl(w, c43$cols, fixed = TRUE), NA)) &&
       grepl("Value of all stems (NOK)", c43$cost, fixed = TRUE) && grepl("Sawlog volume", c43$cost, fixed = TRUE) &&
@@ -2100,10 +2100,10 @@ if (!browser_ok) {
                 substr(or_default(c45$products, ""), 1, 90), paste(c45$xlsx_sheets, collapse = "/"), c45$nerr, err_txt(e45)))
 
     # 46. The target distribution view (restructure R2): the tuning fixture's
-    # spruce 140 SCA in Scenario A (check 43).
+    # spruce 140 Sagtømmer gran in Scenario A (check 43).
     c46 <- list()
     e46 <- try_drv({
-      key46 <- "spruce_140_sca_sagt_mmer"
+      key46 <- "spruce_140_sagt_mmer_gran"
       cell <- function(r, c) js(app, sprintf("(function(){ var t = document.querySelectorAll('#dt_a .ht_master tbody tr')[%d]; return t ? t.querySelectorAll('td')[%d].innerText.trim() : ''; })()", r, c))
       bold <- function(r, c) isTRUE(js(app, sprintf("(function(){ var t = document.querySelectorAll('#dt_a .ht_master tbody tr')[%d]; return !!t && t.querySelectorAll('td')[%d].style.fontWeight === 'bold'; })()", r, c)))
       ncol_hot <- function() js(app, "HTMLWidgets.find('#dt_a').hot.countCols()")

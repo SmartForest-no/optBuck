@@ -218,7 +218,7 @@ misses4 <- i18n_misses()
 en_same <- identical(tr_msg(c("Total", "spruce"), "en"), c("Total", "spruce")) &&
   identical(tr_value(c("Spruce", "Top cylinder"), "en"), c("Spruce", "Top cylinder")) &&
   identical(tr("btn_run", lang = "en"), "Run optimizer")
-pass_through <- identical(tr_value(c("SCA 140 Sagtømmer", NA), "no"), c("SCA 140 Sagtømmer", NA))
+pass_through <- identical(tr_value(c("Test 140 Sagtømmer", NA), "no"), c("Test 140 Sagtømmer", NA))
 ok4 <- !length(rt_fail) && !length(misses4) && en_same && pass_through
 rec("Check 04: every message template round-trips; English unchanged; unknown values pass through",
     ok(ok4), sprintf("%d templates | failed: %s | misses: %s | English unchanged %s | pass-through %s",
@@ -386,11 +386,11 @@ dn <- function(sp, nm, l) assortment_display_name(sp, nm, l)
 ok8 <- identical(dn("spruce", "SAG - REDACTED35", "no"), "Gran SAG - REDACTED35") &&
   identical(dn("spruce", "SAG - REDACTED35", "en"), "Spruce SAG - REDACTED35") &&
   identical(dn("pine", "MASSE FRISK", "no"), "Furu MASSE FRISK") &&
-  identical(dn("spruce", "REDACTED25", "no"), "Gran REDACTED25") &&
+  identical(dn("spruce", "140 Sagtømmer gran", "no"), "Gran 140 Sagtømmer gran") &&
   identical(dn("spruce", "eNERGI 50-90%", "en"), "Spruce eNERGI 50-90%") &&
   identical(dn("spruce", "Sawlog", "en"), "Spruce sawlog") && identical(dn("spruce", "Sawlog", "no"), "Gran sagtømmer") &&
   identical(dn("pine", "Waste", "no"), "Furu vrak")
-rec("Check 08: a product name from a file is shown as written ('SAG - REDACTED35' -> 'Gran SAG - ...' / 'Spruce SAG - ...', 'REDACTED25' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case",
+rec("Check 08: a product name from a file is shown as written ('SAG - REDACTED35' -> 'Gran SAG - ...' / 'Spruce SAG - ...', '140 Sagtømmer gran' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case",
     ok(ok8), paste(dn("spruce", "SAG - REDACTED35", "no"), "|", dn("spruce", "SAG - REDACTED35", "en"), "|", dn("spruce", "Sawlog", "no")))
 
 

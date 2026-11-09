@@ -204,7 +204,7 @@ cand_of <- function(prep, id, opts) {
 c101 <- cand_of(pr, "101", USE)
 ok5a <- is.na(sc$defs$PermittedGrades[keys == spruce_mass]) && !length(permitted[[spruce_mass]]) &&
   any(c101$key == spruce_mass & c101$start < 300) && any(c101$key == spruce_mass & c101$start >= 300) &&
-  !any(c101$key == "spruce_140_sca_sagt_mmer" & c101$start < 300)
+  !any(c101$key == "spruce_140_sagt_mmer_gran" & c101$start < 300)
 rec("Check 5a: '197 Massevirke' has no PermittedGradesDefinition: empty set, and it has candidates inside stem 101's grade-7 butt with the option on (the sawlog has none there)",
     ok(ok5a), sprintf("PermittedGrades NA: %s", is.na(sc$defs$PermittedGrades[keys == spruce_mass])))
 d_none <- sc$defs; d_none$PermittedGrades <- NA_character_
@@ -236,7 +236,7 @@ rec("Check 7: results with the options on are identical on 1 and 2 workers (A an
 section("8. PermittedGrades through the app's tables; run grouping")
 back <- defs_from_products(prod$pd)
 ok8a <- identical(back$PermittedGrades, sc$defs$PermittedGrades) &&
-  identical(prod$pd$PermittedGrades[match("spruce_140_sca_sagt_mmer", prod$pd$ProductKey)], "1;2")
+  identical(prod$pd$PermittedGrades[match("spruce_140_sagt_mmer_gran", prod$pd$ProductKey)], "1;2")
 rec("Check 8a: PermittedGrades goes defs -> ProductData -> defs unchanged (e.g. '1;2')", ok(ok8a),
     paste(back$PermittedGrades, collapse = " | "))
 xl <- tempfile(fileext = ".xlsx"); scenario_export(sc$defs, sc$pm, xl)
@@ -279,8 +279,8 @@ rec("Check 10b: 100 Energi (grade 7 only) does not permit the reference grade: n
     ok(ok10b), sprintf("candidates of 100 Energi on stem 101: off %d, grades %d (all below 300 cm: %s), no grade data %d",
                        sum(c_off$key == energy), sum(c_use$key == energy),
                        all(c_use$stop[c_use$key == energy] <= 300), sum(c_nog$key == energy)))
-rec("Check 10c: a product that permits the reference grade keeps its candidates with the options off and on a stem without grade data (REDACTED25)",
-    ok(any(c_off$key == "spruce_140_sca_sagt_mmer") && any(c_nog$key == "spruce_140_sca_sagt_mmer")))
+rec("Check 10c: a product that permits the reference grade keeps its candidates with the options off and on a stem without grade data (140 Sagtømmer gran)",
+    ok(any(c_off$key == "spruce_140_sagt_mmer_gran") && any(c_nog$key == "spruce_140_sagt_mmer_gran")))
 
 # ---- 9. several files ----------------------------------------------------------------------
 section("9. Several files")
@@ -307,7 +307,7 @@ ok11a <- sum(dl$cells) == nrow(pr$profiles) &&
 rec("Check 11a: hpr_grade_lengths() counts the same 10 cm cells by species and grade as the bucking's grade grid (profiles)",
     ok(ok11a), sprintf("%d cells, species/grade combinations %d", sum(dl$cells), nrow(dl)))
 d90 <- data.frame(species = c("spruce", "spruce", "pine", "pine"), grade = c(3, 2, 3, 7), cells = c(900, 100, 970, 30))
-sdefs <- sc$defs[match("spruce_140_sca_sagt_mmer", assortment_table_keys(sc$defs)), ]; i_s <- 1L   # the one sawlog product
+sdefs <- sc$defs[match("spruce_140_sagt_mmer_gran", assortment_table_keys(sc$defs)), ]; i_s <- 1L   # the one sawlog product
 with_perm <- function(v) { x <- sdefs; x$PermittedGrades[i_s] <- v; x }
 w12 <- grade_mismatch_check(d90, with_perm("1;2"), TRUE)
 w123 <- grade_mismatch_check(d90, with_perm("1;2;3"), TRUE)
@@ -315,18 +315,18 @@ w_off <- grade_mismatch_check(d90, with_perm("1;2"), FALSE)
 w_non <- grade_mismatch_check(NULL, with_perm("1;2"), TRUE)
 w_all <- grade_mismatch_check(d90, with_perm(NA_character_), TRUE)
 w135 <- grade_mismatch_check(data.frame(species = "spruce", grade = c(2, 4), cells = c(800, 200)), with_perm("1;3;5"), TRUE)
-ok11b <- nrow(w12) == 1L && w12$key == "spruce_140_sca_sagt_mmer" && w12$grade == 3 && w12$share == 90 && w12$permitted == "1–2" &&
+ok11b <- nrow(w12) == 1L && w12$key == "spruce_140_sagt_mmer_gran" && w12$grade == 3 && w12$share == 90 && w12$permitted == "1–2" &&
   nrow(w123) == 0L && nrow(w_off) == 0L && nrow(w_non) == 0L && nrow(w_all) == 0L &&
   nrow(w135) == 1L && w135$permitted == "1, 3, 5" && w135$grade == 2
 rec("Check 11b: 90 % grade 3 with a sawlog product permitting 1-2 gives exactly one warning (grade 3, share 90, permitted '1-2'); permitting 1-3, option off, no .hpr stems, or no permitted grades give none; non-consecutive grades read '1, 3, 5'",
     ok(ok11b), sprintf("1-2: %d | 1-3: %d | off: %d | no stems: %d | no grades: %d | 1,3,5: '%s'", nrow(w12), nrow(w123), nrow(w_off), nrow(w_non), nrow(w_all), w135$permitted))
-txt_en <- grade_warning_text(w12, function(k) "Spruce REDACTED25", "en")
-txt_no <- grade_warning_text(w12, function(k) "Gran REDACTED25", "no")
-ok11c <- identical(txt_en, paste0("Grade 3 covers 90 % of the spruce stem length, but Spruce REDACTED25 only permits grade 1–2. ",
-                                  "With \"Use stem grades\" ticked, little Spruce REDACTED25 will be produced. ",
+txt_en <- grade_warning_text(w12, function(k) "Spruce 140 Sagtømmer gran", "en")
+txt_no <- grade_warning_text(w12, function(k) "Gran 140 Sagtømmer gran", "no")
+ok11c <- identical(txt_en, paste0("Grade 3 covers 90 % of the spruce stem length, but Spruce 140 Sagtømmer gran only permits grade 1–2. ",
+                                  "With \"Use stem grades\" ticked, little Spruce 140 Sagtømmer gran will be produced. ",
                                   "The stems and assortments probably come from different jobs with different grade codes.")) &&
-  identical(txt_no, paste0("Kvalitet 3 dekker 90 % av lengden på granstammene, men Gran REDACTED25 tillater bare kvalitet 1–2. ",
-                           "Med «Bruk stammekvalitet» blir det derfor lite Gran REDACTED25. ",
+  identical(txt_no, paste0("Kvalitet 3 dekker 90 % av lengden på granstammene, men Gran 140 Sagtømmer gran tillater bare kvalitet 1–2. ",
+                           "Med «Bruk stammekvalitet» blir det derfor lite Gran 140 Sagtømmer gran. ",
                            "Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder."))
 rec("Check 11c: the warning text in English and Norsk (checkbox label, species word, product name, grade, share, permitted grades)",
     ok(ok11c), paste(txt_en, "|", txt_no))
@@ -383,7 +383,7 @@ rec("Check 12e: a copy of the scenario with an edited price (and an assortment t
              rbind(sc$defs, defs_from_products(load_products())[1L, ]), files = 1L)$same)))
 
 # A renamed product no longer matches; a scenario without any file product has no same instruction.
-d_ren <- sc$defs; d_ren$Name[match("spruce_140_sca_sagt_mmer", assortment_table_keys(sc$defs))] <- "Something else"
+d_ren <- sc$defs; d_ren$Name[match("spruce_140_sagt_mmer_gran", assortment_table_keys(sc$defs))] <- "Something else"
 same_ren <- hpr_same_instruction(st$instruction, MAPN, d_ren, files = 1L)
 same_base <- hpr_same_instruction(st$instruction, MAPN, defs_from_products(load_products()), files = 1L)
 rec("Check 12f: a renamed file product breaks the match for its species only (spruce FALSE, pine TRUE); the base assortments (no file product) match no file",
@@ -454,12 +454,12 @@ section("13. Assortment type")
 ty <- function(g, n) .hpr_type(g, n)
 ok13a <- identical(ty("FRISK", "MASSE FRISK"), "pulpwood") && identical(ty("0-20%", "RMASSE 0-20%"), "pulpwood") &&
   identical(ty("TØRR", "TØRRGRAN - Fallende"), "pulpwood") && identical(ty("FRISK", "SAG - REDACTED35"), "sawlog") &&
-  identical(ty("Tømmer", "REDACTED25"), "sawlog") && identical(ty("Massevirke", "200 Massevirke"), "pulpwood") &&
+  identical(ty("Tømmer", "140 Sagtømmer gran"), "sawlog") && identical(ty("Massevirke", "200 Massevirke"), "pulpwood") &&
   identical(type_choice(ty("0-20%", "RMB 0-20%")), "other") && identical(type_choice(ty("MASSE", "BJØRK")), "other") &&
   identical(ty("MASSE", "MASSE - REDACTED54"), "pulpwood")
-rec("Check 13a: .hpr_type(): MASSE FRISK, RMASSE 0-20%, TØRRGRAN - Fallende and 200 Massevirke are pulpwood; SAG - REDACTED35 and REDACTED25 sawlog; RMB 0-20% and BJØRK (group MASSE) custom",
+rec("Check 13a: .hpr_type(): MASSE FRISK, RMASSE 0-20%, TØRRGRAN - Fallende and 200 Massevirke are pulpwood; SAG - REDACTED35 and 140 Sagtømmer gran sawlog; RMB 0-20% and BJØRK (group MASSE) custom",
     ok(ok13a))
-dT <- sc$defs; kT <- "spruce_140_sca_sagt_mmer"
+dT <- sc$defs; kT <- "spruce_140_sagt_mmer_gran"
 dT2 <- set_assortment_type(dT, kT, "pulpwood")
 iT <- match(kT, assortment_table_keys(dT2))
 dT3 <- set_assortment_type(dT, kT, "other")

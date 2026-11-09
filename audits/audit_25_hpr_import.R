@@ -25,15 +25,15 @@
 #  5.  Mapping: 5 assortments + Waste per species; min top from
 #      DiameterMINTop (14, 14.2), max top from DiameterClassMAX (50), max butt
 #      from DiameterMAXButt (60); top position 10; volume methods; types;
-#      price lengths only for REDACTED23; the scenario passes
+#      price lengths only for 240 Sagtømmer furu; the scenario passes
 #      check_price_set()
 #  6.  Lengths round up to whole dm (365 -> 37 ... 545 -> 55; 305 -> 31); a
 #      class without a whole-dm length below the next class is dropped
-#  7.  Forbidden cells are empty: REDACTED23 has no 13 cm row and
+#  7.  Forbidden cells are empty: 240 Sagtømmer furu has no 13 cm row and
 #      no 40/46 dm cells below 21 cm; every other cell has the file's price;
 #      whole-cm rows take the largest class at or below them (20 cm -> 190 mm,
-#      21 cm -> 207 mm; 14 cm -> 142 mm for SCA Sagtømmer)
-#  8.  Price length: a 37 dm REDACTED23 candidate has the Top
+#      21 cm -> 207 mm; 14 cm -> 142 mm for 140 Sagtømmer gran)
+#  8.  Price length: a 37 dm 240 Sagtømmer furu candidate has the Top
 #      volume of 365 cm, not 370; other products and the base products use
 #      the cut length; base LengthClasses get no PriceLength_cm column
 #  9.  Errors: not XML, wrong root, another message type, diameter unit cm,
@@ -46,10 +46,10 @@
 #      renamed duplicate are noted in info only (no warning)
 # 11.  Run (100-tree list) with the imported scenario: every product used,
 #      logs inside their limits and lengths, no forbidden cell chosen, price
-#      volumes of REDACTED23 on the class lower limit, no
+#      volumes of 240 Sagtømmer furu on the class lower limit, no
 #      coordinate-like columns in any result table
 # 12.  Scenario file round trip keeps the price lengths; a scenario without
-#      them differs, and a comparison prices REDACTED23 on 365 cm in
+#      them differs, and a comparison prices 240 Sagtømmer furu on 365 cm in
 #      A and 370 cm in B (separate candidate passes)
 # 13.  A fully forbidden inner diameter class (all 120 mm cells of 197
 #      Massevirke) stays as empty rows 12-15 cm: imported (noted in info, not shown),
@@ -63,7 +63,7 @@
 #      whole-cm classes, the mm volume diameter and forbidden cells are info);
 #      a skipped product, a dropped length class and a replaced volume
 #      method are warnings
-# 16.  Imported Mid product (2026-10-21): REDACTED23 switched to
+# 16.  Imported Mid product (2026-10-21): 240 Sagtømmer furu switched to
 #      VolumeDiameterCategory Mid imports as Mid without a warning (keeps its
 #      price lengths); a 37 dm candidate is priced on the under-bark diameter
 #      at the middle of the cut log over 365 cm, price class from the top;
@@ -158,8 +158,8 @@ sp_map <- setNames(guess_hpr_species(h$species$name, h$species$user_id), h$speci
 base_defs <- defs_from_products(load_products(root_dir))
 r <- hpr_to_scenario(h, sp_map, base_defs = base_defs)
 keys <- assortment_table_keys(r$defs)
-K_PINE_SAW <- "pine_240_sag_REDACTED34"
-K_SCA <- keys[startsWith(keys, "spruce_140_sca_sag")]
+K_PINE_SAW <- "pine_240_sagt_mmer_furu"
+K_SPR <- keys[startsWith(keys, "spruce_140_sagt")]
 
 
 # ==============================================================================
@@ -259,22 +259,22 @@ rec("Check 04: Grades no longer untick products (2026-10-28); reference grades (
 # ==============================================================================
 section("05. Mapping onto the assortment table")
 d5 <- r$defs; row <- function(k) d5[keys == k, , drop = FALSE]
-exp_keys <- c(K_PINE_SAW, "pine_200_massevirke", "spruce_197_massevirke", "spruce_100_energi", "spruce_154_kubb", K_SCA,
+exp_keys <- c(K_PINE_SAW, "pine_200_massevirke", "spruce_197_massevirke", "spruce_100_energi", "spruce_154_kubb", K_SPR,
               "pine_waste", "spruce_waste")
-ps <- row(K_PINE_SAW); sca <- row(K_SCA)
-ok5 <- isTRUE(r$ok) && setequal(keys, exp_keys) && length(K_SCA) == 1L &&
+ps <- row(K_PINE_SAW); spr <- row(K_SPR)
+ok5 <- isTRUE(r$ok) && setequal(keys, exp_keys) && length(K_SPR) == 1L &&
   ps$MinTopDiameter_cm == 14 && ps$MaxTopDiameter_cm == 50 && ps$MaxButtDiameter_cm == 60 &&
   ps$DiameterTopPosition_cm == 10 && ps$VolumeDiameterCategory == "Top" && ps$Type == "sawlog" &&
-  sca$MinTopDiameter_cm == 14.2 && sca$VolumeDiameterCategory == "Calculated Norwegian mid" &&
+  spr$MinTopDiameter_cm == 14.2 && spr$VolumeDiameterCategory == "Calculated Norwegian mid" &&
   row("spruce_197_massevirke")$Type == "pulpwood" && row("spruce_154_kubb")$Type == "sawlog" &&
   all(d5$Type[d5$Name == "Waste"] == "waste") &&
   identical(which(!is.na(d5$PriceLengths_cm)), which(keys == K_PINE_SAW)) &&
   all(d5$PriceType[d5$Name != "Waste"] == "matrix") && isTRUE(check_price_set(d5, r$pm)$ok)
 rec("Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid",
-    ok(ok5), sprintf("keys %s | pine sawlog top %g-%g, butt <= %g, top position %g, %s | SCA min top %g, %s | price lengths on: %s | valid %s",
+    ok(ok5), sprintf("keys %s | pine sawlog top %g-%g, butt <= %g, top position %g, %s | SPR min top %g, %s | price lengths on: %s | valid %s",
                      paste(keys, collapse = ","), ps$MinTopDiameter_cm, ps$MaxTopDiameter_cm,
                      ps$MaxButtDiameter_cm, ps$DiameterTopPosition_cm, ps$VolumeDiameterCategory,
-                     sca$MinTopDiameter_cm, sca$VolumeDiameterCategory,
+                     spr$MinTopDiameter_cm, spr$VolumeDiameterCategory,
                      paste(keys[!is.na(d5$PriceLengths_cm)], collapse = ","),
                      isTRUE(check_price_set(d5, r$pm)$ok)))
 
@@ -299,7 +299,7 @@ w6 <- grep("Kubb.*301 cm dropped", r6$warnings, value = TRUE)
 ok6 <- identical(c_ps, c(37L, 38L, 40L, 41L, 43L, 46L, 49L, 52L, 55L)) && identical(c_kubb, 31L) &&
   isTRUE(r6$ok) && length(w6) == 1L && identical(cols(r6$pm, "spruce_154_kubb"), 31L)
 rec("Check 06: Length classes round up to whole dm; a class without a whole-dm length is dropped",
-    ok(ok6), sprintf("REDACTED23 %s dm | Kubb %s dm | 301+305 cm classes: '%s', columns %s",
+    ok(ok6), sprintf("240 Sagtømmer furu %s dm | Kubb %s dm | 301+305 cm classes: '%s', columns %s",
                      paste(c_ps, collapse = ","), paste(c_kubb, collapse = ","),
                      paste(w6, collapse = ""), paste(cols(r6$pm, "spruce_154_kubb"), collapse = ",")))
 
@@ -321,17 +321,17 @@ for (cc in as.integer(rownames(g7))) for (j in seq_along(L7)) {
   if (forb) { n_empty <- n_empty + 1L; if (!is.na(v)) bad7 <- bad7 + 1L }
   else if (!isTRUE(v == hp(cls, L7[j]))) bad7 <- bad7 + 1L
 }
-g_sca <- pm_to_grid(r$pm, K_SCA)
+g_spr <- pm_to_grid(r$pm, K_SPR)
 ok7 <- !"13" %in% rownames(g7) && min(as.integer(rownames(g7))) == 14L &&
   max(as.integer(rownames(g7))) == 36L && bad7 == 0L &&
   all(is.na(g7[as.character(14:20), c("40", "46")])) &&
   cell(g7, 20, 37) == hp(190, 365) && cell(g7, 21, 37) == hp(207, 365) &&
-  min(as.integer(rownames(g_sca))) == 14L && cell(g_sca, 14, 43) == h$products[["8019"]]$cells$price[
+  min(as.integer(rownames(g_spr))) == 14L && cell(g_spr, 14, 43) == h$products[["8019"]]$cells$price[
     h$products[["8019"]]$cells$d_mm == 142 & h$products[["8019"]]$cells$l_cm == 430]
 rec("Check 07: Forbidden cells empty, all other cells the file's price; whole-cm rows",
-    ok(ok7), sprintf("REDACTED23 rows %s-%s cm (no 13), %d empty cells, %d cells wrong | 20 cm @37 dm = %g (190 mm), 21 cm = %g (207 mm) | SCA first row %s cm = %g (142 mm)",
+    ok(ok7), sprintf("240 Sagtømmer furu rows %s-%s cm (no 13), %d empty cells, %d cells wrong | 20 cm @37 dm = %g (190 mm), 21 cm = %g (207 mm) | SPR first row %s cm = %g (142 mm)",
                      min(rownames(g7)), max(as.integer(rownames(g7))), n_empty, bad7,
-                     cell(g7, 20, 37), cell(g7, 21, 37), min(as.integer(rownames(g_sca))), cell(g_sca, 14, 43)))
+                     cell(g7, 20, 37), cell(g7, 21, 37), min(as.integer(rownames(g_spr))), cell(g_spr, 14, 43)))
 
 
 # ==============================================================================
@@ -347,13 +347,13 @@ c41 <- cand[cand$ProductKey == K_PINE_SAW & cand$LogLength == 410 & cand$eligibl
 pb <- products_from_defs(base_defs, pm_minimal(load_price_matrix_long(root_dir)))
 ok8 <- isTRUE(all.equal(c37$price_volume_m3, v365)) && !isTRUE(all.equal(v365, v370)) &&
   isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))) &&
-  identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SCA], p8$lc$LogLength[p8$lc$ProductKey == K_SCA]) &&
+  identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SPR], p8$lc$LogLength[p8$lc$ProductKey == K_SPR]) &&
   identical(names(pb$lc), c("ProductKey", "LogLength", "LogLength_dm"))
-rec("Check 08: Price volume on the class lower limit for REDACTED23 only; base products unchanged",
-    ok(ok8), sprintf("37 dm log, top %.1f mm: price volume %.5f (365 cm: %.5f, 370 cm: %.5f) | 41 dm on 410 cm: %s | SCA on cut length: %s | base LengthClasses columns: %s",
+rec("Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged",
+    ok(ok8), sprintf("37 dm log, top %.1f mm: price volume %.5f (365 cm: %.5f, 370 cm: %.5f) | 41 dm on 410 cm: %s | SPR on cut length: %s | base LengthClasses columns: %s",
                      c37$TopDiameter, c37$price_volume_m3, v365, v370,
                      isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))),
-                     identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SCA], p8$lc$LogLength[p8$lc$ProductKey == K_SCA]),
+                     identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SPR], p8$lc$LogLength[p8$lc$ProductKey == K_SPR]),
                      paste(names(pb$lc), collapse = ",")))
 
 
@@ -455,7 +455,7 @@ if (ran) {
 ok11 <- ran && lim_ok && len_ok && forb_ok && pv_ok && length(used) == 0L && length(coord_cols) == 0L
 rec("Check 11: A tree-list run with the imported scenario respects limits, lengths and forbidden cells",
     ok(ok11), if (!ran) paste("run failed:", res) else
-      sprintf("%d logs | products not used: %s | top limits %s | lengths %s | no forbidden cell %s | REDACTED23 price volume on class limits %s (%d logs) | coordinate-like columns: %s",
+      sprintf("%d logs | products not used: %s | top limits %s | lengths %s | no forbidden cell %s | 240 Sagtømmer furu price volume on class limits %s (%d logs) | coordinate-like columns: %s",
               nrow(lg), if (length(used)) paste(used, collapse = ",") else "none", lim_ok, len_ok,
               forb_ok, pv_ok, nrow(ps11), if (length(coord_cols)) paste(coord_cols, collapse = ",") else "none"))
 
@@ -520,11 +520,11 @@ if (isTRUE(r13$ok)) {
   edit_ok <- isTRUE(check_price_set(r13$defs, pm_ed)$ok) &&
     all(is.na(as.matrix(pm_to_grid(pm_ed, K13)[as.character(12:15), ])))
   # A run never chooses the empty classes; without the forbidden class it
-  # does. Spruce sawlogs (Kubb, SCA) are left out of both runs, so pulpwood
+  # does. Spruce sawlogs (Kubb, SPR) are left out of both runs, so pulpwood
   # is the spruce product at 12-15 cm.
   no_saw <- function(s) {
     k <- assortment_table_keys(s$defs)
-    drop <- k %in% c("spruce_154_kubb", K_SCA)
+    drop <- k %in% c("spruce_154_kubb", K_SPR)
     list(defs = s$defs[!drop, , drop = FALSE], pm = s$pm[!s$pm$ProductKey %in% k[drop], , drop = FALSE])
   }
   run_of <- function(s) {
@@ -614,7 +614,7 @@ rec("Check 15: The import shows warnings only when something is lost or replaced
 
 # ==============================================================================
 section("16. Imported Mid product")
-# REDACTED23 (pine, length as defined in LengthClasses, diameter in
+# 240 Sagtømmer furu (pine, length as defined in LengthClasses, diameter in
 # mm) with VolumeDiameterCategory Mid, like the Mid sawlogs of a real file.
 f16 <- variant(function(l) in_prod(l, "7949", ">Top</VolumeDiameterCategory>", ">Mid</VolumeDiameterCategory>"))
 h16 <- read_hpr(f16)
@@ -624,7 +624,7 @@ imp16 <- isTRUE(r16$ok) && identical(h16$products[["7949"]]$volume_method, "Mid"
   length(c(h16$warnings, r16$warnings)) == 0L && nrow(d16) == 1L &&
   identical(d16$VolumeDiameterCategory, "Mid") &&
   identical(d16$PriceLengths_cm, row(K_PINE_SAW)$PriceLengths_cm) &&
-  any(grepl("REDACTED23: Volume diameter 'Measured diameter in mm': optBuck rounds the mid diameter",
+  any(grepl("240 Sagtømmer furu: Volume diameter 'Measured diameter in mm': optBuck rounds the mid diameter",
             r16$info, fixed = TRUE))
 # Candidates on check 8's pine stem: a 37 dm log is priced on the under-bark
 # diameter at the middle of the cut log, over the class lower limit (365 cm);

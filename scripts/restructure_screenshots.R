@@ -15,7 +15,7 @@ options(chromote.timeout = 60)
 suppressMessages(pkgload::load_all(root, quiet = TRUE))   # the package (R/, inst/); source(file.path(root, "audits", "helpers_audit.R"))
 dir <- file.path(root, "outputs", "app_smoke", "review", "restructure"); dir.create(dir, recursive = TRUE, showWarnings = FALSE)
 fx <- file.path(root, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
-key <- "spruce_140_sca_sagt_mmer"
+key <- "spruce_140_sagt_mmer_gran"
 audit_browser_start()
 res <- tryCatch({
   app <- audit_app_driver(file.path(root, "inst", "app"), name = paste0("shots_", lang), load_timeout = 60000, timeout = 180000, width = 1400, height = 1000)

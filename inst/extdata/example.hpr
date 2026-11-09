@@ -2714,7 +2714,7 @@
     <ProductDefinition>
       <ProductKey>1385</ProductKey>
       <ClassifiedProductDefinition>
-        <ProductName>240 Sag Buyer A</ProductName>
+        <ProductName>240 Sagtømmer furu</ProductName>
         <ModificationDate>2022-02-23T08:02:35.764+01:00</ModificationDate>
         <ProductInfo modificationRestricted="false">240</ProductInfo>
         <ProductVersion modificationRestricted="false">02092020</ProductVersion>
@@ -4042,7 +4042,7 @@
             </LogColorMarking>
           </ProductMatrixItem>
         </ProductMatrixes>
-        <ProductUserID agency="Other">240_Sagtømmer_BuyerA_FURU</ProductUserID>
+        <ProductUserID agency="Other">240_Sagtømmer_FURU</ProductUserID>
         <SpeciesGroupKey>262</SpeciesGroupKey>
       </ClassifiedProductDefinition>
     </ProductDefinition>
@@ -4810,7 +4810,7 @@
             </LogColorMarking>
           </ProductMatrixItem>
         </ProductMatrixes>
-        <ProductUserID agency="Other">102_Massevirke_BuyerI_GRAN</ProductUserID>
+        <ProductUserID agency="Other">102_Massevirke_GRAN</ProductUserID>
         <SpeciesGroupKey>263</SpeciesGroupKey>
       </ClassifiedProductDefinition>
     </ProductDefinition>
@@ -5047,7 +5047,7 @@
     <ProductDefinition>
       <ProductKey>1398</ProductKey>
       <ClassifiedProductDefinition>
-        <ProductName>140 Buyer F Sagtømmer</ProductName>
+        <ProductName>140 Sagtømmer gran</ProductName>
         <ModificationDate>2022-02-12T20:12:54.431+01:00</ModificationDate>
         <ProductInfo modificationRestricted="false">140</ProductInfo>
         <ProductVersion modificationRestricted="false"/>
@@ -5768,7 +5768,7 @@
             </LogColorMarking>
           </ProductMatrixItem>
         </ProductMatrixes>
-        <ProductUserID agency="Other">140_BuyerF_Sagtømmer_GRAN</ProductUserID>
+        <ProductUserID agency="Other">140_Sagtømmer_GRAN</ProductUserID>
         <SpeciesGroupKey>263</SpeciesGroupKey>
       </ClassifiedProductDefinition>
     </ProductDefinition>

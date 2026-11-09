@@ -42,8 +42,8 @@ stopifnot(length(files) == 5L)
 runs <- data.frame(
   run = paste0("R", 1:10), file = c(5, 3, 4, 5, 5, 1, 1, 1, 3, 5),
   species = c(rep("spruce", 7), "pine", "pine", "spruce"),
-  pattern = c("140.*sca", "140.*sca", "140.*sca", "140.*sca", "140.*sca", "sag - REDACTED37",
-              "sag - REDACTED37", "sag - REDACTED48", "REDACTED23", "140.*sca"),
+  pattern = c("140.*sagt", "140.*sagt", "140.*sagt", "140.*sagt", "140.*sagt", "sag - REDACTED37",
+              "sag - REDACTED37", "sag - REDACTED48", "240 sag", "140.*sagt"),
   target = c("real", "real", "real", "neutral", "long", "neutral", "long", "neutral", "neutral", "real"),
   n = c(rep(1000, 9), Inf), early_stop = TRUE, stringsAsFactors = FALSE)
 # early_stop = FALSE: always 30 iterations (R2b, R4b, R5b, R8b = R2, R4, R5, R8 without the stop rule;

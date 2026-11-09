@@ -7,7 +7,7 @@
 #           synthetic fixtures) the assortments of the file itself are imported and the
 #           file's own stems bucked twice: "before" = every ButtCondition blanked (the
 #           old behaviour), "after" = as in the file. Also price tuning of file5's
-#           spruce 140 SCA before/after. Files appear as file1..file5 only.
+#           spruce 140 Sagtømmer gran before/after. Files appear as file1..file5 only.
 # Output  : outputs/butt_condition/before_after.txt
 # Usage   : Rscript scripts/butt_condition_report.R [skip_tuning] [only=file5]
 # ==============================================================================
@@ -72,12 +72,12 @@ for (nm in names(files)) {
       pm <- pm_minimal(sc$pm); pr <- products_from_defs(defs, pm)
       products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
       k140 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" &
-                                       grepl("140 sca", products$pd$ProductName, ignore.case = TRUE)][1L]
+                                       grepl("140 .*sagt", products$pd$ProductName, ignore.case = TRUE)][1L]
       price_path <- tempfile(fileext = ".csv"); pm_export(pm, price_path)
       job <- prepare_hpr_stems_job(st, stmap, price_matrix_path = price_path, products = pr$pd, length_classes = pr$lc)
       t0 <- proc.time()[["elapsed"]]
       r1 <- tuning_run(job, products, defs, k140, 30L, list(use_grades = FALSE, cut_at_changes = FALSE))
-      say("   tuning file5 spruce 140 SCA (%s): n %d | FG %.1f -> %.1f | value %.0f -> %.0f NOK (%+.2f %%) | %.0f s", lab,
+      say("   tuning file5 spruce 140 Sagtømmer gran (%s): n %d | FG %.1f -> %.1f | value %.0f -> %.0f NOK (%+.2f %%) | %.0f s", lab,
           as.integer(r1$n_logs[[k140]]), r1$by[[k140]]$fg_o, r1$by[[k140]]$fg_t, r1$orig$value, r1$tuned$value,
           100 * (r1$tuned$value - r1$orig$value) / r1$orig$value, proc.time()[["elapsed"]] - t0)
     }

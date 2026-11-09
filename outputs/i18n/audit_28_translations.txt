@@ -25,7 +25,7 @@
   [PASS  ] Check 07: tree_counts() in English as before Phase 1 and inflected in Norsk; fmt_num() | 6 tree-count cases, wrong: none | fmt_num TRUE
 
 --- 08. Product names from files keep their case ---
-  [PASS  ] Check 08: a product name from a file is shown as written ('SAG - REDACTED35' -> 'Gran SAG - ...' / 'Spruce SAG - ...', 'REDACTED25' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case | Gran SAG - REDACTED35 | Spruce SAG - REDACTED35 | Gran sagtømmer
+  [PASS  ] Check 08: a product name from a file is shown as written ('SAG - REDACTED35' -> 'Gran SAG - ...' / 'Spruce SAG - ...', '140 Sagtømmer gran' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case | Gran SAG - REDACTED35 | Spruce SAG - REDACTED35 | Gran sagtømmer
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

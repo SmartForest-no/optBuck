@@ -22,15 +22,15 @@ FinnHoyde (calibrated, n = 1) | FinnHoyde (kalibrert, n = 1)
 Spruce: measured heights are on average 47 % above the FinnHoyde curve (ratio 1.47, n = 3); check the heights or measure more trees. | Gran: målte høyder er i gjennomsnitt 47 % over FinnHoyde-kurven (forhold 1,47, n = 3); kontroller høydene eller mål flere trær.
 FinnHoyde (calibrated, n = 3) | FinnHoyde (kalibrert, n = 3)
 Species group not used | Treslagsgruppen er ikke brukt
-REDACTED23: 35 forbidden cell(s) left empty (never chosen). | REDACTED23: 35 forbudte celler er latt tomme (velges aldri).
-REDACTED23: Length classes rounded up to whole dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550. | REDACTED23: Lengdeklasser rundet opp til hele dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550.
-REDACTED23: Diameter class limits not in whole cm (207 mm): prices change at whole cm. | REDACTED23: Diameterklassegrenser ikke i hele cm (207 mm): prisene skifter ved hele cm.
-REDACTED23: Volume diameter 'Measured diameter in mm': optBuck rounds the top diameter down to whole cm for this method. | REDACTED23: Volumdiameter 'Measured diameter in mm': optBuck runder top-diameteren ned til hele cm for denne metoden.
+240 Sagtømmer furu: 35 forbidden cell(s) left empty (never chosen). | 240 Sagtømmer furu: 35 forbudte celler er latt tomme (velges aldri).
+240 Sagtømmer furu: Length classes rounded up to whole dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550. | 240 Sagtømmer furu: Lengdeklasser rundet opp til hele dm: 365→370, 377→380, 395→400, 425→430, 455→460, 485→490, 515→520, 545→550.
+240 Sagtømmer furu: Diameter class limits not in whole cm (207 mm): prices change at whole cm. | 240 Sagtømmer furu: Diameterklassegrenser ikke i hele cm (207 mm): prisene skifter ved hele cm.
+240 Sagtømmer furu: Volume diameter 'Measured diameter in mm': optBuck rounds the top diameter down to whole cm for this method. | 240 Sagtømmer furu: Volumdiameter 'Measured diameter in mm': optBuck runder top-diameteren ned til hele cm for denne metoden.
 200 Massevirke: 4 forbidden cell(s) left empty (never chosen). | 200 Massevirke: 4 forbudte celler er latt tomme (velges aldri).
 197 Massevirke: 2 forbidden cell(s) left empty (never chosen). | 197 Massevirke: 2 forbudte celler er latt tomme (velges aldri).
 154 Kubb: Length classes rounded up to whole dm: 305→310. | 154 Kubb: Lengdeklasser rundet opp til hele dm: 305→310.
-REDACTED25: 13 forbidden cell(s) left empty (never chosen). | REDACTED25: 13 forbudte celler er latt tomme (velges aldri).
-REDACTED25: Diameter class limits not in whole cm (142 mm): prices change at whole cm. | REDACTED25: Diameterklassegrenser ikke i hele cm (142 mm): prisene skifter ved hele cm.
+140 Sagtømmer gran: 13 forbidden cell(s) left empty (never chosen). | 140 Sagtømmer gran: 13 forbudte celler er latt tomme (velges aldri).
+140 Sagtømmer gran: Diameter class limits not in whole cm (142 mm): prices change at whole cm. | 140 Sagtømmer gran: Diameterklassegrenser ikke i hele cm (142 mm): prisene skifter ved hele cm.
 Map at least one species group to Spruce or Pine. | Knytt minst én treslagsgruppe til gran eller furu.
 broken.hpr is not a readable XML file. | broken.hpr er ikke en lesbar XML-fil.
 foo.hpr is not a StanForD 2010 .hpr or .pin file (root element 'Foo', expected HarvestedProduction or ProductInstruction). | foo.hpr er ikke en StanForD 2010 .hpr- eller .pin-fil (rotelement 'Foo', forventet HarvestedProduction eller ProductInstruction).

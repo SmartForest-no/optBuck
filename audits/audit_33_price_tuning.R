@@ -11,7 +11,7 @@
 #           No audit before this one reads a private file. When the file is
 #           missing these checks are recorded as REVIEW ("skipped", verdict
 #           ACCEPTED WITH REVIEW), not FAIL. Only counts and numbers are written.
-#           The product is file5's Spruce "140 SCA" sawlog.
+#           The product is file5's Spruce "140 Sagtømmer gran" sawlog.
 #
 # Checks  :
 #  1.  fg_grid hand case: one class, shares 30,13,19,19,19 vs 20 each -> FG 90
@@ -33,13 +33,13 @@
 #  9.  tuning_sample_size: 10200 stems / 7598 logs -> 1343; 7283 / 1469 -> 4958;
 #      7283 / 800 -> 7283; 100 / 0 -> 100 (and the bounds)
 # 10.  tune_prices on_iter is called exactly max_iter times (early_stop = FALSE)
-# 11.  tuning_products on file5: spruce 140 SCA listed with has_file_target TRUE,
+# 11.  tuning_products on file5: spruce 140 Sagtømmer gran listed with has_file_target TRUE,
 #      spruce 154 Kubb (one length class) not listed
 # 14.  Single-product invariant (restructure R3.1): tune_prices() on file5 spruce
-#      140 SCA (n 200, max_iter 3, early_stop FALSE) equals the values stored
+#      140 Sagtømmer gran (n 200, max_iter 3, early_stop FALSE) equals the values stored
 #      with the code before the refactor (outputs/restructure/, derived from a
 #      private file, never committed; REVIEW when missing)
-# 15.  Several products at once on file5: spruce 140 SCA with its file target and
+# 15.  Several products at once on file5: spruce 140 Sagtømmer gran with its file target and
 #      spruce 148 with an Even target set by the editor helpers (n 1000,
 #      max_iter 3): one FG per product, both products' prices change, the overall
 #      FG is the iteration-1 weighted mean
@@ -203,7 +203,7 @@ have5 <- file.exists(f5)
 skipped <- function(n, what) rec(sprintf("Check %d: %s", n, what), REVIEW,
                                  "skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available")
 if (!have5) {
-  skipped(3, "targets on file5 spruce 140 SCA"); skipped(4, "apply_grid_prices round trip on file5")
+  skipped(3, "targets on file5 spruce 140 Sagtømmer gran"); skipped(4, "apply_grid_prices round trip on file5")
   skipped(5, "tune_prices determinism on file5"); skipped(6, "iteration-1 value check on file5")
   skipped(7, "tally_grid holds every log (file5)")
   skipped(8, "hidden Distribution column kept by apply_grid_prices (file5)")
@@ -218,7 +218,7 @@ if (!have5) {
   products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
   dst <- read_hpr_distribution(f5)
   key <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" &
-                                  grepl("140 sca", products$pd$ProductName, ignore.case = TRUE)][1L]
+                                  grepl("140 .*sagt", products$pd$ProductName, ignore.case = TRUE)][1L]
   hk <- sc$defs$HprProductKey[match(key, assortment_table_keys(sc$defs))]
   hpr <- hpr_tuning_info(dst, hk)
   grid <- tuning_grid(products, key, hpr)
@@ -321,10 +321,10 @@ if (!have5) {
   # ============================================================================
   section("11. tuning_products")
   tp <- tuning_products(sc$defs, pm)
-  i140 <- grepl("140 sca", tp$name, ignore.case = TRUE) & tp$species == "spruce"
+  i140 <- grepl("140 .*sagt", tp$name, ignore.case = TRUE) & tp$species == "spruce"
   ok11 <- sum(i140) == 1L && isTRUE(tp$has_file_target[i140]) &&
     !any(grepl("154", tp$name) & grepl("kubb", tp$name, ignore.case = TRUE))
-  rec("Check 11: tuning_products lists spruce 140 SCA sawlog with has_file_target TRUE and not spruce 154 Kubb",
+  rec("Check 11: tuning_products lists spruce 140 Sagtømmer gran sawlog with has_file_target TRUE and not spruce 154 Kubb",
       ok(ok11), sprintf("%d tunable products: %s", nrow(tp), paste(tp$product_id, collapse = ", ")))
 
   # ============================================================================
@@ -366,7 +366,7 @@ if (!have5) {
     same14 <- c(trace = identical(tr14, e14$trace), best_price = identical(t14$best_price, e14$best_price),
                 best_iter = identical(t14$best_iter, e14$best_iter), fg = identical(t14$trace$fg, e14$fg),
                 value = identical(t14$trace$value_total, e14$value))
-    rec("Check 14: tune_prices() on one product (file5 spruce 140 SCA, n 200, max_iter 3) gives the same trace, best prices, FG and value as before the multi-product change",
+    rec("Check 14: tune_prices() on one product (file5 spruce 140 Sagtømmer gran, n 200, max_iter 3) gives the same trace, best prices, FG and value as before the multi-product change",
         ok(all(same14)), sprintf("%s | FG %s", paste(sprintf("%s %s", names(same14), same14), collapse = ", "),
                                  paste(round(t14$trace$fg, 2), collapse = " -> ")))
   }
@@ -395,7 +395,7 @@ if (!have5) {
       t15$trace$fg[1L] >= min(vapply(ids15, function(k) by15[[k]]$fg[1L], 0)) - 1e-9 &&
       t15$trace$fg[1L] <= max(vapply(ids15, function(k) by15[[k]]$fg[1L], 0)) + 1e-9
     ok15d <- identical(names(t15$best_price), ids15) && t15$best_iter %in% 1:3
-    rec("Check 15: Two products tuned together (file5 spruce 140 SCA with its file target, spruce 148 with an Even target; n 1000, max_iter 3): completes, one FG column per product plus the overall FG, both products' prices change, the overall FG lies between the products' FGs",
+    rec("Check 15: Two products tuned together (file5 spruce 140 Sagtømmer gran with its file target, spruce 148 with an Even target; n 1000, max_iter 3): completes, one FG column per product plus the overall FG, both products' prices change, the overall FG lies between the products' FGs",
         ok(ok15a && ok15b && ok15c && ok15d),
         sprintf("FG overall %s | per product %s | prices changed %s | best iteration %s | sample %d stems",
                 paste(round(t15$trace$fg, 2), collapse = " -> "),
@@ -453,7 +453,7 @@ FX17 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_t
 h17 <- read_hpr(FX17); st17 <- read_hpr_stems(FX17)
 sc17 <- hpr_to_scenario(h17, setNames(guess_hpr_species(h17$species$name, h17$species$user_id), h17$species$key))
 pm17 <- pm_minimal(sc17$pm); d17 <- sc17$defs
-k17 <- assortment_table_keys(d17)[grep("140 SCA", d17$Name, fixed = TRUE)[1L]]
+k17 <- assortment_table_keys(d17)[grep("140 .*Sagt", d17$Name)[1L]]
 pm17 <- dist_apply_target(pm17, k17, "neutral"); d17 <- dist_init_fields(dist_clear_fields(d17, k17), k17)
 pr17 <- products_from_defs(d17, pm17)
 prod17 <- list(pd = pr17$pd, lc = pr17$lc, pm = pm17)

@@ -38,7 +38,7 @@
 #      have NA; defaults get no column
 # 11.  It never reaches a run: write_price_file() identical with and without
 #      it, pm_prices() has only the price columns, the backend loader drops it
-# 12.  Private file5 spruce 140 SCA Saqtommer: 13 distinct values = the file's
+# 12.  Private file5 spruce 140 Saqtommer gran: 13 distinct values = the file's
 #      13 class lower limits
 # 30.  Editor (restructure R2): a cell edit sets every whole-cm row of the same file
 #      class (only the row without a file class); prices never change
@@ -459,8 +459,8 @@ cells_match_raw <- function(x, hkey) {
   }, NA)
   all(ok[!is.na(ok)]) && sum(!is.na(ok)) > 0L
 }
-sca_check <- function(n) {            # spruce 140 SCA Sagtomer: 30/45/25 on 430/490/550, 0 on 370
-  x <- get_priv(n); i <- which(grepl("140.*SCA", x$s$defs$Name) & x$s$defs$Species == "spruce")
+spr_check <- function(n) {            # spruce 140 Sagtomer gran: 30/45/25 on 430/490/550, 0 on 370
+  x <- get_priv(n); i <- which(grepl("140 .*Sagt", x$s$defs$Name) & x$s$defs$Species == "spruce")
   if (length(i) != 1L) return(list(ok = FALSE, detail = sprintf("%d match(es)", length(i))))
   k <- assortment_table_keys(x$s$defs)[i]; sw <- x$s$pm[x$s$pm$ProductKey == k, , drop = FALSE]
   by_len <- tapply(sw[[DIST]], sw$LengthClass_dm, function(v) paste(sort(unique(v)), collapse = "/"))
@@ -476,12 +476,12 @@ sca_check <- function(n) {            # spruce 140 SCA Sagtomer: 30/45/25 on 430
                                  f$DistributionCategory, f$MAXDeviation, f$DistributionAllowed, nrow(sw)))
 }
 
-section("20-22. file5, file3, file4: spruce 140 SCA Sagtomer")
+section("20-22. file5, file3, file4: spruce 140 Sagtomer gran")
 for (n in c("file5", "file3", "file4")) {
-  chk <- sprintf("Check %d: %s spruce 140 SCA Sagt\u00f8mmer: Distribution 30/45/25 on 430/490/550 cm in every diameter class%s; Volume of logs, MAXDeviation 4, allowed",
+  chk <- sprintf("Check %d: %s spruce 140 Sagt\u00f8mmer gran: Distribution 30/45/25 on 430/490/550 cm in every diameter class%s; Volume of logs, MAXDeviation 4, allowed",
                  20L + match(n, c("file5", "file3", "file4")) - 1L, n, if (n == "file5") ", 0 on 370" else " (no 370 column)")
   if (!have(n)) { skip(chk, n); next }
-  r <- sca_check(n); rec(chk, ok(r$ok), r$detail)
+  r <- spr_check(n); rec(chk, ok(r$ok), r$detail)
 }
 
 section("23. file1: sawlog products")
@@ -558,14 +558,14 @@ for (grp in list(list(27L, hpr_files, "hpr", "all 5 .hpr files (products written
 
 unlink(c(rt_hpr$h$header$file))
 # ==============================================================================
-section("12. FileDiameterClass_mm on file5 spruce 140 SCA Sagtommer")
-if (!have("file5")) skip("Check 12: FileDiameterClass_mm of file5 spruce 140 SCA", "file5") else {
+section("12. FileDiameterClass_mm on file5 spruce 140 Sagtommer gran")
+if (!have("file5")) skip("Check 12: FileDiameterClass_mm of file5 spruce 140 Sagtømmer gran", "file5") else {
   x12 <- get_priv("file5"); d12 <- x12$s$defs
-  i12 <- which(d12$Species == "spruce" & grepl("140 SCA", d12$Name, fixed = TRUE))[1L]
+  i12 <- which(d12$Species == "spruce" & grepl("140 .*Sagt", d12$Name))[1L]
   k12 <- assortment_table_keys(d12)[i12]; hk12 <- d12$HprProductKey[i12]
   v12 <- x12$s$pm[[FC]][x12$s$pm$ProductKey == k12 & !is.na(x12$s$pm$LengthClass_dm)]
   file12 <- sort(unique(x12$h$products[[hk12]]$cells$d_mm))
-  rec("Check 12: file5 spruce 140 SCA Sagtommer: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits",
+  rec("Check 12: file5 spruce 140 Sagtommer gran: 13 distinct FileDiameterClass_mm values equal the file's 13 class lower limits",
       ok(length(unique(v12)) == 13L && identical(sort(unique(v12)), file12) && !anyNA(v12)),
       sprintf("%d distinct values in %d rows; file classes %d; equal %s", length(unique(v12)), length(v12), length(file12),
               identical(sort(unique(v12)), file12)))

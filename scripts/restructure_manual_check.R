@@ -3,9 +3,9 @@
 #
 # The tuning tab's computation (tuning_run() of app/tuning.R, 30 iterations,
 # seed 1) on the owner's file5, without the browser:
-#   1. spruce 140 SCA alone with its file target (as before the restructure:
+#   1. spruce 140 Sagtømmer gran alone with its file target (as before the restructure:
 #      FG on all stems about 83 -> 94, value change about -0.2 %),
-#   2. spruce 140 SCA together with spruce 148 (Even target set with the
+#   2. spruce 140 Sagtømmer gran together with spruce 148 (Even target set with the
 #      editor's helpers): FG per assortment, value change, runtime.
 # file5 is read in place (C:/optbuck_private/hpr), the result goes to
 # outputs/restructure/manual_check.txt (gitignored).
@@ -37,7 +37,7 @@ sc <- hpr_to_scenario(h, setNames(guess_hpr_species(h$species$name, h$species$us
 pm <- pm_minimal(sc$pm); pr <- products_from_defs(sc$defs, pm)
 products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
 nm <- function(k) products$pd$ProductName[match(k, products$pd$ProductKey)]
-k140 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" & grepl("140 sca", products$pd$ProductName, ignore.case = TRUE)][1L]
+k140 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" & grepl("140 .*sagt", products$pd$ProductName, ignore.case = TRUE)][1L]
 k148 <- products$pd$ProductKey[products$pd$species_group == "spruce" & products$pd$ProductType == "sawlog" & grepl("148", products$pd$ProductName, fixed = TRUE)][1L]
 st <- read_hpr_stems(f5); stopifnot(isTRUE(st$ok))
 smap <- setNames(guess_hpr_species(st$species$name, st$species$user_id), st$species$key)

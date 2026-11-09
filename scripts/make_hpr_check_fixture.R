@@ -9,7 +9,7 @@
 #           refuses to write a file containing coordinate or contact fields (as audit 26 check 10).
 #
 # Stems (spruce group 446 unless noted; linear tapers, mm over bark = d0 - slope * position in cm):
-#   1  H 560, d0 300, slope 0.35   8019 SCA sawlog 430 (Automatic) + waste 120 (Other manual)
+#   1  H 560, d0 300, slope 0.35   8019 sawlog 430 (Automatic) + waste 120 (Other manual)
 #                                   = the best bucking: yield index 1
 #   2  same profile                 8015 pulpwood 520 + waste 30 (Other manual): worse than stem 1
 #   3  H 900, d0 320, slope 0.20   8019 490 (Automatic) + 8015 400 (Spinning); NO StartPos recorded

@@ -157,6 +157,21 @@ if (!RESTRICTED) {
   if (any(grepl("StemCoordinates|Latitude|Longitude", stem_txt))) stop("Coordinates left in a stem.", call. = FALSE)
 }
 
+# OperatorKey: 1, 2, ... in the order of first appearance (header first, then the stems), the same in header and stems.
+op_new <- character(0)
+if (!RESTRICTED) {
+  hk <- txt_of(nodes_of("Machine/OperatorDefinition/OperatorKey"))
+  sk <- unlist(regmatches(stem_txt, gregexpr("(?<=<OperatorKey>)[^<]*(?=</OperatorKey>)", stem_txt, perl = TRUE)))
+  lv <- unique(c(hk, sk)); op_new <- setNames(as.character(seq_along(lv)), lv)
+  stem_txt <- vapply(stem_txt, function(s) {
+    m <- gregexpr("<OperatorKey>[^<]*</OperatorKey>", s)
+    regmatches(s, m) <- lapply(regmatches(s, m), function(x) sprintf("<OperatorKey>%s</OperatorKey>", op_new[sub("</OperatorKey>$", "", sub("^<OperatorKey>", "", x))]))
+    s
+  }, "", USE.NAMES = FALSE)
+  for (n in nodes_of("Machine/OperatorDefinition/OperatorKey")) xml_set_text(n, op_new[[trimws(xml_text(n))]])
+  say("OperatorKey values: %d distinct, renumbered 1..%d", length(lv), length(lv))
+}
+
 # ---- 5 the header edits ------------------------------------------------------------------------------------------------------
 if (!RESTRICTED) {
   # 5a products with no recorded log in the chosen stems are removed with everything inside them
@@ -175,25 +190,23 @@ if (!RESTRICTED) {
   xml_set_text(pr[ok], format(nv[ok], scientific = FALSE, trim = TRUE))
   say("prices changed: %d of %d cells (x%.2f, nearest %d)", sum(ok & v != nv, na.rm = TRUE), length(pr), PRICE_MULT, PRICE_STEP)
 
-  # 5c names of products: buyer, company and place words replaced, type words kept
-  rename_one <- function(s, form) {
-    for (m in NAME_MAP) {
-      new <- if (form == "name") m[[2L]] else m[[3L]]
-      pat <- paste0("(?<![\\p{L}\\p{N}])", gsub("([.()])", "\\\\\\1", m[[1L]]), "(?![\\p{L}\\p{N}])")
-      s <- gsub(pat, new, s, perl = TRUE)
-    }
-    s <- gsub("\\s+", " ", trimws(s)); gsub("_+", "_", gsub("^_|_$", "", s))
+  # 5c names of products: natural neutral names that keep the type words (Sagtømmer, Massevirke, ...) and the
+  # species; the full old -> new names are listed in a private file (the old names contain buyers and places)
+  PRODUCT_MAP_FILE <- "C:/optbuck_private/example_check/product_name_map.csv"
+  pm <- utils::read.csv(PRODUCT_MAP_FILE, encoding = "UTF-8", stringsAsFactors = FALSE, na.strings = character(0))
+  for (pnode in prod_nodes) {
+    un <- xml_find_first(pnode, ".//*[local-name()='ProductUserID']"); nn1 <- xml_find_first(pnode, ".//*[local-name()='ProductName']")
+    j <- match(trimws(xml_text(un)), pm$orig_uid)
+    if (!is.na(j)) { xml_set_text(un, pm$new_uid[j]); xml_set_text(nn1, pm$new_name[j]) }
   }
-  pn <- nodes_of("ClassifiedProductDefinition/ProductName")
-  xml_set_text(pn, vapply(txt_of(pn), rename_one, "", form = "name"))
-  pu <- nodes_of("ClassifiedProductDefinition/ProductUserID")
-  xml_set_text(pu, vapply(txt_of(pu), rename_one, "", form = "id"))
   nn <- txt_of(nodes_of("ClassifiedProductDefinition/ProductName"))
+  uu <- txt_of(nodes_of("ClassifiedProductDefinition/ProductUserID"))
+  for (m in NAME_MAP) {   # no buyer, company or place word may stay in a kept name or id
+    pat <- paste0("(?<![\\p{L}\\p{N}])", gsub("([.()])", "\\\\\\1", m[[1L]]), "(?![\\p{L}\\p{N}])")
+    if (any(grepl(pat, c(nn, uu), perl = TRUE))) stop("A buyer or place word is left in a product name or id: add the product to product_name_map.csv.", call. = FALSE)
+  }
   say("kept product names (neutral): %s", paste(nn, collapse = " | "))
   say("removed product names: %s", paste(removed_names, collapse = " | "))
-  # a word that is removed altogether can leave a dangling dash
-  nodes_fix <- nodes_of("ClassifiedProductDefinition/ProductName")
-  xml_set_text(nodes_fix, sub("\\s*-\\s*$", "", txt_of(nodes_fix)))
 
   # 5d placeholders for identifying fields (the same original value always gets the same placeholder)
   counters <- new.env()
@@ -272,7 +285,11 @@ if (!RESTRICTED) {
   leaves <- xml_find_all(doc, "//*[not(*)]")
   lv <- trimws(xml_text(leaves))
   di <- which(grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}(T.*)?$", lv))
-  if (length(di)) xml_set_text(leaves[di], shift_iso(lv[di]))
+  if (length(di)) {
+    d_old <- lv[di]; d_new <- shift_iso(d_old)
+    say("date values: %d; all changed: %s; year kept in all: %s", length(di), all(d_old != d_new), all(substr(d_old, 1, 4) == substr(d_new, 1, 4)))
+    xml_set_text(leaves[di], d_new)
+  }
   n_dates <- length(di)
   # Attribute values that look like dates (the schema version date on the root is not a data date).
   at <- xml_find_all(doc, "//@*[not(parent::*[local-name()='HarvestedProduction'])]")
@@ -297,6 +314,14 @@ body <- paste0(hdr, paste(stem_txt, collapse = ""), "</Machine></HarvestedProduc
 con <- file(OUT, "wb"); writeBin(charToRaw(enc2utf8(body)), con); close(con)
 say("written: %.2f MB, %d stems", file.size(OUT) / 1024^2, length(chosen))
 if (!RESTRICTED && file.size(OUT) > MAX_BYTES) stop("The file is larger than the limit.", call. = FALSE)
+# Where the bytes are: the header (instruction and definitions) against the stems.
+{
+  wb <- readBin(OUT, "raw", file.size(OUT)); wt <- rawToChar(wb)
+  first <- regexpr("<Stem>\\s*<StemKey>", wt, perl = TRUE, useBytes = TRUE)[1L]
+  last_end <- max(as.integer(gregexpr("</Stem>", wt, fixed = TRUE, useBytes = TRUE)[[1L]])) + 6L
+  say("bytes: header %d (%.1f %%), stems %d (%.1f %%), trailer %d", first - 1L, 100 * (first - 1L) / length(wb),
+      last_end - first + 1L, 100 * (last_end - first + 1L) / length(wb), length(wb) - last_end)
+}
 
 # ---- 7 identifying strings ---------------------------------------------------------------------------------------------------
 if (!RESTRICTED) {
