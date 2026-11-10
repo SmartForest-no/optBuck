@@ -9,7 +9,7 @@ with a Shiny app.
 
 ```r
 install.packages("remotes")
-remotes::install_github("lennartnoordermeer/Apter", upgrade = "never")
+remotes::install_github("SmartForest-no/optBuck", upgrade = "never")
 ```
 
 This installs the default dependencies only (no `Suggests`). `run_app()` names any package of the app
@@ -17,9 +17,6 @@ stack that is missing; install those with `install.packages()`. Adding `dependen
 installs the audit-only packages (shinytest2, chromote, pdftools, ...) and the GitHub-only packages in
 DESCRIPTION's Remotes (taperNOR: Norwegian taper and bark models; fieldPlot: tree-list heights). On old R
 versions without CRAN binaries, upgrades build from source, which is why `upgrade = "never"` is used.
-
-Until the repository is transferred to `SmartForest-no/optBuck`, install from the address above;
-after the transfer the line becomes `remotes::install_github("SmartForest-no/optBuck", upgrade = "never")`.
 
 ## Use
 

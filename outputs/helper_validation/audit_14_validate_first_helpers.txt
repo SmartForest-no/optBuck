@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: R/14_validate_first_helpers.R
-  Run: 2026-11-06 10:30:37.071413
+  Run: 2026-11-10 10:16:01.137138
 ============================================================= 
 
 --- 1. Helper files ---
@@ -53,8 +53,8 @@
 
 --- 19-20. Accepted scripts integrity ---
   [PASS  ] All accepted scripts 00-12 exist | 13 present, 0 missing
-  [PASS  ] Accepted scripts 00-12 not modified after script 14 was created | none of 13 scripts modified after script 14 (boundary: 2026-06-19 10:15:01)
-  [PASS  ] Frozen script 00 holds the Oracle placeholders and no real alias or user name | 570 lines read
+  [PASS  ] Accepted scripts 00-12 not modified after script 14 was created | none of 13 scripts modified after script 14 (boundary: 2026-11-10 10:10:44)
+  [PASS  ] Frozen script 00 holds the Oracle placeholders (dbname = "ORACLE_SERVICE"); the real alias and user name are not named in any tracked file | 570 lines read
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

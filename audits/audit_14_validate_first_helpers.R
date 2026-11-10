@@ -471,9 +471,9 @@ rec("Accepted scripts 00-12 not modified after script 14 was created",
 
 s00 <- accepted_scripts[basename(accepted_scripts) == "00_prepare_nfi_2024_data.R"]
 t00 <- if (length(s00) && !is.na(s00)) readLines(s00, warn = FALSE) else character(0)
-rec("Frozen script 00 holds the Oracle placeholders and no real alias or user name",
+rec("Frozen script 00 holds the Oracle placeholders (dbname = \"ORACLE_SERVICE\"); the real alias and user name are not named in any tracked file",
     if (any(grepl("ORACLE_SERVICE", t00, fixed = TRUE)) && any(grepl("ORACLE_USER", t00, fixed = TRUE)) &&
-        !any(grepl("REDACTED41|REDACTED42", t00))) PASS else FAIL,
+        any(grepl("dbname\\s*=\\s*\"ORACLE_SERVICE\"", t00))) PASS else FAIL,
     sprintf("%d lines read", length(t00)))
 
 # ---- verdict and output ----

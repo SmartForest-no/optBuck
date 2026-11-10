@@ -3,8 +3,7 @@
 #
 # Purpose : (1) The tool name. The working name used before 2026-11-06 is gone from every tracked file:
 #           the only matches of the old name left are the Norwegian/Swedish words (aptering, apteringsgrad,
-#           Apteringsanalyse, apteres, ...) and the GitHub address of the remote
-#           (lennartnoordermeer/ + the old repository name), which stays until the transfer to SmartForest-no.
+#           Apteringsanalyse, apteres, ...); the remote is SmartForest-no/optBuck, so no address is exempt.
 #           (2) Paths. The package never needs an environment variable or a working directory: the
 #           read-only files come from system.file() (extdata_path(), app_dir()), the writable ones from
 #           tools::R_user_dir() (nfi_cache_dir()); the root helper is not set from the app.
@@ -63,8 +62,6 @@ shorten <- function(x, n = 8L) if (length(x) == 0L) "none" else
 OLD <- paste0("ap", "ter")
 # Allowed: Norwegian words that begin with it (aptering..., apteres, apterte, aptere, apterer, aptert) ...
 ALLOWED_WORD <- paste0("(?i)", OLD, "(?:ing[A-Za-zæøå_]*|ende|es|te|t|er|e)(?![A-Za-zæøå0-9_])")
-# ... and the GitHub address of the remote.
-REMOTE <- paste0("lennartnoordermeer/", toupper(substr(OLD, 1, 1)), substr(OLD, 2, 99))
 
 git_files <- function() {
   f <- tryCatch(system2("git", c("-c", "safe.directory=*", "-C", shQuote(root_dir), "ls-files"), stdout = TRUE, stderr = FALSE),
@@ -89,7 +86,6 @@ for (f in files) {
   raw <- readBin(p, "raw", file.size(p))
   if (!is_text(raw)) next
   txt <- rawToChar(raw); Encoding(txt) <- "UTF-8"
-  txt <- gsub(REMOTE, "", txt, fixed = TRUE)
   if (!isTRUE(grepl(OLD, txt, ignore.case = TRUE, useBytes = TRUE))) next
   lines <- strsplit(txt, "\r?\n")[[1L]]
   for (i in which(grepl(OLD, lines, ignore.case = TRUE, useBytes = TRUE))) {
@@ -98,7 +94,7 @@ for (f in files) {
     else allowed_seen <- c(allowed_seen, f)
   }
 }
-rec("Check 02: no tracked text file contains the old name except Norwegian words and the remote's address",
+rec("Check 02: no tracked text file contains the old name except Norwegian words",
     ok(length(residual) == 0L), sprintf("allowed lines in %d files; offending: %s", length(unique(allowed_seen)), shorten(residual)))
 
 # ---- 3 option, variable, function names ----------------------------------------------------------

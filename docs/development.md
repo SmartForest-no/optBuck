@@ -7,8 +7,8 @@ The development roadmap is in [docs/plans/PLAN.md](plans/PLAN.md).
 
 optBuck was called **nfiBuck** until the 2026-10 rename, and had another working
 name until 2026-11-06 (renamed in code, files and docs). The GitHub
-repository is still `lennartnoordermeer/Apter` until the roadmap 8 B8 transfer to
-`SmartForest-no/optBuck`; the local folder can be renamed freely.
+repository is `SmartForest-no/optBuck` (since 2026-11-10; its history joins the history of the
+earlier optBuck package, see PLAN.md B8); the local folder can be renamed freely.
 
 ---
 
