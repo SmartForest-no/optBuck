@@ -506,6 +506,7 @@ hpr_export_result <- function(path, sources, species_by_name, result, defs, pm) 
     if (length(src$errors)) return(fail(src$errors))
     p <- .hpr_prefix(src$path, src$entry)
     if (!p$found) return(fail("The source file has no stems."))
+    p$bytes <- .hpr_clean_bytes(p$bytes)        # marker text / windows-1252 repaired in the copy
     txt <- .as_bytes(rawToChar(p$bytes))
     decl <- regmatches(txt, regexpr("^[^<]*<\\?xml[^>]*\\?>", txt, perl = TRUE, useBytes = TRUE))
     if (length(decl) && grepl("encoding\\s*=\\s*[\"'](?!utf-8)", decl, perl = TRUE, ignore.case = TRUE))

@@ -197,6 +197,46 @@ source_cells_parse <- function(x) {
              criteria = vapply(g(6), utils::URLdecode, "", USE.NAMES = FALSE), stringsAsFactors = FALSE)
 }
 
+# ---- header repair ---------------------------------------------------------------------
+
+# Some files need repair before an XML parser accepts them: (1) a few John
+# Deere TimbermaticH files start with the literal ASCII text "<U+FEFF>" (a
+# byte order mark written as text) before the XML declaration, and (2) some
+# files declare UTF-8 but hold windows-1252 bytes (for example in the header's
+# names). The marker is removed; lines that are not valid UTF-8 are converted
+# from windows-1252, other lines are left as they are. Valid UTF-8 and real
+# byte order marks are not touched (the same bytes come back).
+.hpr_clean_bytes <- function(bytes) {
+  bytes <- bytes[bytes != as.raw(0L)]
+  if (!length(bytes)) return(bytes)
+  head <- rawToChar(bytes[seq_len(min(64L, length(bytes)))])
+  m <- regexpr("^[[:space:]]*<U[+]FEFF>", head, useBytes = TRUE)
+  if (m > 0L) bytes <- bytes[-seq_len(attr(m, "match.length"))]
+  if (validUTF8(rawToChar(bytes))) return(bytes)
+  nl <- which(bytes == as.raw(10L))
+  starts <- c(1L, nl + 1L); ends <- c(nl, length(bytes))
+  keep <- starts <= ends
+  starts <- starts[keep]; ends <- ends[keep]
+  out <- lapply(seq_along(starts), function(i) {
+    ln <- bytes[starts[i]:ends[i]]
+    if (validUTF8(rawToChar(ln))) ln
+    else charToRaw(enc2utf8(iconv(rawToChar(ln), "windows-1252", "UTF-8", sub = "?")))
+  })
+  unlist(out, use.names = FALSE)
+}
+
+# All bytes of a (possibly gzipped) file, repaired by .hpr_clean_bytes().
+.hpr_read_clean <- function(path) {
+  con <- gzfile(path, "rb"); on.exit(close(con))
+  parts <- list()
+  repeat {
+    b <- readBin(con, "raw", HPR_CHUNK_BYTES)
+    if (!length(b)) break
+    parts[[length(parts) + 1L]] <- b
+  }
+  .hpr_clean_bytes(unlist(parts, use.names = FALSE))
+}
+
 # ---- reading -------------------------------------------------------------------------
 
 # Bytes read per step when looking for the first stem.
@@ -301,9 +341,10 @@ read_hpr <- function(path, filename = basename(path)) {
   path <- src$path
   pre <- tryCatch(.hpr_prefix(path, src$entry), error = function(e) NULL)
   if (is.null(pre)) return(fail(sprintf("%s cannot be read.", filename)))
-  parse <- function(x) tryCatch(xml2::read_xml(x, options = c("NOBLANKS", "HUGE")),
+  parse <- function(x) tryCatch(xml2::read_xml(if (is.character(x)) .hpr_read_clean(x) else x,
+                                               options = c("NOBLANKS", "HUGE")),
                                 error = function(e) NULL)
-  x <- parse(if (pre$found) .hpr_close_tags(pre$bytes) else pre$bytes)
+  x <- parse(.hpr_clean_bytes(if (pre$found) .hpr_close_tags(pre$bytes) else pre$bytes))
   how <- if (pre$found) "prefix" else "whole"
   # Both kinds of definitions must be in the part read; otherwise (e.g. a
   # stem before the products) the whole file is parsed.
@@ -412,7 +453,8 @@ read_hpr <- function(path, filename = basename(path)) {
 # ("Top cylinder"); missing optional elements are not reported.
 read_pin <- function(path, filename = basename(path)) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
-  x <- tryCatch(xml2::read_xml(path, options = c("NOBLANKS", "HUGE")), error = function(e) NULL)
+  x <- tryCatch(xml2::read_xml(.hpr_read_clean(path), options = c("NOBLANKS", "HUGE")),
+                error = function(e) NULL)
   if (is.null(x)) return(fail(sprintf("%s is not a readable XML file.", filename)))
   xml2::xml_ns_strip(x)
   if (xml2::xml_name(x) != "ProductInstruction")
