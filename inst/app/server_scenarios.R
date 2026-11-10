@@ -22,7 +22,8 @@
 #           stay as they are: the assortment table is translated only for
 #           display (base names, species, volume methods).
 
-scenario_server <- function(input, output, session, lang = reactive("en"), grade_dist = reactive(NULL)) {
+scenario_server <- function(input, output, session, lang = reactive("en"), grade_dist = reactive(NULL),
+                            hpr_file = function() NULL) {
   L <- function(id, ...) tr(id, ..., lang = lang())
   keys_of <- assortment_table_keys
   sc <- list(A = list(defs = reactiveVal(APP_DEFS), pm = reactiveVal(APP_PM_DEFAULT)),
@@ -181,11 +182,13 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   # Display values: names, species, volume methods and pricing in `l`; the
   # decimal comma in Norsk.
   show_values <- function(disp, l) {
-    for (n in c("name", "species", "method", "position", "pricing")) disp[[n]] <- tr_value(disp[[n]], l)
-    if (l == "no") for (n in c("top", "butt", "length"))
+    # (the table has no butt / method / position columns since 0.3.1; the detail panel's one-line rules do)
+    for (n in intersect(c("name", "species", "method", "position", "pricing"), names(disp))) disp[[n]] <- tr_value(disp[[n]], l)
+    if (l == "no") for (n in intersect(c("top", "butt", "length"), names(disp)))
       disp[[n]] <- gsub(".", ",", disp[[n]], fixed = TRUE)
     disp
   }
+  ASM_FORM_ONLY_COLS <- c("butt", "method", "position")   # shown in the edit dialog, not in the table
   HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey")
 
   # Fixed row order, the same in both tables so rows line up: by species
@@ -219,9 +222,11 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     ord <- asm_order(all_rows)
     disp <- disp[ord, , drop = FALSE]; cell <- cell[ord, , drop = FALSE]; cls <- cls[ord]
     rownames(disp) <- NULL
-    if (!any(!is.na(d$ButtCondition))) {   # the log position column only when this scenario has a condition
-      disp$position <- NULL; cell <- cell[, colnames(cell) != "position", drop = FALSE]
-    }
+    # Max butt diameter, volume method and log position are shown only in the edit dialog (0.3.1); a
+    # difference in one of them marks the name, like the other fields that are not in the table.
+    if (nrow(cell) && any(cell[, ASM_FORM_ONLY_COLS])) cell[rowSums(cell[, ASM_FORM_ONLY_COLS, drop = FALSE]) > 0, "name"] <- TRUE
+    disp <- disp[, setdiff(names(disp), ASM_FORM_ONLY_COLS), drop = FALSE]
+    cell <- cell[, setdiff(colnames(cell), ASM_FORM_ONLY_COLS), drop = FALSE]
     disp <- show_values(disp, l)
     names(disp) <- colnames(cell) <- tr(unname(ASM_COL_IDS[names(disp)]), lang = l)
     cols <- setNames(lapply(names(disp), function(n) reactable::colDef(
@@ -232,7 +237,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     tcol <- tr("col_type", lang = l)
     cols[[tcol]] <- reactable::colDef(
       class = function(value, index) if (isTRUE(cell[index, tcol])) "asm-diff",
-      cell = type_select_js(tolower(side), disp$.key, l))
+      cell = type_select_js(tolower(side), disp$.key, l), width = 135)   # wide enough for «Sagtømmer» in the dropdown
     cls <- paste(cls, ifelse(disp$.key == or_default(selected(), ""), "asm-selected", ""))
     cols$.key <- reactable::colDef(show = FALSE)
     optbuck_reactable(disp, page_size = 20L, columns = cols, sortable = FALSE,
@@ -331,6 +336,9 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
                     stats::setNames(VOLUME_METHODS, tr_value(VOLUME_METHODS, l)),
                     v("VolumeDiameterCategory", "Top cylinder"))
       ),
+      # The log position of an imported product (read-only; the products' condition in the file).
+      if (!new && !is.na(d$ButtCondition))
+        div(class = "note-muted", paste0(M("asm_c_butt"), ": ", tr_value(BUTT_POSITION_VALUES[match(d$ButtCondition, BUTT_CONDITIONS)], l))),
       # Lengths: a flat price uses min..max in 10 cm steps; a matrix's
       # lengths are its columns (set here only for a new matrix: every 30 cm).
       conditionalPanel(
@@ -751,7 +759,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     w <- hot_cols(w, renderer = PM_DIFF_RENDERER, columnSorting = FALSE)
     # Norsk: prices with a decimal comma (numbro's nb-NO culture, shipped
     # with rhandsontable); English as before.
-    if (l == "no") w <- hot_col(w, col = seq_len(ncol(grid)), format = "0.00", language = "nb-NO")
+    if (l == "no") w <- hot_col(w, col = seq_len(ncol(grid)), format = "0.00", language = "nb-NO")   # ",00" is trimmed by PM_DIFF_RENDERER
     w <- hot_context_menu(w, allowRowEdit = FALSE, allowColEdit = FALSE, allowReadOnly = FALSE,
                           allowComments = FALSE, allowCustomBorders = FALSE,
                           customOpts = list(
@@ -1125,8 +1133,20 @@ function(instance, td, row, col, prop, value, cellProperties) {
         if (dis) div(class = "note-muted", tr("grade_disabled", lang = l)),
         if (nrow(n)) div(class = "pm-msg-warn", paste(grade_unused_text(n, side, l), collapse = "
 ")),
-        if (nrow(w)) div(class = "pm-msg-warn", paste(grade_warning_text(w, function(k) key_label(k, l), l), collapse = "
-")))
+        # 0.3.1: one short line per species, the explanation behind a click
+        if (nrow(w)) {
+          ln <- grade_warning_lines(w, l)
+          lapply(seq_len(nrow(w)), function(i)
+            tags$details(class = "pm-msg-warn grade-warn", tags$summary(ln$short[i]), p(ln$detail[i])))
+        })
+    })
+    # "Use the same .hpr as in tab 1": opens the import dialog for the file of tab 1 (greyed out
+    # when tab 1 does not use .hpr stems).
+    observe(session$sendCustomMessage("optbuck-disable",
+                                      list(id = paste0("scen_", s, "_use_tab1"), disabled = is.null(hpr_file()))))
+    observeEvent(input[[paste0("scen_", s, "_use_tab1")]], {
+      f <- hpr_file(); req(f)
+      open_hpr_import(side, f$path, f$name)
     })
     # The box is disabled (and unticked) when no stem file has the scenario's instruction.
     observe({

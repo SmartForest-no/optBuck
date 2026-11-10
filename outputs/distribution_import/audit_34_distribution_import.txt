@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: distribution import and export (Phase 7a)
-  Run: 2026-11-06 10:33:00.606565
+  Run: 2026-11-10 13:41:03.201343
 ============================================================= 
 
 --- 01. Import: Distribution per cell and the four product fields ---
@@ -67,7 +67,7 @@
   [PASS  ] Check 31: Even and Longer logs equal tuning_target() on the priced cells (rows sum to 100, prices unchanged); Clear removes the assortment's target (the column when it was the only one) | neutral TRUE, long TRUE | clear keeps other products TRUE | column dropped when empty TRUE
 
 --- 32. Editor: sums, flag, refused edits ---
-  [PASS  ] Check 32: Row sums; the flag is TRUE only for a sum that is neither 0 nor 100; a cell without a price and a value outside 0-100 are refused | sums TRUE | refused: 'The cell has no price: no target can be ' / 'A target is between 0 and 100 percent.'
+  [PASS  ] Check 32: Row sums; the flag is TRUE only for a sum that is neither 0 nor 100; a cell without a price and a value outside 0-100 are refused | sums TRUE | refused: 'The cell has no price: no demand matrix ' / 'A demand matrix value is between 0 and 1'
 
 --- 33. Editor: the four fields ---
   [PASS  ] Check 33: First target sets Allowed FALSE (roadmap 8 R5), 'Volume of logs', WithinProduct TRUE, MAXDeviation 0; fields from a file are kept; the category can be changed; the fields can be cleared | file fields kept TRUE | first target TRUE | category TRUE | cleared TRUE | kept when set TRUE

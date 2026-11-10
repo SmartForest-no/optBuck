@@ -82,6 +82,10 @@ scenario_column <- function(s) {
       dl(paste0("dl_pin_", s), t_("btn_download_pin"))),
     optbuck_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
                      accept = c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip")),
+    # The .hpr of tab 1 (0.3.1): greyed out (by the server) when tab 1 does not use .hpr stems.
+    div(class = "pm-actions",
+      actionButton(paste0("scen_", s, "_use_tab1"), t_("btn_use_tab1_hpr"), class = "btn-secondary btn-sm",
+                   disabled = "disabled")),
 
     # Stem grades (Phase 6): run options of this scenario, only for .hpr stems.
     conditionalPanel("input.tree_source == 'hpr'",

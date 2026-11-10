@@ -11,7 +11,7 @@ First release of the package (the repository, called optBuck until now, is the p
 
 * Bucking simulator for harvester files: .hpr stems, NFI trees (sanitized data included) and tree lists, two scenarios of
   assortments and prices compared on the same stems.
-* StanForD 2010 import and export of .hpr and .pin files; price tuning to a target length distribution.
+* StanForD 2010 import and export of .hpr and .pin files; price tuning to a demand matrix (the sawmill's wanted length distribution).
 * Bucking analysis (tab 5): the harvester's recorded bucking against the best possible bucking under the file's own
   instruction, with a PDF report.
 * Exported functions: `run_app()`, `read_hpr()`, `read_hpr_stems()`, `read_hpr_logs()`, `hpr_permitted_grades()`,

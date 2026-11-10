@@ -453,6 +453,8 @@ optbuck_stem_compare <- function(logs_default, logs_scenario, height_m, title, l
 PM_DIFF_RENDERER <- "
 function(instance, td, row, col, prop, value, cellProperties) {
   Handsontable.renderers.NumericRenderer.apply(this, arguments);
+  // Whole NOK without decimals (0.3.1): '422,00' / '422.00' is shown as '422'; '430,50' keeps its decimals.
+  if (/[,.]00$/.test(td.textContent)) td.textContent = td.textContent.replace(/[,.]00$/, '');
   td.classList.remove('pm-diff');
   var d = instance.params && instance.params.def;
   if (d && d[row] !== undefined) {

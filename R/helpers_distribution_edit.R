@@ -80,11 +80,11 @@ dist_row_flag <- function(sums) abs(sums) > DIST_TOL & abs(sums - 100) > 1e-4
 # the edited row when it has none). NA clears the cells. Unavailable cells
 # (no price) cannot be edited: an error.
 dist_set_cell <- function(pm, id, diam_cm, length_dm, value) {
-  if (!is.na(value) && (value < 0 || value > 100)) stop("A target is between 0 and 100 percent.")
+  if (!is.na(value) && (value < 0 || value > 100)) stop("A demand matrix value is between 0 and 100 percent.")
   pm <- .dist_ensure(pm)
   i <- .dist_rows(pm, id)
   at <- i[pm$PriceDiameterClass_cm[i] == diam_cm & pm$LengthClass_dm[i] == length_dm]
-  if (length(at) != 1L) stop("The cell has no price: no target can be set there.")
+  if (length(at) != 1L) stop("The cell has no price: no demand matrix value can be set there.")
   fc <- if (PM_FILE_CLASS_COL %in% names(pm)) pm[[PM_FILE_CLASS_COL]][at] else NA_real_
   rows <- if (is.na(fc)) at else
     i[pm$LengthClass_dm[i] == length_dm & !is.na(pm[[PM_FILE_CLASS_COL]][i]) & pm[[PM_FILE_CLASS_COL]][i] == fc]

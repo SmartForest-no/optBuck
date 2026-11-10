@@ -99,7 +99,6 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     ids <- intersect(prods()$product_id, input$tn_products)
     req(length(ids) > 0L)
     gopts <- sc$grade_opts(s)
-    gwarn <- sc$grade_warnings(s)
     gnote <- sc$grade_notes(s)
     pr <- products_from_defs(d, pm)
     products <- list(pd = pr$pd, lc = pr$lc, pm = pm)
@@ -121,7 +120,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
                         on_iter = function(r, m, fg)
                           prog$set(message = tr("tn_iter_progress", r, m, lang = l), value = r / m))
       out$side <- s; out$defs <- d; out$pm <- pm; out$requested <- requested
-      out$stem_id <- sid; out$grade_warn <- gwarn; out$grade_note <- gnote
+      out$stem_id <- sid; out$grade_note <- gnote
       res(out)
     })
     p <- promises::catch(p, function(e)
@@ -154,9 +153,13 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     div(class = "tn-block",
       if (length(notes)) div(class = "pm-msg-warn", paste(notes, collapse = "
 ")),
-      p(class = "tn-scope", L("tn_scope", fmt_num(r$n, 0L, lang()), fmt_num(r$N, 0L, lang()), fmt_num(r$N, 0L, lang()))),
+      p(class = "tn-scope", L("tn_scope", fmt_num(r$n, 0L, lang()), fmt_num(r$N, 0L, lang()))),
       div(class = "tn-hdr", L("tn_hdr_hits")),
       reactable::reactableOutput("tn_tbl_hits"),
+      # Assortments that were not tuned: one short line with the reason; they are left out below.
+      if (length(setdiff(r$ids, r$used)))
+        p(class = "note-muted tn-untuned",
+          L("tn_untuned", paste(vapply(setdiff(r$ids, r$used), function(k) disp_key(r, k), ""), collapse = "; "))),
       p(class = "note-muted", L("tn_fg_def")),
       div(class = "tn-hdr", L("tn_hdr_cost")),
       reactable::reactableOutput("tn_tbl_cost"),
@@ -166,7 +169,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       apportion_notes(r),
       div(class = "tn-hdr", L("tn_matrices")),
       div(class = "tally-controls",
-        selectInput("tn_matrix_product", L("col_assortment"), setNames(r$ids, vapply(r$ids, function(k) disp_key(r, k), "")),
+        selectInput("tn_matrix_product", L("col_assortment"), setNames(r$used, vapply(r$used, function(k) disp_key(r, k), "")),
                     selected = isolate(input$tn_matrix_product), width = "320px"),
         radioButtons("tn_matrix_view", NULL, setNames(names(views), views), inline = TRUE,
                      selected = or_default(isolate(input$tn_matrix_view), "target"))),
@@ -178,18 +181,12 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
   # Hits per assortment: logs, degree of fit and volume before / after, status.
   output$tn_tbl_hits <- reactable::renderReactable({
     r <- res(); req(r, !isTRUE(r$too_few)); l <- lang()
-    by <- r$by
+    by <- r$by; ks <- r$used                 # the tuned assortments only (0.3.1)
     df <- data.frame(
-      a = vapply(r$ids, function(k) disp_key(r, k), ""),
-      n = fmt_num(r$n_logs[r$ids], 0L, l),
-      fg1 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_o, 0)), v1 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_o, 0)),
-      fg2 = fmt1(vapply(r$ids, function(k) by[[k]]$fg_t, 0)), v2 = fmt1(vapply(r$ids, function(k) by[[k]]$vol_t, 0)),
-      st = vapply(r$ids, function(k) if (k %in% r$used) L("tn_status_ok") else {
-        s <- L("tn_status_few", fmt_num(r$n_logs[[k]], 0L, l))
-        # the grade mismatch warning of the assortment, after the reason
-        w <- r$grade_warn[r$grade_warn$key == k, , drop = FALSE]
-        if (NROW(w)) paste(s, grade_warning_text(w, function(x) disp_key(r, x, l), l)) else s
-      }, ""),
+      a = vapply(ks, function(k) disp_key(r, k), ""),
+      n = fmt_num(r$n_logs[ks], 0L, l),
+      fg1 = fmt1(vapply(ks, function(k) by[[k]]$fg_o, 0)), v1 = fmt1(vapply(ks, function(k) by[[k]]$vol_o, 0)),
+      fg2 = fmt1(vapply(ks, function(k) by[[k]]$fg_t, 0)), v2 = fmt1(vapply(ks, function(k) by[[k]]$vol_t, 0)),
       stringsAsFactors = FALSE)
     rownames(df) <- NULL   # the named vapply() results would show as a row-name column
     cols <- list(a = reactable::colDef(name = L("col_assortment"), width = 260),
@@ -197,8 +194,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
                  fg1 = reactable::colDef(name = L("tn_col_fg"), width = 120, align = "right"),
                  v1 = reactable::colDef(name = L("tn_col_vol"), width = 100, align = "right"),
                  fg2 = reactable::colDef(name = L("tn_col_fg"), width = 120, align = "right"),
-                 v2 = reactable::colDef(name = L("tn_col_vol"), width = 100, align = "right"),
-                 st = reactable::colDef(name = " ", minWidth = 420))
+                 v2 = reactable::colDef(name = L("tn_col_vol"), width = 100, align = "right"))
     optbuck_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
                     column_groups = list(reactable::colGroup(L("tn_grp_before"), c("fg1", "v1")),
                                          reactable::colGroup(L("tn_grp_after"), c("fg2", "v2"))))

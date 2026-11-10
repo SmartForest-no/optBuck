@@ -125,7 +125,7 @@ rec("Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same pla
 # ==============================================================================
 section("02. Ids used in the code")
 code_files <- c(Sys.glob(file.path(root_dir, "inst", "app", "*.R")),
-                file.path(root_dir, "R", c("helpers_result_tables.R", "helpers_hpr_stems.R")))   # warning texts: grade_warning_text()
+                file.path(root_dir, "R", c("helpers_result_tables.R", "helpers_hpr_stems.R")))   # warning texts: grade_warning_lines()
 code <- unlist(lapply(code_files, readLines, encoding = "UTF-8", warn = FALSE))
 js <- readLines(file.path(root_dir, "inst", "app", "www", "optbuck.js"), warn = FALSE)
 # Literal ids in tr(), t_(), L(), M(), T_() calls (also c("a", "b") inside them).

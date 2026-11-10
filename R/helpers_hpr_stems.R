@@ -637,45 +637,63 @@ format_grades <- function(g) {
   paste(format(g, trim = TRUE, scientific = FALSE), collapse = ", ")
 }
 
-# The grade mismatch check: with "Use stem grades" on, every sawlog product whose permitted
-# grades cover less than half of its species' stem length (cells without a grade count as
-# permitted).
+# Smallest share of a species' stem length with grades no assortment permits that is reported (0.3.1).
+GRADE_UNMATCHED_MIN_SHARE <- 0.10
+
+# The grade mismatch check (0.3.1; replaces the rule "a sawlog product permits less than half of the
+# stem length", which fired for ordinary files: a stem file can have a large share of low-quality length
+# that only pulpwood products take, and special-order products that permit rare grades). Now the stems'
+# grade codes are compared with the codes the species' assortments know: with "Use stem grades" on, a
+# species is reported when at least 10 % of its stem length has grades that no assortment of the species
+# permits. That is what a different job's grade codes look like; the same file never does it.
+# An assortment without permitted grades permits every grade (so does the waste row, which is ignored
+# here); cells without a grade count as permitted.
 #
 # @param dist       hpr_grade_lengths() result (NULL: no .hpr stems).
 # @param defs       The scenario's assortment table.
 # @param use_grades The scenario's "Use stem grades" option.
-# @param threshold  Warn below this permitted share (0.5).
-# @return data.frame(key, species, grade (the species' dominant grade), share (whole percent of
-#   the species' length), permitted (text)); no rows when nothing applies.
-grade_mismatch_check <- function(dist, defs, use_grades, threshold = 0.5) {
-  none <- data.frame(key = character(0), species = character(0), grade = numeric(0),
-                     share = numeric(0), permitted = character(0), stringsAsFactors = FALSE)
+# @param threshold  Report at or above this unmatched share of a species' length (0.1).
+# @return data.frame(species, grade (the unmatched grade with the longest length), share (whole percent
+#   of the species' length with unmatched grades), grades (all unmatched grades, text), permitted (the
+#   grades the assortments permit, text), n_products (the species' assortments, waste excluded: all of
+#   them restrict the grades); one row per reported species, none when nothing applies.
+grade_mismatch_check <- function(dist, defs, use_grades, threshold = GRADE_UNMATCHED_MIN_SHARE) {
+  none <- data.frame(species = character(0), grade = numeric(0), share = numeric(0), grades = character(0),
+                     permitted = character(0), n_products = integer(0), stringsAsFactors = FALSE)
   if (!isTRUE(use_grades) || is.null(dist) || NROW(dist) == 0L || NROW(defs) == 0L) return(none)
   if ("file" %in% names(dist)) dist <- grade_dist_by_grade(dist)    # per species and grade
   if (is.null(dist)) return(none)
-  keys <- assortment_table_keys(defs)
-  rows <- lapply(which(defs$Type == "sawlog" & defs$Species %in% dist$species), function(i) {
-    perm <- permitted_grades_set(defs$PermittedGrades[i])
-    if (length(perm) == 0L) return(NULL)                      # no grade restriction
-    d <- dist[dist$species == defs$Species[i], , drop = FALSE]
+  rows <- lapply(unique(dist$species), function(sp) {
+    d <- dist[dist$species == sp, , drop = FALSE]
+    prod <- defs[defs$Species == sp & !defs$Type %in% "waste", , drop = FALSE]
+    if (nrow(prod) == 0L) return(NULL)
+    sets <- lapply(prod$PermittedGrades, permitted_grades_set)
+    if (any(lengths(sets) == 0L)) return(NULL)                  # some assortment permits every grade
+    perm <- sort(unique(unlist(sets)))
+    un <- d[!is.na(d$grade) & !d$grade %in% perm, , drop = FALSE]
     tot <- sum(d$cells)
-    if (sum(d$cells[is.na(d$grade) | d$grade %in% perm]) / tot >= threshold) return(NULL)
-    g <- d[!is.na(d$grade), , drop = FALSE]; top <- g[which.max(g$cells), ]
-    data.frame(key = keys[i], species = defs$Species[i], grade = top$grade,
-               share = round(100 * top$cells / tot), permitted = format_grades(perm), stringsAsFactors = FALSE)
+    if (nrow(un) == 0L || tot == 0L || sum(un$cells) / tot < threshold) return(NULL)
+    top <- un[which.max(un$cells), ]
+    data.frame(species = sp, grade = top$grade, share = round(100 * sum(un$cells) / tot),
+               grades = format_grades(un$grade), permitted = format_grades(perm),
+               n_products = nrow(prod), stringsAsFactors = FALSE)
   })
   rows <- rows[!vapply(rows, is.null, NA)]
   if (length(rows) == 0L) none else do.call(rbind, rows)
 }
 
-# The warning texts (one per row of grade_mismatch_check()) in `lang`.
-# @param label Function: assortment key -> display name.
-grade_warning_text <- function(w, label, lang = "en") {
-  if (NROW(w) == 0L) return(character(0))
-  vapply(seq_len(nrow(w)), function(i)
-    tr("grade_mismatch", format(w$grade[i], trim = TRUE), format(w$share[i], trim = TRUE),
-       if (identical(w$species[i], "pine")) tr("gm_species_pine", lang = lang) else tr("gm_species_spruce", lang = lang),
-       label(w$key[i]), w$permitted[i], tr("lbl_use_grades", lang = lang), lang = lang), "")
+# The warning lines of grade_mismatch_check() in `lang`: `short` is one line per reported species, `detail`
+# the explanation shown behind a click.
+grade_warning_lines <- function(w, lang = "en") {
+  if (NROW(w) == 0L) return(list(short = character(0), detail = character(0)))
+  sp_word <- function(sp) tr(if (identical(sp, "pine")) "sp_pine_lc" else "sp_spruce_lc", lang = lang)
+  list(short = vapply(seq_len(nrow(w)), function(i)
+         if (w$n_products[i] == 1L) tr("gm_line_one", sp_word(w$species[i]), lang = lang)
+         else tr("gm_line", format(w$n_products[i], trim = TRUE), sp_word(w$species[i]), lang = lang), ""),
+       detail = vapply(seq_len(nrow(w)), function(i)
+         tr("gm_detail", w$grades[i], format(w$share[i], trim = TRUE),
+            tr(if (identical(w$species[i], "pine")) "gm_species_pine" else "gm_species_spruce", lang = lang),
+            sp_word(w$species[i]), w$permitted[i], lang = lang), ""))
 }
 
 

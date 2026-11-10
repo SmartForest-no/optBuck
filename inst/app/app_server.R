@@ -305,7 +305,7 @@ server <- function(input, output, session) {
   })
   output$stem_summary <- renderUI({   # uiOutput: an empty result really clears the table
     d <- tryCatch(stem_summary_df(), error = function(e) NULL)   # nothing to show: clear the table
-    if (is.null(d) || nrow(d) == 0L) return(NULL)
+    if (is.null(d) || nrow(d) == 0L) return(div(class = "note-muted", L("stems_empty_hint")))   # 0.3.1: a hint, not an empty panel
     l <- lang()
     d$species <- vapply(d$species, function(x) L(paste0("sp_", x)), "")
     names(d) <- c(L("col_species"), L("col_stems"), L("col_mean_dbh"), L("col_mean_height"), L("col_excluded"))
@@ -369,7 +369,15 @@ server <- function(input, output, session) {
     ck <- hs_check(); req(isTRUE(ck$ok))
     list(dist = hpr_grade_lengths(st, hs_map(), ck), instr = st$instruction, map = hs_map())
   })
-  sc <- scenario_server(input, output, session, lang, grade_dist = function() tryCatch(hs_grade_dist(), error = function(e) NULL))
+  # The .hpr file of tab 1 (NULL unless the source is .hpr stems that were read), for "Use the same .hpr as in tab 1".
+  hs_file_tab1 <- function() tryCatch({
+    own <- hs_own()
+    if (!identical(input$tree_source, "hpr") || is.null(own) || !isTRUE(hs_stems()$ok)) return(NULL)
+    i <- if (length(own$path) > 1L) as.integer(or_default(input$stems_use_file, 1L)) else 1L
+    list(path = own$path[i], name = own$name[i])
+  }, error = function(e) NULL)
+  sc <- scenario_server(input, output, session, lang, grade_dist = function() tryCatch(hs_grade_dist(), error = function(e) NULL),
+                        hpr_file = hs_file_tab1)
   # The stem source as the Simulator reads it (R4 D7): what a job is prepared from, and
   # an identity that changes when the stems do (Price tuning clears its results then).
   stem_spec <- function() {
@@ -490,10 +498,7 @@ server <- function(input, output, session) {
                                keys = list(A = assortment_table_keys(d),
                                            B = if (compare) assortment_table_keys(b$defs)),
                                state = sc$pm_state(), t_click = t_click,
-                               grade_warn = list(A = sc$grade_warnings("A"),
-                                                 B = if (compare) sc$grade_warnings("B")),
-                               grade_note = list(A = sc$grade_notes("A"), B = if (compare) sc$grade_notes("B")),
-                               grade_defs = list(A = d, B = if (compare) b$defs)))
+                               grade_note = list(A = sc$grade_notes("A"), B = if (compare) sc$grade_notes("B"))))
   })
 
   result <- reactive({
@@ -612,25 +617,15 @@ server <- function(input, output, session) {
 
 
   # ---- Summary ----------------------------------------------------------------
-  # Grade mismatch warnings of the run (stored when it started): "A: ..." / "B: ..." above the
-  # sentence, only when one applies.
+  # The notes of the run (stored when it started): stems whose grades are not used. The grade
+  # mismatch warnings (0.3.1) are shown in tab 2 only.
   grade_warn_ui <- function(r) {
-    l <- lang(); gw <- r$grade_warn; gd <- r$grade_defs
-    if (is.null(gw)) return(NULL)
-    lab <- function(side) function(k) {
-      d <- gd[[side]]; i <- match(k, assortment_table_keys(d))
-      assortment_display_name(d$Species[i], d$Name[i], l)
-    }
-    lines <- unlist(lapply(c("A", "B"), function(s) {
-      if (NROW(gw[[s]]) == 0L) return(NULL)
-      paste0(if (!is.null(r$scenario)) paste0(s, ": "), grade_warning_text(gw[[s]], lab(s), l))
-    }))
+    l <- lang()
+    if (is.null(r$grade_note)) return(NULL)
     # R5: stems whose grades are not used (above the sentence)
     notes <- unlist(lapply(c("A", "B"), function(s) grade_unused_text(r$grade_note[[s]], s, l)))
     tagList(
       if (length(notes)) div(class = "pm-msg-warn", paste(notes, collapse = "
-")),
-      if (length(lines)) div(class = "pm-msg-warn", paste(lines, collapse = "
 ")))
   }
   output$summary_cards <- renderUI({

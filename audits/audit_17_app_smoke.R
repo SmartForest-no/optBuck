@@ -56,7 +56,7 @@
 #  7.  Theme: Bootstrap 5 loaded, self-hosted Inter font loaded, no Google
 #      Fonts request
 #  8.  Scenario A's compact assortment table: six base rows, columns
-#      Assortment, Species, Top Ø, Max butt Ø, Length, Volume method (no
+#      Assortment, Type, Species, Top Ø, Length (0.3.1: max butt Ø, volume method and log position only in the edit dialog) (no
 #      Type, Length step or Diameter rounding); no limit shown as "–" or
 #      "≥", never "Inf"/"Infinity"; columns cannot be sorted by clicking;
 #      one copy button per side ("Make assortment equal to B/A"); no
@@ -533,7 +533,7 @@ browser_checks <- c(
   "Check 43: Price tuning tab: message without .hpr stems; an Even target set in the target view, the assortment list, a tuning with two iterations gives the key-figure table, the small figure and the four matrix views; Use tuned prices in the other scenario copies them and keeps the results; a change in the tuned scenario clears them",
   "Check 44: Stems and scenarios are independent: importing into a scenario leaves the stems untouched and loading stems leaves the scenarios untouched; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
   "Check 45: No scenario names: no name fields, titles and headers say Scenario A/B, the scenario xlsx has no name",
-  "Check 46: Target distribution view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
+  "Check 46: Demand matrix view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
   "Check 47: Stems panel of the built-in source (R4 D2): the intro, Use this selection builds the species table (equal to the live counts) and two density plots, and any setting change clears it",
   "Check 49: Price tuning on the built-in stems (R4 D7), in Norsk: all sawlog assortments are listed (those without a target greyed with the reason), an Even target on the spruce sawlog makes it tunable, and a tuning on the default selection ends with a result or the too-few-logs message and no error",
   "Check 50: Bucking analysis (tab 5, roadmap 8, revised 2026-11-05) as a background job, in Norsk: the intro, no run button and no products box before a file; after an upload the line 'Fil: ...', the reset link and Run; the result has the key-figure table (85,7 %), the 'left out' line, the quality-code table, no summary sentence, no excluded/control sections, the density figure and one download (PDF, no CSV); tab 2 shows no log position column when no assortment has a butt condition",
@@ -790,9 +790,9 @@ if (!browser_ok) {
                 bs_ver, isTRUE(inter_loaded), n_gfonts))
     # 08. assortment table
     asm_txt <- txt(app, "#tbl_asm_a")
-    hdr <- c("Assortment", "Type", "Species", "Top Ø (cm)", "Max butt Ø (cm)", "Length (cm)",
-             "Volume method")
-    gone8 <- c("Length step", "Diameter rounding")   # R5: Type is a visible column (dropdown)
+    hdr <- c("Assortment", "Type", "Species", "Top Ø (cm)", "Length (cm)")
+    gone8 <- c("Length step", "Diameter rounding",    # R5: Type is a visible column (dropdown)
+               "Max butt Ø (cm)", "Volume method", "Log position")   # 0.3.1: only in the edit dialog
     hdr_ok <- all(vapply(hdr, grepl, logical(1), x = asm_txt, fixed = TRUE)) &&
       !any(vapply(gone8, grepl, logical(1), x = asm_txt, fixed = TRUE))
     n_asm0 <- n_tbl_rows(app, "tbl_asm_a")
@@ -1700,6 +1700,7 @@ if (!browser_ok) {
     c31 <- list()
     e31 <- try_drv({
       c31$src_before <- app$get_value(input = "tree_source")
+      c31$use_before <- js(app, "document.getElementById('scen_a_use_tab1').disabled")   # 0.3.1: greyed out unless tab 1 has .hpr stems
       app$set_inputs(main_nav = "stems", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(tree_source = "hpr", wait_ = FALSE)
       app$upload_file(hs_upload = file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_example_synthetic.hpr"))
@@ -1707,6 +1708,8 @@ if (!browser_ok) {
                       timeout = 60 * 1000)
       app$wait_for_idle()
       c31$file <- txt(app, "#hs_file_ui")
+      c31$use_after <- js(app, "document.getElementById('scen_a_use_tab1').disabled")
+      c31$use_label <- js(app, "document.getElementById('scen_a_use_tab1').innerText.trim()")
       c31$species <- js(app, paste0("Array.from(document.querySelectorAll('#hs_species_ui select'))",
                                     ".map(function(s){ return s.value; }).join(',')"))
       c31$valid <- txt(app, "#hs_validation")
@@ -1736,6 +1739,7 @@ if (!browser_ok) {
     })
     hdr_cols <- function(h) strsplit(or_default(h, ""), "|", fixed = TRUE)[[1L]]
     ok31 <- !nzchar(e31) && identical(c31$src_before, "nfi") &&
+      isTRUE(c31$use_before) && identical(c31$use_after, FALSE) && grepl("same .hpr as in tab 1", or_default(c31$use_label, ""), fixed = TRUE) &&
       !grepl("imported into", c31$file, fixed = TRUE) &&
       identical(c31$species, "pine,spruce,none") &&
       grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
@@ -1996,12 +2000,12 @@ if (!browser_ok) {
       c43$cleared <- !isTRUE(js(app, "!!document.querySelector('#tn_tbl_hits .rt-tr')"))
       c43$nerr <- n_err_notif(app)
     })
-    ok43 <- !nzchar(e43) && grepl("no target distribution (enter one under 2 Assortment specifications and prices)", c43$msg, fixed = TRUE) &&
+    ok43 <- !nzchar(e43) && grepl("no demand matrix (enter one under 2 Assortment specifications and prices)", c43$msg, fixed = TRUE) &&
       grepl("Spruce \u2013 ", c43$msg, fixed = TRUE) && identical(c43$extra, 0L) && isTRUE(c43$off >= 1L) &&
       grepl(paste0(key43, "+"), c43$boxes, fixed = TRUE) && !grepl("-", c43$boxes, fixed = TRUE) && identical(c43$radio, 0L) &&
-      grepl("^Prices were tuned on [0-9,]+ of [0-9,]+ stems; the figures below are for all [0-9,]+ stems\\.$", trimws(c43$scope)) &&
+      grepl("^Prices were tuned on a sample of [0-9,]+ stems\\. The figures below cover all [0-9,]+ stems\\.$", trimws(c43$scope)) &&
       grepl("has apportionment bucking switched on (maximum allowed loss of value 4 %)", c43$apport, fixed = TRUE) &&
-      grepl("Tuned", c43$rows, fixed = TRUE) && grepl(" \u2013 ", c43$rows, fixed = TRUE) && !grepl("sagt mmer", c43$rows, fixed = TRUE) &&
+      grepl(" \u2013 ", c43$rows, fixed = TRUE) && !grepl("sagt mmer", c43$rows, fixed = TRUE) &&
       all(vapply(c("Before tuning", "After tuning", "Assortment", "Logs", "Degree of fit (%)", "Volume (m\u00b3)"),
                  function(w) grepl(w, c43$cols, fixed = TRUE), NA)) &&
       grepl("Value of all stems (NOK)", c43$cost, fixed = TRUE) && grepl("Sawlog volume", c43$cost, fixed = TRUE) &&
@@ -2202,7 +2206,7 @@ if (!browser_ok) {
       r <- strsplit(strsplit(or_default(c47$summary, ""), "|", fixed = TRUE)[[1L]], ";", fixed = TRUE)
       sum(vapply(r, function(x) if (tolower(x[1L]) == sp) as.integer(gsub("[^0-9]", "", x[2L])) else 0L, 0L))
     }
-    ok47 <- !nzchar(e47) && grepl("Choose the stems optBuck will buck", c47$intro, fixed = TRUE) &&
+    ok47 <- !nzchar(e47) && grepl("Load or select stem data.", c47$intro, fixed = TRUE) &&
       identical(c47$btn, "Use this selection") && identical(c47$rows_before, 0L) && identical(c47$plot_before, 0L) &&
       isTRUE(c47$rows_after >= 1L) && isTRUE(c47$plot_after >= 1L) &&
       identical(t47("spruce"), n47("spruce")) && identical(t47("pine"), n47("pine")) &&
@@ -2341,7 +2345,7 @@ if (!browser_ok) {
         c49$nerr <- n_err_notif(app)
         app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
       })
-      ok49 <- !nzchar(e49) && grepl("Gran \u2013 ", c49$off_before, fixed = TRUE) && grepl("ingen \u00f8nsket fordeling (legg inn under 2 Sortimentskrav og priser)", c49$off_before, fixed = TRUE) &&
+      ok49 <- !nzchar(e49) && grepl("Gran \u2013 ", c49$off_before, fixed = TRUE) && grepl("ingen fordelingsmatrise (legg inn under 2 Sortimentskrav og priser)", c49$off_before, fixed = TRUE) &&
         identical(c49$run_before, 0L) && grepl("spruce_sawlog+", c49$boxes, fixed = TRUE) &&
         (identical(c49$result, "table") || grepl("F\u00e5 stokker|F\u00e5 for|For f\u00e5 stokker", c49$result)) && identical(c49$nerr, 0L)
         rec(grep("^Check 49:", browser_checks, value = TRUE), if (ok49) PASS else FAIL,
@@ -2441,7 +2445,7 @@ if (!browser_ok) {
         lshot(app, "03_simulator_no")
       })
       ok35 <- !nzchar(e35) && !length(c35$left_prices) && !length(c35$left_sim) &&
-        identical(c35$cell, "422,00") && isTRUE(all.equal(c35$typed, 430.5)) &&
+        identical(c35$cell, "422") && isTRUE(all.equal(c35$typed, 430.5)) &&
         identical(c35$slider, "1 100 m") &&
         identical(c35$species, "Gran") && identical(c35$county, "Alle fylker") &&
         all(vapply(c("Datakilde", "Landsskogtakseringen", "Hogstklasse", "HKL 4 – eldre produksjonsskog",

@@ -23,8 +23,8 @@
 #      grades are used); scenarios_differ() sees the options.
 #   9  Several files: the grades of the second file are its own.
 #  11  Grade mismatch warning (R4 polish): hpr_grade_lengths() equals the bucking's
-#      grade grid; grade_mismatch_check() warns when a sawlog product permits the
-#      grades of under half of a species' length; the texts in both languages.
+#      grade grid; grade_mismatch_check() reports a species when 10 % or more of its length
+#      has grades that no assortment of the species permits (0.3.1); the texts.
 #  12  Same instruction (R5): grades are used only for stems whose file has the
 #      scenario's instruction (ProductKey and name); the "not used" note with its
 #      share; copies, price edits, .pin round trip, two stem files.
@@ -315,21 +315,37 @@ w_off <- grade_mismatch_check(d90, with_perm("1;2"), FALSE)
 w_non <- grade_mismatch_check(NULL, with_perm("1;2"), TRUE)
 w_all <- grade_mismatch_check(d90, with_perm(NA_character_), TRUE)
 w135 <- grade_mismatch_check(data.frame(species = "spruce", grade = c(2, 4), cells = c(800, 200)), with_perm("1;3;5"), TRUE)
-ok11b <- nrow(w12) == 1L && w12$key == "spruce_140_sagt_mmer_gran" && w12$grade == 3 && w12$share == 90 && w12$permitted == "1–2" &&
+# 0.3.1: the rule changed. A species is reported when >= 10 % of its stem length has grades that NO
+# assortment of the species permits (different grade codes); a sawlog product that permits few of the
+# present grades is not enough (a file with much low-quality length and pulpwood products that take it
+# is normal: found on the owner's file5, where 10 of 13 sawlog products were flagged although the file's
+# own recorded bucking cut every sawlog from grade 2 and all grade-7 length into pulpwood).
+two <- sc$defs[sc$defs$Species == "spruce" & sc$defs$Type %in% c("sawlog", "pulpwood"), , drop = FALSE][1:2, ]
+two$Type <- c("sawlog", "pulpwood"); two$PermittedGrades <- c("1;2", "3")
+w_two <- grade_mismatch_check(d90, two, TRUE)                                                    # pulpwood takes 3: none
+w_small <- grade_mismatch_check(data.frame(species = "spruce", grade = c(2, 9), cells = c(950, 50)), with_perm("1;2"), TRUE)   # 5 % < 10 %
+w_edge <- grade_mismatch_check(data.frame(species = "spruce", grade = c(2, 9), cells = c(900, 100)), with_perm("1;2"), TRUE)  # 10 %
+ok11b <- nrow(w12) == 1L && w12$species == "spruce" && w12$grade == 3 && w12$share == 90 && w12$permitted == "1–2" &&
+  w12$n_products == 1L && w12$grades == "3" &&
   nrow(w123) == 0L && nrow(w_off) == 0L && nrow(w_non) == 0L && nrow(w_all) == 0L &&
-  nrow(w135) == 1L && w135$permitted == "1, 3, 5" && w135$grade == 2
-rec("Check 11b: 90 % grade 3 with a sawlog product permitting 1-2 gives exactly one warning (grade 3, share 90, permitted '1-2'); permitting 1-3, option off, no .hpr stems, or no permitted grades give none; non-consecutive grades read '1, 3, 5'",
-    ok(ok11b), sprintf("1-2: %d | 1-3: %d | off: %d | no stems: %d | no grades: %d | 1,3,5: '%s'", nrow(w12), nrow(w123), nrow(w_off), nrow(w_non), nrow(w_all), w135$permitted))
-txt_en <- grade_warning_text(w12, function(k) "Spruce 140 Sagtømmer gran", "en")
-txt_no <- grade_warning_text(w12, function(k) "Gran 140 Sagtømmer gran", "no")
-ok11c <- identical(txt_en, paste0("Grade 3 covers 90 % of the spruce stem length, but Spruce 140 Sagtømmer gran only permits grade 1–2. ",
-                                  "With \"Use stem grades\" ticked, little Spruce 140 Sagtømmer gran will be produced. ",
-                                  "The stems and assortments probably come from different jobs with different grade codes.")) &&
-  identical(txt_no, paste0("Kvalitet 3 dekker 90 % av lengden på granstammene, men Gran 140 Sagtømmer gran tillater bare kvalitet 1–2. ",
-                           "Med «Bruk stammekvalitet» blir det derfor lite Gran 140 Sagtømmer gran. ",
-                           "Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder."))
-rec("Check 11c: the warning text in English and Norsk (checkbox label, species word, product name, grade, share, permitted grades)",
-    ok(ok11c), paste(txt_en, "|", txt_no))
+  nrow(w135) == 1L && w135$permitted == "1, 3, 5" && w135$grade == 2 && w135$share == 100 && w135$grades == "2, 4" &&
+  nrow(w_two) == 0L && nrow(w_small) == 0L && nrow(w_edge) == 1L
+rec("Check 11b: 90 % grade 3 with the only product permitting 1-2 gives one warning row (species, grade 3, share 90, permitted '1-2', 1 product); another product that permits 3, 1-3, option off, no .hpr stems, no permitted grades, or 5 % unmatched give none; 10 % does",
+    ok(ok11b), sprintf("1-2: %d | 1-3: %d | off: %d | no stems: %d | no grades: %d | 1,3,5: '%s' | pulp takes 3: %d | 5 %%: %d | 10 %%: %d",
+                       nrow(w12), nrow(w123), nrow(w_off), nrow(w_non), nrow(w_all), w135$permitted, nrow(w_two), nrow(w_small), nrow(w_edge)))
+ln_en <- grade_warning_lines(w12, "en"); ln_no <- grade_warning_lines(w12, "no")
+w9 <- w12; w9$n_products <- 9L
+ok11c <- identical(ln_en$short, "The stem quality fits poorly with one assortment (spruce).") &&
+  identical(ln_en$detail, paste0("Grade 3 covers 90 % of the spruce stem length, but no spruce assortment permits it (permitted: grade 1–2). ",
+                                 "The stems and assortments probably come from different jobs with different grade codes.")) &&
+  identical(ln_no$short, "Stammekvaliteten passer dårlig med ett sortiment (gran).") &&
+  identical(ln_no$detail, paste0("Kvalitet 3 dekker 90 % av lengden på granstammene, men ingen sortimenter for gran tillater den (tillatt: kvalitet 1–2). ",
+                                 "Stammene og sortimentene kommer trolig fra ulike oppdrag med ulike kvalitetskoder.")) &&
+  identical(grade_warning_lines(w9, "no")$short, "Stammekvaliteten passer dårlig med 9 sortimenter (gran).") &&
+  identical(grade_warning_lines(w9, "en")$short, "The stem quality fits poorly with 9 assortments (spruce).") &&
+  length(grade_warning_lines(w12[0, ], "en")$short) == 0L
+rec("Check 11c: the warning texts in English and Norsk: one short line per species (one / many assortments) and the detail behind a click",
+    ok(ok11c), paste(ln_en$short, "|", ln_no$short, "|", ln_no$detail))
 
 # ---- 12. same instruction (R5, 2026-11-03) -----------------------------------------------------
 section("12. Grades only with the same instruction")
