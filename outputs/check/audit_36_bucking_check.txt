@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bucking check (roadmap 8, tab 5)
-  Run: 2026-11-10 13:25:40.172448
+  Run: 2026-11-10 13:41:54.817031
 ============================================================= 
 
 --- 01. Reader ---
@@ -52,17 +52,14 @@
   [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 58866/61004
 
 --- 14. NFI stem profiles on demand ---
-  [FAIL  ] Check 14: no cache in an empty folder; building three plots in chunks (progress called per chunk, ending at the total) gives exactly the profiles of the existing cache (every diameter equal) | rows 5867 vs 5867 | progress 0/43
+  [PASS  ] Check 14: no cache in an empty folder; building three plots in chunks (progress called per chunk, ending at the total) gives exactly the profiles of the existing cache (every diameter equal) | rows 5867 vs 5867 | progress 0/43
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   FAIL  1
-2   PASS 16
+1   PASS 17
 
-  Verdict: FAIL 
+  Verdict: PASS 
 ============================================================= 
-
-  [FAIL] Check 14: no cache in an empty folder; building three plots in chunks (progress called per chunk, ending at the total) gives exactly the profiles of the existing cache (every diameter equal) | rows 5867 vs 5867 | progress 0/43 
 
 Audit CSV: <repo>/outputs/check/audit_36_bucking_check.csv

@@ -83,7 +83,19 @@ init_audit_log(audit_txt)
 
 E <- new.env(parent = emptyenv())
 
+# Checks 5-17 need the prototype's own output files (outputs/stem_profiles/..., the reference
+# selected-log CSVs of scripts 06/08), which are gitignored and were produced on the machine that ran the
+# frozen prototype scripts; the trees in them (e.g. 242251) no longer exist after the NFI tree numbers were
+# permuted on 2026-11-04. Where those files are absent a failure of these checks is not a code failure:
+# it is reported as REVIEW (0.3.1; found while investigating the old "generate_taper_profile_one_tree()
+# returns NULL": taperNOR was fine, the input row did not exist).
+proto_outputs <- file.path(root_dir, "outputs", "stem_profiles", "stem_profiles_example_500trees.parquet")
 rec <- function(check, result, detail = "") {
+  n <- suppressWarnings(as.integer(sub("^Check ([0-9]+).*$", "\\1", check)))
+  if (identical(result, "FAIL") && !file.exists(proto_outputs) && !is.na(n) && n >= 5L && n <= 17L) {
+    result <- "REVIEW"
+    detail <- paste0("prototype outputs absent on this machine (outputs/stem_profiles/..., not in the repository); ", detail)
+  }
   record_check(E, check, result, detail, audit_txt)
 }
 

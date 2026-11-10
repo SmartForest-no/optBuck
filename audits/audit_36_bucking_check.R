@@ -266,7 +266,7 @@ if (!requireNamespace("gridExtra", quietly = TRUE) || !requireNamespace("pdftool
 section("14. NFI stem profiles on demand")
 td_all <- nfi_cache_tree_data(root_dir); pl3 <- sort(unique(td_all$plot_id))[1:3]
 tmp_cache <- tempfile("nfi_cache_"); dir.create(tmp_cache)
-not_ready <- !nfi_profiles_ready(tmp_cache)
+not_ready <- length(list.files(tmp_cache, "[.]parquet$", recursive = TRUE)) == 0L   # nfi_profiles_ready() takes the root, not a folder
 prog_log <- integer(0)
 build_nfi_cache(root_dir, out_dir = tmp_cache, plots = pl3, progress = function(d, t) prog_log <<- c(prog_log, d), chunk = 100L)
 got <- as.data.frame(dplyr::collect(arrow::open_dataset(tmp_cache)))
