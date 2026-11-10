@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: import from .hpr (Phase A)
-  Run: 2026-11-06 10:29:31.715573
+  Run: 2026-11-10 13:28:54.475298
 ============================================================= 
 
 --- 01. Reading ---
@@ -16,7 +16,7 @@
   [PASS  ] Check 04: Grades no longer untick products (2026-10-28); reference grades (most commonly permitted, ties kept, else StartGrade, else none) and which products permit them | fixture: unticked (mapped species) ; 100 Energi (grade 7 only) ticked TRUE, no reason; without permitted grades kept TRUE | invented groups: reference grades 1:2, 2:1/2/3/4, 3:3, 4: | permits one: saw_mode=TRUE, saw_mode2=TRUE, pulp_wide=TRUE, special=FALSE, energy=FALSE, no_grades=NA, tie_a=TRUE, tie_b=TRUE, start_only=NA
 
 --- 05. Mapping onto the assortment table ---
-  [PASS  ] Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid | keys pine_240_sagt_mmer_furu,pine_200_massevirke,spruce_197_massevirke,spruce_100_energi,spruce_154_kubb,spruce_140_sagt_mmer_gran,pine_waste,spruce_waste | pine sawlog top 14-50, butt <= 60, top position 10, Top | SPR min top 14.2, Calculated Norwegian mid | price lengths on: pine_240_sagt_mmer_furu | valid TRUE
+  [PASS  ] Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid | keys pine_240_sagt_mmer_furu,pine_200_massevirke,spruce_197_massevirke,spruce_100_energi,spruce_154_kubb,spruce_140_sagt_mmer_gran,pine_waste,spruce_waste | pine sawlog top 14-50, butt <= 60, top position 10, Top cylinder | SPR min top 14.2, Calculated Norwegian mid | price lengths on: pine_240_sagt_mmer_furu | valid TRUE
 
 --- 06. Lengths round up ---
   [PASS  ] Check 06: Length classes round up to whole dm; a class without a whole-dm length is dropped | 240 Sagtømmer furu 37,38,40,41,43,46,49,52,55 dm | Kubb 31 dm | 301+305 cm classes: '154 Kubb: Length class(es) 301 cm dropped: no whole-dm length inside the class.', columns 31
@@ -25,7 +25,7 @@
   [PASS  ] Check 07: Forbidden cells empty, all other cells the file's price; whole-cm rows | 240 Sagtømmer furu rows 14-36 cm (no 13), 46 empty cells, 0 cells wrong | 20 cm @37 dm = 584 (190 mm), 21 cm = 575 (207 mm) | SPR first row 14 cm = 650 (142 mm)
 
 --- 08. Price length ---
-  [PASS  ] Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged | 37 dm log, top 250.4 mm: price volume 0.20660 (365 cm: 0.20660, 370 cm: 0.20983) | 41 dm on 410 cm: TRUE | SPR on cut length: TRUE | base LengthClasses columns: ProductKey,LogLength,LogLength_dm
+  [PASS  ] Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged | 37 dm log, top 250.4 mm: price volume 0.17917 (365 cm: 0.17917, 370 cm: 0.18162) | 41 dm on 410 cm: TRUE | SPR on cut length: TRUE | base LengthClasses columns: ProductKey,LogLength,LogLength_dm
 
 --- 09. Errors ---
   [PASS  ] Check 09: File errors are reported and block the import | not_xml: ok | root: ok | message: ok | unit: ok | machine: ok | dup_key: ok | no_groups: ok | no_prods: ok | no_species: ok
@@ -34,7 +34,7 @@
   [PASS  ] Check 10: Partial problems are warnings and the rest imports | unknown_group: ok | dia_over_bark: ok | vol_over_bark: ok | method: ok | top_position: ok | margin: ok | duplicate renamed and merged species noted in info, no warning: TRUE
 
 --- 11. Run with the imported scenario ---
-  [PASS  ] Check 11: A tree-list run with the imported scenario respects limits, lengths and forbidden cells | 314 logs | products not used: none | top limits TRUE | lengths TRUE | no forbidden cell TRUE | 240 Sagtømmer furu price volume on class limits TRUE (59 logs) | coordinate-like columns: none
+  [PASS  ] Check 11: A tree-list run with the imported scenario respects limits, lengths and forbidden cells | 317 logs | products not used: none | top limits TRUE | lengths TRUE | no forbidden cell TRUE | 240 Sagtømmer furu price volume on class limits TRUE (62 logs) | coordinate-like columns: none
 
 --- 12. Scenario file and comparison ---
   [PASS  ] Check 12: Price lengths survive the scenario file; a scenario without them differs and is priced on the cut | round trip TRUE, price lengths kept TRUE | differs without them TRUE, equal after round trip TRUE | comparison: A on 365 cm, B on 370 cm TRUE
@@ -49,12 +49,15 @@
   [PASS  ] Check 15: The import shows warnings only when something is lost or replaced | fixture import: 0 warnings, info has rounded up to whole dm=TRUE, not in whole cm=TRUE, forbidden cell=TRUE, Volume diameter=TRUE | skipped product warned TRUE | dropped length class warned TRUE | replaced volume method warned TRUE
 
 --- 16. Imported Mid product ---
-  [PASS  ] Check 16: An imported Mid product maps to Mid without a warning, is priced on the mid diameter over the class lower limit, and is chosen in a run | import: Mid TRUE, 0 warnings, price lengths kept TRUE | 37 dm log from 10 cm: mid 273.5 mm, top 250.4 mm (class 25), price volume 0.20898 (365 cm: 0.20898, cut 370 cm: 0.21185, Top: 0.20660) | run: 60 Mid logs
+  [PASS  ] Check 16: An imported Mid product maps to Mid without a warning, is priced on the mid diameter over the class lower limit, and is chosen in a run | import: Mid TRUE, 0 warnings, price lengths kept TRUE | 37 dm log from 10 cm: mid 273.5 mm, top 250.4 mm (class 25), price volume 0.20898 (365 cm: 0.20898, cut 370 cm: 0.21185, Top: 0.17917) | run: 60 Mid logs
+
+--- 17. The file's own volume method per product (0.3.1) ---
+  [PASS  ] Check 17: Top maps to Top cylinder, the other file methods keep their names; an unknown method gets the frustum (Top) with one warning per method | pine sawlog Top cylinder | spruce 140 Calculated Norwegian mid -> Top | spruce 154 All diameters (solid volume) -> Top | warnings about the unknown method: 1
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 16
+1   PASS 17
 
   Verdict: PASS 
 ============================================================= 

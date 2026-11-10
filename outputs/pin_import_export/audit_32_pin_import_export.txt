@@ -1,10 +1,10 @@
 ============================================================= 
   Audit: .pin import and export (Phase 5b)
-  Run: 2026-11-05 11:02:31.105532
+  Run: 2026-11-10 13:28:54.462923
 ============================================================= 
 
 --- 01. Both layouts import ---
-  [PASS  ] Check 01: Both layouts import (minimal and full): assortments, limits, lengths, volume methods and prices | minimal TRUE (6 rows, Pine Sawlog 310-430 cm, price 18/31 = 62) | full TRUE (4 rows, Spruce Sawlog Full min top 18, max top 60, max butt 70, method Top)
+  [PASS  ] Check 01: Both layouts import (minimal and full): assortments, limits, lengths, volume methods and prices | minimal TRUE (6 rows, Pine Sawlog 310-430 cm, price 18/31 = 62) | full TRUE (4 rows, Spruce Sawlog Full min top 18, max top 60, max butt 70, method Top cylinder)
 
 --- 02. Key fallbacks ---
   [PASS  ] Check 02: ProductUserID is the key; a missing or repeated one falls back to ProductName, a repeated name gets _2, _3 | normal PS1,PP1,SS1,SP1 | no ID: Pine Sawlog,PP1,SS1,SP1 | repeated ID: Pine Sawlog,Pine Pulpwood,SS1,SP1 | no IDs, three equal names: Pine Sawlog,Pine Pulpwood,Pine Sawlog_2,Pine Sawlog_3
@@ -22,7 +22,7 @@
   [PASS  ] Check 06: Permitted grades fill PermittedGrades; ReferenceGrades and HprProductKey stay NA for .pin products | grades 1;2;3;4;5;6;7 | 1;2 | reference NA TRUE, key NA TRUE | .hpr import keys set TRUE
 
 --- 07. Export -> import round trip ---
-  [PASS  ] Check 07: Export -> import reproduces assortments, classes and prices (Top cylinder is written as Top) | minimal: defs TRUE prices TRUE | full: defs TRUE prices TRUE | default scenario: defs TRUE prices TRUE 
+  [PASS  ] Check 07: Export -> import reproduces assortments, classes and prices (Top cylinder is written as Top and read back as Top cylinder, 0.3.1) | minimal: defs TRUE prices TRUE | full: defs TRUE prices TRUE | default scenario: defs TRUE prices TRUE 
 
 --- 08. The exported file ---
   [PASS  ] Check 08: The export has no waste rows, unique ProductUserIDs (the source's own), grades only when present, SpeciesGroupUserID, the source's metadata and a fixed header with the elements the schema requires | ids PULP_Pine,SAW_Spruce | header SenderApplication/CreationDate/ModificationDate/ApplicationVersionCreated/ApplicationVersionModified/CountryCode | grade blocks 2 (full) / 4 (minimal) | species SE1_Tall_SoundKnot/SE1_Gran_Sound | duplicates Same_name,Same_name_2
@@ -40,7 +40,7 @@
   [PASS  ] Check 12: An .hpr is still read by ProductKey and its assortments keep HprProductKey | 8 product keys, all numeric TRUE
 
 --- 13. Files under 512 bytes ---
-  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: filef4745716337c.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
+  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: file3e2851f26955.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

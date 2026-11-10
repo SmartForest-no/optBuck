@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bucking check (roadmap 8, tab 5)
-  Run: 2026-11-10 13:21:25.967481
+  Run: 2026-11-10 13:25:40.172448
 ============================================================= 
 
 --- 01. Reader ---
@@ -28,7 +28,7 @@
   [PASS  ] Check 08: manual cuts 7 of 14 logs (the multi-tree log is not counted), 1 of 4 sawlogs, 1 of 4 butt sawlogs; the yield index with and without manual cuts follows the stems | all 0.500 sawlogs 0.250 butt 0.250 | with 0.7620 without 1.0000
 
 --- 09. Only the products the harvester used ---
-  [PASS  ] Check 09: by default (no box) the best possible bucking uses only the products the harvester cut a log of; against all products of the file its value is lower (stem 3 no longer uses Kubb), the recorded value is the same, no unused product is in the best bucking | products 3 of 6 | best 517.4478 vs 586.9828 | yield 0.8570 vs 0.7555
+  [PASS  ] Check 09: by default (no box) the best possible bucking uses only the products the harvester cut a log of; against all products of the file its value is lower (stem 3 no longer uses Kubb), the recorded value is the same, no unused product is in the best bucking | products 3 of 6 | best 517.4478 vs 574.8363 | yield 0.8570 vs 0.7715
 
 --- 10. File without stem profiles ---
   [PASS  ] Check 10: a file with logs but no StemDiameters gives no best bucking (no_profile), only the recorded tables and manual-cut shares | no_profile TRUE | recorded products 4 | manual share 0.500

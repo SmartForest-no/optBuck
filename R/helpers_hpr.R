@@ -46,6 +46,13 @@ HPR_UNAVAILABLE <- c(HPR_FORBIDDEN, HPR_MANUAL)
 # StanForD volume categories optBuck computes (others become solid volume).
 HPR_VOLUME_METHODS <- c("Top", "Calculated Norwegian mid", "Mid", "All diameters (solid volume)")
 
+# The price volume method an imported product gets (0.3.1): the file's own method, per product.
+# StanForD "Top" is the cylinder at the top diameter (optBuck's "Top cylinder"); the other three
+# keep their names. A method that is not listed gets the frustum (optBuck's "Top") and one warning.
+HPR_VOLUME_METHOD_MAP <- c("Top" = "Top cylinder", "Calculated Norwegian mid" = "Calculated Norwegian mid",
+                           "Mid" = "Mid", "All diameters (solid volume)" = "All diameters (solid volume)")
+HPR_VOLUME_FALLBACK <- "Top"
+
 # Volume method of a .pin product without a PriceDefinition: the default of a
 # new assortment in the app (Phase 5b). Never read from a file, so it is not
 # in HPR_VOLUME_METHODS; hpr_to_scenario() accepts it without a warning.
@@ -722,7 +729,7 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, man
   }
   base <- if (is.null(base_defs)) defs_from_products(load_products()) else base_defs   # Waste rows
   ref <- hpr_reference_grades(hpr)      # per group: stored with each product (ReferenceGrades)
-  rows <- list(); pms <- list(); used_keys <- character(0)
+  rows <- list(); pms <- list(); used_keys <- character(0); warned_methods <- character(0)
   for (k in keep) {
     p <- hpr$products[[k]]
     if (is.null(p)) next
@@ -742,9 +749,15 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, man
       }
       pw <- grid$warnings; pinfo <- grid$info
       method <- p$volume_method
-      if (is.na(method) || !method %in% c(HPR_VOLUME_METHODS, PIN_DEFAULT_VOLUME_METHOD)) {
-        pw <- c(pw, sprintf("Volume method '%s' is not available; solid volume used.", method))
-        method <- "All diameters (solid volume)"
+      if (!is.na(method) && method %in% names(HPR_VOLUME_METHOD_MAP)) {
+        method <- unname(HPR_VOLUME_METHOD_MAP[method])
+      } else if (!identical(method, PIN_DEFAULT_VOLUME_METHOD)) {
+        shown <- if (is.na(method)) "(none)" else method
+        if (!shown %in% warned_methods) {                      # once per method, not per product
+          w <- c(w, sprintf("Volume method '%s' is not available; the frustum (Top, 1 cm/m taper) is used.", shown))
+          warned_methods <- c(warned_methods, shown)
+        }
+        method <- HPR_VOLUME_FALLBACK
       }
       if (method != "All diameters (solid volume)" && !is.na(p$volume_adjustment) &&
           !identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM))

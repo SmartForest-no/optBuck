@@ -10,41 +10,15 @@
 
 --- 16. tuning_matrix_view() ---
   [PASS  ] Check 16: tuning_matrix_view(): classes in rows and lengths (cm) in columns; target and outcome shares in whole percent (NA where there is no price); FG per class for the outcome views only; price change for the steered cells only | target 20,33,30,NA,50,67 | outcome 10,0,40,NA,50,100 | change -3,NA,NA,NA,4,NA
-
---- Setup: file5 products, grid and the original-price run of all stems ---
-
---- 3. tuning_target ---
-  [PASS  ] Check 3: neutral and long sum to 100 per class (NA where unavailable); real = 0/30/45/25 on 37/43/49/55 dm; long = 10/20/30/40 | grid 4 lengths x 13 classes; neutral/long TRUE, real TRUE, long weights TRUE
-
---- 4. apply_grid_prices round trip ---
-  [PASS  ] Check 4: tuning_grid(apply_grid_prices(P))$price == P; other products and unavailable cells untouched; the original grid reproduces pm | 92 optBuck rows of the product
-
---- 5. tune_prices determinism ---
-  [PASS  ] Check 5: tune_prices twice (real, n = 200, seed 1, max_iter 3) gives an identical trace and best_price | iterations 3, best iteration 3, FG 75.04 -> 83.44 -> 88.18
-
---- 6. iteration-1 value check ---
-  [PASS  ] Check 6: the product's value equals sum(V * P1) within 0.5 NOK (all stems); value_orig of iteration 1 equals the total value | result 900466.363 NOK, sum(V*P1) 900466.363 NOK, difference -0.000000; total value 1493115.5 NOK
-
---- 7. tally_grid holds every log ---
-  [PASS  ] Check 7: tally_grid counts and price volume equal the product's totals in selected_logs_all; a log outside the grid stops with the difference | 7598 logs, 1313.3846 m3; grid 7598, 1313.3846 m3 | error: tally_grid(spruce_140_sagt_mmer_gran): the grid does not hold all logs: counts 7597 of 7598 (difference 1), price volume 1313.182040 of 1313.384640 m3 (differenc
-
---- 8. hidden Distribution column ---
-  [PASS  ] Check 8: file5's price matrix has the hidden Distribution column; apply_grid_prices keeps it identical; swap_job_prices passes it to no run | column present TRUE (1572 non-NA cells), identical after apply TRUE, absent in the run's pm TRUE
-
---- 10. on_iter ---
-  [PASS  ] Check 10: on_iter is called exactly max_iter times (early_stop = FALSE) with (r, max_iter, fg) | 3 calls, FG 75.04 -> 83.44 -> 88.18
-
---- 11. tuning_products ---
-  [PASS  ] Check 11: tuning_products lists spruce 140 Sagtømmer gran sawlog with has_file_target TRUE and not spruce 154 Kubb | 9 tunable products: pine_289_stamblokk, pine_240_sagt_mmer_furu, pine_821_stolper_21, pine_246_eksport, spruce_146_sagt_mmer_gran, spruce_148_sm_t_mmer_gran, spruce_140_sagt_mmer_gran, spruce_140_t_mmer_gran, spruce_189_stamblokk
-
---- 13. swap_job_prices keeps the stem-grade options ---
-  [PASS  ] Check 13: swap_job_prices keeps the stem-grade options: sample results identical before and after swapping (grades on and off); tune_prices with grades on runs, iteration 1 equals a normal run with grades on | identical on TRUE, off TRUE | sample value grades on 130375, off 152197 NOK | tune iteration 1 20501.181 vs normal run 20501.181 | FG 87.08 -> 86.96 -> 86.96
-
---- 14. Single-product invariant ---
-  [PASS  ] Check 14: tune_prices() on one product (file5 spruce 140 Sagtømmer gran, n 200, max_iter 3) gives the same trace, best prices, FG and value as before the multi-product change | trace TRUE, best_price TRUE, best_iter TRUE, fg TRUE, value TRUE | FG 75.04 -> 83.44 -> 88.18
-
---- 15. Several products at once ---
-  [PASS  ] Check 15: Two products tuned together (file5 spruce 140 Sagtømmer gran with its file target, spruce 148 with an Even target; n 1000, max_iter 3): completes, one FG column per product plus the overall FG, both products' prices change, the overall FG lies between the products' FGs | FG overall 79.02 -> 84.67 -> 88.3 | per product 140 82>88.2>91.6; 148 33.3>31.2>38 | prices changed TRUE/TRUE | best iteration 3 | sample 1000 stems
+  [REVIEW] Check 3: targets on file5 spruce 140 Sagtømmer gran | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 4: apply_grid_prices round trip on file5 | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 5: tune_prices determinism on file5 | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 6: iteration-1 value check on file5 | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 7: tally_grid holds every log (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 8: hidden Distribution column kept by apply_grid_prices (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 10: tune_prices on_iter (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 11: tuning_products (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
+  [REVIEW] Check 13: swap_job_prices keeps the stem-grade options (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available
 
 --- 12. tuning_hpr_info against the file's own classes (file1, file3, file4, file5) ---
   [PASS  ] Check 12: tuning_hpr_info equals the file's classes (lengths, classes, cm_map, prices, Distribution, basis) and real targets for every tunable product (file1, 3, 4, 5) | 15 tunable products, 5 with a file target compared
@@ -54,10 +28,21 @@
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
-  result  n
-1   PASS 17
+  result n
+1   PASS 6
+2 REVIEW 9
 
-  Verdict: PASS 
+  Verdict: ACCEPTED WITH REVIEW 
 ============================================================= 
+
+  [REVIEW] Check 3: targets on file5 spruce 140 Sagtømmer gran | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 4: apply_grid_prices round trip on file5 | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 5: tune_prices determinism on file5 | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 6: iteration-1 value check on file5 | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 7: tally_grid holds every log (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 8: hidden Distribution column kept by apply_grid_prices (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 10: tune_prices on_iter (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 11: tuning_products (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
+  [REVIEW] Check 13: swap_job_prices keeps the stem-grade options (file5) | skipped: file5 (C:/optbuck_private/hpr/REDACTED28) is not available 
 
 Audit CSV: <repo>/outputs/price_tuning/audit_33_price_tuning.csv

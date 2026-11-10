@@ -264,7 +264,7 @@ exp_keys <- c(K_PINE_SAW, "pine_200_massevirke", "spruce_197_massevirke", "spruc
 ps <- row(K_PINE_SAW); spr <- row(K_SPR)
 ok5 <- isTRUE(r$ok) && setequal(keys, exp_keys) && length(K_SPR) == 1L &&
   ps$MinTopDiameter_cm == 14 && ps$MaxTopDiameter_cm == 50 && ps$MaxButtDiameter_cm == 60 &&
-  ps$DiameterTopPosition_cm == 10 && ps$VolumeDiameterCategory == "Top" && ps$Type == "sawlog" &&
+  ps$DiameterTopPosition_cm == 10 && ps$VolumeDiameterCategory == "Top cylinder" && ps$Type == "sawlog" &&
   spr$MinTopDiameter_cm == 14.2 && spr$VolumeDiameterCategory == "Calculated Norwegian mid" &&
   row("spruce_197_massevirke")$Type == "pulpwood" && row("spruce_154_kubb")$Type == "sawlog" &&
   all(d5$Type[d5$Name == "Waste"] == "waste") &&
@@ -341,18 +341,18 @@ pv <- list(treid = "t", plot_id = NA, species_group = "pine", DBH = 300, height_
            diameterPosition = seq(0L, 1800L, 10L), DiameterValue = 330 - seq(0, 1800, 10) * 0.15)
 cand <- generate_candidate_logs_one_tree(pv, p8$pd, p8$lc, stump_height_cm = 10L)
 c37 <- cand[cand$ProductKey == K_PINE_SAW & cand$LogLength == 370 & cand$eligible, ][1L, ]
-v365 <- price_volume_m3("Top", c37$TopDiameter, 365, adjustment = VOLUME_ROUND_DOWN_CM)
-v370 <- price_volume_m3("Top", c37$TopDiameter, 370, adjustment = VOLUME_ROUND_DOWN_CM)
+v365 <- price_volume_m3("Top cylinder", c37$TopDiameter, 365, adjustment = VOLUME_ROUND_DOWN_CM)
+v370 <- price_volume_m3("Top cylinder", c37$TopDiameter, 370, adjustment = VOLUME_ROUND_DOWN_CM)
 c41 <- cand[cand$ProductKey == K_PINE_SAW & cand$LogLength == 410 & cand$eligible, ][1L, ]
 pb <- products_from_defs(base_defs, pm_minimal(load_price_matrix_long(root_dir)))
 ok8 <- isTRUE(all.equal(c37$price_volume_m3, v365)) && !isTRUE(all.equal(v365, v370)) &&
-  isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))) &&
+  isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top cylinder", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))) &&
   identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SPR], p8$lc$LogLength[p8$lc$ProductKey == K_SPR]) &&
   identical(names(pb$lc), c("ProductKey", "LogLength", "LogLength_dm"))
 rec("Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged",
     ok(ok8), sprintf("37 dm log, top %.1f mm: price volume %.5f (365 cm: %.5f, 370 cm: %.5f) | 41 dm on 410 cm: %s | SPR on cut length: %s | base LengthClasses columns: %s",
                      c37$TopDiameter, c37$price_volume_m3, v365, v370,
-                     isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))),
+                     isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top cylinder", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))),
                      identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SPR], p8$lc$LogLength[p8$lc$ProductKey == K_SPR]),
                      paste(names(pb$lc), collapse = ",")))
 
@@ -443,7 +443,7 @@ if (ran) {
   forb_ok <- all(paste(mat$ProductKey, mat$LengthClass_dm, mat$PriceDiameterClass_cm_used) %in% priced)
   ps11 <- lg[lg$ProductKey == K_PINE_SAW, ]
   pv_ok <- nrow(ps11) > 0L && isTRUE(all.equal(ps11$price_volume_m3,
-    price_volume_m3("Top", ps11$TopDiameter_ub, price_lengths(row(K_PINE_SAW)$PriceLengths_cm, ps11$LogLength),
+    price_volume_m3("Top cylinder", ps11$TopDiameter_ub, price_lengths(row(K_PINE_SAW)$PriceLengths_cm, ps11$LogLength),
                     adjustment = VOLUME_ROUND_DOWN_CM)))
   # 100 Energi (grade 7 only) does not permit the reference grade: a stem without grade data
   # (a tree list) never gets it (2026-10-28).
@@ -475,8 +475,8 @@ if (is.list(cmp)) {
   a12 <- cmp$selected_logs_all; b12 <- cmp$scenario$selected_logs_all
   a12 <- a12[a12$ProductKey == K_PINE_SAW & a12$LogLength == 370, ]
   b12 <- b12[b12$ProductKey == K_PINE_SAW & b12$LogLength == 370, ]
-  top_a <- price_volume_m3("Top", a12$TopDiameter_ub, 365, adjustment = VOLUME_ROUND_DOWN_CM)
-  top_b <- price_volume_m3("Top", b12$TopDiameter_ub, 370, adjustment = VOLUME_ROUND_DOWN_CM)
+  top_a <- price_volume_m3("Top cylinder", a12$TopDiameter_ub, 365, adjustment = VOLUME_ROUND_DOWN_CM)
+  top_b <- price_volume_m3("Top cylinder", b12$TopDiameter_ub, 370, adjustment = VOLUME_ROUND_DOWN_CM)
   cmp_ok <- nrow(a12) > 0L && nrow(b12) > 0L && isTRUE(all.equal(a12$price_volume_m3, top_a)) &&
     isTRUE(all.equal(b12$price_volume_m3, top_b))
 }
@@ -604,7 +604,7 @@ h15 <- read_hpr(no_cells)
 r15 <- hpr_to_scenario(h15, sp_map, keep = c("7949", "8017", "8019"), base_defs = base_defs)
 w_skip <- any(grepl("154 Kubb not imported: no priced cells", r15$warnings, fixed = TRUE))
 w_drop <- any(grepl("301 cm dropped", r6$warnings, fixed = TRUE))
-w_meth <- any(grepl("solid volume used", w10$method, fixed = TRUE))
+w_meth <- any(grepl("the frustum (Top", w10$method, fixed = TRUE))
 ok15 <- length(r$warnings) == 0L && all(in_info) && !any(in_warn) && w_skip && w_drop && w_meth
 rec("Check 15: The import shows warnings only when something is lost or replaced",
     ok(ok15), sprintf("fixture import: %d warnings, info has %s | skipped product warned %s | dropped length class warned %s | replaced volume method warned %s",
@@ -654,6 +654,25 @@ rec("Check 16: An imported Mid product maps to Mid without a warning, is priced 
             if (is.list(res16)) sprintf("%d Mid logs", sum(res16$selected_logs_all$ProductKey == K_PINE_SAW))
             else paste("failed:", res16)))
 unlink(c(f11, f12, f16, f16pm))
+
+section("17. The file's own volume method per product (0.3.1)")
+# The file's Top is the cylinder at the top diameter (Top cylinder); the frustum is kept only as the
+# fallback for a method that is not known, with one warning per method (not per product).
+r17 <- hpr_to_scenario(h, sp_map, base_defs = base_defs)
+m17 <- setNames(r17$defs$VolumeDiameterCategory, assortment_table_keys(r17$defs))
+f17 <- variant(function(l) in_prod(in_prod(l, "8019", ">Calculated Norwegian mid<", ">Unsupported method<"),
+                                   "8017", ">All diameters (solid volume)<", ">Unsupported method<"))
+x17 <- read_hpr(f17); s17 <- hpr_to_scenario(x17, sp_map, base_defs = base_defs)
+m17b <- setNames(s17$defs$VolumeDiameterCategory, assortment_table_keys(s17$defs))
+w17 <- grep("Unsupported method", s17$warnings, value = TRUE)
+rec("Check 17: Top maps to Top cylinder, the other file methods keep their names; an unknown method gets the frustum (Top) with one warning per method",
+    ok(m17[[K_PINE_SAW]] == "Top cylinder" && m17[["spruce_140_sagt_mmer_gran"]] == "Calculated Norwegian mid" &&
+         m17[["spruce_154_kubb"]] == "All diameters (solid volume)" &&
+         m17b[["spruce_140_sagt_mmer_gran"]] == "Top" && m17b[["spruce_154_kubb"]] == "Top" && length(w17) == 1L &&
+         !any(grepl("^154 Kubb: Volume method", s17$warnings))),
+    sprintf("pine sawlog %s | spruce 140 %s -> %s | spruce 154 %s -> %s | warnings about the unknown method: %d",
+            m17[[K_PINE_SAW]], m17[["spruce_140_sagt_mmer_gran"]], m17b[["spruce_140_sagt_mmer_gran"]],
+            m17[["spruce_154_kubb"]], m17b[["spruce_154_kubb"]], length(w17)))
 
 
 # ==============================================================================

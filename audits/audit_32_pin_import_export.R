@@ -125,7 +125,7 @@ ok1a <- isTRUE(mini$s$ok) && identical(mini$h$kind, "pin") &&
   g_ps["18", "31"] == 62 && g_ps["25", "43"] == 72 && g_ps["32", "43"] == 74
 ok1b <- isTRUE(full$s$ok) && setequal(full$s$defs$Name[full$s$defs$Type != "waste"], names_full) &&
   r_ss$MinTopDiameter_cm == 18 && r_ss$MaxTopDiameter_cm == 60 && r_ss$MaxButtDiameter_cm == 70 &&
-  r_ss$VolumeDiameterCategory == "Top" &&
+  r_ss$VolumeDiameterCategory == "Top cylinder" &&
   row_of(full$s, "Pine Pulpwood Full")$VolumeDiameterCategory == "All diameters (solid volume)" &&
   row_of(full$s, "Pine Pulpwood Full")$DiameterTopPosition_cm == 10 &&
   g_pu["5", "33"] == 40 + 5 && g_pu["7", "36"] == 65 && g_ss["18", "31"] == 600 && g_ss["32", "43"] == 800
@@ -239,7 +239,6 @@ round_trip <- function(s) {
   b <- b[match(ka, kb), ]
   cols <- c("Name", "Species", "Type", "MinTopDiameter_cm", "MaxTopDiameter_cm", "MaxButtDiameter_cm",
             "MinLength_cm", "MaxLength_cm", "DiameterTopPosition_cm", "PermittedGrades")
-  a$VolumeDiameterCategory <- sub("^Top cylinder$", "Top", a$VolumeDiameterCategory)   # the documented difference
   eq_defs <- isTRUE(all.equal(a[, c(cols, "VolumeDiameterCategory")], b[, c(cols, "VolumeDiameterCategory")],
                               check.attributes = FALSE))
   # Matrix-priced assortments only: a flat price is written as a one-class matrix (documented).
@@ -251,7 +250,7 @@ round_trip <- function(s) {
 rt_mini <- round_trip(mini$s); rt_full <- round_trip(full$s)
 dflt <- list(defs = defs_from_products(load_products()), pm = pm_minimal(load_price_matrix_long(root_dir)))
 rt_dflt <- round_trip(dflt)
-rec("Check 07: Export -> import reproduces assortments, classes and prices (Top cylinder is written as Top)",
+rec("Check 07: Export -> import reproduces assortments, classes and prices (Top cylinder is written as Top and read back as Top cylinder, 0.3.1)",
     ok(rt_mini$ok && rt_full$ok && rt_dflt$ok),
     sprintf("minimal: defs %s prices %s | full: defs %s prices %s | default scenario: defs %s prices %s %s",
             rt_mini$defs, rt_mini$prices, rt_full$defs, rt_full$prices, rt_dflt$defs, rt_dflt$prices,
