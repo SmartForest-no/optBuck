@@ -1,6 +1,6 @@
 Package: optBuck
 Title: Bucking Simulator and Bucking Analysis for Harvester Files
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
     person("Lennart", "Noordermeer", email = "lennart.noordermeer@nibio.no",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0000-0000-0000")),
