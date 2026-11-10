@@ -19,36 +19,39 @@ BugReports: https://github.com/SmartForest-no/optBuck/issues
 Depends: R (>= 4.1)
 Imports:
     arrow,
+    bslib,
     dplyr,
+    fieldPlot,
     future,
+    ggplot2,
+    graphics,
+    grDevices,
+    grid,
+    gridExtra,
+    htmltools,
+    jsonlite,
+    later,
     parallel,
+    promises,
+    ragg,
+    reactable,
     readr,
     readxl,
+    rhandsontable,
+    shiny,
     stats,
+    systemfonts,
+    taperNOR,
     tools,
     utils,
     writexl,
     xml2
 Suggests:
-    bslib,
     chromote,
-    fieldPlot,
-    ggplot2,
-    gridExtra,
-    htmltools,
-    jsonlite,
-    later,
     pdftools,
     pkgload,
     processx,
-    promises,
-    ragg,
-    reactable,
-    rhandsontable,
-    shiny,
     shinytest2,
-    systemfonts,
-    taperNOR,
     testthat (>= 3.0.0),
     zip
 Remotes:
@@ -60,6 +63,7 @@ Language: en-GB
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Collate:
+    'app_stack.R'
     'helpers_utils.R'
     'helpers_paths.R'
     'helpers_i18n.R'

@@ -37,10 +37,6 @@
 #' }
 #' @export
 run_app <- function(launch.browser = TRUE, ...) {
-  need <- c("shiny", "bslib", "reactable", "rhandsontable", "ggplot2", "promises", "later", "htmltools", "jsonlite")
-  missing <- need[!vapply(need, requireNamespace, NA, quietly = TRUE)]
-  if (length(missing))
-    stop("run_app() needs these packages: ", paste(missing, collapse = ", "), ". Install them with install.packages().", call. = FALSE)
   shiny::runApp(app_dir(), launch.browser = launch.browser, ...)
 }
 

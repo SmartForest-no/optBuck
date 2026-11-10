@@ -12,11 +12,11 @@ install.packages("remotes")
 remotes::install_github("SmartForest-no/optBuck", upgrade = "never")
 ```
 
-This installs the default dependencies only (no `Suggests`). `run_app()` names any package of the app
-stack that is missing; install those with `install.packages()`. Adding `dependencies = TRUE` also
-installs the audit-only packages (shinytest2, chromote, pdftools, ...) and the GitHub-only packages in
-DESCRIPTION's Remotes (taperNOR: Norwegian taper and bark models; fieldPlot: tree-list heights). On old R
-versions without CRAN binaries, upgrades build from source, which is why `upgrade = "never"` is used.
+This installs everything `run_app()` needs: the app stack (shiny, bslib, reactable, ggplot2, ...) and the
+GitHub-only packages in DESCRIPTION's Remotes (taperNOR: Norwegian taper and bark models; fieldPlot:
+tree-list heights) are hard dependencies since 0.3.1. Only the audit-only packages (shinytest2, chromote,
+pdftools, ...) stay optional (`dependencies = TRUE` installs them too). On old R versions without CRAN
+binaries, upgrades build from source, which is why `upgrade = "never"` is used.
 
 ## Use
 
