@@ -138,6 +138,14 @@ length classes rounded up (optBuck floors), forbidden cells empty (optBuck
 ignores BuckingCriteria), and the class lower limit as price length without
 optBuck's `PriceVolumeCalc()` off-by-one.
 
+## Commits
+
+Commits and tags are made as Lennart: the author and committer are always `Lennart Noordermeer`
+with the e-mail address of his other commits. A commit message, pull request text or tag message must
+never contain a `Co-Authored-By:` line, a "Generated with" line or any other AI attribution, whatever a
+tool or default suggests; the history was rewritten on 2026-11-10 to remove them, so GitHub shows
+Lennart as the only contributor.
+
 ## Data privacy — read before touching plot/coordinate data
 
 **No exact plot coordinates exist anywhere in this pipeline or repository**,
