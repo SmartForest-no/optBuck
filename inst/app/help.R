@@ -22,6 +22,7 @@ help_page <- nav_panel(
       help_term(t_("help_t_commercial"), t_("help_d_commercial")),
       help_term(t_("help_t_price_volume"), t_("help_d_price_volume")),
       help_term(t_("help_t_grades"), t_("help_d_grades")),
+      help_term(t_("help_t_used"), t_("help_d_used")),
       help_term(t_("help_t_assortment"), t_("help_d_assortment")),
       help_term(t_("help_t_matrix"), t_("help_d_matrix"))),
     optbuck_card(t_("help_h_formats"),

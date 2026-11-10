@@ -145,6 +145,27 @@ hpr_rec_prices <- function(h, defs) {
 # Share (0-1) helper that returns NA for an empty denominator.
 .share <- function(a, b) if (is.finite(b) && b > 0) a / b else NA_real_
 
+# A product counts as "used" in the bucking check when it has at least this share of the recorded
+# (non-waste) logs of a species (0.3.1; was: at least one log).
+CHECK_USED_MIN_SHARE <- 0.01
+
+# The ProductKeys the harvester used in a file: for each species, the products with at least
+# `min_share` of that species' recorded non-waste logs; a product used for any species counts.
+#
+# @param logs       Recorded logs (read_hpr_logs()$logs: waste, ProductKey, species_key).
+# @param species_map Named character: species group key -> "spruce", "pine" or "none".
+# @param min_share  Smallest share (0-1) of a species' logs.
+# @return Character vector of ProductKeys.
+check_used_products <- function(logs, species_map, min_share = CHECK_USED_MIN_SHARE) {
+  lg <- logs[!logs$waste, , drop = FALSE]
+  if (nrow(lg) == 0L) return(character(0))
+  sp <- unname(species_map[as.character(lg$species_key)])
+  sp[is.na(sp)] <- "none"
+  tab <- unclass(table(species = sp, key = as.character(lg$ProductKey)))
+  share <- tab / pmax(rowSums(tab), 1)
+  colnames(share)[colSums(share >= min_share - 1e-12) > 0L]
+}
+
 # The bucking check of one .hpr file.
 #
 # @param path        .hpr (or .hpr.gz / .zip with an .hpr).
@@ -152,7 +173,7 @@ hpr_rec_prices <- function(h, defs) {
 # @param filename    Name for messages.
 # @param reject_zones TRUE: recorded waste logs are defect zones (the decision of 2026-11-04).
 # @param used_only  TRUE (default; the tab has no box): the best possible bucking may use only the products
-#   the harvester cut at least one log of in this file; FALSE: every product of the file's instruction.
+#   the harvester used (check_used_products(): at least 1 % of a species' recorded logs); FALSE: every product of the file's instruction.
 # @param manual_ok  TRUE (default): the best possible bucking may also use cells marked "Only logs bucked
 #   manually allowed" (with the file's price): the operator was allowed to cut them. FALSE: as the simulator.
 # @param stage       "all" (default: prepare, buck, finish in this process); "prepare" returns a `check_prep`
@@ -175,7 +196,7 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   h <- read_hpr(path, filename); if (!isTRUE(h$ok)) return(fail(h$errors, h$warnings))
   smap <- if (is.null(species_map)) setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key) else species_map
   rl <- read_hpr_logs(path, filename, defs = h); if (!isTRUE(rl$ok)) return(fail(rl$errors))
-  keep <- if (used_only) unique(rl$logs$ProductKey[!rl$logs$waste]) else NULL
+  keep <- if (used_only) check_used_products(rl$logs, smap) else NULL
   sc <- hpr_to_scenario(h, smap, keep = keep, manual_ok = manual_ok); if (!isTRUE(sc$ok)) return(fail(sc$errors, sc$warnings))
   pm <- pm_minimal(sc$pm); defs <- sc$defs; pr <- products_from_defs(defs, pm); pd <- pr$pd
   lg <- rl$logs

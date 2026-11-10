@@ -17,7 +17,7 @@ bucking_check(path, species_map = NULL, filename = basename(path), reject_zones 
 
 \item{reject_zones}{Treat recorded waste logs as defect zones.}
 
-\item{used_only}{Use only the products the harvester cut a log of.}
+\item{used_only}{Use only the products the harvester used (at least 1 \% of a species' recorded logs).}
 
 \item{manual_ok}{Let the best bucking use cells marked "Only logs bucked manually allowed".}
 
@@ -35,7 +35,7 @@ file cannot be checked.
 \description{
 For each stem of an .hpr file the recorded logs are valued like candidates of the optimiser (same
 price volume, class and price) and compared with the best possible bucking under the file's own
-instruction: only the products with at least one recorded log are used, recorded waste logs are
+instruction: only the products with at least 1 \% of a species' recorded logs are used, recorded waste logs are
 defect zones, cells marked "Only logs bucked manually allowed" may be used with the file's price,
 and stems whose recorded logs cover less than half of the measured stem are left out. The bucking
 yield index (apteringsgrad) is the recorded value divided by the best possible value.

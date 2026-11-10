@@ -192,7 +192,7 @@ buck_stem <- function(dbh_cm, height_m, species = "spruce", workers = 1L) {
 #'
 #' For each stem of an .hpr file the recorded logs are valued like candidates of the optimiser (same
 #' price volume, class and price) and compared with the best possible bucking under the file's own
-#' instruction: only the products with at least one recorded log are used, recorded waste logs are
+#' instruction: only the products with at least 1 % of a species' recorded logs are used, recorded waste logs are
 #' defect zones, cells marked "Only logs bucked manually allowed" may be used with the file's price,
 #' and stems whose recorded logs cover less than half of the measured stem are left out. The bucking
 #' yield index (apteringsgrad) is the recorded value divided by the best possible value.
@@ -202,7 +202,7 @@ buck_stem <- function(dbh_cm, height_m, species = "spruce", workers = 1L) {
 #' @param species_map Named character: species group key -> "spruce", "pine" or "none"; default: guessed.
 #' @param filename Name for messages.
 #' @param reject_zones Treat recorded waste logs as defect zones.
-#' @param used_only Use only the products the harvester cut a log of.
+#' @param used_only Use only the products the harvester used (at least 1 % of a species' recorded logs).
 #' @param manual_ok Let the best bucking use cells marked "Only logs bucked manually allowed".
 #' @param progress `NULL` or a function called with "read", "opt", "val" and "tab".
 #' @param root Package root (default: found automatically).
