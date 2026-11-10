@@ -36,3 +36,17 @@ test_that("a product counts as used with at least 1 % of a species' recorded log
   expect_equal(CHECK_USED_MIN_SHARE, 0.01)
   expect_length(check_used_products(lg[0, ], smap), 0L)
 })
+
+test_that("recorded logs of a product below the used threshold are still valued", {
+  f <- fixture("hpr_check_synthetic.hpr")
+  a <- bucking_check(f, used_only = TRUE)
+  expect_true(a$ok)
+  rec <- a$logs$recorded
+  expect_false(any(rec$unknown_product))                   # every recorded product has a price
+  # a high threshold drops products from the optimiser only: the recorded value stays the same
+  op <- options(optbuck.check_used_min_share = 0.7); on.exit(options(op))   # only the pine product stays
+  b <- bucking_check(f, used_only = TRUE)
+  expect_lt(length(unique(b$logs$optimal$ProductKey)), length(unique(a$logs$optimal$ProductKey)))
+  expect_equal(sum(b$logs$recorded$value_nok), sum(rec$value_nok))
+  expect_false(any(b$logs$recorded$unknown_product))
+})

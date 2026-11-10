@@ -156,7 +156,8 @@ CHECK_USED_MIN_SHARE <- 0.01
 # @param species_map Named character: species group key -> "spruce", "pine" or "none".
 # @param min_share  Smallest share (0-1) of a species' logs.
 # @return Character vector of ProductKeys.
-check_used_products <- function(logs, species_map, min_share = CHECK_USED_MIN_SHARE) {
+check_used_products <- function(logs, species_map,
+                                min_share = getOption("optbuck.check_used_min_share", CHECK_USED_MIN_SHARE)) {
   lg <- logs[!logs$waste, , drop = FALSE]
   if (nrow(lg) == 0L) return(character(0))
   sp <- unname(species_map[as.character(lg$species_key)])
@@ -196,9 +197,13 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   h <- read_hpr(path, filename); if (!isTRUE(h$ok)) return(fail(h$errors, h$warnings))
   smap <- if (is.null(species_map)) setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key) else species_map
   rl <- read_hpr_logs(path, filename, defs = h); if (!isTRUE(rl$ok)) return(fail(rl$errors))
-  keep <- if (used_only) check_used_products(rl$logs, smap) else NULL
+  # Every product with a recorded log is in the scenario, so each recorded log is valued; the best possible
+  # bucking may use only the products the harvester used (check_used_products(): >= 1 % of a species' logs).
+  keep <- if (used_only) unique(rl$logs$ProductKey[!rl$logs$waste]) else NULL
   sc <- hpr_to_scenario(h, smap, keep = keep, manual_ok = manual_ok); if (!isTRUE(sc$ok)) return(fail(sc$errors, sc$warnings))
   pm <- pm_minimal(sc$pm); defs <- sc$defs; pr <- products_from_defs(defs, pm); pd <- pr$pd
+  used <- if (used_only) check_used_products(rl$logs, smap) else NULL
+  drop_unused <- !is.null(used) && any(!is.na(defs$HprProductKey) & !defs$HprProductKey %in% used)
   lg <- rl$logs
   warnings <- c(h$warnings, sc$warnings, rl$warnings); info <- c(sc$info, rl$info)
   akeys <- assortment_table_keys(defs)
@@ -253,10 +258,19 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   }
   reject <- if (reject_zones) { w <- lg[lg$waste, , drop = FALSE]
     data.frame(stem_key = w$stem_key, start = w$StartPos, length = w$LogLength, stringsAsFactors = FALSE) }
-  price_path <- tempfile(fileext = ".csv"); pm_export(pm, price_path); on.exit(unlink(price_path), add = TRUE)
+  # The products the best possible bucking may use (waste rows always).
+  pm_o <- pm; pr_o <- pr
+  if (drop_unused) {
+    defs_o <- defs[is.na(defs$HprProductKey) | defs$HprProductKey %in% used, , drop = FALSE]
+    pm_o <- pm[pm$ProductKey %in% assortment_table_keys(defs_o), , drop = FALSE]
+    pr_o <- products_from_defs(defs_o, pm_o)
+  }
+  price_path <- tempfile(fileext = ".csv"); pm_export(pm_o, price_path); on.exit(unlink(price_path), add = TRUE)
   opts <- list(use_grades = TRUE, cut_at_changes = FALSE, reject_zones = reject_zones)
-  job <- prepare_hpr_stems_job(st, smap, price_matrix_path = price_path, root = root, products = pd,
-                               length_classes = pr$lc, grade_opts = opts, reject = reject)
+  job <- prepare_hpr_stems_job(st, smap, price_matrix_path = price_path, root = root, products = pr_o$pd,
+                               length_classes = pr_o$lc, grade_opts = opts, reject = reject)
+  # The recorded logs are valued with all the file's products (same profiles, other runs).
+  job_rec <- if (drop_unused) swap_job_prices(job, list(pd = pr$pd, lc = pr$lc, pm = pm), root = root) else job
   if (identical(stage, "prepare")) return(structure(as.list(environment()), class = "check_prep"))
   }
   prog("opt")
@@ -265,14 +279,15 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   prog("val")
   in_job <- names(job$pvs)
   lgj <- lg[lg$stem_key %in% in_job, , drop = FALSE]
-  vr <- value_recorded_logs(job, lgj, prodmap, hpr_products = h$products, rec_prices = hpr_rec_prices(h, defs))
+  vr <- value_recorded_logs(job_rec, lgj, prodmap, hpr_products = h$products, rec_prices = hpr_rec_prices(h, defs))
   rec <- cbind(lgj, vr)
   rec$species_group <- vapply(rec$stem_key, function(k) job$pvs[[k]]$species_group, "")
   prog("tab")
 
   # ---- stem table, exclusions, flags ------------------------------------------------------------------
-  min_saw_top <- vapply(split(seq_len(nrow(pd)), pd$species_group), function(i) {
-    d <- pd[i, , drop = FALSE]; d <- d[d$ProductType %in% "sawlog", , drop = FALSE]
+  pd_o <- pr_o$pd                                  # the products the best possible bucking uses
+  min_saw_top <- vapply(split(seq_len(nrow(pd_o)), pd_o$species_group), function(i) {
+    d <- pd_o[i, , drop = FALSE]; d <- d[d$ProductType %in% "sawlog", , drop = FALSE]
     if (nrow(d)) min(d$MinTopDiameter) else NA_real_ }, 0)
   sk <- in_job
   stems <- data.frame(StemKey = sk, species_group = vapply(sk, function(k) job$pvs[[k]]$species_group, ""),
