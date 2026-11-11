@@ -1,3 +1,26 @@
+# optBuck 0.3.3
+
+Fixes after testing 0.3.2.
+
+* **Flat price keeps the product structure.** «Fast pris» on an assortment with a price matrix puts the same price in every priced
+  cell of the existing matrix; length classes, diameter classes, empty cells and the demand matrix stay (the .pin export used to get
+  length classes every 10 cm and an all-zero demand matrix). A run with B = A with only the price type changed differs only through the price.
+* **Products without a demand matrix:** the .pin and .hpr exports write Distribution 0 and DistributionAllowed false (never true with an
+  all-zero matrix; one warning if a product had it). Tab 2 shows «Ingen fordelingsmatrise» / "No demand matrix" instead of a table of zeros,
+  and the scenario xlsx has no `target_<n>` sheet for such products. Existing demand matrices round-trip through xlsx and .pin.
+* **Price volume rounding follows each product's `VolumeDiameterAdjustment`** ("Measured diameter in mm" = not rounded, "... rounded
+  downwards to cm" = whole cm), read from the .hpr/.pin, kept in the scenario xlsx and written on export. Calculated Norwegian mid always
+  floors and solid volume never rounds. Results of products the file prices on unrounded mm change (price volume 6-8 % higher on `Top`).
+* **Downloads:** «Last ned som .hpr» is in tab 2 next to xlsx and .pin (it bucks the stems of tab 1 with the scenario and copies them with
+  the simulated logs; greyed out without .hpr stems in tab 1). The .hpr button in tab 3 is gone. The .hpr export no longer scans its own
+  output for coordinates (the known coordinate blocks are still removed).
+* **Price tuning, matrices:** two new views, «Opprinnelige priser» and «Tilpassede priser» (kr/m³); diameter classes that were not tuned
+  (too few logs, no demand matrix) are greyed with a note.
+* **Tab 3:** «A og B er like. Endre scenario B for å sammenligne.» when the scenarios are identical.
+* **Keys:** æ, ø, å are transliterated (ae, o, a) in assortment keys and sheet names (`spruce_140_sagtommer_gran`, was `sagt_mmer`). Scenario
+  files and price uploads with the old keys still load.
+* The cleaning thresholds for .hpr stems are described as optBuck's own defaults.
+
 # optBuck 0.3.2
 
 Fixes after testing 0.3.1.
