@@ -249,7 +249,7 @@
 "asm_add_title","ui","Add assortment to Scenario %s","Legg til sortiment i scenario %s",""
 "asm_edit_title","ui","Edit %s – %s (Scenario %s)","Rediger %s – %s (scenario %s)",""
 "pricing_matrix","ui","Price matrix","Prismatrise",""
-"pricing_flat","ui","Flat price","Fast pris",""
+"pricing_flat","ui","Flat price (same price in every cell)","Fast pris (samme pris i alle celler)",""
 "lbl_min_top","ui","Min top diameter (cm)","Minste toppdiameter (cm)",""
 "lbl_max_top","ui","Max top diameter (cm; empty = no limit)","Største toppdiameter (cm; tom = ingen grense)",""
 "lbl_dtp","ui","Top diameter read (cm below the cut)","Toppdiameter målt (cm under kappet)",""

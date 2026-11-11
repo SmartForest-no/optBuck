@@ -345,7 +345,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       # Lengths: a flat price uses min..max in 10 cm steps; a matrix's
       # lengths are its columns (set here only for a new matrix: every 30 cm).
       conditionalPanel(
-        if (new || !identical(d$PriceType, "matrix")) "true" else "input.asm_price_type == 'flat'",
+        if (new || !identical(d$PriceType, "matrix")) "true" else "false",
         layout_columns(col_widths = c(4, 4, 4),
           numericInput("asm_min_len", M("lbl_min_len"), v("MinLength_cm", 310), min = 10, step = 10),
           numericInput("asm_max_len", M("lbl_max_len"), v("MaxLength_cm", 550), min = 10, step = 10),
@@ -400,6 +400,12 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       stringsAsFactors = FALSE))
     rows$HprProductKey <- if (is.null(old_row)) NA_character_ else old_row$HprProductKey   # hidden; kept on edits
     rows$TypeUser <- if (is.null(old_row)) FALSE else old_row$TypeUser
+    # A flat price on a matrix assortment keeps its structure (lengths, diameter
+    # classes, demand matrix) and puts the price in every cell (2026-11-11).
+    fill_price <- NULL
+    if (!is.null(old_row) && identical(old_row$PriceType, "matrix") && identical(ptype, "flat")) {
+      fill_price <- num(input$asm_price); ptype <- "matrix"; rows$PriceType <- "matrix"
+    }
     same_pricing <- !is.null(old_row) && identical(old_row$PriceType, ptype)
     if (same_pricing && ptype == "matrix") {   # lengths stay the matrix columns
       rows$MinLength_cm <- old_row$MinLength_cm; rows$MaxLength_cm <- old_row$MaxLength_cm
@@ -411,6 +417,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     for (n in c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS))   # hidden fields (Phase 7a, R4 D6); kept on edits
       rows[[n]] <- if (!is.null(old_row)) old_row[[n]] else rows[[n]][NA_integer_]
     errs <- list(); start <- NULL
+    if (!is.null(fill_price) && (is.na(fill_price) || fill_price < 0)) errs <- c(errs, list(T_("err_start_price")))
     if (!same_pricing) {
       price <- num(input$asm_price)
       if (is.na(price) || price < 0) errs <- c(errs, list(T_("err_start_price")))
@@ -423,7 +430,8 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
           pm_start_prices(k, ptype, price, max(1, floor(rows$MinTopDiameter_cm[1])), hi, lens))),
           error = function(e) { errs <<- c(errs, list(conditionMessage(e))); NULL })
     }
-    list(rows = rows, ptype = ptype, same_pricing = same_pricing, start = start, errors = errs)
+    list(rows = rows, ptype = ptype, same_pricing = same_pricing, start = start, errors = errs,
+         fill_price = fill_price)
   }
 
   observeEvent(input$asm_save, {
@@ -445,6 +453,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
       i <- match(old, k); d2 <- d; d2[i, ] <- f$rows
       pm2 <- if (f$same_pricing) pm_rename_key(swap_prices(pm, setdiff(new_keys, old)), old, new_keys)
              else swap_prices(pm, c(old, new_keys), f$start)
+      if (!is.null(f$fill_price)) pm2 <- pm_fill_price(pm2, new_keys, f$fill_price)
     }
     err <- function(e) asm_form_err(e)
     v <- check_price_set(d2, pm2)

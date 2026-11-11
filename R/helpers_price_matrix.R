@@ -403,6 +403,17 @@ pm_start_prices <- function(key, price_type, price, class_lo = NA, class_hi = NA
                         PriceNOKperM3 = price, stringsAsFactors = FALSE))
 }
 
+# The same price in every priced cell of the products `keys` ("flat price" on
+# a matrix assortment, 2026-11-11): length classes, diameter classes, empty
+# (forbidden) cells and the hidden Distribution / file-class columns stay as
+# they are; only PriceNOKperM3 changes.
+pm_fill_price <- function(pm, keys, price) {
+  pm <- pm_minimal(pm)
+  hit <- pm$ProductKey %in% keys & !is.na(pm$PriceNOKperM3)
+  pm$PriceNOKperM3[hit] <- price
+  pm
+}
+
 # Give product `from`'s prices to `to` (an assortment renamed or moved to
 # another species).
 pm_rename_key <- function(pm, from, to) {
