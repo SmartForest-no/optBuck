@@ -1101,9 +1101,9 @@ if (!browser_ok) {
       !is.null(csv14) && identical(nrow(csv14), n_logs) && identical(unique(csv14$Scenario), "A") &&
       all(c("Scenario", "Plot", "StartPos", "StopPos") %in% names(csv14))
     rec(browser_checks[10], if (ok14) PASS else FAIL,
-        sprintf("label: '%s' | preview rows: %s | sorting/paging controls: %s | logs in run: %s | CSV rows %s, scenarios %s | headers: %s%s",
+        sprintf("label: '%s' | preview rows: %s | sorting/paging controls: %s | logs in run: %s | CSV rows %s, scenarios %s | headers: %s | note: %s | hpr btn: %s%s",
                 trimws(note14), n_rows14, ctrl14, n_logs, if (is.null(csv14)) NA else nrow(csv14),
-                if (is.null(csv14)) "" else paste(unique(csv14$Scenario), collapse = "/"), hdr14, err_txt(e14)))
+                if (is.null(csv14)) "" else paste(unique(csv14$Scenario), collapse = "/"), hdr14, trimws(txt(app, "#same_ab_note")), js(app, "(document.getElementById('dl_hpr_a')||{className:'none'}).className"), err_txt(e14)))
     # 15. Trees and Products tabs after a single run (results restructure,
     # 2026-10-23): figures, the paged trees table (all trees), a row click
     # draws the cutting pattern (A only), the CSVs; Products: the merged
@@ -2186,7 +2186,7 @@ if (!browser_ok) {
       c46$allowed <- x46$defs$DistributionAllowed[match(key46, assortment_table_keys(x46$defs))]
       c46$prices_same <- identical(pm_prices(pmx), pm_prices(pm_minimal(scen_of(app, "a")$pm)))
       app$click("dt_a_clear"); app$wait_for_idle(); Sys.sleep(1)
-      c46$cleared <- cell(0, nc - 1L)
+      c46$cleared <- trimws(txt(app, "#dt_a_none"))   # 2026-11-11: no table of zeros, a note
       c46$nerr <- n_err_notif(app)
       app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
     })
@@ -2199,7 +2199,7 @@ if (!browser_ok) {
       isTRUE(c46$ck_on) && isTRUE(c46$dev_vis_on) && !isTRUE(c46$dev_vis_off) && identical(c46$allowed_off, FALSE) &&
       isTRUE(c46$dev_vis_back) && isTRUE(c46$allowed) && isTRUE(c46$maxdev == 7.5) &&
       grepl("<MAXDeviation>7\\.5</MAXDeviation>", c46$pin) &&
-      grepl("^0(\\.00)?$", c46$cleared) && identical(c46$nerr, 0L)
+      identical(c46$cleared, "No demand matrix") && identical(c46$nerr, 0L)
     rec(grep("^Check 46:", browser_checks, value = TRUE), if (ok46) PASS else FAIL,
         sprintf("buttons '%s', price controls hidden %s | Even: sum '%s' (bold %s) | after editing a cell to 20: '%s', rows with 20 in that column %s, sum '%s' (bold %s) | .pin has <Distribution>20 %s | xlsx: %s cells = 20, category '%s' | after Clear: sum '%s' | apportionment checkbox ticked %s, loss field visible %s / hidden when unticked %s / back %s, allowed after unticking %s, xlsx allowed %s maxdev %s | error notifications %s%s",
                 c46$buttons, c46$bulk_hidden, c46$sum_even, c46$bold_even, c46$edited, c46$n_same, c46$sum_after, c46$bold_after,
@@ -2364,8 +2364,8 @@ if (!browser_ok) {
         app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
         pick(app, "a", "spruce_sawlog"); app$wait_for_idle()
         app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
+        app$click("dt_a_even"); app$wait_for_idle()      # 2026-11-11: without a demand matrix the view shows a note, no table, until Even
         app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)
-        app$click("dt_a_even"); app$wait_for_idle()
         app$set_inputs(pm_a_view = "prices", wait_ = FALSE); app$wait_for_idle()
         app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
         app$wait_for_js("!!document.getElementById('tn_run')", timeout = 30 * 1000)
@@ -2533,9 +2533,9 @@ if (!browser_ok) {
         grepl("prøveflater .* graner", or_default(c35$counts, "")) && grepl("Beregnet kjøretid", or_default(c35$counts, ""))
       rec(browser_checks[31], if (ok35) PASS else FAIL,
           sprintf("grid cell '%s', '430,5' typed -> %s, slider '%s' | English left: prices tab %s, simulator %s | species '%s', county '%s' | counts '%s'%s",
-                  c35$cell, paste(c35$typed, collapse = ","), c35$slider,
-                  shorten_txt(c35$left_prices), shorten_txt(c35$left_sim), c35$species, c35$county,
-                  substr(gsub("\\s+", " ", or_default(c35$counts, "")), 1, 90), err_txt(e35)))
+                  or_default(c35$cell, "NULL"), paste(c35$typed, collapse = ","), or_default(c35$slider, "NULL"),
+                  paste(shorten_txt(c35$left_prices), collapse = ""), paste(shorten_txt(c35$left_sim), collapse = ""), or_default(c35$species, "NULL"), or_default(c35$county, "NULL"),
+                  paste(substr(gsub("\\s+", " ", or_default(c35$counts, "")), 1, 90), collapse = ""), err_txt(e35)))
 
       # 36. Dialogs and messages in Norsk.
       c36 <- list()

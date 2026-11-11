@@ -591,8 +591,8 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   # source file(s) with the simulated logs (R/helpers_hpr_export.R). Greyed out when tab 1 has no .hpr stems.
   for (side in c("A", "B")) local({
     side <- side; s <- low(side)
-    observe(session$sendCustomMessage("optbuck-disable",
-                                      list(id = paste0("dl_hpr_", s), disabled = is.null(hpr_ctx()))))
+    observe({ input$main_nav; session$sendCustomMessage("optbuck-disable",
+                                      list(id = paste0("dl_hpr_", s), disabled = is.null(hpr_ctx()))) })
     output[[paste0("dl_hpr_", s)]] <- downloadHandler(
       filename = function() L("file_hpr", side),
       content  = function(file) {
@@ -618,9 +618,9 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
           showNotification(paste(tr_msg(x$warnings, l), collapse = " "), type = "warning", duration = 15)
         parts <- if (length(x$per_file) > 1L)
           paste(vapply(seq_along(x$per_file), function(i)
-            L("hpr_export_file_part", fmt_int(i), fmt_int(x$per_file[i])), ""), collapse = ", ")
-        showNotification(if (is.null(parts)) L("hpr_export_done", fmt_int(x$n_stems))
-                         else L("hpr_export_done_files", fmt_int(x$n_stems), parts), duration = 10)
+            L("hpr_export_file_part", fmt_num(i, 0L, l), fmt_num(x$per_file[i], 0L, l)), ""), collapse = ", ")
+        showNotification(if (is.null(parts)) L("hpr_export_done", fmt_num(x$n_stems, 0L, l))
+                         else L("hpr_export_done_files", fmt_num(x$n_stems, 0L, l), parts), duration = 10)
       })
   })
 
