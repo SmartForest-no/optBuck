@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: import from .hpr (Phase A)
-  Run: 2026-11-10 13:28:54.475298
+  Run: 2026-11-11 12:47:43.227152
 ============================================================= 
 
 --- 01. Reading ---
@@ -25,7 +25,7 @@
   [PASS  ] Check 07: Forbidden cells empty, all other cells the file's price; whole-cm rows | 240 Sagtømmer furu rows 14-36 cm (no 13), 46 empty cells, 0 cells wrong | 20 cm @37 dm = 584 (190 mm), 21 cm = 575 (207 mm) | SPR first row 14 cm = 650 (142 mm)
 
 --- 08. Price length ---
-  [PASS  ] Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged | 37 dm log, top 250.4 mm: price volume 0.17917 (365 cm: 0.17917, 370 cm: 0.18162) | 41 dm on 410 cm: TRUE | SPR on cut length: TRUE | base LengthClasses columns: ProductKey,LogLength,LogLength_dm
+  [PASS  ] Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged | 37 dm log, top 250.4 mm: price volume 0.17977 (365 cm: 0.17974, 370 cm: 0.18220) | 41 dm on 410 cm: TRUE | SPR on cut length: TRUE | base LengthClasses columns: ProductKey,LogLength,LogLength_dm
 
 --- 09. Errors ---
   [PASS  ] Check 09: File errors are reported and block the import | not_xml: ok | root: ok | message: ok | unit: ok | machine: ok | dup_key: ok | no_groups: ok | no_prods: ok | no_species: ok
@@ -46,10 +46,10 @@
   [PASS  ] Check 14: Only the part before the first stem is read (whole file if needed); .gz and .zip | fixture: prefix, 0.23 of 0.38 MB | stem before the products: whole, same definitions TRUE | <Stem> in a biomass function: prefix, same products TRUE | .gz: prefix, same TRUE | .zip: same TRUE | zip without .hpr: 'other.zip contains no .hpr file.'
 
 --- 15. Import message: warnings only for what is lost or replaced ---
-  [PASS  ] Check 15: The import shows warnings only when something is lost or replaced | fixture import: 0 warnings, info has rounded up to whole dm=TRUE, not in whole cm=TRUE, forbidden cell=TRUE, Volume diameter=TRUE | skipped product warned TRUE | dropped length class warned TRUE | replaced volume method warned TRUE
+  [PASS  ] Check 15: The import shows warnings only when something is lost or replaced | fixture import: 0 warnings, info has rounded up to whole dm=TRUE, not in whole cm=TRUE, forbidden cell=TRUE | skipped product warned TRUE | dropped length class warned TRUE | replaced volume method warned TRUE
 
 --- 16. Imported Mid product ---
-  [PASS  ] Check 16: An imported Mid product maps to Mid without a warning, is priced on the mid diameter over the class lower limit, and is chosen in a run | import: Mid TRUE, 0 warnings, price lengths kept TRUE | 37 dm log from 10 cm: mid 273.5 mm, top 250.4 mm (class 25), price volume 0.20898 (365 cm: 0.20898, cut 370 cm: 0.21185, Top: 0.17917) | run: 60 Mid logs
+  [PASS  ] Check 16: An imported Mid product maps to Mid without a warning, is priced on the mid diameter over the class lower limit, and is chosen in a run | import: Mid TRUE, 0 warnings, price lengths kept TRUE | 37 dm log from 10 cm: mid 273.5 mm, top 250.4 mm (class 25), price volume 0.21441 (365 cm: 0.21441, cut 370 cm: 0.21735, Top: 0.17977) | run: 60 Mid logs
 
 --- 17. The file's own volume method per product (0.3.1) ---
   [PASS  ] Check 17: Top maps to Top cylinder, the other file methods keep their names; an unknown method gets the frustum (Top) with one warning per method | pine sawlog Top cylinder | spruce 140 Calculated Norwegian mid -> Top | spruce 154 All diameters (solid volume) -> Top | warnings about the unknown method: 1

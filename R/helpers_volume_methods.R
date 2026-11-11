@@ -74,6 +74,15 @@ volume_rounding <- function(method) {
   ifelse(as.character(method) == "All diameters (solid volume)", "None", VOLUME_ROUND_DOWN_CM)
 }
 
+# The diameter rounding of each product (2026-11-11): the product's own VolumeDiameterAdjustment (from the
+# .hpr/.pin file) where it has one, else the method's default; solid volume never rounds.
+volume_adjustment_of <- function(method, stored = NA) {
+  d <- volume_rounding(method)
+  st <- as.character(stored); ok <- !is.na(st) & st %in% VOLUME_DIAMETER_ADJUSTMENTS
+  out <- ifelse(ok, st, d)
+  ifelse(as.character(method) == "All diameters (solid volume)", "None", out)
+}
+
 # Short labels of the volume methods for compact tables.
 VOLUME_METHOD_SHORT <- c("Top cylinder" = "Top cylinder", "Top" = "Top (frustum)",
                          "All diameters (solid volume)" = "Solid volume",

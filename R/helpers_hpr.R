@@ -759,10 +759,6 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, man
         }
         method <- HPR_VOLUME_FALLBACK
       }
-      if (method != "All diameters (solid volume)" && !is.na(p$volume_adjustment) &&
-          !identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM))
-        pinfo <- c(pinfo, sprintf("Volume diameter '%s': optBuck rounds the %s diameter down to whole cm for this method.",
-                            p$volume_adjustment, if (method == "Mid") "mid" else "top"))
       len_rule <- or_default(p$volume_length, "Physical length cm")
       class_len <- identical(len_rule, "Length as defined in LengthClasses") &&
         method != "All diameters (solid volume)"
@@ -806,6 +802,10 @@ hpr_to_scenario <- function(hpr, species_map, keep = NULL, base_defs = NULL, man
                else unlist(ref[intersect(p$species_keys[species_map[p$species_keys] == sp], names(ref))])
           if (length(r)) norm_permitted_grades(paste(r, collapse = ";")) else NA_character_
         },
+        # The file's own diameter rounding for the price volume (2026-11-11); NA = the method's default.
+        VolumeDiameterAdjustment = if (method == "All diameters (solid volume)" || is.na(p$volume_adjustment)) NA_character_
+                                   else if (identical(p$volume_adjustment, VOLUME_ROUND_DOWN_CM)) VOLUME_ROUND_DOWN_CM
+                                   else if (identical(p$volume_adjustment, "Measured diameter in mm")) "None" else NA_character_,
         HprProductKey = if (identical(hpr$kind, "pin")) NA_character_ else p$key,
         # Roadmap 8: where on the stem the product may be cut (NA = anywhere)
         ButtCondition = if (isTRUE(p$condition %in% BUTT_CONDITIONS)) p$condition else NA_character_,

@@ -341,18 +341,18 @@ pv <- list(treid = "t", plot_id = NA, species_group = "pine", DBH = 300, height_
            diameterPosition = seq(0L, 1800L, 10L), DiameterValue = 330 - seq(0, 1800, 10) * 0.15)
 cand <- generate_candidate_logs_one_tree(pv, p8$pd, p8$lc, stump_height_cm = 10L)
 c37 <- cand[cand$ProductKey == K_PINE_SAW & cand$LogLength == 370 & cand$eligible, ][1L, ]
-v365 <- price_volume_m3("Top cylinder", c37$TopDiameter, 365, adjustment = VOLUME_ROUND_DOWN_CM)
-v370 <- price_volume_m3("Top cylinder", c37$TopDiameter, 370, adjustment = VOLUME_ROUND_DOWN_CM)
+v365 <- price_volume_m3("Top cylinder", c37$TopDiameter_ub, 365, adjustment = "None")
+v370 <- price_volume_m3("Top cylinder", c37$TopDiameter_ub, 370, adjustment = "None")
 c41 <- cand[cand$ProductKey == K_PINE_SAW & cand$LogLength == 410 & cand$eligible, ][1L, ]
 pb <- products_from_defs(base_defs, pm_minimal(load_price_matrix_long(root_dir)))
-ok8 <- isTRUE(all.equal(c37$price_volume_m3, v365)) && !isTRUE(all.equal(v365, v370)) &&
-  isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top cylinder", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))) &&
+ok8 <- isTRUE(all.equal(c37$price_volume_m3, v365, tolerance = 1e-3)) && !isTRUE(all.equal(v365, v370)) &&
+  isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top cylinder", c41$TopDiameter_ub, 410, adjustment = "None"), tolerance = 1e-3)) &&
   identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SPR], p8$lc$LogLength[p8$lc$ProductKey == K_SPR]) &&
   identical(names(pb$lc), c("ProductKey", "LogLength", "LogLength_dm"))
 rec("Check 08: Price volume on the class lower limit for 240 Sagtømmer furu only; base products unchanged",
     ok(ok8), sprintf("37 dm log, top %.1f mm: price volume %.5f (365 cm: %.5f, 370 cm: %.5f) | 41 dm on 410 cm: %s | SPR on cut length: %s | base LengthClasses columns: %s",
-                     c37$TopDiameter, c37$price_volume_m3, v365, v370,
-                     isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top cylinder", c41$TopDiameter, 410, adjustment = VOLUME_ROUND_DOWN_CM))),
+                     c37$TopDiameter_ub, c37$price_volume_m3, v365, v370,
+                     isTRUE(all.equal(c41$price_volume_m3, price_volume_m3("Top cylinder", c41$TopDiameter_ub, 410, adjustment = "None"), tolerance = 1e-3)),
                      identical(p8$lc$PriceLength_cm[p8$lc$ProductKey == K_SPR], p8$lc$LogLength[p8$lc$ProductKey == K_SPR]),
                      paste(names(pb$lc), collapse = ",")))
 
@@ -442,9 +442,9 @@ if (ran) {
   priced <- paste(r$pm$ProductKey, r$pm$LengthClass_dm, r$pm$PriceDiameterClass_cm)
   forb_ok <- all(paste(mat$ProductKey, mat$LengthClass_dm, mat$PriceDiameterClass_cm_used) %in% priced)
   ps11 <- lg[lg$ProductKey == K_PINE_SAW, ]
-  pv_ok <- nrow(ps11) > 0L && isTRUE(all.equal(ps11$price_volume_m3,
+  pv_ok <- nrow(ps11) > 0L && isTRUE(all.equal(tolerance = 1e-3, ps11$price_volume_m3,
     price_volume_m3("Top cylinder", ps11$TopDiameter_ub, price_lengths(row(K_PINE_SAW)$PriceLengths_cm, ps11$LogLength),
-                    adjustment = VOLUME_ROUND_DOWN_CM)))
+                    adjustment = "None")))
   # 100 Energi (grade 7 only) does not permit the reference grade: a stem without grade data
   # (a tree list) never gets it (2026-10-28).
   used <- setdiff(keys[r$defs$Name != "Waste"], c(unique(lg$ProductKey), "spruce_100_energi"))
@@ -475,10 +475,10 @@ if (is.list(cmp)) {
   a12 <- cmp$selected_logs_all; b12 <- cmp$scenario$selected_logs_all
   a12 <- a12[a12$ProductKey == K_PINE_SAW & a12$LogLength == 370, ]
   b12 <- b12[b12$ProductKey == K_PINE_SAW & b12$LogLength == 370, ]
-  top_a <- price_volume_m3("Top cylinder", a12$TopDiameter_ub, 365, adjustment = VOLUME_ROUND_DOWN_CM)
-  top_b <- price_volume_m3("Top cylinder", b12$TopDiameter_ub, 370, adjustment = VOLUME_ROUND_DOWN_CM)
-  cmp_ok <- nrow(a12) > 0L && nrow(b12) > 0L && isTRUE(all.equal(a12$price_volume_m3, top_a)) &&
-    isTRUE(all.equal(b12$price_volume_m3, top_b))
+  top_a <- price_volume_m3("Top cylinder", a12$TopDiameter_ub, 365, adjustment = "None")
+  top_b <- price_volume_m3("Top cylinder", b12$TopDiameter_ub, 370, adjustment = "None")
+  cmp_ok <- nrow(a12) > 0L && nrow(b12) > 0L && isTRUE(all.equal(a12$price_volume_m3, top_a, tolerance = 1e-3)) &&
+    isTRUE(all.equal(b12$price_volume_m3, top_b, tolerance = 1e-3))
 }
 ok12 <- isTRUE(back$ok) && identical(back$defs$PriceLengths_cm, r$defs$PriceLengths_cm) &&
   isTRUE(scenarios_differ(r$defs, r$pm, d_nopl, r$pm)) && !isTRUE(scenarios_differ(r$defs, r$pm, back$defs, back$pm)) &&
@@ -592,8 +592,8 @@ unlink(c(gz, zf, zn, zd), recursive = TRUE)
 # ==============================================================================
 section("15. Import message: warnings only for what is lost or replaced")
 # The fixture import loses nothing: no warnings; rounding, whole-cm classes,
-# the mm volume diameter and forbidden cells are info (documented rules).
-info_pat <- c("rounded up to whole dm", "not in whole cm", "forbidden cell", "Volume diameter")
+# and forbidden cells are info (the file's mm volume diameter is used since 2026-11-11) (documented rules).
+info_pat <- c("rounded up to whole dm", "not in whole cm", "forbidden cell")
 in_info <- vapply(info_pat, function(p) any(grepl(p, r$info, fixed = TRUE)), logical(1))
 in_warn <- vapply(info_pat, function(p) any(grepl(p, r$warnings, fixed = TRUE)), logical(1))
 # Something lost: a product without priced cells (ticked anyway), a length
@@ -624,8 +624,7 @@ imp16 <- isTRUE(r16$ok) && identical(h16$products[["7949"]]$volume_method, "Mid"
   length(c(h16$warnings, r16$warnings)) == 0L && nrow(d16) == 1L &&
   identical(d16$VolumeDiameterCategory, "Mid") &&
   identical(d16$PriceLengths_cm, row(K_PINE_SAW)$PriceLengths_cm) &&
-  any(grepl("240 Sagtømmer furu: Volume diameter 'Measured diameter in mm': optBuck rounds the mid diameter",
-            r16$info, fixed = TRUE))
+  identical(d16$VolumeDiameterAdjustment, "None")      # the file says "Measured diameter in mm": the mid diameter is not rounded
 # Candidates on check 8's pine stem: a 37 dm log is priced on the under-bark
 # diameter at the middle of the cut log, over the class lower limit (365 cm);
 # the price class still comes from the top diameter.
@@ -634,8 +633,8 @@ c16 <- generate_candidate_logs_one_tree(pv, p16$pd, p16$lc, stump_height_cm = 10
 c16 <- c16[c16$ProductKey == K_PINE_SAW & c16$LogLength == 370 & c16$eligible, ][1L, ]
 pvu <- add_under_bark_profile(pv)
 mid16 <- approx(pvu$diameterPosition, pvu$DiameterValueUB, (c16$StartPos + c16$StopPos) / 2)$y
-v16 <- price_volume_m3("Mid", NA, 365, adjustment = VOLUME_ROUND_DOWN_CM, mid_d_mm = mid16)
-v16cut <- price_volume_m3("Mid", NA, 370, adjustment = VOLUME_ROUND_DOWN_CM, mid_d_mm = mid16)
+v16 <- price_volume_m3("Mid", NA, 365, adjustment = "None", mid_d_mm = mid16)
+v16cut <- price_volume_m3("Mid", NA, 370, adjustment = "None", mid_d_mm = mid16)
 cand16 <- isTRUE(all.equal(c16$price_volume_m3, v16)) && !isTRUE(all.equal(v16, v16cut)) &&
   !isTRUE(all.equal(v16, c37$price_volume_m3)) &&
   identical(c16$PriceDiameterClass_cm, as.integer(floor(c16$TopDiameter / 10)))

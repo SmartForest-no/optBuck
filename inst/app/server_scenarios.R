@@ -192,7 +192,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     disp
   }
   ASM_FORM_ONLY_COLS <- c("butt", "method", "position")   # shown in the edit dialog, not in the table
-  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "HprProductKey")
+  HIDDEN_ASM_COLS <- c("MinButtDiameter_cm", "DiameterTopPosition_cm", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "VolumeDiameterAdjustment", "HprProductKey")
 
   # Fixed row order, the same in both tables so rows line up: by species
   # (spruce, pine), then sawlog, pulpwood, waste, then custom assortments (by
@@ -413,6 +413,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     }
     rows$PermittedGrades <- if (!is.null(old_row)) old_row$PermittedGrades else NA_character_   # hidden; kept on edits
     rows$ReferenceGrades <- if (!is.null(old_row)) old_row$ReferenceGrades else NA_character_
+    rows$VolumeDiameterAdjustment <- if (!is.null(old_row)) old_row$VolumeDiameterAdjustment else NA_character_   # hidden; kept on edits
     rows$ButtCondition <- if (!is.null(old_row)) old_row$ButtCondition else NA_character_   # read-only
     for (n in c(DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS))   # hidden fields (Phase 7a, R4 D6); kept on edits
       rows[[n]] <- if (!is.null(old_row)) old_row[[n]] else rows[[n]][NA_integer_]

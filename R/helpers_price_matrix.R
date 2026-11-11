@@ -439,6 +439,7 @@ scenario_export <- function(defs, pm, path) {
   has_fields <- any(!is.na(unlist(defs[, DISTRIBUTION_DEF_COLS, drop = FALSE])))
   cols <- if (has_fields) ASSORTMENT_TABLE_COLS else setdiff(ASSORTMENT_TABLE_COLS, DISTRIBUTION_DEF_COLS)
   if (!any(!is.na(unlist(defs[, SOURCE_DEF_COLS, drop = FALSE])))) cols <- setdiff(cols, SOURCE_DEF_COLS)
+  if (all(is.na(defs$VolumeDiameterAdjustment))) cols <- setdiff(cols, "VolumeDiameterAdjustment")   # only files that state it
   sheets <- c(list(assortments = defs[, cols, drop = FALSE]),
               .pm_wide_sheets(pm), .pm_target_sheets(pm), .pm_file_class_sheet(pm))
   writexl::write_xlsx(sheets, path)
@@ -455,7 +456,7 @@ scenario_import <- function(path) {
   if (!"assortments" %in% sheets)
     return(fail("The xlsx needs a sheet 'assortments' and the price sheets."))
   defs <- as.data.frame(readxl::read_excel(path, sheet = "assortments", col_types = "text"))
-  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "TypeUser", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "ButtCondition", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)), names(defs))
+  miss <- setdiff(setdiff(ASSORTMENT_TABLE_COLS, c("Type", "TypeUser", "PriceLengths_cm", "PermittedGrades", "ReferenceGrades", "ButtCondition", "VolumeDiameterAdjustment", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)), names(defs))
   if (length(miss) > 0L)
     return(fail(paste("assortments sheet missing column(s):", paste(miss, collapse = ", "))))
   defs <- defs[!is.na(defs$Name) & nzchar(trimws(defs$Name)), , drop = FALSE]

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bucking check (roadmap 8, tab 5)
-  Run: 2026-11-11 11:28:48.295212
+  Run: 2026-11-11 12:53:59.065418
 ============================================================= 
 
 --- 01. Reader ---
@@ -28,7 +28,7 @@
   [PASS  ] Check 08: manual cuts 7 of 14 logs (the multi-tree log is not counted), 1 of 4 sawlogs, 1 of 4 butt sawlogs; the yield index with and without manual cuts follows the stems | all 0.500 sawlogs 0.250 butt 0.250 | with 0.7620 without 1.0000
 
 --- 09. Only the products the harvester used ---
-  [PASS  ] Check 09: by default (no box) the best possible bucking uses only the products the harvester cut a log of; against all products of the file its value is lower (stem 3 no longer uses Kubb), the recorded value is the same, no unused product is in the best bucking | products 3 of 6 | best 517.4478 vs 574.8363 | yield 0.8570 vs 0.7715
+  [PASS  ] Check 09: by default (no box) the best possible bucking uses only the products the harvester cut a log of; against all products of the file its value is lower (stem 3 no longer uses Kubb), the recorded value is the same, no unused product is in the best bucking | products 3 of 6 | best 517.4478 vs 576.2787 | yield 0.8570 vs 0.7695
 
 --- 10. File without stem profiles ---
   [PASS  ] Check 10: a file with logs but no StemDiameters gives no best bucking (no_profile), only the recorded tables and manual-cut shares | no_profile TRUE | recorded products 4 | manual share 0.500
@@ -49,7 +49,7 @@
   [PASS  ] Check 16: stem 9 (one 100 cm waste log on 800 cm of profile) is left out as incomplete (n_incomplete 1, shown as 'left out'); the multi-tree stem is not counted as left out because of deviating data; the reason translates | reason 'recorded logs cover less than half of the measured stem' | incomplete 1 | left out 1
 
 --- 17. The PDF report ---
-  [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 58865/61002
+  [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 58866/61004
 
 --- 14. NFI stem profiles on demand ---
   [PASS  ] Check 14: no cache in an empty folder; building three plots in chunks (progress called per chunk, ending at the total) gives exactly the profiles of the existing cache (every diameter equal) | rows 5867 vs 5867 | progress 0/43

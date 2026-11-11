@@ -360,7 +360,7 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
     top_pos <- or_default(as.numeric(d$DiameterTopPosition_cm), 0)
     method <- as.character(d$VolumeDiameterCategory)
     if (identical(method, "Top cylinder")) method <- "Top"       # StanForD has no cylinder rule
-    round_down <- !identical(volume_rounding(d$VolumeDiameterCategory), "None")
+    round_down <- !identical(volume_adjustment_of(d$VolumeDiameterCategory, if ("VolumeDiameterAdjustment" %in% names(d)) d$VolumeDiameterAdjustment else NA), "None")
     # A demand matrix exists when some cell has a Distribution above 0 (all-zero = none).
     has_demand <- matrix_priced && any(dist > 0, na.rm = TRUE)
     if (isTRUE(d$DistributionAllowed) && !has_demand) no_demand_warn <<- TRUE

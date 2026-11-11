@@ -132,7 +132,7 @@ ok1 <- identical(unname(rnd), c(VOLUME_ROUND_DOWN_CM, VOLUME_ROUND_DOWN_CM, "Non
   identical(p1$VolumeDiameterAdjustment, unname(volume_rounding(p1$VolumeDiameterCategory))) &&
   identical(assortment_lengths(poles, pm_poles)$spruce_poles, seq(800, 1200, by = 10)) &&
   identical(custom_type(c("Waste", "Poles")), c("waste_commercial", "poles")) &&
-  !any(c("LengthStep_cm", "VolumeDiameterAdjustment") %in% ASSORTMENT_TABLE_COLS)
+  !"LengthStep_cm" %in% ASSORTMENT_TABLE_COLS && "VolumeDiameterAdjustment" %in% ASSORTMENT_TABLE_COLS   # hidden field since 2026-11-11 (the file's own rounding)
 rec("Check 01: Rounding per volume method, flat lengths every 10 cm, user types never waste",
     ok(ok1), sprintf("rounding: %s | poles lengths: %d (800-1200) | custom types: %s",
                      paste(sprintf("%s = %s", VOLUME_METHODS, rnd), collapse = "; "),

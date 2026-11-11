@@ -480,7 +480,8 @@ ASSORTMENT_TABLE_COLS <- c(
   "Name", "Type", "TypeUser", "Species", "MinTopDiameter_cm", "MaxTopDiameter_cm",
   "MinButtDiameter_cm", "MaxButtDiameter_cm", "MinLength_cm", "MaxLength_cm",
   "DiameterTopPosition_cm", "VolumeDiameterCategory", "PriceType", "PriceLengths_cm",
-  "PermittedGrades", "ReferenceGrades", "ButtCondition", "HprProductKey", DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)
+  "PermittedGrades", "ReferenceGrades", "ButtCondition", "VolumeDiameterAdjustment", "HprProductKey",
+  DISTRIBUTION_DEF_COLS, SOURCE_DEF_COLS)
 
 # "TRUE"/"true"/TRUE -> TRUE, "FALSE"/... -> FALSE, anything else NA.
 .dist_logical <- function(x) {
@@ -570,7 +571,7 @@ assortment_table_keys <- function(defs) {
 .type_assortment_table <- function(d) {
   num <- setdiff(ASSORTMENT_TABLE_COLS, c("Name", "Type", "TypeUser", "Species", "VolumeDiameterCategory",
                                           "PriceType", "PriceLengths_cm", "PermittedGrades",
-                                          "ReferenceGrades", "ButtCondition", "HprProductKey",
+                                          "ReferenceGrades", "ButtCondition", "HprProductKey", "VolumeDiameterAdjustment",
                                           "DistributionAllowed", "DistributionCategory",
                                           "DistributionWithinProduct", SOURCE_DEF_COLS))
   # Files without the hidden Type: rows are user assortments (commercial).
@@ -590,6 +591,9 @@ assortment_table_keys <- function(defs) {
   # Tables without the butt condition (all but hpr imports): anywhere on the stem.
   if (!"ButtCondition" %in% names(d)) d$ButtCondition <- rep(NA_character_, nrow(d))
   bc <- trimws(as.character(d$ButtCondition)); d$ButtCondition <- ifelse(bc %in% BUTT_CONDITIONS, bc, NA_character_)
+  # The hidden diameter rounding of the price volume (the file's VolumeDiameterAdjustment): NA = the method's default.
+  if (!"VolumeDiameterAdjustment" %in% names(d)) d$VolumeDiameterAdjustment <- rep(NA_character_, nrow(d))
+  va <- trimws(as.character(d$VolumeDiameterAdjustment)); d$VolumeDiameterAdjustment <- ifelse(va %in% VOLUME_DIAMETER_ADJUSTMENTS, va, NA_character_)
   # The same for the hidden .hpr ProductKey (hpr imports; used by the .hpr export).
   if (!"HprProductKey" %in% names(d)) d$HprProductKey <- rep(NA_character_, nrow(d))
   hk <- trimws(as.character(d$HprProductKey))
@@ -674,7 +678,8 @@ products_from_defs <- function(defs, pm) {
     VolumeDiameterCategory   = defs$VolumeDiameterCategory,
     VolumeLengthCategory     = ifelse(defs$PriceType == "matrix",
                                       "Length as defined in LengthClasses", "Physical length cm"),
-    VolumeDiameterAdjustment = volume_rounding(defs$VolumeDiameterCategory),
+    VolumeDiameterAdjustment = volume_adjustment_of(defs$VolumeDiameterCategory,
+                                 if ("VolumeDiameterAdjustment" %in% names(defs)) defs$VolumeDiameterAdjustment else NA),
     DiameterTopPosition      = as.numeric(defs$DiameterTopPosition_cm),
     DiameterUnderBark        = rep(EXPECTED_DIAMETER_UNDER_BARK, nrow(defs)),
     DiameterSource           = rep(EXPECTED_DIAMETER_SOURCE, nrow(defs)),
