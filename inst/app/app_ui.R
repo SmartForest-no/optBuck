@@ -63,7 +63,7 @@ scenario_column <- function(s) {
           uiOutput(paste0("flat_other_", s)))),
       conditionalPanel(state("!= 'none'"),
         div(class = "pm-actions",
-          btn(paste0("asm_remove_", s), t_("btn_remove")),
+          btn(paste0("asm_remove_", s), t_("btn_remove_asm")),
           btn(paste0("asm_copy_one_", s), t_("btn_make_equal", O)),
           btn(paste0("pm_", s, "_reset"), t_("btn_reset_prices")),
           dl(paste0("dl_", s, "_wide"), t_("btn_prices_xlsx")),

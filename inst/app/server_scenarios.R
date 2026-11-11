@@ -954,8 +954,6 @@ function(instance, td, row, col, prop, value, cellProperties) {
 
   # Rows (diameter classes, ends only) and columns (lengths) of a matrix.
   axes_ui <- function(s, id, pm) {
-    # The bulk-edit field and mode keep their values when the controls are redrawn.
-    kept <- function(n, d) isolate(or_default(input[[paste0(s, n)]], d))
     lens <- sort(unique(pm$LengthClass_dm[pm$ProductKey == id & !is.na(pm$LengthClass_dm)]))
     b <- function(n, l) actionButton(paste0(s, n), l, class = "btn-secondary btn-sm")
     div(class = "pm-axes",
@@ -968,14 +966,7 @@ function(instance, td, row, col, prop, value, cellProperties) {
           numericInput(paste0(s, "_len_new"), NULL, NA, min = 1, step = 1, width = "90px"),
           b("_len_add", L("btn_add")),
           selectInput(paste0(s, "_len_pick"), NULL, lens, width = "90px"),
-          b("_len_rm", L("btn_remove"))),
-      div(class = "pm-axes-row",
-          span(class = "pm-axes-lbl", L("lbl_bulk_edit")),
-          numericInput(paste0(s, "_bulk_value"), NULL, kept("_bulk_value", NA), step = 1, width = "90px"),
-          radioButtons(paste0(s, "_bulk_mode"), NULL, inline = TRUE, selected = kept("_bulk_mode", "amount"),
-                       choices = setNames(c("amount", "percent"), c(L("bulk_nok"), L("bulk_pct")))),
-          b("_bulk_apply", L("btn_apply")),
-          b("_fill_open", L("btn_fill_rows"))))
+          b("_len_rm", L("btn_remove"))))
   }
 
   # Reset prices: a base assortment priced as by default gets its default
@@ -1020,49 +1011,6 @@ function(instance, td, row, col, prop, value, cellProperties) {
                  edit(function(pm, id) pm_add_length(pm, id, input[[paste0(p, "_len_new")]])))
     observeEvent(input[[paste0(p, "_len_rm")]],
                  edit(function(pm, id) pm_remove_length(pm, id, input[[paste0(p, "_len_pick")]])))
-
-    # Bulk edit of the cells selected in the grid (rhandsontable's
-    # input$pm_<s>_select: 1-based r, c, r2, c2, any corner order).
-    observeEvent(input[[paste0(p, "_bulk_apply")]], {
-      sel <- input[[paste0(p, "_select")]]$select
-      v <- suppressWarnings(as.numeric(input[[paste0(p, "_bulk_value")]]))
-      if (is.null(sel) || length(v) != 1L || !is.finite(v)) return()
-      mode <- or_default(input[[paste0(p, "_bulk_mode")]], "amount")
-      edit(function(pm, id) pm_bulk_adjust(pm, id, seq(min(sel$r, sel$r2), max(sel$r, sel$r2)),
-                                           seq(min(sel$c, sel$c2), max(sel$c, sel$c2)), mode, v))
-    })
-
-    # Fill from a price per diameter class + a correction per length.
-    observeEvent(input[[paste0(p, "_fill_open")]], {
-      id <- selected(); req(id, sel_state(side) == "matrix")
-      pm <- prices(side); first <- pm_row_first_prices(pm, id)
-      lens <- sort(unique(pm$LengthClass_dm[pm$ProductKey == id & !is.na(pm$LengthClass_dm)]))
-      field <- function(prefix, k, v) numericInput(sprintf("%s_fill_%s_%s", p, prefix, k), NULL,
-                                                   if (is.na(v)) NA else v, step = 1, width = "110px")
-      showModal(modalDialog(
-        title = L("fill_title"), size = "m", easyClose = TRUE,
-        div(style = "display: flex; gap: 24px; flex-wrap: wrap;",
-          tags$table(class = "hpr-table",
-            tags$thead(tags$tr(tags$th(L("fill_col_class")), tags$th(L("fill_col_price")))),
-            tags$tbody(lapply(names(first), function(k)
-              tags$tr(tags$td(k), tags$td(field("row", k, first[[k]])))))),
-          tags$table(class = "hpr-table",
-            tags$thead(tags$tr(tags$th(L("fill_col_len")), tags$th(L("fill_col_corr")))),
-            tags$tbody(lapply(lens, function(k) tags$tr(tags$td(k), tags$td(field("len", k, 0))))))),
-        footer = tagList(modalButton(L("btn_cancel")),
-                         actionButton(paste0(p, "_fill_apply"), L("btn_apply"), class = "btn-primary"))))
-    })
-    observeEvent(input[[paste0(p, "_fill_apply")]], {
-      id <- selected(); req(id, sel_state(side) == "matrix")
-      pm <- prices(side); g <- pm_to_grid(pm, id)
-      get <- function(prefix, k) input[[sprintf("%s_fill_%s_%s", p, prefix, k)]]
-      num <- function(x, d) { v <- suppressWarnings(as.numeric(x)); if (length(v) != 1L || is.na(v)) d else v }
-      rp <- vapply(rownames(g), function(k) num(get("row", k), NA_real_), 0)
-      lc <- vapply(colnames(g), function(k) num(get("len", k), 0), 0)
-      removeModal()
-      if (any(is.na(rp) & rowSums(!is.na(as.matrix(g))) > 0L)) return(say(side, "error", T_("err_fill_price")))
-      edit(function(pm, id) pm_bulk_fill(pm, id, rp, lc))
-    })
 
     # The flat price field, rendered per assortment (data-key: the key its
     # edits are written to). Re-rendered on selection, resets and a language
