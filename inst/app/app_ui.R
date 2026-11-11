@@ -84,7 +84,8 @@ scenario_column <- function(s) {
       btn(paste0("asm_reset_", s), t_("btn_reset_defaults")),
       btn(paste0("scen_copy_", s), t_("btn_copy_from", O)),
       dl(paste0("dl_scen_", s), t_("btn_download_scenario")),
-      dl(paste0("dl_pin_", s), t_("btn_download_pin"))),
+      dl(paste0("dl_pin_", s), t_("btn_download_pin")),
+      dl(paste0("dl_hpr_", s), t_("btn_dl_hpr"))),
     # Stem grades (Phase 6): run options of this scenario, only for .hpr stems.
     conditionalPanel("input.tree_source == 'hpr'",
       div(class = "section-hdr", t_("hdr_stem_grades")),
@@ -247,8 +248,7 @@ simulator_page <- nav_panel(
         div(class = "section-hdr", t_("hdr_logs")),
         uiOutput("logs_preview_note"),
         reactableOutput("tbl_selected_logs"),
-        downloadButton("dl_logs", t_("btn_dl_logs"), class = "btn-secondary btn-sm"),
-        uiOutput("dl_hpr_ui", inline = TRUE)
+        downloadButton("dl_logs", t_("btn_dl_logs"), class = "btn-secondary btn-sm")
       )
     ))
   )

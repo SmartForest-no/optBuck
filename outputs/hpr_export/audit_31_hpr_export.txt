@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr export (Phase 5a)
-  Run: 2026-11-06 10:32:42.577188
+  Run: 2026-11-11 13:07:32.489031
 ============================================================= 
 
 --- 01. Round trip ---
@@ -18,8 +18,8 @@
 --- 05. Log content ---
   [PASS  ] Check 05: m3 (price) = the result's price volume, m3sob >= m3sub, Mid >= Top diameters, ob >= ub, cutting reason Automatic | price 0.27937 vs 0.27937 | sob 0.33097 sub 0.29548 | Mid ob 293 Top ob 256 Top ub 241
 
---- 06. The coordinate check ---
-  [PASS  ] Check 06: A coordinate element in a copied block makes the export fail and removes the file | Coordinates found in the export; the file was not written.
+--- 06. No coordinate scan in the user export (2026-11-11) ---
+  [PASS  ] Check 06: The user export has no coordinate scan: an unexpected coordinate-like element in a copied block does not block the export | TRUE
 
 --- 07. Two source files ---
   [PASS  ] Check 07: Two source files: per-file stem counts equal the result's, keys stay as written, every SpeciesGroupKey is defined | per file 5/5 vs 5/5 | 10 stems | stem groups 446,445 defined 445,446,447,448

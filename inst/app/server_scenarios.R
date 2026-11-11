@@ -23,7 +23,7 @@
 #           display (base names, species, volume methods).
 
 scenario_server <- function(input, output, session, lang = reactive("en"), grade_dist = reactive(NULL),
-                            hpr_file = function() NULL) {
+                            hpr_file = function() NULL, hpr_ctx = function() NULL) {
   L <- function(id, ...) tr(id, ..., lang = lang())
   keys_of <- assortment_table_keys
   sc <- list(A = list(defs = reactiveVal(APP_DEFS), pm = reactiveVal(APP_PM_DEFAULT)),
@@ -584,6 +584,43 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
         }
         if (length(x$warnings))
           showNotification(paste(tr_msg(x$warnings, lang()), collapse = " "), type = "warning", duration = 15)
+      })
+  })
+
+  # The scenario as an .hpr (2026-11-11): the stems of tab 1 bucked with this scenario, copied from their
+  # source file(s) with the simulated logs (R/helpers_hpr_export.R). Greyed out when tab 1 has no .hpr stems.
+  for (side in c("A", "B")) local({
+    side <- side; s <- low(side)
+    observe(session$sendCustomMessage("optbuck-disable",
+                                      list(id = paste0("dl_hpr_", s), disabled = is.null(hpr_ctx()))))
+    output[[paste0("dl_hpr_", s)]] <- downloadHandler(
+      filename = function() L("file_hpr", side),
+      content  = function(file) {
+        l <- lang(); ctx <- hpr_ctx()
+        fail <- function(msg) {
+          showNotification(L("hpr_export_failed", paste(tr_msg(msg, l), collapse = " ")), type = "error", duration = NULL)
+          stop("hpr_export_failed")
+        }
+        if (is.null(ctx)) fail(L("hpr_export_no_stems"))
+        d <- defs(side); pm <- prices(side)
+        x <- withProgress(message = L("hpr_export_bucking", side), value = 0.3, tryCatch({
+          pr <- products_from_defs(d, pm)
+          pf <- write_price_file(pm); on.exit(unlink(pf), add = TRUE)
+          workers <- optbuck_workers(); .ensure_plan(workers)
+          job <- prepare_hpr_stems_job(ctx$stems, ctx$species_map, price_matrix_path = pf, root = ROOT,
+                                       products = pr$pd, length_classes = pr$lc, grade_opts = grade_opts(side))
+          res <- finish_job(job, buck_job(job, workers))
+          setProgress(0.8, message = L("hpr_export_writing"))
+          hpr_export_result(file, ctx$sources, ctx$species_by_name, res, d, pm)
+        }, error = function(e) list(ok = FALSE, errors = conditionMessage(e))))
+        if (!isTRUE(x$ok)) fail(x$errors)
+        if (length(x$warnings))
+          showNotification(paste(tr_msg(x$warnings, l), collapse = " "), type = "warning", duration = 15)
+        parts <- if (length(x$per_file) > 1L)
+          paste(vapply(seq_along(x$per_file), function(i)
+            L("hpr_export_file_part", fmt_int(i), fmt_int(x$per_file[i])), ""), collapse = ", ")
+        showNotification(if (is.null(parts)) L("hpr_export_done", fmt_int(x$n_stems))
+                         else L("hpr_export_done_files", fmt_int(x$n_stems), parts), duration = 10)
       })
   })
 

@@ -367,7 +367,17 @@ server <- function(input, output, session) {
     list(path = own$path[i], name = own$name[i])
   }, error = function(e) NULL)
   sc <- scenario_server(input, output, session, lang, grade_dist = function() tryCatch(hs_grade_dist(), error = function(e) NULL),
-                        hpr_file = hs_file_tab1)
+                        hpr_file = hs_file_tab1,
+                        # What the .hpr download of tab 2 needs: the stems of tab 1, their species map and source file(s).
+                        hpr_ctx = function() tryCatch({
+                          if (!identical(input$tree_source, "hpr")) return(NULL)
+                          st <- hs_stems(); fl <- hs_file()
+                          if (!isTRUE(st$ok) || is.null(fl)) return(NULL)
+                          nid <- tolower(trimws(st$species$name))
+                          sbn <- setNames(unname(hs_map()[st$species$key]), nid); sbn <- sbn[!duplicated(names(sbn))]
+                          list(stems = st, species_map = hs_map(), species_by_name = sbn,
+                               sources = data.frame(path = fl$path, name = fl$name, stringsAsFactors = FALSE))
+                        }, error = function(e) NULL))
   # The stem source as the Simulator reads it (R4 D7): what a job is prepared from, and
   # an identity that changes when the stems do (Price tuning clears its results then).
   stem_spec <- function() {
@@ -475,16 +485,7 @@ server <- function(input, output, session) {
                                     hpr = "Preparing stem profiles", "Taper profiles")))
     # Each scenario's assortments at run time: per-assortment B - A only for
     # assortments both have (2026-10-22).
-    # .hpr export (Phase 5a): the source file(s) and what the export needs of
-    # each scenario at run time.
-    hx <- NULL
-    if (src == "hpr") {
-      fl <- hs_file(); st <- hs_stems(); nid <- tolower(trimws(st$species$name))
-      sbn <- setNames(unname(hs_map()[st$species$key]), nid); sbn <- sbn[!duplicated(names(sbn))]
-      hx <- list(sources = data.frame(path = fl$path, name = fl$name, stringsAsFactors = FALSE),
-                 species_by_name = sbn, defs = list(A = d, B = if (compare) b$defs))
-    }
-    run_task$invoke(spec, list(hpr_export = hx, price_matrix = a, price_matrix_b = if (compare) b$pm,
+    run_task$invoke(spec, list(price_matrix = a, price_matrix_b = if (compare) b$pm,
                                keys = list(A = assortment_table_keys(d),
                                            B = if (compare) assortment_table_keys(b$defs)),
                                state = sc$pm_state(), t_click = t_click,
@@ -956,41 +957,6 @@ server <- function(input, output, session) {
       if (compared()) l <- rbind(l, sc_col(readable_logs(result_b()$selected_logs_all), nm("B")))
       write_result_csv(l, file)
     })
-
-  # .hpr export (Phase 5a, R/helpers_hpr_export.R): one file per scenario,
-  # only for runs of .hpr stems; the button is not there otherwise.
-  output$dl_hpr_ui <- renderUI({
-    if (!has_result() || is.null(result()$hpr_export)) return(NULL)
-    if (!compared())
-      return(downloadButton("dl_hpr_a", L("btn_dl_hpr"), class = "btn-secondary btn-sm"))
-    tagList(downloadButton("dl_hpr_a", L("btn_dl_hpr_ab", nm("A")), class = "btn-secondary btn-sm"),
-            downloadButton("dl_hpr_b", L("btn_dl_hpr_ab", nm("B")), class = "btn-secondary btn-sm"))
-  })
-  hpr_download <- function(side) downloadHandler(
-    filename = function() L("file_hpr", side),
-    content  = function(file) {
-      r <- result(); hx <- r$hpr_export
-      rs <- if (side == "A") r else result_b()
-      pm <- if (side == "A") r$price_matrix else r$price_matrix_b
-      l <- lang()
-      x <- withProgress(message = L("hpr_export_writing"), value = 0.5,
-        tryCatch(hpr_export_result(file, hx$sources, hx$species_by_name, rs, hx$defs[[side]], pm),
-                 error = function(e) list(ok = FALSE, errors = conditionMessage(e))))
-      if (!isTRUE(x$ok)) {
-        showNotification(L("hpr_export_failed", paste(tr_msg(x$errors, l), collapse = " ")),
-                         type = "error", duration = NULL)
-        stop("hpr_export_failed")
-      }
-      if (length(x$warnings))
-        showNotification(paste(tr_msg(x$warnings, l), collapse = " "), type = "warning", duration = 15)
-      parts <- if (length(x$per_file) > 1L)
-        paste(vapply(seq_along(x$per_file), function(i)
-          L("hpr_export_file_part", fmt_int(i), fmt_int(x$per_file[i])), ""), collapse = ", ")
-      showNotification(if (is.null(parts)) L("hpr_export_done", fmt_int(x$n_stems))
-                       else L("hpr_export_done_files", fmt_int(x$n_stems), parts), duration = 10)
-    })
-  output$dl_hpr_a <- hpr_download("A")
-  output$dl_hpr_b <- hpr_download("B")
 
   # Log tally per price matrix (stocknota; R/helpers_result_tables.R): the
   # commercial logs per price-diameter class x length class of one

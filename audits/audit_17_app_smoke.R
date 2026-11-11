@@ -1096,7 +1096,7 @@ if (!browser_ok) {
       grepl("Scenario A", note14, fixed = TRUE) && identical(ctrl14, 0L) &&
       all(c("Plot", "StartPos", "StopPos", "Assortment") %in% h14) &&
       !any(grepl("_", h14, fixed = TRUE)) && !any(c("ProductType", "ProductKey") %in% h14) &&
-      isTRUE(js(app, "document.getElementById('dl_hpr_a') === null")) &&   # NFI run: no .hpr export button
+      isTRUE(js(app, "document.getElementById('dl_hpr_ui') === null && document.getElementById('dl_hpr_a').classList.contains('disabled')")) &&   # NFI run: no .hpr button in tab 3; the one in tab 2 is greyed out
       !is.null(csv14) && identical(nrow(csv14), n_logs) && identical(unique(csv14$Scenario), "A") &&
       all(c("Scenario", "Plot", "StartPos", "StopPos") %in% names(csv14))
     rec(browser_checks[10], if (ok14) PASS else FAIL,
@@ -1754,10 +1754,12 @@ if (!browser_ok) {
       c31$logs_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_selected_logs .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
       app$set_inputs(result_tabs = "trees", wait_ = FALSE); app$wait_for_idle()
       c31$trees_hdr <- js(app, "Array.from(document.querySelectorAll('#tbl_trees .rt-th')).map(function(h){ return h.innerText.trim(); }).join('|')")
-      # .hpr export (Phase 5a): one button per scenario after this comparison;
-      # B's file holds the 5 bucked stems with logs and no coordinates.
-      app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
-      c31$hpr_btn <- js(app, "Array.from(document.querySelectorAll('#dl_hpr_ui a')).map(function(a){ return a.innerText.trim(); }).join('|')")
+      # .hpr export (2026-11-11): tab 3 has no .hpr button; tab 2 has one per scenario card (enabled with .hpr
+      # stems in tab 1) that bucks the stems with that scenario; B's file holds the 5 bucked stems with logs
+      # and no coordinates.
+      c31$tab3_btn <- js(app, "document.getElementById('dl_hpr_ui') === null")
+      app$set_inputs(main_nav = "prices", wait_ = FALSE); app$wait_for_idle()
+      c31$hpr_btn <- js(app, "['dl_hpr_a', 'dl_hpr_b'].map(function(i){ var a = document.getElementById(i); return a.innerText.trim() + (a.classList.contains('disabled') ? ' (off)' : ''); }).join('|')")
       f_hpr <- tryCatch(app$get_download("dl_hpr_b"), error = function(e) NULL)
       c31$hpr_ok <- !is.null(f_hpr) && {
         tx <- paste(readLines(f_hpr, warn = FALSE), collapse = "\n")
@@ -1774,7 +1776,7 @@ if (!browser_ok) {
       grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
       identical(as.integer(c31$n_warn), 4L) && !grepl("Not used", c31$valid, fixed = TRUE) &&
       !grepl("multi-tree", c31$valid, fixed = TRUE) && grepl("4 spruce · 1 pine stems", c31$counts, fixed = TRUE) &&
-      identical(c31$hpr_btn, "Download Scenario A (.hpr)|Download Scenario B (.hpr)") && isTRUE(c31$hpr_ok) &&
+      isTRUE(c31$tab3_btn) && identical(c31$hpr_btn, "Download as .hpr|Download as .hpr") && isTRUE(c31$hpr_ok) &&
       grepl("Stems", c31$summary, fixed = TRUE) && !grepl("Plots", c31$summary, fixed = TRUE) &&
       grepl("Scenario B", c31$summary, fixed = TRUE) && c31$cmp_tab &&
       !"Plot" %in% hdr_cols(c31$logs_hdr) && "Tree" %in% hdr_cols(c31$logs_hdr) &&

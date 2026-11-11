@@ -117,7 +117,13 @@
   var register = function() {
     Shiny.addCustomMessageHandler("optbuck-disable", function(m) {
       var el = document.getElementById(m.id);
-      if (el) { el.disabled = !!m.disabled; }
+      if (el) {
+        el.disabled = !!m.disabled;
+        if (el.tagName === "A") {     // a download button
+          el.classList.toggle("disabled", !!m.disabled);
+          el.setAttribute("aria-disabled", m.disabled ? "true" : "false");
+        }
+      }
     });
   };
   if (window.Shiny && Shiny.addCustomMessageHandler) register();

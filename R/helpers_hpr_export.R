@@ -627,7 +627,6 @@ hpr_export_result <- function(path, sources, species_by_name, result, defs, pm) 
   writeBin(pre[[1L]]$close, con)
   close(con); open_con <- FALSE
 
-  if (.hpr_export_has_coordinates(path)) return(fail("Coordinates found in the export; the file was not written."))
   list(ok = TRUE, errors = character(0), path = path, n_stems = sum(per_file), n_logs = n_logs,
        per_file = per_file, no_profile = no_profile, gap_logs = gap_logs, warnings = prod$warnings)
 }

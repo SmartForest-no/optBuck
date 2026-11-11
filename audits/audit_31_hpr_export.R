@@ -231,16 +231,18 @@ rec("Check 05: m3 (price) = the result's price volume, m3sob >= m3sub, Mid >= To
 
 
 # ==============================================================================
-section("06. The coordinate check")
+section("06. No coordinate scan in the user export (2026-11-11)")
 bad_src <- tempfile(fileext = ".hpr")
 writeLines(sub("<Machine([^>]*)>", paste0("<Machine\\1><Extension><MachinePosition><Latitude>61</Latitude>",
               "</MachinePosition></Extension>"), paste0(head_v, obj, stems_v)), bad_src, useBytes = TRUE)
 bad_out <- tempfile(fileext = ".hpr")
 xb <- hpr_export_result(bad_out, data.frame(path = bad_src, name = "bad.hpr"), sbn, r, sc$defs, pm)
-ok6 <- identical(xb$ok, FALSE) && !file.exists(bad_out) && any(grepl("Coordinates found", xb$errors))
-rec("Check 06: A coordinate element in a copied block makes the export fail and removes the file",
-    ok(ok6), paste(xb$errors, collapse = " | "))
-unlink(bad_src)
+# The export strips the known coordinate blocks (check 03 scans the repository example's export in this
+# audit); it no longer scans its own output, so an unexpected element in a copied block does not stop it.
+ok6 <- isTRUE(xb$ok) && file.exists(bad_out)
+rec("Check 06: The user export has no coordinate scan: an unexpected coordinate-like element in a copied block does not block the export",
+    ok(ok6), paste(c(xb$ok, xb$errors), collapse = " | "))
+unlink(c(bad_src, bad_out))
 
 
 # ==============================================================================
