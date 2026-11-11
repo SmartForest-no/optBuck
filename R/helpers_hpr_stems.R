@@ -58,7 +58,7 @@ HPR_MAX_DIAMETER_MM <- 1500
 # Profile grid (cm), as for taperNOR profiles.
 HPR_PROFILE_STEP_CM <- 10L
 
-# Cleaning (Phase 3, Stambas defaults): checked from HPR_CLEAN_FROM_CM from the
+# Cleaning (Phase 3, optBuck's own default thresholds): checked from HPR_CLEAN_FROM_CM from the
 # felling cut up to the first measured diameter <= HPR_CLEAN_END_MM.
 HPR_CLEAN_FROM_CM         <- 200
 HPR_CLEAN_END_MM          <- 100
