@@ -800,3 +800,4 @@
 "tn_view_price_orig","ui","Original prices (NOK/m³)","Opprinnelige priser (kr/m³)",""
 "tn_view_price_tuned","ui","Tuned prices (NOK/m³)","Tilpassede priser (kr/m³)",""
 "tn_untuned_note","ui","Greyed diameter classes were not tuned (too few logs, or no demand matrix).","Nedtonede diameterklasser ble ikke tilpasset (for få stokker, eller ingen fordelingsmatrise).",""
+"same_ab","ui","A and B are identical. Change scenario B to compare.","A og B er like. Endre scenario B for å sammenligne.","tab 3: sidebar and above the summary of a single run"

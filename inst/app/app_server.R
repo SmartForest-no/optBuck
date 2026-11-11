@@ -619,6 +619,8 @@ server <- function(input, output, session) {
       if (length(notes)) div(class = "pm-msg-warn", paste(notes, collapse = "
 ")))
   }
+  # A and B identical: only A runs (2026-11-11).
+  output$same_ab_note <- renderUI(if (!sc$differ()) p(class = "note-muted", L("same_ab")))
   output$summary_cards <- renderUI({
     if (input$run_btn == 0L) return(div(class = "note-muted", L("no_run_yet")))
     req(has_result()); r <- result(); l <- lang()
@@ -631,7 +633,7 @@ server <- function(input, output, session) {
       fmt_num(or_default(r$elapsed_total_seconds, r$elapsed_seconds), 1L, l, big = FALSE)))
     plots <- if (!isTRUE(is_hpr())) ro_field(L("lbl_plots"), fmt_int(r$n_plots_sampled))
     if (!compared())
-      return(tagList(grade_warn_ui(r), ro_field_row(
+      return(tagList(grade_warn_ui(r), if (!sc$differ()) p(class = "note-muted", L("same_ab")), ro_field_row(
         run_time,
         plots,
         ro_field(L(unit_id("lbl_trees")), fmt_int(r$n_trees_total)),

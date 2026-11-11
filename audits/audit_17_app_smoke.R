@@ -1094,6 +1094,7 @@ if (!browser_ok) {
     csv14 <- read_logs_csv(app)
     ok14 <- !nzchar(e14) && !is.na(n_logs) && identical(n_rows14, min(20L, n_logs)) &&
       grepl("Scenario A", note14, fixed = TRUE) && identical(ctrl14, 0L) &&
+      grepl("A and B are identical. Change scenario B to compare.", txt(app, "#same_ab_note"), fixed = TRUE) &&
       all(c("Plot", "StartPos", "StopPos", "Assortment") %in% h14) &&
       !any(grepl("_", h14, fixed = TRUE)) && !any(c("ProductType", "ProductKey") %in% h14) &&
       isTRUE(js(app, "document.getElementById('dl_hpr_ui') === null && document.getElementById('dl_hpr_a').classList.contains('disabled')")) &&   # NFI run: no .hpr button in tab 3; the one in tab 2 is greyed out

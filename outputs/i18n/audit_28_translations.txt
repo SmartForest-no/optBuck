@@ -1,16 +1,16 @@
 ============================================================= 
   Audit: translations (Norsk / English)
-  Run: 2026-11-11 13:10:33.514175
+  Run: 2026-11-11 13:12:02.16154
 ============================================================= 
 
 --- 01. The table ---
-  [PASS  ] Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates | 801 rows (msg 165, ui 565, value 71) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none
+  [PASS  ] Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates | 802 rows (msg 165, ui 566, value 71) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none
 
 --- 02. Ids used in the code ---
-  [PASS  ] Check 02: every id the code uses exists; no ui id unused | 447 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE
+  [PASS  ] Check 02: every id the code uses exists; no ui id unused | 448 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE
 
 --- 03. No English text left in the app code ---
-  [PASS  ] Check 03: no untranslated English string literals in app/*.R | 2274 string literals, 32 prose-like, 30 translated at display | left: none
+  [PASS  ] Check 03: no untranslated English string literals in app/*.R | 2279 string literals, 32 prose-like, 30 translated at display | left: none
 
 --- 04. Templates round-trip ---
   [PASS  ] Check 04: every message template round-trips; English unchanged; unknown values pass through | 108 templates | failed: none | misses: none | English unchanged TRUE | pass-through TRUE

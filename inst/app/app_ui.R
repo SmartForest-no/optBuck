@@ -113,7 +113,8 @@ simulator_sidebar <- sidebar(
   width = 320,
   conditionalPanel("output.stems_ready",
     actionButton("run_btn", t_("btn_run"),
-                 class = "btn-primary", width = "100%"))
+                 class = "btn-primary", width = "100%"),
+    uiOutput("same_ab_note"))
 )
 
 # ---- Stems (restructure R1, 2026-10-30) -------------------------------------------------
