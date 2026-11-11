@@ -76,5 +76,6 @@ pin_export_scenario <- function(defs, pm, path) {
   if (is.null(tryCatch(xml2::read_xml(path), error = function(e) NULL)))
     return(fail("The .pin file could not be written correctly."))
   if (.hpr_export_has_coordinates(path)) return(fail("Coordinates found in the export; the file was not written."))
-  list(ok = TRUE, errors = character(0), path = path, n_products = nrow(defs), ids = ids)
+  list(ok = TRUE, errors = character(0), path = path, n_products = nrow(defs), ids = ids,
+       warnings = prod$warnings)
 }

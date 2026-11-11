@@ -794,3 +794,5 @@
 "src_opt_default","ui","The standard assortments","Standardsortimentene",""
 "btn_src_ok","ui","Continue","Fortsett",""
 "msg_source_default","ui","Scenario %s now uses the standard assortments.","Scenario %s bruker nå standardsortimentene.",""
+"m_exp_dist_no_matrix","msg","Demand matrix not written: an assortment had Distribution allowed but no demand matrix; it was written as not allowed (all-zero Distribution).","Fordelingsmatrise ikke skrevet: et sortiment hadde fordeling tillatt uten fordelingsmatrise; det ble skrevet som ikke tillatt (Distribution 0).",""
+"dt_none","ui","No demand matrix","Ingen fordelingsmatrise",""

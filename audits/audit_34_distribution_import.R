@@ -541,10 +541,18 @@ section("26. Imported cells equal the file cells, all private files")
 }
 
 section("27-28. Round trip, all private files")
+# The export never writes DistributionAllowed true without a demand matrix (2026-11-11): the
+# expected re-read value of such a product is false.
+allowed_expected <- function(s) {
+  k <- assortment_table_keys(s$defs)
+  nm <- vapply(k, function(q) !dist_has_target(s$pm, q), NA)
+  s$defs$DistributionAllowed[nm & s$defs$DistributionAllowed %in% TRUE] <- FALSE
+  s
+}
 rt_priv <- function(n) {
   x <- get_priv(n)
   re <- if (identical(x$h$kind, "pin")) import(export_pin_file(x$s)) else import(export_hpr_file(x$s))
-  list(same = rt_same(x$s, re$s), n = sum(as.character(x$s$defs$Type) != "waste"))
+  list(same = rt_same(allowed_expected(x$s), re$s), n = sum(as.character(x$s$defs$Type) != "waste"))
 }
 for (grp in list(list(27L, hpr_files, "hpr", "all 5 .hpr files (products written and re-read)"),
                  list(28L, pin_files, "pin", "both .pin files"))) {

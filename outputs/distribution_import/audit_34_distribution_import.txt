@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: distribution import and export (Phase 7a)
-  Run: 2026-11-10 13:41:03.201343
+  Run: 2026-11-11 12:39:46.70234
 ============================================================= 
 
 --- 01. Import: Distribution per cell and the four product fields ---

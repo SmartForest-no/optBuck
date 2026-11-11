@@ -52,6 +52,7 @@ scenario_column <- function(s) {
         conditionalPanel(sprintf("input.pm_%s_view == 'target'", s),
           div(class = "pm-grid",
             div(class = "pm-axis", t_("pm_axis")),
+            uiOutput(paste0("dt_", s, "_none")),
             rHandsontableOutput(paste0("dt_", s)),
             div(class = "pm-axes",
               div(class = "pm-axes-row",

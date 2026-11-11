@@ -30,3 +30,40 @@ test_that("pm_fill_price keeps the product structure and a run changes only thro
                     paste(cells$LengthClass_dm, cells$PriceDiameterClass_cm)))
   expect_equal(sum(lb$value_nok), sum(lb$price_volume_m3 * lb$PriceNOKperM3))
 })
+
+# Products without a demand matrix (2026-11-11): Distribution 0 and DistributionAllowed false in the
+# exports (never allowed with an all-zero matrix); existing demand matrices survive xlsx and .pin.
+test_that("exports never allow a distribution without a demand matrix; matrices round-trip", {
+  f <- system.file("extdata", "example.hpr", package = "optBuck"); skip_if(!nzchar(f))
+  hp <- read_hpr(f)
+  smap <- setNames(guess_hpr_species(hp$species$name, hp$species$user_id), hp$species$key)
+  sc <- hpr_to_scenario(hp, smap); d <- sc$defs; pm <- pm_minimal(sc$pm)
+  keys <- assortment_table_keys(d)
+  has <- vapply(keys, function(k) dist_has_target(pm, k), NA)
+  skip_if(!any(has), "no demand matrix in the example")
+  k_has <- keys[has & d$Type == "sawlog"][1L]; k_has <- k_has[!is.na(k_has)]
+  k_no <- keys[!has & d$Type != "waste"][1L]
+  skip_if(is.na(k_no) || length(k_has) == 0L)
+  d$DistributionAllowed[keys == k_no] <- TRUE            # allowed, but no matrix
+  pm[[PM_DISTRIBUTION_COL]][pm$ProductKey == k_no] <- 0
+  p <- tempfile(fileext = ".pin"); x <- pin_export_scenario(d, pm, p); expect_true(x$ok)
+  expect_length(x$warnings, 1L)
+  xml <- xml2::read_xml(p); xml2::xml_ns_strip(xml)
+  prods <- xml2::xml_find_all(xml, "//ClassifiedProductDefinition")
+  nm <- xml2::xml_text(xml2::xml_find_first(prods, ".//ProductName"))
+  for (i in seq_along(prods)) {
+    allowed <- xml2::xml_text(xml2::xml_find_first(prods[[i]], ".//DistributionAllowed"))
+    dist <- as.numeric(xml2::xml_text(xml2::xml_find_all(prods[[i]], ".//ProductMatrixItem/Distribution")))
+    if (!any(dist > 0)) expect_equal(allowed, "false", info = nm[i])
+    else expect_equal(allowed, "true", info = nm[i])
+  }
+  expect_true(any(vapply(prods, function(p) any(as.numeric(xml2::xml_text(xml2::xml_find_all(p, ".//ProductMatrixItem/Distribution"))) > 0), NA)))
+  # xlsx: a sheet only for products with a matrix, and the matrix comes back
+  xf <- tempfile(fileext = ".xlsx"); scenario_export(d, pm, xf)
+  sh <- readxl::excel_sheets(xf); expect_equal(sum(grepl("^target_", sh)), sum(has & TRUE) - sum(has & keys == k_no))
+  back <- scenario_import(xf); expect_true(isTRUE(back$ok))
+  pb <- pm_minimal(back$pm)
+  expect_true(dist_has_target(pb, k_has)); expect_false(dist_has_target(pb, k_no))
+  expect_equal(sort(dist_grid(pb, k_has)[!is.na(dist_grid(pb, k_has))]),
+               sort(dist_grid(pm, k_has)[!is.na(dist_grid(pm, k_has))]))
+})

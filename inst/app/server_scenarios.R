@@ -581,6 +581,8 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
                            type = "error", duration = NULL)
           stop("pin_export_failed")
         }
+        if (length(x$warnings))
+          showNotification(paste(tr_msg(x$warnings, lang()), collapse = " "), type = "warning", duration = 15)
       })
   })
 
@@ -964,8 +966,16 @@ function(instance, td, row, col, prop, value, cellProperties) {
   render_target <- function(side) renderRHandsontable({
     pm_tick(); id <- selected(); lang()
     req(id, sel_state(side) == "matrix")
+    req(dist_has_target(isolate(prices(side)), id))     # no demand matrix: a note instead of a table of zeros
     dt_widget(isolate(prices(side)), id)
   })
+  render_no_target <- function(side) renderUI({
+    pm_tick(); id <- selected(); lang()
+    req(id, sel_state(side) == "matrix")
+    if (!dist_has_target(isolate(prices(side)), id)) div(class = "note-muted", L("dt_none"))
+  })
+  output$dt_a_none <- render_no_target("A")
+  output$dt_b_none <- render_no_target("B")
   output$dt_a <- render_target("A")
   output$dt_b <- render_target("B")
 

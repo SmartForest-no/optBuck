@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .pin import and export (Phase 5b)
-  Run: 2026-11-11 11:47:01.833991
+  Run: 2026-11-11 12:38:38.262348
 ============================================================= 
 
 --- 01. Both layouts import ---
@@ -40,7 +40,7 @@
   [PASS  ] Check 12: An .hpr is still read by ProductKey and its assortments keep HprProductKey | 8 product keys, all numeric TRUE
 
 --- 13. Files under 512 bytes ---
-  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: file9ef0205a1d3.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
+  [PASS  ] Check 13: A valid .pin under 512 bytes imports; a wrong-root file under 512 bytes gives the wrong-root error | .pin 413 bytes, ok TRUE, 2 assortments, priced cells 1 | wrong root 54 bytes: file5680676a1361.pin is not a StanForD 2010 .hpr or .pin file (root element 'Other', expected HarvestedProduction or ProductInstruction).
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

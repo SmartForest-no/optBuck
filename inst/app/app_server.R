@@ -981,6 +981,8 @@ server <- function(input, output, session) {
                          type = "error", duration = NULL)
         stop("hpr_export_failed")
       }
+      if (length(x$warnings))
+        showNotification(paste(tr_msg(x$warnings, l), collapse = " "), type = "warning", duration = 15)
       parts <- if (length(x$per_file) > 1L)
         paste(vapply(seq_along(x$per_file), function(i)
           L("hpr_export_file_part", fmt_int(i), fmt_int(x$per_file[i])), ""), collapse = ", ")

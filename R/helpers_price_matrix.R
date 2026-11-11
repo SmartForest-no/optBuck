@@ -917,7 +917,7 @@ pm_template_wide <- function(default, path) {
   d <- pm_minimal(pm)
   if (!PM_DISTRIBUTION_COL %in% names(d)) return(list())
   ids <- setdiff(pm_matrix_ids(d), PM_FLAT_ID)
-  ids <- ids[vapply(ids, function(id) any(!is.na(d[[PM_DISTRIBUTION_COL]][d$ProductKey == id & .is_matrix_row(d)])), logical(1))]
+  ids <- ids[vapply(ids, function(id) any(d[[PM_DISTRIBUTION_COL]][d$ProductKey == id & .is_matrix_row(d)] > 0, na.rm = TRUE), logical(1))]   # no demand matrix: no sheet
   out <- lapply(ids, function(id) {
     g <- .pm_hidden_grid(d, id, PM_DISTRIBUTION_COL)
     o <- cbind(setNames(data.frame(as.integer(rownames(g))), id), g)

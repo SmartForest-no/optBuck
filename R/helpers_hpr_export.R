@@ -89,11 +89,13 @@ HPR_EXPORT_META_BEFORE <- c("ProductInfo", "ProductVersion", "ProductBuyer", "Pr
 # DistributionAllowed, DistributionCategory, MAXDeviation and
 # DistributionWithinProduct, in the element order of the source files; NULL
 # when none is stored (then nothing is written, as before).
-.hpr_export_length_distribution <- function(d) {
+.hpr_export_length_distribution <- function(d, has_matrix = TRUE) {
   g <- function(n) if (n %in% names(d)) d[[n]][1L] else NA
   al <- g("DistributionAllowed"); ct <- g("DistributionCategory")
   dv <- g("MAXDeviation"); wp <- g("DistributionWithinProduct")
   if (all(is.na(c(al, ct, dv, wp)))) return(NULL)
+  # Never DistributionAllowed true with an all-zero demand matrix (StanForD: no matrix = not allowed).
+  if (isTRUE(al) && !has_matrix) al <- FALSE
   tf <- function(x) if (isTRUE(x)) "true" else "false"
   paste0('<LengthDistributionDefinition modificationRestricted="false">',
          if (!is.na(al)) paste0("<DistributionAllowed>", tf(al), "</DistributionAllowed>"),
@@ -303,6 +305,7 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
   sg_el <- vapply(src, function(s) source_xml_part(s, "sguid"), "", USE.NAMES = FALSE)
   sg_by_species <- function(sp) { i <- which(nzchar(sg_el) & as.character(defs$Species) == sp); if (length(i)) sg_el[i[1L]] else NA_character_ }
 
+  no_demand_warn <- FALSE
   xml <- vapply(seq_len(nrow(defs)), function(i) {
     d <- defs[i, , drop = FALSE]
     s <- src[i]
@@ -358,6 +361,9 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
     method <- as.character(d$VolumeDiameterCategory)
     if (identical(method, "Top cylinder")) method <- "Top"       # StanForD has no cylinder rule
     round_down <- !identical(volume_rounding(d$VolumeDiameterCategory), "None")
+    # A demand matrix exists when some cell has a Distribution above 0 (all-zero = none).
+    has_demand <- matrix_priced && any(dist > 0, na.rm = TRUE)
+    if (isTRUE(d$DistributionAllowed) && !has_demand) no_demand_warn <<- TRUE
     int <- function(x) format(round(as.numeric(x)), scientific = FALSE, trim = TRUE)
     items <- sprintf(
       paste0('<ProductMatrixItem diameterClassLowerLimit="%s" lengthClassLowerLimit="%s"><Price>%s</Price>',
@@ -409,7 +415,7 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
       if (nzchar(part("mid"))) part("mid") else EXPORT_NEUTRAL_MID,
       grades,
       # LengthDistributionDefinition (Phase 7a): the stored fields, else a neutral one (the element is required).
-      or_default(.hpr_export_length_distribution(d), EXPORT_NEUTRAL_LENGTH_DIST),
+      or_default(.hpr_export_length_distribution(d, has_demand), EXPORT_NEUTRAL_LENGTH_DIST),
       if (nzchar(part("limit"))) part("limit") else EXPORT_NEUTRAL_LIMIT,
       '<ProductMatrixes modificationRestrictedPrice="false" modificationRestrictedDistribution="false" ',
       'modificationRestrictedLimitation="false" modificationRestrictedBuckingCriteria="false" ',
@@ -418,7 +424,10 @@ hpr_export_products <- function(defs, pm, orig, groups, used_keys = names(orig),
       if (pin) sg else paste0(uid, if (length(gk)) paste0("<SpeciesGroupKey>", gk, "</SpeciesGroupKey>", collapse = "")),
       "</ClassifiedProductDefinition></ProductDefinition>")
   }, "")
-  list(xml = xml, keys = setNames(keys, akeys), ids = ids)
+  list(xml = xml, keys = setNames(keys, akeys), ids = ids,
+       warnings = if (no_demand_warn)
+         "Demand matrix not written: an assortment had Distribution allowed but no demand matrix; it was written as not allowed (all-zero Distribution)."
+       else character(0))
 }
 
 
@@ -620,7 +629,7 @@ hpr_export_result <- function(path, sources, species_by_name, result, defs, pm) 
 
   if (.hpr_export_has_coordinates(path)) return(fail("Coordinates found in the export; the file was not written."))
   list(ok = TRUE, errors = character(0), path = path, n_stems = sum(per_file), n_logs = n_logs,
-       per_file = per_file, no_profile = no_profile, gap_logs = gap_logs)
+       per_file = per_file, no_profile = no_profile, gap_logs = gap_logs, warnings = prod$warnings)
 }
 
 # TRUE if the file holds a coordinate element (scanned in chunks).
