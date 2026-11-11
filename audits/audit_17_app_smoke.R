@@ -1998,8 +1998,8 @@ if (!browser_ok) {
       c43$apport <- js(app, "Array.from(document.querySelectorAll('#tn_results p.note-muted')).map(function(e){ return e.innerText.replace(/\\s+/g, ' ').trim(); }).filter(function(t){ return /^Note:/.test(t); }).join(' | ')")
       c43$plot_w <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().width")
       c43$plot_h <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().height")
-      # the four matrix views of the assortment
-      for (v in c("target", "orig", "tuned", "change")) {
+      # the six matrix views of the assortment (2026-11-11: original and tuned prices added)
+      for (v in c("target", "orig", "tuned", "price_orig", "price_tuned", "change")) {
         app$set_inputs(tn_matrix_view = v, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(0.5)
         if (v == "change") c43$change_note <- trimws(txt(app, "#tn_matrix_note"))
         c43$views[[v]] <- list(hdr = headers_of(app, "tn_matrix"),
@@ -2043,10 +2043,10 @@ if (!browser_ok) {
       grepl("Value of all stems (NOK)", c43$cost, fixed = TRUE) && grepl("Sawlog volume", c43$cost, fixed = TRUE) &&
       identical(c43$cost_cols, "|Before|After|Change") &&
       isTRUE(abs(c43$plot_w - 700) < 4) && isTRUE(abs(c43$plot_h - 320) < 4) &&
-      all(vapply(c43$views, function(v) isTRUE(v$cells >= 1L), logical(1))) && length(c43$views) == 4L &&
+      all(vapply(c43$views, function(v) isTRUE(v$cells >= 1L), logical(1))) && length(c43$views) == 6L &&
       all(vapply(c43$views, function(v) grepl("Diameter class (mm)", v$hdr, fixed = TRUE) && grepl("Length class (cm)", v$hdr, fixed = TRUE), NA)) &&
       grepl("Degree of fit (%)", c43$views$orig$hdr, fixed = TRUE) && grepl("Degree of fit (%)", c43$views$tuned$hdr, fixed = TRUE) &&
-      !grepl("Degree of fit", c43$views$target$hdr, fixed = TRUE) && !grepl("Degree of fit", c43$views$change$hdr, fixed = TRUE) &&
+      !grepl("Degree of fit", c43$views$target$hdr, fixed = TRUE) && !grepl("Degree of fit", c43$views$change$hdr, fixed = TRUE) && !grepl("Degree of fit", c43$views$price_orig$hdr, fixed = TRUE) &&
       grepl("not adjusted", c43$change_note, fixed = TRUE) &&
       identical(c43$use, "Use tuned prices in scenario B") &&
       grepl("Replace scenario B with the tuned prices?", c43$q, fixed = TRUE) && identical(c43$open, 0L) &&

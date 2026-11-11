@@ -324,6 +324,7 @@ details.optbuck-card { margin-bottom: 16px; }
 .pager-info { color: var(--optbuck-muted); font-size: 0.82rem; min-width: 120px; text-align: center; }
 /* Target distribution view (restructure R2): a cell without a price. */
 .pm-na { background-color: #F3F4F3 !important; }
+.tn-untuned { color: #A3A9A6; background-color: #F7F8F7; }   /* diameter classes that price tuning did not touch */
 .tn-top { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 .tn-top .reactable { max-width: 100%; }
 

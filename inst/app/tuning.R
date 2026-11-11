@@ -148,6 +148,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     r <- res(); if (is.null(r)) return(NULL)
     if (isTRUE(r$too_few)) return(div(class = "pm-msg-error", L("tn_too_few")))
     views <- c(target = L("tn_view_target"), orig = L("tn_view_orig"), tuned = L("tn_view_tuned"),
+               price_orig = L("tn_view_price_orig"), price_tuned = L("tn_view_price_tuned"),
                change = L("tn_price_change"))
     notes <- grade_unused_text(r$grade_note, r$side, lang())   # R5: stems whose grades are not used
     div(class = "tn-block",
@@ -255,11 +256,16 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       df$fg <- ifelse(is.na(mv$fg), "", fmt1(mv$fg))
       cols$fg <- reactable::colDef(name = L("tn_col_fg"), width = 150, align = "right")
     }
+    untuned <- mv$untuned
     optbuck_reactable(df, columns = cols, sortable = FALSE, pagination = FALSE, lang = l,
+                    row_class = function(index) if (isTRUE(untuned[index])) "tn-untuned",
                     column_groups = list(reactable::colGroup(L("tn_col_length_cm"), lc)))
   })
   output$tn_matrix_note <- renderUI({
-    if (identical(or_default(input$tn_matrix_view, "target"), "change")) p(class = "note-muted", L("tn_change_caption"))
+    r <- res(); k <- or_default(input$tn_matrix_product, if (!is.null(r)) r$ids[1L])
+    untuned <- !is.null(r) && !isTRUE(r$too_few) && !is.null(k) && k %in% r$ids && any(tuning_matrix_view(r$by[[k]], "target")$untuned)
+    tagList(if (identical(or_default(input$tn_matrix_view, "target"), "change")) p(class = "note-muted", L("tn_change_caption")),
+            if (untuned) p(class = "note-muted", L("tn_untuned_note")))
   })
 
   # Test mode only (shinytest2): the tuned grids, so audit 17 can compare them with scenario B.

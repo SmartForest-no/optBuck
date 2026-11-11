@@ -526,12 +526,13 @@ tuning_products <- function(defs, pm) {
 # @param view "target", "orig", "tuned" or "change".
 # @return list(m = classes x lengths numeric (NA: no value), fg = FG per class
 #   or NULL, digits): shares and prices rounded to whole numbers.
-tuning_matrix_view <- function(by, view = c("target", "orig", "tuned", "change")) {
+tuning_matrix_view <- function(by, view = c("target", "orig", "tuned", "change", "price_orig", "price_tuned")) {
   view <- match.arg(view)
   g <- by$grid
   lens <- g$lengths * 10; cls <- g$diam_classes
   m <- switch(view,
     target = by$W, orig = by$S_orig, tuned = by$S_tuned,
+    price_orig = by$P1, price_tuned = by$Pb,          # NOK/m3 (2026-11-11)
     change = { steer <- !is.na(by$W) & !is.na(by$P1) & matrix(by$eligible, nrow(by$P1), ncol(by$P1), byrow = TRUE)
                d <- by$Pb - by$P1; d[!steer] <- NA_real_; d })
   m <- round(t(m))
@@ -552,5 +553,7 @@ tuning_matrix_view <- function(by, view = c("target", "orig", "tuned", "change")
   }
   if (identical(view, "change")) dash <- priced & (is.na(m) | m == 0)
   m[dash] <- NA_real_
-  list(m = m, fg = fg, classes = cls, lengths_cm = lens, dash = dash)
+  # Diameter classes that were not tuned (fewer logs than the minimum, or no demand matrix): greyed in the app.
+  untuned <- if (is.null(by$eligible)) rep(FALSE, length(cls)) else !unname(by$eligible[as.character(cls)]) | is.na(unname(by$eligible[as.character(cls)]))
+  list(m = m, fg = fg, classes = cls, lengths_cm = lens, dash = dash, untuned = untuned)
 }

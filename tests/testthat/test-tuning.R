@@ -44,3 +44,18 @@ test_that("hpr_default_keep limits the default selection to the used products", 
   expect_false(kg$used)
   expect_equal(length(kg$keep), sum(hpr_product_table(hg, mg)$default))
 })
+
+# Matrix views of tab 4 (2026-11-11): the original and the tuned prices in NOK/m3, diameter classes that were not
+# tuned are flagged (greyed in the app).
+test_that("tuning_matrix_view has price views and flags the classes that were not tuned", {
+  mk <- function(v) matrix(v, 2, 2)               # rows = lengths, columns = diameter classes
+  by <- list(grid = list(lengths = c(37, 43), diam_classes = c(100, 150), price = mk(c(500, 520, 600, NA))),
+             W = mk(c(50, 50, 100, NA)), P1 = mk(c(500, 520, 600, NA)), Pb = mk(c(510, 530, 600, NA)),
+             S_orig = mk(c(40, 60, 100, NA)), S_tuned = mk(c(50, 50, 100, NA)),
+             eligible = c("100" = TRUE, "150" = FALSE))
+  po <- tuning_matrix_view(by, "price_orig"); pt <- tuning_matrix_view(by, "price_tuned")
+  expect_equal(unname(po$m[1, ]), c(500, 520)); expect_equal(unname(pt$m[1, ]), c(510, 530))
+  expect_true(is.na(pt$m[2, 2]))                  # a cell without a price stays empty
+  expect_equal(po$untuned, c(FALSE, TRUE))
+  expect_equal(tuning_matrix_view(by, "target")$untuned, c(FALSE, TRUE))
+})

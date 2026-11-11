@@ -797,3 +797,6 @@
 "dt_none","ui","No demand matrix","Ingen fordelingsmatrise",""
 "hpr_export_bucking","ui","Bucking the stems with Scenario %s...","Apterer stammene med scenario %s...",""
 "hpr_export_no_stems","ui","No .hpr stems are loaded in tab 1.","Ingen .hpr-stammer er lastet i fane 1.",""
+"tn_view_price_orig","ui","Original prices (NOK/m³)","Opprinnelige priser (kr/m³)",""
+"tn_view_price_tuned","ui","Tuned prices (NOK/m³)","Tilpassede priser (kr/m³)",""
+"tn_untuned_note","ui","Greyed diameter classes were not tuned (too few logs, or no demand matrix).","Nedtonede diameterklasser ble ikke tilpasset (for få stokker, eller ingen fordelingsmatrise).",""
