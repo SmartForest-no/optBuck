@@ -42,6 +42,7 @@ Recorded logs are not read; the stems are bucked from their profiles. | Registre
 1 stem dropped: StemKey already used by an earlier stem. | 1 stamme utelatt: StemKey er allerede brukt av en tidligere stamme.
 1 stem dropped: profile does not start at the felling cut (position 0). | 1 stamme utelatt: profilen starter ikke ved fellingskuttet (posisjon 0).
 1 stem dropped: a diameter above 1,500 mm (likely a unit error). | 1 stamme utelatt: en diameter over 1 500 mm (trolig feil enhet).
+Bark: the file's bark function (none) is not supported; barkNOR is used for the stems of GRAN, FURU. | Bark: filens barkfunksjon (none) støttes ikke; barkNOR brukes for stammene i GRAN, FURU.
 1 stem dropped: multi-tree stem (no single-stem profile). | 1 stamme utelatt: flertrestamme (ingen enkeltstammeprofil).
 1 stem dropped: no stem profile (StemDiameters). | 1 stamme utelatt: ingen stammeprofil (StemDiameters).
 1 stem dropped: species group LAUV (447) is set to Not used. | 1 stamme utelatt: treslagsgruppen LAUV (447) er satt til Ikke brukt.
@@ -54,6 +55,7 @@ No stems are left to buck: no stem has a usable profile in a species group set t
 1 stem with a broken top (last diameter above 200 mm). | 1 stamme med knekt topp (siste diameter over 200 mm).
 2 stems dropped: profile falls less than 1 mm per 30 dm. | 2 stammer utelatt: profilen faller mindre enn 1 mm per 30 dm.
 1 stem dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm. | 1 stamme utelatt: profilen faller mer enn 30 mm over 1 dm eller 60 mm over 10 dm.
+Bark: the file's bark function (none) is not supported; barkNOR is used for the stems of GRAN. | Bark: filens barkfunksjon (none) støttes ikke; barkNOR brukes for stammene i GRAN.
 nostems.hpr contains no stems. | nostems.hpr inneholder ingen stammer.
 Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell. | Ukjent oppsett: forventet lange kolonner (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) eller et bredt rutenett med et matrisenavn (spruce_sawlog / pine_sawlog) i cellen øverst til venstre.
 Negative price in 1 row(s). | Negativ pris i 1 rad(er).

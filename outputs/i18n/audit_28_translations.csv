@@ -1,9 +1,9 @@
 check,result,detail
-"Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates",PASS,"802 rows (msg 165, ui 566, value 71) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none"
-Check 02: every id the code uses exists; no ui id unused,PASS,"448 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE"
-Check 03: no untranslated English string literals in app/*.R,PASS,"2279 string literals, 32 prose-like, 30 translated at display | left: none"
-Check 04: every message template round-trips; English unchanged; unknown values pass through,PASS,108 templates | failed: none | misses: none | English unchanged TRUE | pass-through TRUE
-"Check 05: backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss",PASS,"72 distinct messages (tree list 42, .hpr import 24, .hpr stems 28, prices 16) | misses: none | unchanged: none"
+"Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates",PASS,"805 rows (msg 166, ui 568, value 71) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none"
+Check 02: every id the code uses exists; no ui id unused,PASS,"450 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE"
+Check 03: no untranslated English string literals in app/*.R,PASS,"2281 string literals, 32 prose-like, 30 translated at display | left: none"
+Check 04: every message template round-trips; English unchanged; unknown values pass through,PASS,109 templates | failed: none | misses: none | English unchanged TRUE | pass-through TRUE
+"Check 05: backend messages (tree list, .hpr import, .hpr stems, prices) translate without a miss",PASS,"74 distinct messages (tree list 42, .hpr import 24, .hpr stems 30, prices 16) | misses: none | unchanged: none"
 "Check 06: downloads: English CSV as write.csv; Norsk CSV with ';', decimal comma and BOM reads back; tally xlsx in both languages",PASS,"English CSV identical TRUE | Norsk CSV TRUE | xlsx sheets en 'spruce_sawlog', 'spruce_pulpwood', 'long' / no 'spruce_sawlog', 'spruce_pulpwood', 'liste', headers and numbers TRUE"
 Check 07: tree_counts() in English as before Phase 1 and inflected in Norsk; fmt_num(),PASS,"6 tree-count cases, wrong: none | fmt_num TRUE"
 "Check 08: a product name from a file is shown as written ('SAG - Buyer A' -> 'Gran SAG - ...' / 'Spruce SAG - ...', '140 Sagtømmer gran' unchanged); only the base names (Sawlog, Pulpwood, Waste) start in lower case",PASS,Gran SAG - Buyer A | Spruce SAG - Buyer A | Gran sagtømmer

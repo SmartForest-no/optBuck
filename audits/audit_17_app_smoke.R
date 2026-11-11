@@ -1775,7 +1775,7 @@ if (!browser_ok) {
       !grepl("imported into", c31$file, fixed = TRUE) &&
       identical(c31$species, "pine,spruce,none") &&
       grepl("hpr_example_synthetic.hpr: 13 stems read, 5 used.", c31$valid, fixed = TRUE) &&
-      identical(as.integer(c31$n_warn), 4L) && !grepl("Not used", c31$valid, fixed = TRUE) &&
+      identical(as.integer(c31$n_warn), 5L) && !grepl("Not used", c31$valid, fixed = TRUE) &&   # 4 + the barkNOR fallback line (the fixture has no BarkFunction)
       !grepl("multi-tree", c31$valid, fixed = TRUE) && grepl("4 spruce · 1 pine stems", c31$counts, fixed = TRUE) &&
       isTRUE(c31$tab3_btn) && identical(c31$hpr_btn, "Download as .hpr|Download as .hpr") && isTRUE(c31$hpr_ok) &&
       grepl("Stems", c31$summary, fixed = TRUE) && !grepl("Plots", c31$summary, fixed = TRUE) &&

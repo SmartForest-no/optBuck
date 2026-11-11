@@ -261,6 +261,7 @@ profiles_to_profile_vectors <- function(profiles,
   dv_col   <- profiles$DiameterValue
   grade_col <- profiles$grade                       # NULL unless the profiles carry grades
   file_col  <- profiles$file                        # the stem file (.hpr stems with grades, R5)
+  bark_a_col <- profiles$bark_a; bark_b_col <- profiles$bark_b   # .hpr stems: the file's bark function (NA = barkNOR)
   reject_col <- profiles$reject                     # recorded waste zones (bucking check), NULL otherwise
 
   for (tid in tree_ids) {
@@ -282,6 +283,8 @@ profiles_to_profile_vectors <- function(profiles,
     if (!is.null(grade_col)) pvs[[tid]]$grade <- as.numeric(grade_col[ii])
     if (!is.null(file_col)) pvs[[tid]]$file <- as.integer(file_col[i1])
     if (!is.null(reject_col)) pvs[[tid]]$reject <- as.logical(reject_col[ii])
+    if (!is.null(bark_a_col) && !is.na(bark_a_col[i1]) && !is.na(bark_b_col[i1]))
+      pvs[[tid]]$bark_ab <- c(bark_a_col[i1], bark_b_col[i1])
   }
   pvs
 }

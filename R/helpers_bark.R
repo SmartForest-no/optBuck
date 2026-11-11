@@ -85,6 +85,23 @@ dbh_from_profile <- function(positions_cm, d_ob_mm) {
   stats::approx(positions_cm, d_ob_mm, xout = 130, rule = 2)$y
 }
 
+# The bark function of an .hpr species group (2026-11-11, decided by Lennart): StanForD "Swedish Zacco" gives double
+# bark (mm) = ConstantA + FactorB * d_ob (mm), "None" gives 0. Both reproduce the recorded log diameters of the
+# owner's files (residual 0.3 mm = rounding). Any other category (e.g. "Skogforsk 2004", which also depends on the
+# position on the stem) or none is not supported: a = b = NA and barkNOR is used for the stem.
+#
+# @param sp species table with bark_category, bark_a, bark_b.
+# @return sp with bark_a / bark_b set to 0 for "None" and NA for unsupported categories.
+HPR_BARK_SUPPORTED <- c("Swedish Zacco", "None")
+hpr_bark_columns <- function(sp) {
+  cat <- as.character(sp$bark_category)
+  none <- cat %in% "None"
+  zacco <- cat %in% "Swedish Zacco" & is.finite(sp$bark_a) & is.finite(sp$bark_b)
+  sp$bark_a <- ifelse(none, 0, ifelse(zacco, sp$bark_a, NA_real_))
+  sp$bark_b <- ifelse(none, 0, ifelse(zacco, sp$bark_b, NA_real_))
+  sp
+}
+
 # Add the under-bark profile (DiameterValueUB, mm) to a profile vector.
 #
 # Uses the measured over-bark dbh (pv$DBH, mm) when present, which is also
@@ -93,6 +110,12 @@ dbh_from_profile <- function(positions_cm, d_ob_mm) {
 # @param pv    Profile vector from profiles_to_profile_vectors().
 # @param model Bark model function (default: get_bark_model()).
 add_under_bark_profile <- function(pv, model = get_bark_model()) {
+  # An .hpr stem whose file has a supported bark function: the harvester's own deduction.
+  ab <- pv$bark_ab
+  if (length(ab) == 2L && all(is.finite(ab))) {
+    pv$DiameterValueUB <- pmax(pv$DiameterValue - pmax(ab[1L] + ab[2L] * pv$DiameterValue, 0), 0)
+    return(pv)
+  }
   dbh_mm <- pv$DBH
   if (is.null(dbh_mm) || length(dbh_mm) != 1L || is.na(dbh_mm))
     dbh_mm <- dbh_from_profile(pv$diameterPosition, pv$DiameterValue)

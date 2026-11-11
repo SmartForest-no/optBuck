@@ -400,7 +400,14 @@ read_hpr <- function(path, filename = basename(path)) {
       if (any(!is.na(g))) min(g, na.rm = TRUE) else NA_real_ }, 0),
     start_grade = vapply(sgs, .hnum, 0, "./Grades/StartGrade"),
     dbh_height  = vapply(sgs, .hnum, 0, "./DBHHeight"),    # cm from the felling cut (hpr stems)
+    # The group's BarkFunction (2026-11-11): category and, for the supported ones, double bark (mm) = a + b * d_ob.
+    bark_category = vapply(sgs, function(s) {
+      e <- xml2::xml_find_first(s, "./BarkFunction")
+      if (inherits(e, "xml_missing")) NA_character_ else as.character(xml2::xml_attr(e, "barkFunctionCategory")) }, ""),
+    bark_a = vapply(sgs, .hnum, 0, "./BarkFunction/SwedishZacco/ConstantA"),
+    bark_b = vapply(sgs, .hnum, 0, "./BarkFunction/SwedishZacco/FactorB"),
     stringsAsFactors = FALSE)
+  species <- hpr_bark_columns(species)
   if (nrow(species) == 0L) errors <- c(errors, "The file defines no species groups.")
   if (any(duplicated(species$key)))
     errors <- c(errors, sprintf("Species group key(s) defined twice: %s.",
@@ -514,7 +521,8 @@ read_pin <- function(path, filename = basename(path)) {
   species <- data.frame(key = ids, name = ids, user_id = ids,
                         best_grade = rep(NA_real_, length(ids)), start_grade = rep(NA_real_, length(ids)),
                         dbh_height = rep(NA_real_, length(ids)),
-                        stringsAsFactors = FALSE)
+                        bark_category = rep(NA_character_, length(ids)), bark_a = rep(NA_real_, length(ids)),
+                        bark_b = rep(NA_real_, length(ids)), stringsAsFactors = FALSE)
   if (nrow(species) > 0L)
     species$n_products <- vapply(species$key, function(k)
       sum(vapply(products, function(p) k %in% p$species_keys, logical(1))), integer(1))

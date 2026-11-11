@@ -1,3 +1,11 @@
+# optBuck 0.3.4
+
+* **Bark model for .hpr stems:** the under-bark diameters of .hpr stems follow the harvester's own bark function from the file
+  (`Swedish Zacco`: double bark = A + B x over-bark diameter; `None`) instead of barkNOR. The function reproduces the under-bark log
+  diameters recorded in the files to within 0.3 mm. A file with another function (for example `Skogforsk 2004`) or none falls back
+  to barkNOR for those stems, and tab 1 says so once. NFI stems and uploaded tree lists keep barkNOR. Help has a new term, «Barkmodell».
+  Effect on a Zacco file (file5): `Top` price volume 0.922 -> 1.002 of the harvester's `m3 (price)`, yield index 93.1 -> 93.2 %.
+
 # optBuck 0.3.3
 
 Fixes after testing 0.3.2.

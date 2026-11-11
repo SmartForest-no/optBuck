@@ -281,7 +281,7 @@ p_none <- hpr_stem_profiles(st, setNames(rep("none", 4L), names(map)))
 ok7 <- isTRUE(p$ok) && identical(p$n_read, 13L) && identical(p$n_used, 5L) &&
   identical(sort(td$treid), c("1", "2", "3", "4", "5")) &&
   identical(td$species_group[match(c("1", "2"), td$treid)], c("spruce", "pine")) &&
-  identical(p$warnings, want_w) && all(want_i %in% p$info) &&
+  identical(p$warnings[!grepl("^Bark:", p$warnings)], want_w) && all(want_i %in% p$info) &&
   identical(p$excluded$treid, c("6", "7", "8", "9", "2", "11", "12", "13")) &&      # file order
   isTRUE(p_g$ok) && identical(p_g$tree_data$treid, "2") &&
   # stems 1, 3-5 and 11-13: the species check comes before the profile checks
@@ -532,7 +532,7 @@ w14 <- c("2 stems with a broken top (last diameter above 200 mm).",
 pr14 <- hpr_stem_profiles(st14, map14)
 rs14 <- setNames(pr14$excluded$excluded_reason, pr14$excluded$treid)
 ok14b <- identical(unname(ck14$clean_counts), c(2L, 2L, 3L)) && ck14$n_read == 12L && ck14$n_used == 7L &&
-  setequal(ck14$warnings, w14) && length(ck14$warnings) == 3L && !any(grepl("falls|broken", ck14$info)) &&
+  setequal(ck14$warnings[!grepl("^Bark:", ck14$warnings)], w14) && sum(!grepl("^Bark:", ck14$warnings)) == 3L && !any(grepl("falls|broken", ck14$info)) &&
   nrow(pr14$tree_data) == 7L && nrow(pr14$excluded) == 5L &&
   all(c("2", "12") %in% pr14$tree_data$treid == c(TRUE, FALSE)) &&   # broken top kept; broken + steep dropped as steep
   !"2" %in% names(rs14) && startsWith(rs14[["12"]], "profile falls more") &&
