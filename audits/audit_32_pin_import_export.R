@@ -331,7 +331,7 @@ ui_src <- paste(readLines(file.path(root_dir, "inst", "app", "app_ui.R"), warn =
 ok10 <- identical(read_product_file(MINI)$kind, "pin") && identical(read_product_file(as_hpr_name)$kind, "pin") &&
   identical(read_product_file(HPRFX)$kind, "hpr") && identical(read_product_file(as_pin_name)$kind, "hpr") &&
   grepl("if (!identical(data$kind, \"pin\")) hpr_kept(", src, fixed = TRUE) && !grepl("hpr_imported", src, fixed = TRUE) &&
-  grepl('accept = c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip")', ui_src, fixed = TRUE)
+  grepl('c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip"), l)', src, fixed = TRUE)   # 0.3.2: the upload field is in the source dialog
 rec("Check 10: The root element decides; a .pin is not kept for the .hpr stems source (audit 17 check 42 drives the app)",
     ok(ok10), sprintf("kinds: pin %s, pin as .hpr %s, hpr %s, hpr as .pin %s | app: pin branch present %s, hpr_imported gone %s",
                       read_product_file(MINI)$kind, read_product_file(as_hpr_name)$kind, read_product_file(HPRFX)$kind,

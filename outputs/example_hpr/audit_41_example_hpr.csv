@@ -3,7 +3,7 @@ check,result,detail
 "Check 02: well-formed XML, no coordinate elements",PASS,coordinate elements: 0
 "Check 03: identity fields hold only neutral placeholders, empty values or numbers",PASS,33 values in 24 fields; not neutral: 0
 "Check 04: read_hpr(), read_hpr_stems(), read_hpr_logs() work; every classified product has a recorded log",PASS,"products 7, with logs 7; logs 772 on 376 stems"
-Check 05: bucking_check() works; yield index between 0.5 and 1.1,PASS,"stems checked 318, yield index 0.9446, 6.1 s"
+Check 05: bucking_check() works; yield index between 0.5 and 1.1,PASS,"stems checked 318, yield index 0.9446, 6.7 s"
 Check 06: valid against the StanForD 2010 HarvestedProduction schema 3.1,PASS,errors: 0
 Check 07: the scripted search for the original's identifying strings found none,PASS,"50 strings searched when the file was built, 0 found"
-"Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file",PASS,42 words searched in 284 tracked files; files with a hit: 0
+"Check 08: no buyer, company, landowner, file-name or place word of the original files in any tracked text file",PASS,42 words searched in 287 tracked files; files with a hit: 0
