@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: import from .hpr (Phase A)
-  Run: 2026-11-11 12:47:43.227152
+  Run: 2026-11-11 13:15:11.403251
 ============================================================= 
 
 --- 01. Reading ---
@@ -16,7 +16,7 @@
   [PASS  ] Check 04: Grades no longer untick products (2026-10-28); reference grades (most commonly permitted, ties kept, else StartGrade, else none) and which products permit them | fixture: unticked (mapped species) ; 100 Energi (grade 7 only) ticked TRUE, no reason; without permitted grades kept TRUE | invented groups: reference grades 1:2, 2:1/2/3/4, 3:3, 4: | permits one: saw_mode=TRUE, saw_mode2=TRUE, pulp_wide=TRUE, special=FALSE, energy=FALSE, no_grades=NA, tie_a=TRUE, tie_b=TRUE, start_only=NA
 
 --- 05. Mapping onto the assortment table ---
-  [PASS  ] Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid | keys pine_240_sagt_mmer_furu,pine_200_massevirke,spruce_197_massevirke,spruce_100_energi,spruce_154_kubb,spruce_140_sagt_mmer_gran,pine_waste,spruce_waste | pine sawlog top 14-50, butt <= 60, top position 10, Top cylinder | SPR min top 14.2, Calculated Norwegian mid | price lengths on: pine_240_sagt_mmer_furu | valid TRUE
+  [PASS  ] Check 05: Assortments, limits, volume methods, types and price lengths; the scenario is valid | keys pine_240_sagtommer_furu,pine_200_massevirke,spruce_197_massevirke,spruce_100_energi,spruce_154_kubb,spruce_140_sagtommer_gran,pine_waste,spruce_waste | pine sawlog top 14-50, butt <= 60, top position 10, Top cylinder | SPR min top 14.2, Calculated Norwegian mid | price lengths on: pine_240_sagtommer_furu | valid TRUE
 
 --- 06. Lengths round up ---
   [PASS  ] Check 06: Length classes round up to whole dm; a class without a whole-dm length is dropped | 240 Sagtømmer furu 37,38,40,41,43,46,49,52,55 dm | Kubb 31 dm | 301+305 cm classes: '154 Kubb: Length class(es) 301 cm dropped: no whole-dm length inside the class.', columns 31

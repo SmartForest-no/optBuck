@@ -299,8 +299,29 @@ validate_products <- function(pd, lc = NULL) {
 # A lower-case key part from an assortment name ("Large sawlogs" ->
 # "large_sawlogs").
 assortment_slug <- function(name) {
+  # Letters outside a-z are transliterated, not dropped (2026-11-11): ae, o, a (and a, o, u for the umlauts).
+  s <- tolower(trimws(as.character(name)))
+  s <- gsub("[\u00e6\u00c6]", "ae", s); s <- gsub("[\u00f8\u00d8\u00f6\u00d6]", "o", s)
+  s <- gsub("[\u00e5\u00c5\u00e4\u00c4]", "a", s); s <- gsub("[\u00fc\u00dc]", "u", s)
+  s <- gsub("[^a-z0-9]+", "_", s)
+  gsub("^_+|_+$", "", s)
+}
+
+# The slug before the transliteration (letters outside a-z dropped): old scenario files name their price
+# sheets and keys with it, so uploads still find them (key_aliases()).
+.legacy_assortment_slug <- function(name) {
   s <- gsub("[^a-z0-9]+", "_", tolower(trimws(as.character(name))))
   gsub("^_+|_+$", "", s)
+}
+
+# Old key -> current key for the assortments whose key changed with the transliteration (named character,
+# empty when none).
+key_aliases <- function(defs) {
+  if (is.null(defs) || nrow(defs) == 0L) return(character(0))
+  now <- assortment_table_keys(defs)
+  old <- paste0(as.character(defs$Species), "_", vapply(defs$Name, .legacy_assortment_slug, character(1), USE.NAMES = FALSE))
+  d <- old != now
+  setNames(now[d], old[d])
 }
 
 # Parse allowed lengths: "310;340, 370" or a numeric vector -> integer cm.

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: stem grades and cut at grade changes (Phase 6)
-  Run: 2026-11-10 13:39:10.080396
+  Run: 2026-11-11 13:15:49.235543
 ============================================================= 
 
 --- 1. Grades read and put on the grid ---
@@ -16,7 +16,7 @@
 
 --- 3. Use stem grades; 4. Cut at grade changes ---
   [PASS  ] Check 3a: with Use stem grades no log takes a product that does not permit a grade it covers; without the option some do (not vacuous) | violations: off 5, use 0, use+cut 0
-  [PASS  ] Check 3b: stem 101 (grade 7 below 300 cm): no sawlog or Kubb below 300 cm with the option; stem 104 (grade 7 from 295 -> 300): none above 300 | A logs of 101 below 300: spruce_140_sagt_mmer_gran
+  [PASS  ] Check 3b: stem 101 (grade 7 below 300 cm): no sawlog or Kubb below 300 cm with the option; stem 104 (grade 7 from 295 -> 300): none above 300 | A logs of 101 below 300: spruce_140_sagtommer_gran
   [PASS  ] Check 4a: with Cut at grade changes no log contains a grade change in its interior; without it some do (not vacuous) | logs spanning a change: off 3, use only 1, cut only 0, both 0
   [PASS  ] Check 4b: the options are independent: cut only does not apply permitted grades, use only does not force cuts; a stem without a change (103, 105) is the same in all four runs | cut-only violations 2
 
@@ -67,7 +67,7 @@
 
 --- 13. Assortment type ---
   [PASS  ] Check 13a: .hpr_type(): MASSE FRISK, RMASSE 0-20%, TØRRGRAN - Fallende and 200 Massevirke are pulpwood; SAG - Buyer A and 140 Sagtømmer gran sawlog; RMB 0-20% and BJØRK (group MASSE) custom
-  [PASS  ] Check 13b: set_assortment_type(): the user's choice is stored in Type and flagged (TypeUser), reaches ProductData, 'other' is a custom type apart from sawlog/pulpwood/waste, and a waste row cannot be changed | pulpwood 140_sagt_mmer_gran
+  [PASS  ] Check 13b: set_assortment_type(): the user's choice is stored in Type and flagged (TypeUser), reaches ProductData, 'other' is a custom type apart from sawlog/pulpwood/waste, and a waste row cannot be changed | pulpwood 140_sagtommer_gran
   [PASS  ] Check 13c: the chosen type survives copy A to B and the scenario xlsx round trip; a different type makes the scenarios differ, a price edit does not touch it
   [PASS  ] Check 13d: the type groups of the result tables and the value-by-type chart follow the field (a sawlog changed to pulpwood is Pulpwood, a custom type Other)
 ============================================================= 

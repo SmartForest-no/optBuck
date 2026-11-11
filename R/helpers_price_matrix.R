@@ -464,12 +464,13 @@ scenario_import <- function(path) {
   keys <- assortment_table_keys(defs)
   empty <- data.frame(ProductKey = character(0), LengthClass_dm = numeric(0),
                       PriceDiameterClass_cm = numeric(0), PriceNOKperM3 = numeric(0))
+  al <- key_aliases(defs)
   up <- read_price_matrix_upload(path, path, empty,
-                                 matrix_keys = keys[defs$PriceType == "matrix"])
+                                 matrix_keys = keys[defs$PriceType == "matrix"], alias = al)
   if (length(up$errors) > 0L) return(fail(up$errors))
   v <- check_price_set(defs, up$long)
   if (!v$ok) return(fail(v$errors))
-  v$pm <- .pm_attach_hidden(v$pm, path, sheets, keys[defs$PriceType == "matrix"])
+  v$pm <- .pm_attach_hidden(v$pm, path, sheets, keys[defs$PriceType == "matrix"], alias = al)
   # An older file may have a 'scenario' sheet with a name; it is ignored.
   list(ok = TRUE, defs = defs, pm = v$pm, errors = character(0), warnings = v$warnings)
 }
@@ -477,12 +478,12 @@ scenario_import <- function(path) {
 # Put the target (sheets target_<n>) and the file diameter classes (sheet
 # file_classes) of a scenario xlsx back on the price matrix as its hidden
 # columns. A value with no priced cell to hold it is ignored.
-.pm_attach_hidden <- function(pm, path, sheets, matrix_keys) {
+.pm_attach_hidden <- function(pm, path, sheets, matrix_keys, alias = NULL) {
   pm <- pm_minimal(pm)
   key <- function(p) paste(p$ProductKey, p$LengthClass_dm, p$PriceDiameterClass_cm)
   for (sh in sheets[.is_target_sheet(sheets)]) {
     raw <- as.data.frame(readxl::read_excel(path, sheet = sh, col_names = FALSE, col_types = "text", .name_repair = "minimal"))
-    p <- .parse_wide_grid(raw, id = NULL, valid_ids = matrix_keys)
+    p <- .parse_wide_grid(raw, id = NULL, valid_ids = matrix_keys, alias = alias)
     if (is.null(p$long)) next
     if (!PM_DISTRIBUTION_COL %in% names(pm)) pm[[PM_DISTRIBUTION_COL]] <- NA_real_
     i <- match(key(pm), key(p$long))
@@ -492,7 +493,7 @@ scenario_import <- function(path) {
   if ("file_classes" %in% sheets) {
     fc <- as.data.frame(readxl::read_excel(path, sheet = "file_classes", col_types = "text"))
     if (all(c("ProductKey", "PriceDiameterClass_cm", PM_FILE_CLASS_COL) %in% names(fc))) {
-      kk <- function(k, c) paste(trimws(k), suppressWarnings(as.integer(c)))
+      kk <- function(k, c) paste(.unalias(trimws(k), alias), suppressWarnings(as.integer(c)))
       i <- match(kk(pm$ProductKey, pm$PriceDiameterClass_cm), kk(fc$ProductKey, fc$PriceDiameterClass_cm))
       hit <- !is.na(i) & .is_matrix_row(pm)
       pm[[PM_FILE_CLASS_COL]] <- NA_real_
@@ -737,13 +738,19 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
 # @param id    Matrix id (ProductKey); if NULL, read from the top-left cell.
 # @param valid_ids Allowed sawlog ProductKeys.
 # @return list(long = data.frame or NULL, id, errors).
-.parse_wide_grid <- function(raw, id = NULL, valid_ids) {
+# Old key -> current key (key_aliases()); other values unchanged.
+.unalias <- function(x, alias) {
+  if (is.null(alias) || length(alias) == 0L) return(x)
+  i <- match(x, names(alias)); x[!is.na(i)] <- unname(alias[i[!is.na(i)]]); x
+}
+
+.parse_wide_grid <- function(raw, id = NULL, valid_ids, alias = NULL) {
   raw <- as.matrix(raw)
   raw[is.na(raw)] <- ""
   errs <- character(0)
-  corner <- unname(trimws(as.character(raw[1L, 1L])))
+  corner <- .unalias(unname(trimws(as.character(raw[1L, 1L]))), alias)
   if (is.null(id)) id <- corner
-  id <- unname(as.character(id))
+  id <- .unalias(unname(as.character(id)), alias)
   if (!id %in% valid_ids)
     return(list(long = NULL, id = id, errors = sprintf(
       "Unknown matrix '%s' (expected one of: %s).", id, paste(valid_ids, collapse = ", "))))
@@ -791,7 +798,7 @@ validate_scenario_pm <- function(pm, pd, lc, default = NULL) {
 # @return list(layout = "long"|"wide", long = data.frame (raw long rows, for
 #   validation), ids = matrices contained (wide) or all ids (long), errors).
 read_price_matrix_upload <- function(path, filename = path, default,
-                                     matrix_keys = character(0)) {
+                                     matrix_keys = character(0), alias = NULL) {
   ext <- tolower(tools::file_ext(filename))
   saw_ids <- union(setdiff(pm_matrix_ids(default), PM_FLAT_ID), matrix_keys)
   fail <- function(msg) list(layout = NA_character_, long = NULL, ids = character(0),
@@ -818,15 +825,15 @@ read_price_matrix_upload <- function(path, filename = path, default,
           next
         }
         body <- raw[-1L, , drop = FALSE]; names(body) <- hdr
-        longs[[sh]] <- data.frame(ProductKey = trimws(body$ProductKey),
+        longs[[sh]] <- data.frame(ProductKey = .unalias(trimws(body$ProductKey), alias),
                                   LengthClass_dm = NA, PriceDiameterClass_cm = NA,
                                   PriceNOKperM3 = trimws(body$PriceNOKperM3),
                                   stringsAsFactors = FALSE)
         ids <- c(ids, PM_FLAT_ID)
       } else {
-        p <- .parse_wide_grid(raw, id = sh, valid_ids = saw_ids)
+        p <- .parse_wide_grid(raw, id = sh, valid_ids = saw_ids, alias = alias)
         errs <- c(errs, p$errors)
-        if (!is.null(p$long)) { longs[[sh]] <- p$long; ids <- c(ids, sh) }
+        if (!is.null(p$long)) { longs[[sh]] <- p$long; ids <- c(ids, p$id) }
       }
     }
     if (length(errs) > 0L) return(fail(errs))
@@ -844,11 +851,12 @@ read_price_matrix_upload <- function(path, filename = path, default,
     if ("ProductKey" %in% hdr) {   # long layout; missing columns are reported by validation
       body <- raw[-1L, , drop = FALSE]; names(body) <- hdr
       body[] <- lapply(body, function(x) { x <- trimws(x); x[x %in% c("", "NA")] <- NA; x })
+      body$ProductKey <- .unalias(body$ProductKey, alias)
       return(list(layout = "long", long = body, ids = pm_matrix_ids(default),
                   errors = character(0)))
     }
-    if (hdr[1L] %in% saw_ids) {
-      p <- .parse_wide_grid(raw, id = NULL, valid_ids = saw_ids)
+    if (.unalias(hdr[1L], alias) %in% saw_ids) {
+      p <- .parse_wide_grid(raw, id = NULL, valid_ids = saw_ids, alias = alias)
       if (length(p$errors) > 0L) return(fail(p$errors))
       return(list(layout = "wide", long = p$long, ids = p$id, errors = character(0)))
     }

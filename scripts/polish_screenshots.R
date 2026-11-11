@@ -80,7 +80,7 @@ shot("05_stems_hpr")
 nav("prices")
 app$upload_file(scen_a_upload = fx); app$wait_for_idle()
 app$click("hpr_apply"); app$wait_for_idle()
-key <- "spruce_140_sagt_mmer_gran"
+key <- "spruce_140_sagtommer_gran"
 pick("a", key)
 app$set_inputs(pm_a_view = "target", wait_ = FALSE); app$wait_for_idle()
 app$wait_for_js("!!document.querySelector('#dt_a .ht_master td')", timeout = 30 * 1000)

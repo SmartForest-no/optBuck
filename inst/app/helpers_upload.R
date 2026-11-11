@@ -29,7 +29,7 @@ upload_price_set <- function(path, filename, defs, pm) {
   keys <- assortment_table_keys(defs)
   cur  <- pm_minimal(pm)
   up <- read_price_matrix_upload(path, filename, cur,
-                                 matrix_keys = keys[defs$PriceType == "matrix"])
+                                 matrix_keys = keys[defs$PriceType == "matrix"], alias = key_aliases(defs))
   out <- list(ok = FALSE, pm = NULL, layout = up$layout, ids = up$ids,
               errors = up$errors, warnings = character(0))
   if (length(up$errors) > 0L) return(out)
@@ -61,7 +61,7 @@ upload_assortment_prices <- function(path, filename, defs, pm, key) {
   keys <- assortment_table_keys(defs)
   cur  <- pm_minimal(pm)
   up <- read_price_matrix_upload(path, filename, cur,
-                                 matrix_keys = keys[defs$PriceType == "matrix"])
+                                 matrix_keys = keys[defs$PriceType == "matrix"], alias = key_aliases(defs))
   out <- list(ok = FALSE, pm = NULL, ignored = character(0),
               errors = up$errors, warnings = character(0))
   if (length(up$errors) > 0L) return(out)

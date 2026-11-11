@@ -138,7 +138,7 @@ r4 <- rec_l[rec_l$stem_key == "4", ]; o4 <- opt_l[as.character(opt_l$treid) == "
 ct <- x$control; ub <- ct$unpriced_by_product
 ok5 <- r4$PriceNOKperM3[1L] == 300 && r4$value_nok[1L] > 0 && !r4$outside[1L] &&
   is.na(r4$PriceNOKperM3[2L]) && r4$value_nok[2L] == 0 && r4$outside[2L] &&
-  !any(o4$LogLength == 370 & o4$ProductKey == "spruce_140_sagt_mmer_gran") &&
+  !any(o4$LogLength == 370 & o4$ProductKey == "spruce_140_sagtommer_gran") &&
   ct$n_unpriced == 1L && nrow(ub) == 1L && ub$key == "spruce_197_massevirke" && ub$logs == 1L && ub$share_pct > 0
 rec("Check 05: the log in a 'manual only' cell is valued with the file's price (300 NOK/m3) while the best bucking never cuts that cell; the 130 cm log has no price: 0, flagged outside, counted and listed per product with its share of the product's recorded volume",
     ok(ok5), sprintf("prices %s | values %s | unpriced %d | best lengths %s | share %.2f %%", paste(r4$PriceNOKperM3, collapse = "/"),

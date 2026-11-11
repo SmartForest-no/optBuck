@@ -158,7 +158,7 @@ sp_map <- setNames(guess_hpr_species(h$species$name, h$species$user_id), h$speci
 base_defs <- defs_from_products(load_products(root_dir))
 r <- hpr_to_scenario(h, sp_map, base_defs = base_defs)
 keys <- assortment_table_keys(r$defs)
-K_PINE_SAW <- "pine_240_sagt_mmer_furu"
+K_PINE_SAW <- "pine_240_sagtommer_furu"
 K_SPR <- keys[startsWith(keys, "spruce_140_sagt")]
 
 
@@ -665,12 +665,12 @@ x17 <- read_hpr(f17); s17 <- hpr_to_scenario(x17, sp_map, base_defs = base_defs)
 m17b <- setNames(s17$defs$VolumeDiameterCategory, assortment_table_keys(s17$defs))
 w17 <- grep("Unsupported method", s17$warnings, value = TRUE)
 rec("Check 17: Top maps to Top cylinder, the other file methods keep their names; an unknown method gets the frustum (Top) with one warning per method",
-    ok(m17[[K_PINE_SAW]] == "Top cylinder" && m17[["spruce_140_sagt_mmer_gran"]] == "Calculated Norwegian mid" &&
+    ok(m17[[K_PINE_SAW]] == "Top cylinder" && m17[["spruce_140_sagtommer_gran"]] == "Calculated Norwegian mid" &&
          m17[["spruce_154_kubb"]] == "All diameters (solid volume)" &&
-         m17b[["spruce_140_sagt_mmer_gran"]] == "Top" && m17b[["spruce_154_kubb"]] == "Top" && length(w17) == 1L &&
+         m17b[["spruce_140_sagtommer_gran"]] == "Top" && m17b[["spruce_154_kubb"]] == "Top" && length(w17) == 1L &&
          !any(grepl("^154 Kubb: Volume method", s17$warnings))),
     sprintf("pine sawlog %s | spruce 140 %s -> %s | spruce 154 %s -> %s | warnings about the unknown method: %d",
-            m17[[K_PINE_SAW]], m17[["spruce_140_sagt_mmer_gran"]], m17b[["spruce_140_sagt_mmer_gran"]],
+            m17[[K_PINE_SAW]], m17[["spruce_140_sagtommer_gran"]], m17b[["spruce_140_sagtommer_gran"]],
             m17[["spruce_154_kubb"]], m17b[["spruce_154_kubb"]], length(w17)))
 
 

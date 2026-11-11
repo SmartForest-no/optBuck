@@ -1701,7 +1701,7 @@ if (!browser_ok) {
                                  ".map(function(r){ return r.querySelector('.rt-td').textContent.trim(); }).join('|')"))
       shoot(app, "20_hpr_B_products")
       app$set_inputs(result_tabs = "logs", wait_ = FALSE); app$wait_for_idle()
-      app$set_inputs(tally_key = "spruce_140_sagt_mmer_gran", wait_ = FALSE); app$wait_for_idle()
+      app$set_inputs(tally_key = "spruce_140_sagtommer_gran", wait_ = FALSE); app$wait_for_idle()
       c33$radio <- js(app, "Array.from(document.querySelectorAll('#tally_scenario input')).map(function(i){ return i.value; }).join(',')")
       shoot(app, "21_hpr_B_tally_B_only")
       app$set_inputs(result_tabs = "summary", wait_ = FALSE); app$wait_for_idle()
@@ -1955,7 +1955,7 @@ if (!browser_ok) {
                 plot_w = NA, plot_h = NA, views = list(), kept = FALSE, cleared = FALSE, radio = "")
     e43 <- try_drv({
       fx43 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
-      key43 <- "spruce_140_sagt_mmer_gran"
+      key43 <- "spruce_140_sagtommer_gran"
       app$set_inputs(tree_source = "nfi", wait_ = FALSE); app$wait_for_idle()
       app$set_inputs(main_nav = "tuning", wait_ = FALSE); app$wait_for_idle()
       c43$msg <- txt(app, "#tn_main")
@@ -2142,7 +2142,7 @@ if (!browser_ok) {
     # spruce 140 Sagtømmer gran in Scenario A (check 43).
     c46 <- list()
     e46 <- try_drv({
-      key46 <- "spruce_140_sagt_mmer_gran"
+      key46 <- "spruce_140_sagtommer_gran"
       cell <- function(r, c) js(app, sprintf("(function(){ var t = document.querySelectorAll('#dt_a .ht_master tbody tr')[%d]; return t ? t.querySelectorAll('td')[%d].innerText.trim() : ''; })()", r, c))
       bold <- function(r, c) isTRUE(js(app, sprintf("(function(){ var t = document.querySelectorAll('#dt_a .ht_master tbody tr')[%d]; return !!t && t.querySelectorAll('td')[%d].style.fontWeight === 'bold'; })()", r, c)))
       ncol_hot <- function() js(app, "HTMLWidgets.find('#dt_a').hot.countCols()")

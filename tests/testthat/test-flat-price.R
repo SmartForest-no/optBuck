@@ -67,3 +67,30 @@ test_that("exports never allow a distribution without a demand matrix; matrices 
   expect_equal(sort(dist_grid(pb, k_has)[!is.na(dist_grid(pb, k_has))]),
                sort(dist_grid(pm, k_has)[!is.na(dist_grid(pm, k_has))]))
 })
+
+# Keys transliterate ae/o/a instead of dropping the letters (2026-11-11); old scenario files still load.
+test_that("assortment keys transliterate and old keys are still found in a scenario file", {
+  expect_equal(assortment_slug("140 Sagtømmer gran"), "140_sagtommer_gran")
+  expect_equal(assortment_slug("Ære år Ø"), "aere_ar_o")
+  expect_equal(assortment_slug("Sawlog"), "sawlog")
+  f <- system.file("extdata", "example.hpr", package = "optBuck"); skip_if(!nzchar(f))
+  hp <- read_hpr(f); smap <- setNames(guess_hpr_species(hp$species$name, hp$species$user_id), hp$species$key)
+  sc <- hpr_to_scenario(hp, smap)
+  al <- key_aliases(sc$defs)
+  expect_true("spruce_140_sagt_mmer_gran" %in% names(al))
+  expect_equal(unname(al["spruce_140_sagt_mmer_gran"]), "spruce_140_sagtommer_gran")
+  # a file written with the old keys (sheet names, corner cells, flat prices) imports unchanged
+  xf <- tempfile(fileext = ".xlsx"); scenario_export(sc$defs, sc$pm, xf)
+  back_key <- function(v) { j <- match(v, unname(al)); v[!is.na(j)] <- names(al)[j[!is.na(j)]]; v }
+  old <- lapply(setNames(readxl::excel_sheets(xf), readxl::excel_sheets(xf)), function(s) {
+    d <- as.data.frame(readxl::read_excel(xf, sheet = s, col_types = "text", .name_repair = "minimal"))
+    names(d) <- back_key(names(d)); d[] <- lapply(d, back_key); d })
+  names(old) <- back_key(names(old))
+  of <- tempfile(fileext = ".xlsx"); writexl::write_xlsx(old, of)
+  expect_true(any(grepl("sagt_mmer", readxl::excel_sheets(of))))
+  back <- scenario_import(of)
+  expect_true(isTRUE(back$ok), info = paste(back$errors, collapse = " | "))
+  p0 <- pm_prices(sc$pm); p1 <- pm_prices(back$pm)
+  expect_equal(nrow(p0), nrow(p1)); expect_equal(sort(unique(p0$ProductKey)), sort(unique(p1$ProductKey)))
+  expect_equal(sum(p0$PriceNOKperM3, na.rm = TRUE), sum(p1$PriceNOKperM3, na.rm = TRUE))
+})
