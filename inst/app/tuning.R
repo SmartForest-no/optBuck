@@ -67,7 +67,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     ok <- st$reason == "ok"
     lbl <- disp_name(st$species, st$name, l)
     why <- c(no_target = L("tn_reason_no_target"), one_length = L("tn_reason_one_length"),
-             one_class = L("tn_reason_one_class"), flat = L("tn_reason_flat"))
+             one_class = L("tn_reason_one_class"), mixed = L("tn_reason_mixed"), flat = L("tn_reason_flat"))
     cur <- intersect(isolate(input$tn_products), st$product_id[ok])
     tagList(
       if (any(ok))

@@ -697,6 +697,7 @@
 "tn_reason_one_length","ui","only one length class","bare én lengdeklasse",""
 "tn_reason_one_class","ui","only one diameter class","bare én diameterklasse",""
 "tn_reason_flat","ui","flat price, no price matrix","fast pris, ingen prismatrise",""
+"tn_reason_mixed","ui","Prices vary within a diameter class. Price tuning needs one price per diameter class and length.","Prisene varierer innenfor en diameterklasse. Pristilpasning krever én pris per diameterklasse og lengde.",""
 "col_type","ui","Type","Type","R5: assortment type"
 "type_sawlog","ui","Sawlog","Sagtømmer","R5"
 "type_pulpwood","ui","Pulpwood","Massevirke","R5"

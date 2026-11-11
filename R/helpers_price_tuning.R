@@ -451,10 +451,25 @@ tuning_hpr_info <- function(defs, pm, product_id) {
   list(cells = cells, category = cat_)
 }
 
+# TRUE when every priced cell of the product has one price per (file diameter
+# class, length class), as tuning assumes: tuning_grid() takes the first row of a
+# class and apply_grid_prices() writes the cell price to all its rows. A price
+# edited on one whole-cm row inside a file class breaks this (0.3.1: the
+# iteration-1 value check then failed with a backend error).
+tuning_prices_uniform <- function(defs, pm, product_id) {
+  rows <- .tg_rows(pm, product_id)
+  rows <- rows[!is.na(rows$PriceNOKperM3), , drop = FALSE]
+  if (nrow(rows) == 0L) return(TRUE)
+  cls <- unique(tuning_hpr_info(defs, pm, product_id)$cells$d_mm)
+  key <- paste(rows$LengthClass_dm, file_class_of_cm(rows$PriceDiameterClass_cm, cls))
+  all(tapply(rows$PriceNOKperM3, key, function(x) max(x) - min(x) < 1e-9))
+}
+
 # Every sawlog assortment of a scenario with the reason it cannot be tuned (R4 D5):
 # "ok" (tunable and has a target), "no_target", "one_length" (fewer than two priced
-# lengths), "one_class" (fewer than two diameter classes) or "flat" (a flat price,
-# no matrix).
+# lengths), "one_class" (fewer than two diameter classes), "mixed" (prices differ
+# between the whole-cm rows of one file diameter class, tuning_prices_uniform())
+# or "flat" (a flat price, no matrix).
 # @return data.frame(product_id, name, species, reason).
 tuning_sawlog_status <- function(defs, pm) {
   keys <- assortment_table_keys(defs)
@@ -465,6 +480,7 @@ tuning_sawlog_status <- function(defs, pm) {
       if (nrow(ok) == 0L || length(unique(ok$LengthClass_dm)) < 2L) "one_length"
       else if (!keys[i] %in% tunable$product_id) "one_class"
       else if (!isTRUE(tunable$has_file_target[match(keys[i], tunable$product_id)])) "no_target"
+      else if (!tuning_prices_uniform(defs, pm, keys[i])) "mixed"
       else "ok"
     }
     data.frame(product_id = keys[i], name = as.character(defs$Name[i]), species = as.character(defs$Species[i]),
