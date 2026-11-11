@@ -25,3 +25,22 @@ test_that("tuning_sawlog_status flags prices that vary inside a diameter class",
   expect_equal(tr("tn_reason_mixed", lang = "no"),
                "Prisene varierer innenfor en diameterklasse. Pristilpasning krever én pris per diameterklasse og lengde.")
 })
+
+# The assortments a scenario takes over from the .hpr of tab 1 (0.3.2): the file's default selection
+# limited to the products the harvester used (>= 1 % of a species' logs).
+test_that("hpr_default_keep limits the default selection to the used products", {
+  f <- fixture("hpr_check_synthetic.hpr"); skip_if(!nzchar(f))
+  hp <- read_hpr(f); expect_true(isTRUE(hp$ok))
+  map <- setNames(guess_hpr_species(hp$species$name, hp$species$user_id), hp$species$key)
+  all_default <- as.character(hpr_product_table(hp, map)$key[hpr_product_table(hp, map)$default])
+  k <- hpr_default_keep(f, basename(f), hp, map)
+  expect_true(k$used)
+  expect_true(all(k$keep %in% all_default))
+  expect_lt(length(k$keep), length(all_default))
+  # a file without recorded logs keeps the default selection
+  g <- fixture("hpr_example_synthetic.hpr")
+  hg <- read_hpr(g); mg <- setNames(guess_hpr_species(hg$species$name, hg$species$user_id), hg$species$key)
+  kg <- hpr_default_keep(g, basename(g), hg, mg)
+  expect_false(kg$used)
+  expect_equal(length(kg$keep), sum(hpr_product_table(hg, mg)$default))
+})

@@ -318,17 +318,7 @@ server <- function(input, output, session) {
     tagList(
       if (n > 1L) selectInput("stems_use_file", L("lbl_stems_use_file"),
                               choices = setNames(seq_len(n), own$name)),
-      div(class = "pm-actions",
-        actionButton("stems_use_a", L("btn_stems_use", "A"), class = "btn-secondary btn-sm"),
-        actionButton("stems_use_b", L("btn_stems_use", "B"), class = "btn-secondary btn-sm")))
-  })
-  for (side in c("A", "B")) local({
-    side <- side
-    observeEvent(input[[paste0("stems_use_", tolower(side))]], {
-      own <- hs_own(); req(own)
-      i <- if (length(own$path) > 1L) as.integer(or_default(input$stems_use_file, 1L)) else 1L
-      sc$open_hpr_import(side, own$path[i], own$name[i])
-    })
+      NULL)
   })
 
 

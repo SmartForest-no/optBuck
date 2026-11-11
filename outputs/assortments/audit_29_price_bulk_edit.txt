@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bulk editing of price matrices
-  Run: 2026-11-06 10:31:57.102529
+  Run: 2026-11-11 10:22:01.163033
 ============================================================= 
 
 --- 01. Range + amount ---
@@ -16,7 +16,7 @@
   [PASS  ] Check 04: Forbidden cells empty after the round trip, scenario valid, prices never negative | empty cells kept and scenario valid: amount=TRUE, percent=TRUE, fill=TRUE | minimum after -1e6: 0
 
 --- 05. App: range edit and fill dialog ---
-  [PASS  ] Check 05: App: range +10 NOK in A (B unchanged); fill dialog | changed idx 2,3,4,41,42,43 by 10; A range +10 correct (6 cells): TRUE | B unchanged: TRUE | fill cell 777 + 5 = 782 and empty cells kept: TRUE | field value and mode kept after Apply and a row button: TRUE
+  [PASS  ] Check 05: App: no 'Change prices' row under the matrix (0.3.2); row/column buttons stay; 'Remove assortment' | bulk controls gone: TRUE | row and length buttons present: TRUE | remove button reads 'Remove assortment'
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 

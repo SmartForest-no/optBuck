@@ -271,6 +271,8 @@ details.optbuck-card { margin-bottom: 16px; }
 .pm-axes-row .form-control, .pm-axes-row .selectize-input { padding: 3px 6px; min-height: 0; }
 .pm-axes-lbl { font-size: 0.82rem; color: var(--optbuck-muted); min-width: 110px; }
 .pm-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 10px; }
+.src-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 2px 0 10px; }
+.src-line .src-text { font-weight: 500; }
 .pm-msg-error { color: var(--optbuck-danger); white-space: pre-wrap; }
 .pm-msg-ok { color: var(--optbuck-success); }
 .pm-msg-warn { color: var(--optbuck-warning); white-space: pre-wrap; }

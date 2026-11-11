@@ -39,6 +39,9 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   pm_tick <- reactiveVal(0L)                      # re-render the grids
   redraw  <- function() pm_tick(isolate(pm_tick()) + 1L)
   msgs    <- list(A = reactiveVal(NULL), B = reactiveVal(NULL))
+  # Where each scenario's assortments came from (0.3.2): list(type = "default" | "tab1" | "file",
+  # name). "tab1" = the .hpr loaded in tab 1 (taken over automatically), "file" = an uploaded file.
+  src     <- list(A = reactiveVal(list(type = "default")), B = reactiveVal(list(type = "default")))
   # text: i18n_text() or English backend text (a vector: one line each);
   # warnings: English backend text.
   say     <- function(side, type, text, warnings = NULL)
@@ -535,6 +538,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   # assortments and prices (Copy from A/B, and the Price tuning tab).
   replace_scenario <- function(side, from, d, pm) {
     if (commit(side, d, pm)) {
+      src[[side]](isolate(src[[from]]()))
       # The stem-grade checkboxes come along (they are part of the scenario).
       for (n in c("grade_use_", "grade_cut_"))
         updateCheckboxInput(session, paste0(n, low(side)), value = isTRUE(input[[paste0(n, low(from))]]))
@@ -569,28 +573,106 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
           stop("pin_export_failed")
         }
       })
-    # A scenario xlsx (with an "assortments" sheet) replaces the scenario;
-    # any other xlsx or CSV is a price file for all its assortments; an
-    # .hpr, .pin (or .hpr.gz / .zip) opens the import dialog (R1.6).
-    observeEvent(input[[paste0("scen_", s, "_upload")]], {
-      f <- input[[paste0("scen_", s, "_upload")]]; req(f)
-      if (grepl("\\.(hpr|pin|gz|zip)$", f$name, ignore.case = TRUE))
-        return(open_hpr_import(side, f$datapath, f$name, uploaded = TRUE))
-      sheets <- if (grepl("\\.xlsx$", f$name, ignore.case = TRUE))
-        tryCatch(readxl::excel_sheets(f$datapath), error = function(e) character(0))
-      if (!"assortments" %in% sheets) {
-        res <- upload_price_set(f$datapath, f$name, defs(side), prices(side))
-        if (!isTRUE(res$ok))
-          return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
-        sc[[side]]$pm(res$pm); redraw()
-        return(say(side, "ok", T_("msg_loaded_prices", f$name, price_file_text(res$ids)), res$warnings))
-      }
-      res <- scenario_import(f$datapath)
+  })
+
+  # A file for a scenario (the upload in the "change source" dialog): a scenario xlsx (with an
+  # "assortments" sheet) replaces the scenario; any other xlsx or CSV is a price file for all its
+  # assortments; an .hpr, .pin (or .hpr.gz / .zip) opens the import dialog (R1.6).
+  handle_upload <- function(side, f) {
+    if (grepl("\\.(hpr|pin|gz|zip)$", f$name, ignore.case = TRUE))
+      return(open_hpr_import(side, f$datapath, f$name, uploaded = TRUE))
+    sheets <- if (grepl("\\.xlsx$", f$name, ignore.case = TRUE))
+      tryCatch(readxl::excel_sheets(f$datapath), error = function(e) character(0))
+    if (!"assortments" %in% sheets) {
+      res <- upload_price_set(f$datapath, f$name, defs(side), prices(side))
       if (!isTRUE(res$ok))
         return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
-      sc[[side]]$defs(res$defs); sc[[side]]$pm(res$pm); redraw()
-      say(side, "ok", T_("msg_loaded_scenario", f$name, nrow(res$defs)), res$warnings)
+      sc[[side]]$pm(res$pm); redraw()
+      return(say(side, "ok", T_("msg_loaded_prices", f$name, price_file_text(res$ids)), res$warnings))
+    }
+    res <- scenario_import(f$datapath)
+    if (!isTRUE(res$ok))
+      return(say(side, "error", c(list(T_("err_not_loaded", f$name)), as.list(res$errors))))
+    sc[[side]]$defs(res$defs); sc[[side]]$pm(res$pm); redraw()
+    src[[side]](list(type = "file", name = f$name))
+    say(side, "ok", T_("msg_loaded_scenario", f$name, nrow(res$defs)), res$warnings)
+  }
+
+  # ---- assortment source (0.3.2) ----------------------------------------------------
+  # Each scenario shows where its assortments came from ("Sortimenter fra: ...") with a "change
+  # source" button. A .hpr loaded in tab 1 is taken over by A and B automatically (the products the
+  # harvester used, >= 1 % of a species' recorded logs); without it the default assortments stay.
+  # The dialog offers the tab-1 file (with the product selection of the import dialog), an upload
+  # (scenario xlsx, price file, .hpr or .pin) or the default assortments.
+  apply_default <- function(side, say_it = TRUE) {
+    if (!commit(side, APP_DEFS, APP_PM_DEFAULT)) return(FALSE)
+    src[[side]](list(type = "default")); redraw()
+    if (say_it) say(side, "ok", T_("msg_source_default", side))
+    TRUE
+  }
+  used_cache <- NULL              # list(path, keep): the >= 1 % selection of the file last read
+  auto_tab1 <- function(f) {
+    data <- withProgress(message = L("prog_reading", f$name), value = 0.5, read_product_file(f$path, f$name))
+    fail <- function(e) for (x in c("A", "B")) say(x, "error", e)
+    if (!isTRUE(data$ok)) return(fail(c(list(T_("hpr_not_imported", f$name)), as.list(data$errors))))
+    map <- setNames(guess_hpr_species(data$species$name, data$species$user_id), data$species$key)
+    k <- withProgress(message = L("prog_reading", f$name), value = 0.5,
+                      hpr_default_keep(f$path, f$name, data, map))
+    used_cache <<- list(path = f$path, keep = if (k$used) k$keep else NULL)
+    res <- hpr_to_scenario(data, map, k$keep, base_defs = APP_DEFS)
+    if (!isTRUE(res$ok)) return(fail(c(list(T_("hpr_not_imported", f$name)), as.list(res$errors))))
+    n <- sum(res$defs$Type != "waste")
+    for (x in c("A", "B")) if (commit(x, res$defs, res$pm)) {
+      src[[x]](list(type = "tab1", name = f$name))
+      say(x, "ok", T_(if (n == 1L) "msg_imported_1" else "msg_imported", n, f$name, x), res$warnings)
+    }
+    redraw()
+  }
+  tab1_key <- NULL
+  observe({
+    f <- hpr_file()
+    key <- if (is.null(f)) NULL else paste(f$path, f$name, sep = "|")
+    if (identical(key, isolate(tab1_key))) return()
+    tab1_key <<- key
+    isolate({
+      if (is.null(f)) {                       # tab 1 no longer uses .hpr: back to the defaults
+        for (x in c("A", "B")) if (identical(src[[x]]()$type, "tab1")) apply_default(x)
+      } else auto_tab1(f)
     })
+  })
+
+  src_side <- reactiveVal("A")
+  source_modal <- function(side) {
+    l <- isolate(lang()); f <- hpr_file(); has <- !is.null(f)
+    cur <- isolate(src[[side]]()$type)
+    rb <- radioButtons("src_choice", NULL,
+                       choiceNames = list(if (has) tr("src_opt_tab1_x", f$name, lang = l) else tr("src_opt_tab1", lang = l),
+                                          tr("src_opt_upload", lang = l), tr("src_opt_default", lang = l)),
+                       choiceValues = c("tab1", "upload", "default"),
+                       selected = if (cur == "tab1" && has) "tab1" else if (has) "tab1" else "default")
+    if (!has) rb <- htmltools::tagQuery(rb)$find("input")$filter(function(x, i) identical(htmltools::tagGetAttribute(x, "value"), "tab1"))$addAttrs(disabled = "disabled")$allTags()
+    modalDialog(
+      title = tr("src_title", side, lang = l), size = "m", easyClose = TRUE, fade = FALSE,
+      rb,
+      conditionalPanel("input.src_choice == 'upload'",
+        file_input_lang("src_upload", tr("lbl_upload_scenario", lang = l),
+                        c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip"), l)),
+      footer = tagList(modalButton(tr("btn_cancel", lang = l)),
+                       conditionalPanel("input.src_choice != 'upload'",
+                                        actionButton("src_ok", tr("btn_src_ok", lang = l), class = "btn-primary"))))
+  }
+  observeEvent(input$src_ok, {
+    side <- src_side(); ch <- input$src_choice
+    if (identical(ch, "tab1")) {
+      f <- hpr_file(); req(f)
+      open_hpr_import(side, f$path, f$name, origin = "tab1")
+    } else if (identical(ch, "default")) {
+      removeModal(); apply_default(side)
+    }
+  })
+  observeEvent(input$src_upload, {
+    f <- input$src_upload; req(f); side <- src_side()
+    removeModal(); handle_upload(side, f)
   })
 
   # ---- import from .hpr (R/helpers_hpr.R; hpr Phase A) ---------------------------
@@ -622,12 +704,12 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   hpr_uploads <- character(0)     # Shiny's upload folders of this session
   session$onSessionEnded(function() unlink(hpr_uploads, recursive = TRUE))
   hpr_kept <- reactiveVal(NULL)   # list(name, path): the file the dialog shows (test value)
-  open_hpr_import <- function(side, path, name, uploaded = FALSE) {
+  open_hpr_import <- function(side, path, name, uploaded = FALSE, origin = "file") {
     if (uploaded) hpr_uploads <<- unique(c(hpr_uploads, dirname(path)))
     data <- withProgress(message = L("prog_reading", name), value = 0.5,
                          read_product_file(path, name))
     if (!identical(data$kind, "pin")) hpr_kept(list(name = name, path = path))   # a .pin has no stems and is not kept
-    hpr(list(side = side, data = data, file = name)); hpr_err(NULL)
+    hpr(list(side = side, data = data, file = name, path = path, origin = origin)); hpr_err(NULL)
     showModal(hpr_modal(side))
   }
   hpr_data <- reactive({ h <- hpr(); if (!is.null(h$data)) h$data })
@@ -683,6 +765,9 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
   output$hpr_products <- renderUI({
     d <- hpr_data(); req(isTRUE(d$ok)); l <- lang()
     tab <- hpr_product_table(d, hpr_map())
+    # The products the harvester used (>= 1 % of a species' logs) are ticked when the file is the one of tab 1.
+    u <- if (identical(hpr()$origin, "tab1") && identical(used_cache$path, hpr()$path)) used_cache$keep
+    tab$default <- tab$default & (is.null(u) | as.character(tab$key) %in% u)
     species_txt <- function(x) if (x == "none") L("sp_not_used")
       else paste(tr_value(tools::toTitleCase(strsplit(x, ", ", fixed = TRUE)[[1L]]), l), collapse = ", ")
     tagList(
@@ -718,6 +803,7 @@ scenario_server <- function(input, output, session, lang = reactive("en"), grade
     if (!isTRUE(res$ok)) return(hpr_err(c(list(T_("hpr_not_imported", h$file)), as.list(res$errors))))
     if (!commit(side, res$defs, res$pm, err = function(e) hpr_err(e))) return()
     selected(keys_of(res$defs)[asm_order(res$defs)][1L])
+    src[[side]](list(type = if (identical(h$origin, "tab1")) "tab1" else "file", name = h$file))
     redraw(); removeModal()
     n <- sum(res$defs$Type != "waste")
     say(side, "ok", T_(if (n == 1L) "msg_imported_1" else "msg_imported", n, h$file, side), res$warnings)
@@ -1088,14 +1174,13 @@ function(instance, td, row, col, prop, value, cellProperties) {
             tags$details(class = "pm-msg-warn grade-warn", tags$summary(ln$short[i]), p(ln$detail[i])))
         })
     })
-    # "Use the same .hpr as in tab 1": opens the import dialog for the file of tab 1 (greyed out
-    # when tab 1 does not use .hpr stems).
-    observe(session$sendCustomMessage("optbuck-disable",
-                                      list(id = paste0("scen_", s, "_use_tab1"), disabled = is.null(hpr_file()))))
-    observeEvent(input[[paste0("scen_", s, "_use_tab1")]], {
-      f <- hpr_file(); req(f)
-      open_hpr_import(side, f$path, f$name)
+    # Where the assortments came from, and the button that opens the source dialog.
+    output[[paste0("src_line_", s)]] <- renderUI({
+      x <- src[[side]](); l <- lang()
+      span(class = "src-text", switch(x$type, tab1 = tr("src_tab1", x$name, lang = l),
+                                      file = tr("src_file", x$name, lang = l), tr("src_default", lang = l)))
     })
+    observeEvent(input[[paste0("scen_", s, "_source")]], { src_side(side); showModal(source_modal(side)) })
     # The box is disabled (and unticked) when no stem file has the scenario's instruction.
     observe({
       dis <- grade_disabled(side)
@@ -1110,4 +1195,4 @@ function(instance, td, row, col, prop, value, cellProperties) {
        grade_warnings = grade_warnings, grade_notes = grade_notes,
        replace_scenario = replace_scenario,
        open_hpr_import = open_hpr_import)  # opens the import dialog for a file (Stems tab)
-}
+}

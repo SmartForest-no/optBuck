@@ -1,3 +1,20 @@
+# optBuck 0.3.2
+
+Fixes after testing 0.3.1.
+
+* **Price tuning:** an assortment whose prices differ between the whole-cm rows of one file diameter class (for example
+  after editing one cell in tab 2) is listed as not tunable, with the reason «Prisene varierer innenfor en diameterklasse.
+  Pristilpasning krever én pris per diameterklasse og lengde.» / "Prices vary within a diameter class. Price tuning needs
+  one price per diameter class and length." It used to stop with "value check failed on iteration 1".
+* **Tab 2:** the «Change prices» row under the matrix (± NOK/m³, ± %, fill from row prices) is removed; the button
+  «Remove» is «Remove assortment» / «Fjern sortiment».
+* **Assortment source:** an .hpr loaded in tab 1 gives scenarios A and B its assortments and rules automatically (the
+  products the harvester used, at least 1 % of a species' recorded logs), without a dialog. Each scenario starts with
+  «Sortimenter fra: <fil> (fane 1)» / «Standardsortimenter» and a button «Bytt kilde» (dialog: the same .hpr as in tab 1 with
+  the product selection, an uploaded file, or the default assortments). The upload field and the button «Bruk samme .hpr som
+  i fane 1» at the bottom of the scenario, and the buttons «Bruk sortimentene fra denne filen i scenario A/B» in tab 1, are
+  removed. Tab 1 no longer using .hpr puts the scenarios that used it back to the default assortments.
+
 # optBuck 0.3.1
 
 * **Reader:** files that declare UTF-8 but have windows-1252 bytes in the header are read (non-UTF-8 lines are converted),

@@ -515,3 +515,19 @@ check_control <- function(rec) {
        mean_abs_pct = 100 * mean(abs(d)), n_outside = sum(rec$outside, na.rm = TRUE), n_unknown = sum(rec$unknown_product),
        n_unpriced = sum(!rec$waste & !is.na(rec$akey) & is.na(rec$PriceNOKperM3)))   # no price cell for the log's class: valued 0
 }
+
+# The products a scenario takes over from an .hpr that is loaded in tab 1 (0.3.2): the file's default
+# selection (hpr_product_table()$default: mapped species, priced cells) limited to the products the
+# harvester used, i.e. at least 1 % of a species' recorded non-waste logs (check_used_products()).
+# A file without readable logs (or with no used product) keeps the default selection.
+#
+# @param path,filename The file.  @param hpr read_hpr() result.  @param species_map Group key -> species.
+# @return list(keep (ProductKeys), used (TRUE when the logs decided)).
+hpr_default_keep <- function(path, filename, hpr, species_map) {
+  tab <- hpr_product_table(hpr, species_map)
+  base <- as.character(tab$key[tab$default])
+  rl <- tryCatch(read_hpr_logs(path, filename, defs = hpr), error = function(e) NULL)
+  if (is.null(rl) || !isTRUE(rl$ok) || nrow(rl$logs) == 0L) return(list(keep = base, used = FALSE))
+  keep <- base[base %in% check_used_products(rl$logs, species_map)]
+  if (length(keep) == 0L) list(keep = base, used = FALSE) else list(keep = keep, used = TRUE)
+}

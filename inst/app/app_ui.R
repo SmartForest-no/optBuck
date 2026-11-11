@@ -28,6 +28,10 @@ scenario_column <- function(s) {
   dl  <- function(id, label) downloadButton(id, label, class = "btn-secondary btn-sm")
   state <- function(cond) sprintf("output.asm_state_%s %s", s, cond)
   optbuck_card(uiOutput(paste0("scen_title_", s), inline = TRUE),
+    # Where the assortments came from, with the button that opens the source dialog (0.3.2).
+    div(class = "src-line",
+        uiOutput(paste0("src_line_", s), inline = TRUE),
+        btn(paste0("scen_", s, "_source"), t_("btn_change_source"))),
     div(class = "section-hdr", t_("hdr_assortments")),
     reactableOutput(paste0("tbl_asm_", s)),
 
@@ -80,13 +84,6 @@ scenario_column <- function(s) {
       btn(paste0("scen_copy_", s), t_("btn_copy_from", O)),
       dl(paste0("dl_scen_", s), t_("btn_download_scenario")),
       dl(paste0("dl_pin_", s), t_("btn_download_pin"))),
-    optbuck_file_input(paste0("scen_", s, "_upload"), t_("lbl_upload_scenario"),
-                     accept = c(".xlsx", ".csv", ".hpr", ".pin", ".gz", ".zip")),
-    # The .hpr of tab 1 (0.3.1): greyed out (by the server) when tab 1 does not use .hpr stems.
-    div(class = "pm-actions",
-      actionButton(paste0("scen_", s, "_use_tab1"), t_("btn_use_tab1_hpr"), class = "btn-secondary btn-sm",
-                   disabled = "disabled")),
-
     # Stem grades (Phase 6): run options of this scenario, only for .hpr stems.
     conditionalPanel("input.tree_source == 'hpr'",
       div(class = "section-hdr", t_("hdr_stem_grades")),
@@ -283,4 +280,4 @@ ui <- page_navbar(
   nav_spacer(),
   nav_item(lang_switch()),
   nav_item(div(class = "navbar-logo-item", navbar_logo()))
-)
+)

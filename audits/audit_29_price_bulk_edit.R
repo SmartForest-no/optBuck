@@ -19,7 +19,7 @@
 #  4.  Forbidden cells stay empty in all three, also after the long-format
 #      round trip, and the result passes check_price_set(); prices never
 #      go below 0
-#  5.  App (shinytest2): in Scenario A select a range, +10 NOK/m3 changes
+#  5.  App (shinytest2, 0.3.2): the 'Change prices' row (bulk edit, fill dialog) is gone from the app; the helper functions stay (checks 1-4). Former text: in Scenario A select a range, +10 NOK/m3 changes
 #      exactly those cells in A (not outside the range) and leaves B
 #      unchanged; the fill dialog applies a row price and a length
 #      correction to one cell; the "Change prices" field and mode keep their
@@ -152,7 +152,7 @@ shot_dir <- file.path(root_dir, "outputs", "app_smoke", "review", "audit29")
 unlink(shot_dir, recursive = TRUE); ensure_dir(shot_dir)     # cleared by each run, as audit 17 does
 browser_ok <- requireNamespace("shinytest2", quietly = TRUE) && requireNamespace("chromote", quietly = TRUE)
 if (!browser_ok) {
-  rec("Check 05: App: range +10 NOK in A (B unchanged); fill dialog", FAIL,
+  rec("Check 05: App: no 'Change prices' row under the matrix", FAIL,
       "shinytest2 / chromote not available")
 } else {
   Sys.setenv(NOT_CRAN = "true", OPTBUCK_N_PLOTS = "5", OPTBUCK_LANG = "en")
@@ -164,7 +164,7 @@ if (!browser_ok) {
                           load_timeout = 60 * 1000, timeout = 120 * 1000,
                           width = 1400, height = 1100)
   if (!inherits(app, "AppDriver")) {
-    rec("Check 05: App: range +10 NOK in A (B unchanged); fill dialog", FAIL, paste("start error:", app))
+    rec("Check 05: App: no 'Change prices' row under the matrix", FAIL, paste("start error:", app))
     audit_browser_stop()
   } else {
     js <- function(code) tryCatch(app$get_js(code), error = function(e) NA)
@@ -179,56 +179,17 @@ if (!browser_ok) {
       app$wait_for_js("document.fonts.status === 'loaded'", timeout = 30 * 1000)
       app$wait_for_js("!!document.querySelector('#pm_a .ht_master td')", timeout = 30 * 1000)
       app$wait_for_idle()
-      a0 <- scen("a"); b0 <- scen("b")
-      ga0 <- as.matrix(gridA(a0))
-      shot("01_before_bulk_edit")
-      # select rows 2-4 x columns 1-2 (0-based in Handsontable) as a drag would
-      app$run_js("HTMLWidgets.find('#pm_a').hot.selectCells([[1, 0, 3, 1]]);")
-      app$wait_for_idle()
-      app$set_inputs(pm_a_bulk_value = 10, wait_ = FALSE)
-      app$wait_for_idle()
-      app$click("pm_a_bulk_apply"); app$wait_for_idle()
-      app$wait_for_js(sprintf("HTMLWidgets.find('#pm_a').hot.getDataAtCell(1, 0) === %s", format(round(ga0[2, 1] + 10, 2), nsmall = 0)), timeout = 30 * 1000)
-      app$wait_for_idle(); Sys.sleep(1)
-      shot("02_after_bulk_edit")
-      a1 <- scen("a"); b1 <- scen("b")
-      # the field keeps its value after Apply and after a row button (mode too)
-      kept_apply <- identical(as.numeric(app$get_value(input = "pm_a_bulk_value")), 10)
-      app$set_inputs(pm_a_bulk_mode = "percent", wait_ = FALSE); app$wait_for_idle()
-      app$click("pm_a_cls_add_lo"); app$wait_for_idle(); Sys.sleep(1)
-      kept_row <- identical(as.numeric(app$get_value(input = "pm_a_bulk_value")), 10) &&
-        identical(app$get_value(input = "pm_a_bulk_mode"), "percent")
-      app$click("pm_a_cls_rm_lo"); app$wait_for_idle(); Sys.sleep(1)
-      kept_row <- kept_row && identical(as.numeric(app$get_value(input = "pm_a_bulk_value")), 10)
-      app$set_inputs(pm_a_bulk_mode = "amount", wait_ = FALSE); app$wait_for_idle()
-      ga1 <- as.matrix(gridA(a1))
-      inr <- matrix(FALSE, nrow(ga0), ncol(ga0)); inr[2:4, 1:2] <- TRUE
-      chg_ok <- isTRUE(all.equal(ga1[inr], round(ga0[inr] + 10, 2))) &&
-        isTRUE(all.equal(ga1[!inr], ga0[!inr])) && same_na(ga1, ga0)
-      b_ok <- identical(b1, b0)
-      # the fill dialog: class 20 price 777, length correction +5 on the second length
-      app$click("pm_a_fill_open"); app$wait_for_idle()
-      app$wait_for_js("!!document.querySelector('.modal-content')", timeout = 30 * 1000)
-      cls <- rownames(ga1)[1]; len <- colnames(ga1)[2]
-      shot("03_fill_dialog")
-      pa <- list(777); names(pa) <- paste0("pm_a_fill_row_", cls)
-      pb <- list(5);   names(pb) <- paste0("pm_a_fill_len_", len)
-      do.call(app$set_inputs, c(pa, list(wait_ = FALSE))); do.call(app$set_inputs, c(pb, list(wait_ = FALSE)))
-      app$wait_for_idle()
-      app$click("pm_a_fill_apply"); app$wait_for_idle()
-      a2 <- scen("a"); ga2 <- as.matrix(gridA(a2))
-      fill_ok <- isTRUE(all.equal(unname(ga2[1, 2]), 782)) &&
-        (is.na(ga2[1, 1]) || isTRUE(all.equal(unname(ga2[1, 1]), 777))) && same_na(ga2, ga0) &&
-        identical(scen("b"), b0)
-      shot("04_after_fill")
-      list(chg = chg_ok, b = b_ok, fill = fill_ok, kept = kept_apply && kept_row,
-           n = sum(inr & !is.na(ga0)), diff = paste(which(!is.na(ga1 - ga0) & (ga1 - ga0) != 0), collapse = ","), d = paste(unique(round((ga1 - ga0)[!is.na(ga1 - ga0) & ga1 != ga0], 2)), collapse = ","))
+      shot("01_matrix_without_change_prices")
+      has <- function(id) isTRUE(js(sprintf("!!document.getElementById('%s')", id)))
+      list(gone = !any(vapply(c("pm_a_bulk_value", "pm_a_bulk_mode", "pm_a_bulk_apply", "pm_a_fill_open"), has, logical(1))),
+           rows = has("pm_a_cls_add_lo") && has("pm_a_len_add"),
+           label = trimws(js("document.getElementById('asm_remove_a').innerText")))
     }, error = function(e) list(err = conditionMessage(e)))
-    rec("Check 05: App: range +10 NOK in A (B unchanged); fill dialog",
-        ok(is.null(res$err) && isTRUE(res$chg) && isTRUE(res$b) && isTRUE(res$fill) && isTRUE(res$kept)),
+    rec("Check 05: App: no 'Change prices' row under the matrix (0.3.2); row/column buttons stay; 'Remove assortment'",
+        ok(is.null(res$err) && isTRUE(res$gone) && isTRUE(res$rows) && identical(res$label, "Remove assortment")),
         if (!is.null(res$err)) paste("error:", res$err)
-        else sprintf("changed idx %s by %s; A range +10 correct (%d cells): %s | B unchanged: %s | fill cell 777 + 5 = 782 and empty cells kept: %s | field value and mode kept after Apply and a row button: %s",
-                     res$diff, res$d, res$n, res$chg, res$b, res$fill, res$kept))
+        else sprintf("bulk controls gone: %s | row and length buttons present: %s | remove button reads '%s'",
+                     res$gone, res$rows, res$label))
     audit_browser_stop(app)
   }
 }
