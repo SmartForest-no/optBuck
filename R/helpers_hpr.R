@@ -522,7 +522,7 @@ read_pin <- function(path, filename = basename(path)) {
                         best_grade = rep(NA_real_, length(ids)), start_grade = rep(NA_real_, length(ids)),
                         dbh_height = rep(NA_real_, length(ids)),
                         bark_category = rep(NA_character_, length(ids)), bark_a = rep(NA_real_, length(ids)),
-                        bark_b = rep(NA_real_, length(ids)), stringsAsFactors = FALSE)
+                        bark_b = rep(NA_real_, length(ids)), bark_fn = rep(NA_character_, length(ids)), stringsAsFactors = FALSE)
   if (nrow(species) > 0L)
     species$n_products <- vapply(species$key, function(k)
       sum(vapply(products, function(p) k %in% p$species_keys, logical(1))), integer(1))

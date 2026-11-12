@@ -1,3 +1,12 @@
+# optBuck 0.3.5
+
+* **Skogforsk 2004 bark function for spruce in .hpr files:** a species group with `Skogforsk 2004, Norway spruce` now uses the published function
+  (Hannrup, B. 2004. Funktioner for skattning av barkens tjocklek hos tall och gran vid avverkning med skordare. Skogforsk Arbetsrapport 575:
+  double bark = 0.46146 + 0.01386 dbh + 0.03571 d, all in mm, at least 2 mm). It reproduces the recorded under-bark log diameters of two
+  files to within rounding (sd 0.29 mm). The pine function (`Skogforsk 2004, Scots pine`) did **not** reproduce them (residual sd 0.8-1.3 mm,
+  up to 10 mm), so it is not implemented: pine stays on barkNOR and tab 1 says so once. Effect on file3 / file4 (spruce-dominated):
+  price volume of all products 0.976 -> 0.986 and 0.990 -> 0.999 of the harvester's `m3 (price)`; the `Top` products are pine and unchanged.
+
 # optBuck 0.3.4
 
 * **Bark model for .hpr stems:** the under-bark diameters of .hpr stems follow the harvester's own bark function from the file

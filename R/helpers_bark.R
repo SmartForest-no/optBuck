@@ -92,13 +92,32 @@ dbh_from_profile <- function(positions_cm, d_ob_mm) {
 #
 # @param sp species table with bark_category, bark_a, bark_b.
 # @return sp with bark_a / bark_b set to 0 for "None" and NA for unsupported categories.
-HPR_BARK_SUPPORTED <- c("Swedish Zacco", "None")
+#
+# "Skogforsk 2004, Norway spruce" (2026-11-12): the published spruce function of Hannrup (2004), see
+# skogforsk2004_spruce_double_bark(). It reproduces the recorded Top/Mid/Butt ub diameters of the owner's
+# files within rounding (sd 0.29 mm, max 0.56 mm; audit-style check in the PLAN). "Skogforsk 2004, Scots pine"
+# was tested the same way and does NOT reproduce them (residual sd 0.8-1.3 mm, up to 10 mm on stems of
+# the owner's files), so it is not implemented: pine stays on barkNOR with the tab-1 message.
+#
+# bark_fn: "ab" (a + b * d_ob: Zacco, None), "skf_spruce", or NA (barkNOR).
+HPR_BARK_SUPPORTED <- c("Swedish Zacco", "None", "Skogforsk 2004, Norway spruce")
+
+# Hannrup, B. (2004). Funktioner for skattning av barkens tjocklek hos tall och gran vid avverkning med
+# skordare. Skogforsk Arbetsrapport 575, p. 32 (Sf_gran): reldia = dia / dbh,
+# db = 0.46146 + 0.01386 * dbh + 0.03571 * dbh * reldia, db = max(db, 2); db = double bark (mm),
+# dia = over-bark diameter (mm), dbh = over-bark diameter at breast height (mm).
+skogforsk2004_spruce_double_bark <- function(d_ob_mm, dbh_mm) {
+  pmax(0.46146 + 0.01386 * dbh_mm + 0.03571 * dbh_mm * (d_ob_mm / dbh_mm), 2)
+}
+
 hpr_bark_columns <- function(sp) {
   cat <- as.character(sp$bark_category)
   none <- cat %in% "None"
   zacco <- cat %in% "Swedish Zacco" & is.finite(sp$bark_a) & is.finite(sp$bark_b)
+  skf <- cat %in% "Skogforsk 2004, Norway spruce"
   sp$bark_a <- ifelse(none, 0, ifelse(zacco, sp$bark_a, NA_real_))
   sp$bark_b <- ifelse(none, 0, ifelse(zacco, sp$bark_b, NA_real_))
+  sp$bark_fn <- ifelse(none | zacco, "ab", ifelse(skf, "skf_spruce", NA_character_))
   sp
 }
 
@@ -111,6 +130,10 @@ hpr_bark_columns <- function(sp) {
 # @param model Bark model function (default: get_bark_model()).
 add_under_bark_profile <- function(pv, model = get_bark_model()) {
   # An .hpr stem whose file has a supported bark function: the harvester's own deduction.
+  if (identical(pv$bark_fn, "skf_spruce") && is.finite(pv$DBH) && pv$DBH > 0) {
+    pv$DiameterValueUB <- pmax(pv$DiameterValue - skogforsk2004_spruce_double_bark(pv$DiameterValue, pv$DBH), 0)
+    return(pv)
+  }
   ab <- pv$bark_ab
   if (length(ab) == 2L && all(is.finite(ab))) {
     pv$DiameterValueUB <- pmax(pv$DiameterValue - pmax(ab[1L] + ab[2L] * pv$DiameterValue, 0), 0)

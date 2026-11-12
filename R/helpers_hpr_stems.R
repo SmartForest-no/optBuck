@@ -388,8 +388,8 @@ hpr_stem_checks <- function(st, species_map) {
   used_groups <- unique(gi[use]); used_groups <- used_groups[!is.na(used_groups)]
   # Bark (2026-11-11): the file's bark function where it is supported, else barkNOR (said once).
   bark_lines <- character(0)
-  if (length(used_groups) && "bark_a" %in% names(sp)) {
-    bad <- used_groups[is.na(sp$bark_a[used_groups]) | is.na(sp$bark_b[used_groups])]
+  if (length(used_groups) && "bark_fn" %in% names(sp)) {
+    bad <- used_groups[is.na(sp$bark_fn[used_groups])]
     if (length(bad)) {
       cats <- unique(ifelse(is.na(sp$bark_category[bad]), "none", sp$bark_category[bad]))
       bark_lines <- sprintf("Bark: the file's bark function (%s) is not supported; barkNOR is used for the stems of %s.",
@@ -494,10 +494,11 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE, reject = NULL) {
     DiameterValue = unlist(lapply(prof, `[[`, "d"), use.names = FALSE),
     DBH = rep(dbh_mm, ng), height_m = rep(height_m, ng), stringsAsFactors = FALSE)
   # The file's bark function of each stem's species group (NA: not supported, barkNOR is used).
-  if ("bark_a" %in% names(st$species) && isTRUE(getOption("optbuck.hpr_file_bark", TRUE))) {   # the option switches the file's bark function off (comparisons only)
+  if ("bark_fn" %in% names(st$species) && isTRUE(getOption("optbuck.hpr_file_bark", TRUE))) {   # the option switches the file's bark function off (comparisons only)
     gk <- match(s$species_key[use], st$species$key)
     ck$profiles$bark_a <- rep(st$species$bark_a[gk], ng)
     ck$profiles$bark_b <- rep(st$species$bark_b[gk], ng)
+    ck$profiles$bark_fn <- rep(st$species$bark_fn[gk], ng)
   }
   ck$tree_data <- data.frame(plot_id = rep(NA_character_, length(use)), treid = key,
                              sesong = rep(NA, length(use)), species_group = ck$species[use],
