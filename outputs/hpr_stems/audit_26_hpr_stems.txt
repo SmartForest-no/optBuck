@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr stems (hpr Phase B)
-  Run: 2026-11-12 09:42:03.416186
+  Run: 2026-11-12 14:15:08.655775
 ============================================================= 
 
 --- 01. Reading the fixture's stems ---
@@ -28,7 +28,7 @@
   [PASS  ] Check 08: .hpr.gz and .hpr in a .zip give the same stems; a zip without an .hpr is an error | .gz same TRUE | .zip same TRUE | zip without .hpr: 'other.zip contains no .hpr file.'
 
 --- 09. Files without stem profiles or without stems ---
-  [PASS  ] Check 09: Stems without profiles (logs only) and a file without stems are errors | 'logs_only.hpr has 2 stems but none with a stem profile (StemDiameters): there is nothing to buck.' | 'no_stems.hpr contains no stems.'
+  [PASS  ] Check 09: Stems without profiles (logs only) and a file without stems are errors | 'logs_only.hpr has 2 stems but none with a stem profile (StemDiameters): there is nothing to buck.' | 'no_stems.hpr contains no stems (definitions only).'
 
 --- 10. Privacy: coordinates, dates, operators and names are never read ---
   [PASS  ] Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output | 18 tables, 66 columns | coordinate-like columns: none | invented values found: none | stem table columns: stem_key,species_key,kind,category,n_points

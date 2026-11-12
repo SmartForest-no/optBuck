@@ -701,7 +701,7 @@ prepare_hpr_job <- function(prepared, price_matrix_path = "default_2021",
                             length_classes = NULL, params = list(), scenario = NULL,
                             grade_opts = NULL) {
   t_start <- Sys.time()
-  if (!isTRUE(prepared$ok)) stop("The .hpr stems did not pass validation.")
+  if (!isTRUE(prepared$ok)) stop(paste(c("The .hpr stems did not pass validation.", prepared$errors), collapse = " "))
   step_cm <- as.integer(or_default(params$start_pos_step_cm, 10L))
   params$stump_height_cm <- 0L
   pps <- .load_runs(price_matrix_path, root, products, length_classes, scenario)

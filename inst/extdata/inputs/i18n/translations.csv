@@ -419,7 +419,7 @@
 "m_hpr_margins","msg","Length class margins ignored (logs are cut at the class length).","Marginer for lengdeklasser ignorert (stokkene kappes på klasselengden).",""
 "m_hpr_none","msg","No product could be imported.","Ingen produkter kunne importeres.",""
 "m_hs_unreadable","msg","The stems of %s cannot be read: %s","Stammene i %s kan ikke leses: %s",""
-"m_hs_nostems","msg","%s contains no stems.","%s inneholder ingen stammer.",""
+"m_hs_nostems","msg","%s contains no stems (definitions only).","%s inneholder ingen stammer (bare definisjoner).",""
 "m_hs_noprofiles","msg","%s has %s stems but none with a stem profile (StemDiameters): there is nothing to buck.","%s har %s stammer, men ingen med stammeprofil (StemDiameters): det er ingenting å aptere.",""
 "m_hs_read","msg","Read %s stems from %s.","Leste %s stammer fra %s.",""
 "m_hs_notread","msg","Recorded logs are not read; the stems are bucked from their profiles.","Registrerte stokker leses ikke; stammene apteres etter profilene sine.",""

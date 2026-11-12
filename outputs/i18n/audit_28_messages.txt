@@ -56,7 +56,7 @@ No stems are left to buck: no stem has a usable profile in a species group set t
 2 stems dropped: profile falls less than 1 mm per 30 dm. | 2 stammer utelatt: profilen faller mindre enn 1 mm per 30 dm.
 1 stem dropped: profile falls more than 30 mm over 1 dm or 60 mm over 10 dm. | 1 stamme utelatt: profilen faller mer enn 30 mm over 1 dm eller 60 mm over 10 dm.
 Bark: the file's bark function (none) is not supported; barkNOR is used for the stems of GRAN. | Bark: filens barkfunksjon (none) støttes ikke; barkNOR brukes for stammene i GRAN.
-nostems.hpr contains no stems. | nostems.hpr inneholder ingen stammer.
+nostems.hpr contains no stems (definitions only). | nostems.hpr inneholder ingen stammer (bare definisjoner).
 Unrecognised layout: expected long columns (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) or a wide grid with a matrix name (spruce_sawlog / pine_sawlog) in the top-left cell. | Ukjent oppsett: forventet lange kolonner (ProductKey, LengthClass_dm, PriceDiameterClass_cm, PriceNOKperM3) eller et bredt rutenett med et matrisenavn (spruce_sawlog / pine_sawlog) i cellen øverst til venstre.
 Negative price in 1 row(s). | Negativ pris i 1 rad(er).
 Diameter classes must be consecutive whole cm (no gaps): spruce_sawlog | Diameterklassene må være sammenhengende hele cm (uten hull): spruce_sawlog

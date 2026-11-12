@@ -323,7 +323,7 @@ e_noprof <- read_hpr_stems(f_noprof, "logs_only.hpr")
 e_nostem <- read_hpr_stems(f_nostem, "no_stems.hpr")
 ok9 <- !isTRUE(e_noprof$ok) && identical(e_noprof$errors,
   "logs_only.hpr has 2 stems but none with a stem profile (StemDiameters): there is nothing to buck.") &&
-  !isTRUE(e_nostem$ok) && identical(e_nostem$errors, "no_stems.hpr contains no stems.")
+  !isTRUE(e_nostem$ok) && identical(e_nostem$errors, "no_stems.hpr contains no stems (definitions only).")
 rec("Check 09: Stems without profiles (logs only) and a file without stems are errors",
     ok(ok9), sprintf("'%s' | '%s'", paste(e_noprof$errors, collapse = " "), paste(e_nostem$errors, collapse = " ")))
 unlink(c(f_noprof, f_nostem))

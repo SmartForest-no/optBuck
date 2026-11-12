@@ -244,6 +244,26 @@ source_cells_parse <- function(x) {
   .hpr_clean_bytes(unlist(parts, use.names = FALSE))
 }
 
+# The default namespace declaration (xmlns="...") of the root element, removed
+# from the bytes before parsing: xml2's namespace stripping needs minutes on a
+# document of 20 MB or more, and the optBuck readers use no namespace. Only
+# the first declaration in the first 8 KB is removed; other bytes are kept.
+.hpr_drop_default_ns <- function(bytes) {
+  if (!length(bytes)) return(bytes)
+  h <- rawToChar(bytes[seq_len(min(8192L, length(bytes)))])
+  m <- regexpr("[[:space:]]xmlns=\"[^\"]*\"", h, useBytes = TRUE)
+  if (m < 1L) return(bytes)
+  bytes[-seq(m, length.out = attr(m, "match.length"))]
+}
+
+# Strip the namespaces of a document; fast when .hpr_drop_default_ns() already
+# removed the default one (only a prefix like xsi can be left, which no
+# XPath of the readers uses).
+.hpr_strip_ns <- function(x) {
+  if (any(names(xml2::xml_ns(x)) == "d1")) xml2::xml_ns_strip(x)
+  invisible(x)
+}
+
 # ---- reading -------------------------------------------------------------------------
 
 # Bytes read per step when looking for the first stem.
@@ -348,15 +368,19 @@ read_hpr <- function(path, filename = basename(path)) {
   path <- src$path
   pre <- tryCatch(.hpr_prefix(path, src$entry), error = function(e) NULL)
   if (is.null(pre)) return(fail(sprintf("%s cannot be read.", filename)))
-  parse <- function(x) tryCatch(xml2::read_xml(if (is.character(x)) .hpr_read_clean(x) else x,
+  parse <- function(x) tryCatch(xml2::read_xml(.hpr_drop_default_ns(if (is.character(x)) .hpr_read_clean(x) else x),
                                                options = c("NOBLANKS", "HUGE")),
                                 error = function(e) NULL)
-  x <- parse(.hpr_clean_bytes(if (pre$found) .hpr_close_tags(pre$bytes) else pre$bytes))
+  # Clean first, then close the open tags: a literal "<U+FEFF>" marker would
+  # otherwise count as an open element "U" (its closing tag left a stray </U>
+  # after the marker was removed, so every such file fell back to a whole-file parse).
+  cleaned <- .hpr_clean_bytes(pre$bytes)
+  x <- parse(if (pre$found) .hpr_close_tags(cleaned) else cleaned)
   how <- if (pre$found) "prefix" else "whole"
   # Both kinds of definitions must be in the part read; otherwise (e.g. a
   # stem before the products) the whole file is parsed.
   has_defs <- function(x) !is.null(x) && {
-    xml2::xml_ns_strip(x)
+    .hpr_strip_ns(x)
     length(xml2::xml_find_all(x, "/*/Machine/SpeciesGroupDefinition")) > 0L &&
       length(xml2::xml_find_all(x, "/*/Machine/ProductDefinition")) > 0L
   }
@@ -372,7 +396,7 @@ read_hpr <- function(path, filename = basename(path)) {
     if (!is.null(src$entry)) unlink(dirname(whole), recursive = TRUE)
   }
   if (is.null(x)) return(fail(sprintf("%s is not a readable XML file.", filename)))
-  xml2::xml_ns_strip(x)
+  .hpr_strip_ns(x)
   if (xml2::xml_name(x) != "HarvestedProduction")
     return(fail(sprintf("%s is not a StanForD 2010 .hpr or .pin file (root element '%s', expected HarvestedProduction or ProductInstruction).",
                         filename, xml2::xml_name(x))))
@@ -467,10 +491,10 @@ read_hpr <- function(path, filename = basename(path)) {
 # ("Top cylinder"); missing optional elements are not reported.
 read_pin <- function(path, filename = basename(path)) {
   fail <- function(msg) list(ok = FALSE, errors = msg, warnings = character(0))
-  x <- tryCatch(xml2::read_xml(.hpr_read_clean(path), options = c("NOBLANKS", "HUGE")),
+  x <- tryCatch(xml2::read_xml(.hpr_drop_default_ns(.hpr_read_clean(path)), options = c("NOBLANKS", "HUGE")),
                 error = function(e) NULL)
   if (is.null(x)) return(fail(sprintf("%s is not a readable XML file.", filename)))
-  xml2::xml_ns_strip(x)
+  .hpr_strip_ns(x)
   if (xml2::xml_name(x) != "ProductInstruction")
     return(fail(sprintf("%s is not a StanForD 2010 .hpr or .pin file (root element '%s', expected HarvestedProduction or ProductInstruction).",
                         filename, xml2::xml_name(x))))

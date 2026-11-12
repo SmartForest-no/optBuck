@@ -186,6 +186,16 @@ check_used_products <- function(logs, species_map,
 bucking_check <- function(path, species_map = NULL, filename = basename(path), reject_zones = TRUE,
                           used_only = TRUE, manual_ok = TRUE, progress = NULL, root = get_root_dir(),
                           stage = "all", prep = NULL, b = NULL) {
+  # Any failure comes back as ok = FALSE with a message, never as a bare R error (2026-11-12).
+  tryCatch(
+    .bucking_check_run(path, species_map, filename, reject_zones, used_only, manual_ok, progress, root, stage, prep, b),
+    error = function(e) list(ok = FALSE, errors = sprintf("%s could not be checked: %s", filename, conditionMessage(e)),
+                             warnings = character(0), info = character(0)))
+}
+
+.bucking_check_run <- function(path, species_map = NULL, filename = basename(path), reject_zones = TRUE,
+                               used_only = TRUE, manual_ok = TRUE, progress = NULL, root = get_root_dir(),
+                               stage = "all", prep = NULL, b = NULL) {
   prog <- function(step) if (is.function(progress)) progress(step)
   fail <- function(e, w = character(0)) list(ok = FALSE, errors = e, warnings = w, info = character(0))
   if (identical(stage, "finish")) {
@@ -197,6 +207,9 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   h <- read_hpr(path, filename); if (!isTRUE(h$ok)) return(fail(h$errors, h$warnings))
   smap <- if (is.null(species_map)) setNames(guess_hpr_species(h$species$name, h$species$user_id), h$species$key) else species_map
   rl <- read_hpr_logs(path, filename, defs = h); if (!isTRUE(rl$ok)) return(fail(rl$errors))
+  if (nrow(rl$logs) == 0L) {   # no recorded logs: say why (definitions-only file, or stems without logs and profiles)
+    s0 <- read_hpr_stems(path, filename, defs = h); if (!isTRUE(s0$ok)) return(fail(s0$errors, h$warnings))
+  }
   # Every product with a recorded log is in the scenario, so each recorded log is valued; the best possible
   # bucking may use only the products the harvester used (check_used_products(): >= 1 % of a species' logs).
   keep <- if (used_only) unique(rl$logs$ProductKey[!rl$logs$waste]) else NULL
@@ -256,6 +269,9 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
     base$excluded <- data.frame(treid = unique(lg$stem_key), reason = "no stem profile (StemDiameters)", stringsAsFactors = FALSE)
     return(base)
   }
+  # The stems' own checks say why none can be bucked (e.g. every profile fails the cleaning); report that.
+  ck <- hpr_stem_checks(st, smap)
+  if (!isTRUE(ck$ok)) return(fail(ck$errors, c(warnings, ck$warnings)))
   reject <- if (reject_zones) { w <- lg[lg$waste, , drop = FALSE]
     data.frame(stem_key = w$stem_key, start = w$StartPos, length = w$LogLength, stringsAsFactors = FALSE) }
   # The products the best possible bucking may use (waste rows always).

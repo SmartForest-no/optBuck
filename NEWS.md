@@ -1,3 +1,13 @@
+# optBuck (development version)
+
+* **John Deere TimbermaticH files no longer hang the reader:** a file starting with the literal text `<U+FEFF>` made `read_hpr()` count the marker as an
+  open element, so the prefix never parsed and the whole file was parsed instead, where `xml2::xml_ns_strip()` needed over 10 minutes on 20-50 MB.
+  The header is now cleaned before the open tags are closed and the default namespace is dropped from the bytes (`read_hpr()` on four such files:
+  1.3-2.8 s, was over 10 minutes).
+* **Clearer messages:** a file with definitions only says "contains no stems (definitions only)" (Norwegian: "inneholder ingen stammer (bare
+  definisjoner)"), also in the bucking check; `bucking_check()` always returns `ok = FALSE` with a reason (the stem checks' own text, or the R error
+  message) instead of a bare "did not pass validation".
+
 # optBuck 0.3.5
 
 * **Skogforsk 2004 bark function for spruce in .hpr files:** a species group with `Skogforsk 2004, Norway spruce` now uses the published function

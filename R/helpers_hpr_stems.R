@@ -236,7 +236,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
             gpos = unlist(lapply(parts, `[[`, "gpos"), use.names = FALSE),
             gval = unlist(lapply(parts, `[[`, "gval"), use.names = FALSE))
   errors <- character(0)
-  if (nrow(stems) == 0L) errors <- sprintf("%s contains no stems.", filename)
+  if (nrow(stems) == 0L) errors <- sprintf("%s contains no stems (definitions only).", filename)
   else if (all(stems$n_points == 0L))
     errors <- sprintf("%s has %s stems but none with a stem profile (StemDiameters): there is nothing to buck.",
                       filename, format(nrow(stems), big.mark = ","))
