@@ -1,13 +1,13 @@
 ============================================================= 
   Audit: tool name and paths (2026-11-06)
-  Run: 2026-11-11 15:50:58.625551
+  Run: 2026-11-12 14:25:50.359705
 ============================================================= 
-  [PASS  ] Check 01: no tracked file name contains the old tool name | 314 tracked files; offending: none
+  [PASS  ] Check 01: no tracked file name contains the old tool name | 315 tracked files; offending: none
   [PASS  ] Check 02: no tracked text file contains the old name except Norwegian words | allowed lines in 17 files; offending: none
   [PASS  ] Check 03: options, variables and functions carry the package name (optbuck.*, OPTBUCK_*, optbuck_*) | present: OPTBUCK_WORKERS, optbuck.workers, optbuck_workers, OPTBUCK_LANG | environment variables read or set in R/ and inst/app: OPTBUCK_N_PLOTS | OPTBUCK_TUNE_MAX_ITER | OPTBUCK_HPR_MAX_MB | OPTBUCK_LANG | OPTBUCK_WORKERS | OPTBUCK_ROOT
   [PASS  ] Check 04: the package sets no OPTBUCK_ROOT; inst/app calls get_root_dir() once (app.R) | setters: none | get_root_dir() in inst/app: app.R
   [PASS  ] Check 05: extdata_path() / app_dir() come from system.file(); the NFI cache of an installed package is under R_user_dir() | extdata <repo>/inst/extdata/inputs | app <repo>/inst/app | cache C:\Users\leno\AppData\Local/R/cache/R/optBuck/taper_profiles
-  [PASS  ] Check 06: the arguments that default to get_root_dir() are listed (data readers and the NFI cache, no writers of other kinds) | 20 arguments in api.R, helpers_check.R, helpers_nfi_cache.R, helpers_paths.R, helpers_products.R, helpers_valuation.R, run_bucking.R
+  [PASS  ] Check 06: the arguments that default to get_root_dir() are listed (data readers and the NFI cache, no writers of other kinds) | 21 arguments in api.R, helpers_check.R, helpers_nfi_cache.R, helpers_paths.R, helpers_products.R, helpers_valuation.R, run_bucking.R
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
