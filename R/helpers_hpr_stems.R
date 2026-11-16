@@ -238,7 +238,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
   errors <- character(0)
   if (nrow(stems) == 0L) errors <- sprintf("%s contains no stems (definitions only).", filename)
   else if (all(stems$n_points == 0L))
-    errors <- sprintf("%s has %s stems but none with a stem profile (StemDiameters): there is nothing to buck.",
+    errors <- sprintf("%s has %s stems but no stem profile (StemDiameters). Bucking and the bucking analysis require stem profiles.",
                       filename, format(nrow(stems), big.mark = ","))
   sp <- defs$species
   sp$offset_cm  <- hpr_stump_offset(sp$dbh_height)
@@ -535,7 +535,7 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE, reject = NULL) {
 hpr_file_failure_reason <- function(errors, filename) {
   e <- paste(errors, collapse = " ")
   if (grepl("contains no stems", e, fixed = TRUE)) return("no stems")
-  if (grepl("none with a stem profile", e, fixed = TRUE)) return("no stem profiles")
+  if (grepl("but no stem profile (StemDiameters)", e, fixed = TRUE)) return("no stem profiles")
   if (grepl("is not a readable XML file|is not a StanForD 2010 .hpr file|is a StanForD '", e)) return("not a readable StanForD 2010 .hpr file")
   if (grepl("The stems of .* cannot be read|cannot be read", e)) return("the stems cannot be read")
   gsub(filename, "the file", errors[1L], fixed = TRUE)
