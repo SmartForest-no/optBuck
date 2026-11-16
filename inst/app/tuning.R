@@ -118,7 +118,7 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
     p <- promises::then(p, function(job) {
       out <- tuning_run(job, products, d, ids, max_iter, gopts,
                         on_iter = function(r, m, fg)
-                          prog$set(message = tr("tn_iter_progress", r, m, lang = l), value = r / m))
+                          prog$set(message = tr("tn_iter_progress", lang = l), value = r / m))
       out$side <- s; out$defs <- d; out$pm <- pm; out$requested <- requested
       out$stem_id <- sid; out$grade_note <- gnote
       res(out)
@@ -165,8 +165,6 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       div(class = "tn-hdr", L("tn_hdr_cost")),
       reactable::reactableOutput("tn_tbl_cost"),
       p(class = "note-muted", L("tn_cost_caption")),
-      plotOutput("tn_plot", width = "700px", height = "320px"),
-      p(class = "note-muted", L("tn_fig_caption")),
       apportion_notes(r),
       div(class = "tn-hdr", L("tn_matrices")),
       div(class = "tally-controls",
@@ -215,28 +213,6 @@ tuning_server <- function(input, output, session, lang, sc, stem_spec, stem_id, 
       stringsAsFactors = FALSE)
     names(df) <- c(" ", L("tn_col_before"), L("tn_col_after"), L("tn_col_change"))
     optbuck_reactable(df, sortable = FALSE, pagination = FALSE, lang = l)
-  })
-  # One line per tuned assortment (degree of fit by iteration), the best iteration marked.
-  # Colours are the app's chart colours (the first is the primary green); with more
-  # assortments than colours the line type changes.
-  output$tn_plot <- renderPlot(width = 700, height = 320, res = 96, {
-    r <- res(); req(r, !isTRUE(r$too_few)); l <- lang()
-    ks <- r$used; lab <- vapply(ks, function(k) disp_key(r, k, l), "")
-    d <- do.call(rbind, lapply(seq_along(ks), function(i)
-      data.frame(it = r$trace$r, fg = r$by[[ks[i]]]$fg_iter, a = lab[i], stringsAsFactors = FALSE)))
-    d$a <- factor(d$a, levels = lab)
-    pal <- c(OPTBUCK_CHART$series1, OPTBUCK_CHART$series2, OPTBUCK_CHART$other, OPTBUCK_CHART$neutral)
-    lt <- c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
-    col <- setNames(rep_len(pal, length(ks)), lab)
-    lty <- setNames(lt[((seq_along(ks) - 1L) %/% length(pal)) %% length(lt) + 1L], lab)
-    best <- d[d$it == r$best_iter, , drop = FALSE]
-    ggplot2::ggplot(d, ggplot2::aes(x = it, y = fg, colour = a, linetype = a)) +
-      ggplot2::geom_line(linewidth = 0.6, na.rm = TRUE) +
-      ggplot2::geom_point(data = best, size = 2.4, na.rm = TRUE) +
-      ggplot2::scale_colour_manual(values = col) + ggplot2::scale_linetype_manual(values = lty) +
-      ggplot2::scale_x_continuous(breaks = function(x) { b <- pretty(x); b[b == round(b)] }) +
-      ggplot2::labs(x = L("tn_iteration"), y = L("tn_col_fg"), title = L("tn_fig_title"), colour = NULL, linetype = NULL) +
-      theme_optbuck() + ggplot2::theme(legend.position = "bottom")
   })
   # The matrix of the chosen assortment in the chosen view: shares in whole percent per
   # file diameter class (rows) and length class (columns); the outcome views have the

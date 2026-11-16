@@ -530,7 +530,7 @@ browser_checks <- c(
   "Check 40: Two .hpr files uploaded at once: one total line, species merged by name, a comparison on both files' stems, a File column, no file names",
   "Check 41: Stem grades: two checkboxes per scenario only for .hpr stems, off by default; ticked in A the run compares A with B; Copy from A copies the boxes",
   "Check 42: Import .hpr/.pin: a .pin imported into Scenario A through the upload field (title says .hpr/.pin), the message, the assortments, no file kept for the .hpr stems source, and Download as .pin gives a ProductInstruction file without coordinates",
-  "Check 43: Price tuning tab: message without .hpr stems; an Even target set in the target view, the assortment list, a tuning with two iterations gives the key-figure table, the small figure and the four matrix views; Use tuned prices in the other scenario copies them and keeps the results; a change in the tuned scenario clears them",
+  "Check 43: Price tuning tab: message without .hpr stems; an Even target set in the target view, the assortment list, a tuning with two iterations gives the key-figure table (no figure, no iteration text) and the matrix views; Use tuned prices in the other scenario copies them and keeps the results; a change in the tuned scenario clears them",
   "Check 44: Importing into a scenario leaves the stems untouched; loading other stems (0.3.2) gives A and B the new file's assortments; the Stems tab summary and the use-this-file buttons open the dialog without a second upload",
   "Check 45: No scenario names: no name fields, titles and headers say Scenario A/B, the scenario xlsx has no name",
   "Check 46: Demand matrix view: switch, Even button, a cell edit sets its file class, the sum per row (bold when not 100), the .pin and the xlsx carry the edited target, Clear",
@@ -1952,7 +1952,7 @@ if (!browser_ok) {
     # A's assortments and the tuned prices.
     c43 <- list(msg = "", extra = NA_integer_, boxes = "", rows = "", price_cells = 0L, use = "", q = "",
                 open = NA_integer_, cells = 0L, equal = FALSE, changed = 0L, nerr = NA_integer_,
-                plot_w = NA, plot_h = NA, views = list(), kept = FALSE, cleared = FALSE, radio = "")
+                no_fig = FALSE, views = list(), kept = FALSE, cleared = FALSE, radio = "")
     e43 <- try_drv({
       fx43 <- file.path(root_dir, "inst", "extdata", "inputs", "test_fixtures", "hpr_tuning_synthetic.hpr")
       key43 <- "spruce_140_sagtommer_gran"
@@ -1988,7 +1988,7 @@ if (!browser_ok) {
       c43$boxes <- js(app, "Array.from(document.querySelectorAll('input[name=tn_products]')).map(function(e){ return e.value + (e.checked ? '+' : '-'); }).join(',')")
       c43$radio <- js(app, "document.querySelectorAll('input[name=tn_target]').length")
       app$click("tn_run")
-      app$wait_for_js("!!document.querySelector('#tn_tbl_hits .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr') && !!document.querySelector('#tn_plot img')",
+      app$wait_for_js("!!document.querySelector('#tn_tbl_hits .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr')",
                       timeout = 240 * 1000)
       app$wait_for_idle()
       c43$rows <- js(app, "Array.from(document.querySelectorAll('#tn_tbl_hits .rt-tbody .rt-tr')).map(function(r){ return r.innerText.replace(/\\s+/g, ' ').trim(); }).join(' | ')")
@@ -1997,8 +1997,7 @@ if (!browser_ok) {
       c43$cost_cols <- headers_of(app, "tn_tbl_cost")
       c43$scope <- txt(app, "#tn_results .tn-scope")
       c43$apport <- js(app, "Array.from(document.querySelectorAll('#tn_results p.note-muted')).map(function(e){ return e.innerText.replace(/\\s+/g, ' ').trim(); }).filter(function(t){ return /^Note:/.test(t); }).join(' | ')")
-      c43$plot_w <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().width")
-      c43$plot_h <- js(app, "document.querySelector('#tn_plot img').getBoundingClientRect().height")
+      c43$no_fig <- js(app, "document.querySelectorAll('#tn_plot, #tn_results img').length") == 0L && !grepl("iterasjon|iteration", txt(app, "#tn_results"), ignore.case = TRUE)
       # the six matrix views of the assortment (2026-11-11: original and tuned prices added)
       for (v in c("target", "orig", "tuned", "price_orig", "price_tuned", "change")) {
         app$set_inputs(tn_matrix_view = v, wait_ = FALSE); app$wait_for_idle(); Sys.sleep(0.5)
@@ -2043,7 +2042,7 @@ if (!browser_ok) {
                  function(w) grepl(w, c43$cols, fixed = TRUE), NA)) &&
       grepl("Value of all stems (NOK)", c43$cost, fixed = TRUE) && grepl("Sawlog volume", c43$cost, fixed = TRUE) &&
       identical(c43$cost_cols, "|Before|After|Change") &&
-      isTRUE(abs(c43$plot_w - 700) < 4) && isTRUE(abs(c43$plot_h - 320) < 4) &&
+      isTRUE(c43$no_fig) &&
       all(vapply(c43$views, function(v) isTRUE(v$cells >= 1L), logical(1))) && length(c43$views) == 6L &&
       all(vapply(c43$views, function(v) grepl("Diameter class (mm)", v$hdr, fixed = TRUE) && grepl("Length class (cm)", v$hdr, fixed = TRUE), NA)) &&
       grepl("Degree of fit (%)", c43$views$orig$hdr, fixed = TRUE) && grepl("Degree of fit (%)", c43$views$tuned$hdr, fixed = TRUE) &&
@@ -2054,8 +2053,8 @@ if (!browser_ok) {
       isTRUE(c43$kept) && isTRUE(c43$cleared) &&
       isTRUE(c43$equal) && c43$changed >= 1L && identical(c43$nerr, 0L)
     rec(grep("^Check 43:", browser_checks, value = TRUE), if (ok43) PASS else FAIL,
-        sprintf("message '%s' (inputs %s) | assortments %s, target radio %s | rows: %s | columns '%s' | figure %sx%s px | matrix views (cells): %s | button '%s' | dialog '%s', open after OK %s | results kept after applying to B %s | B cells %s equal to the tuned prices %s, changed against A %s | cleared by a change in A %s | error notifications %s%s",
-                c43$msg, c43$extra, c43$boxes, c43$radio, substr(or_default(c43$rows, ""), 1, 120), c43$cols, round(or_default(c43$plot_w, NA)), round(or_default(c43$plot_h, NA)),
+        sprintf("message '%s' (inputs %s) | assortments %s, target radio %s | rows: %s | columns '%s' | no figure or iteration text %s | matrix views (cells): %s | button '%s' | dialog '%s', open after OK %s | results kept after applying to B %s | B cells %s equal to the tuned prices %s, changed against A %s | cleared by a change in A %s | error notifications %s%s",
+                c43$msg, c43$extra, c43$boxes, c43$radio, substr(or_default(c43$rows, ""), 1, 120), c43$cols, c43$no_fig,
                 paste(vapply(names(c43$views), function(n) sprintf("%s %s", n, c43$views[[n]]$cells), ""), collapse = ", "),
                 c43$use, c43$q, c43$open, c43$kept, c43$cells, c43$equal, c43$changed, c43$cleared, c43$nerr,
                 paste0(err_txt(e43), " | apportionment note '", or_default(c43$apport, ""), "'", " | scope '", trimws(or_default(c43$scope, "")), "' | cost '", or_default(c43$cost, ""), "' cols '", or_default(c43$cost_cols, ""),

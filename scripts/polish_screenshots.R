@@ -91,7 +91,7 @@ nav("tuning")
 app$wait_for_js("!!document.getElementById('tn_run')", timeout = 30 * 1000)
 shot("07a_tuning_list")
 app$click("tn_run")
-app$wait_for_js("!!document.querySelector('#tn_tbl_hits .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr') && !!document.querySelector('#tn_plot img')", timeout = 300 * 1000)
+app$wait_for_js("!!document.querySelector('#tn_tbl_hits .rt-tr') && !!document.querySelector('#tn_matrix .rt-tr')", timeout = 300 * 1000)
 app$wait_for_idle(); Sys.sleep(2)
 shot("07b_tuning_results")
 for (v in c("target", "orig", "tuned", "change")) {
