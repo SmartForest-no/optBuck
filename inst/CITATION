@@ -4,6 +4,6 @@ bibentry(
   author = person("Lennart", "Noordermeer"),
   organization = "NIBIO",
   year = "2026",
-  note = "R package version 0.3.0",
+  note = "R package version 0.3.6",
   url = "https://github.com/SmartForest-no/optBuck"
 )

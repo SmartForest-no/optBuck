@@ -1,5 +1,11 @@
-# optBuck (development version)
+# optBuck 0.3.6
 
+* **Tab 4 (Pristilpasning):** the figure «Fordelingsgrad per iterasjon» and its caption are removed; the tables, the cost table,
+  the note about fordelingsaptering and the matrix views stay. The progress bar says «Tilpasser priser ...» / "Tuning prices ..."
+  without an iteration count.
+* **Files with stems but no stem profile** (for example some John Deere SilviA and Timbermatic files) give one clear line in tab 1
+  and tab 5: «... har N stammer, men ingen stammeprofil (StemDiameters). Aptering og apteringsanalysen krever stammeprofiler.»
+  Decision: optBuck will not rebuild stem profiles from log diameters.
 * **John Deere TimbermaticH files no longer hang the reader:** a file starting with the literal text `<U+FEFF>` made `read_hpr()` count the marker as an
   open element, so the prefix never parsed and the whole file was parsed instead, where `xml2::xml_ns_strip()` needed over 10 minutes on 20-50 MB.
   The header is now cleaned before the open tags are closed and the default namespace is dropped from the bytes (`read_hpr()` on four such files:
@@ -67,6 +73,10 @@ Fixes after testing 0.3.1.
 
 # optBuck 0.3.1
 
+* **Example file:** `system.file("extdata", "example.hpr", package = "optBuck")`: 376 whole stems and their recorded logs
+  (measurements unchanged) from a real harvester file, with seven products, prices multiplied by 1.15 and rounded to the
+  nearest 5 NOK, and every name, id, date (shifted, year kept) and coordinate removed or replaced. It is a valid StanForD 2010
+  `.hpr` (v3.1) and works in all five tabs; `scripts/make_example_hpr.R` shows how it was made.
 * **Reader:** files that declare UTF-8 but have windows-1252 bytes in the header are read (non-UTF-8 lines are converted),
   and the literal text `<U+FEFF>` that some John Deere TimbermaticH files start with is ignored. Valid UTF-8 and real
   byte order marks are untouched; the copy of the header in an exported .hpr is repaired the same way.
@@ -94,13 +104,6 @@ Fixes after testing 0.3.1.
   tuned assortments are listed first, the others in one line with the reason, and left out of the detailed results.
 * **Audits:** 36 check 14 passed a folder where `nfi_profiles_ready()` takes the root (not a taperNOR problem); audit 15
   needs the prototype's own output files, which are not in the repository, and reports REVIEW where they are absent.
-
-# optBuck (development version)
-
-* New example file `system.file("extdata", "example.hpr", package = "optBuck")`: 376 whole stems and their recorded logs
-  (measurements unchanged) from a real harvester file, with seven products, prices multiplied by 1.15 and rounded to the
-  nearest 5 NOK, and every name, id, date (shifted, year kept) and coordinate removed or replaced. It is a valid StanForD 2010
-  `.hpr` (v3.1) and works in all five tabs; `scripts/make_example_hpr.R` shows how it was made.
 
 # optBuck 0.3.0
 
