@@ -347,7 +347,7 @@ bad_cols <- grep("(^|_)(lat|lon|latitude|longitude|coord|coordinates|altitude|da
 vals <- unlist(lapply(tabs, function(t) unlist(lapply(t, as.character))), use.names = FALSE)
 leaks <- secret[vapply(secret, function(s) any(grepl(s, c(vals, unlist(st10[c("info", "warnings")])), fixed = TRUE)), logical(1))]
 ok10 <- isTRUE(st10$ok) && p10$n_used == 2L && length(bad_cols) == 0L && length(leaks) == 0L &&
-  identical(names(st10$stems), c("stem_key", "species_key", "kind", "category", "n_points", "estimated"))
+  identical(names(st10$stems), c("stem_key", "species_key", "kind", "category", "n_points", "estimated", "est_species"))
 rec("Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output",
     ok(ok10), sprintf("%d tables, %d columns | coordinate-like columns: %s | invented values found: %s | stem table columns: %s",
                       length(tabs), length(cols), if (length(bad_cols)) paste(bad_cols, collapse = ",") else "none",

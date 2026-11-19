@@ -1,5 +1,6 @@
 # optBuck (development)
 
+* Estimated stem profiles follow the species chosen for a group in tab 1: a change re-estimates that group's stems (`hpr_reestimate_profiles()`).
 * **Estimated stem profiles for files with logs but no StemDiameters** (older John Deere files and others): `read_hpr_stems()` estimates the profile of each single-tree stem from DBH and the log diameters (Mid ob, Top ob, Butt ob where present) with `taperNOR::kublin_nor()`, the tree height from a bounded fit of `taperNOR::taperNOR()` at the file's DBH (`R/helpers_hpr_profile.R`). The profile ends 10 cm above the last log. Stems are marked in `stems$estimated`; tab 1 shows how many profiles are measured and how many estimated, tab 5 and the PDF carry the note, the Simulator's `height_source` says "Estimated profile". Validation on 14 files with real profiles: profile RMSE 6.7 mm (spruce 6.4, pine 9.7), yield index about 0.010 lower than with measured profiles. Reverses the decision of 2026-11-16 (Lennart, 2026-11-19).
 * Tab 5 and the PDF say when a file has no quality codes: «Filen har ingen kvalitetskoder; beste mulig aptering antar feilfrie stammer.»
 

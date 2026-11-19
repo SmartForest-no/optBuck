@@ -236,6 +236,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
             gpos = unlist(lapply(parts, `[[`, "gpos"), use.names = FALSE),
             gval = unlist(lapply(parts, `[[`, "gval"), use.names = FALSE))
   stems$estimated <- rep(FALSE, nrow(stems))
+  stems$est_species <- rep(NA_character_, nrow(stems)); est_in <- vector("list", nrow(stems))
   errors <- character(0); est_warn <- character(0); est_info <- character(0)
   sp <- defs$species
   sp$offset_cm  <- hpr_stump_offset(sp$dbh_height)
@@ -250,7 +251,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
       e <- tryCatch(hpr_estimate_profiles(list(stems = stems, species = sp), logs, read_hpr_dbh(path, filename, chunk_bytes)),
                     error = function(e) NULL)
       if (!is.null(e) && e$n_estimated > 0L) {
-        stems <- e$st$stems; x$idx <- e$st$idx; x$pos <- e$st$pos; x$d <- e$st$d
+        stems <- e$st$stems; est_in <- e$st$est_in; x$idx <- e$st$idx; x$pos <- e$st$pos; x$d <- e$st$d
         est_warn <- "Stem profiles are estimated from the log diameters and DBH (taperNOR/TapeR) because the file has no StemDiameters. The yield index is typically about 1 percentage point lower than with measured profiles and suits comparison between files; the top of the stem is uncertain."
         miss <- sum(stems$kind == "single" & !stems$estimated)
         est_info <- sprintf("Estimated stem profiles for %s of %s stems (%s single-tree stems without usable logs or DBH).",
@@ -267,7 +268,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
   info <- c(sprintf("Read %s stems from %s.", format(nrow(stems), big.mark = ","), filename),
             if (length(est_info)) est_info else "Recorded logs are not read; the stems are bucked from their profiles.")
   list(ok = length(errors) == 0L, errors = errors, warnings = c(defs$warnings, src$warnings, est_warn),
-       info = info, file = filename, species = sp, stems = stems,
+       info = info, file = filename, species = sp, stems = stems, est_in = est_in, est_cache = new.env(),
        instruction = hpr_instruction_table(defs),
        idx = x$idx, pos = x$pos, d = x$d, gidx = x$gidx, gpos = x$gpos, gval = x$gval,
        seconds = as.numeric(difftime(Sys.time(), t0, units = "secs")))
@@ -348,6 +349,7 @@ hpr_clean_flags <- function(idx, pos, d, n, check = seq_len(n)) {
 hpr_stem_checks <- function(st, species_map) {
   if (!isTRUE(st$ok)) return(list(ok = FALSE, errors = st$errors, warnings = st$warnings,
                                   info = character(0), file = st$file))
+  st <- hpr_reestimate_profiles(st, species_map)             # estimated profiles follow the species choice
   s <- st$stems; n <- nrow(s); sp <- st$species
   gi <- match(s$species_key, sp$key)
   group <- ifelse(is.na(gi), s$species_key,
@@ -481,6 +483,7 @@ hpr_reject_cells <- function(g, start, len, step = HPR_PROFILE_STEP_CM) {
 }
 
 hpr_stem_profiles <- function(st, species_map, grades = FALSE, reject = NULL) {
+  st <- hpr_reestimate_profiles(st, species_map)
   ck <- hpr_stem_checks(st, species_map)
   if (is.null(ck$use)) return(ck)
   s <- st$stems; use <- ck$use
@@ -607,7 +610,8 @@ combine_hpr_stems <- function(reads, filenames = vapply(reads, function(r) or_de
   list(ok = TRUE, errors = character(0), warnings = warnings, instruction = instr,
        info = "Recorded logs are not read; the stems are bucked from their profiles.",
        file = NA_character_, n_files = length(good), failed = failed,
-       species = sp, stems = stems,
+       species = sp, stems = stems, est_cache = new.env(),
+       est_in = unlist(lapply(good, function(i) or_default(reads[[i]]$est_in, vector("list", nrow(reads[[i]]$stems)))), recursive = FALSE),
        idx = unlist(Map(function(i, o) reads[[i]]$idx + o, good, off), use.names = FALSE),
        pos = unlist(lapply(good, function(i) reads[[i]]$pos), use.names = FALSE),
        d   = unlist(lapply(good, function(i) reads[[i]]$d), use.names = FALSE),

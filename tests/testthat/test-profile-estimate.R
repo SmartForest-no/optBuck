@@ -71,3 +71,29 @@ test_that("the new messages are translated", {
   expect_match(tr_msg("The file has no quality codes; the best possible bucking assumes defect-free stems.", "no"), "kvalitetskoder")
   expect_match(tr("hs_profiles_count", "3", "5", lang = "no"), "3 målt, 5 estimert")
 })
+
+test_that("estimated profiles follow a later change of the species choice", {
+  skip_if_not_installed("taperNOR")
+  b <- read_hpr_stems(fixture("hpr_logsonly_synthetic.hpr"))
+  keys <- b$species$key
+  as_sp <- function(x) setNames(rep(x, length(keys)), keys)
+  p_sp <- hpr_stem_profiles(b, as_sp("spruce")); p_pi <- hpr_stem_profiles(b, as_sp("pine"))
+  expect_true(p_sp$ok && p_pi$ok)
+  # the height fit uses the other taper curve: the profiles differ
+  expect_false(isTRUE(all.equal(p_sp$profiles$DiameterValue, p_pi$profiles$DiameterValue)))
+  # a guessed-species read gives the same profiles as the explicit map of the guess
+  g <- setNames(guess_hpr_species(b$species$name, b$species$user_id), keys)
+  expect_equal(hpr_stem_profiles(b, g)$profiles$DiameterValue, hpr_stem_profiles(b, ifelse(g == "pine", "pine", "spruce"))$profiles$DiameterValue)
+  # switching back and forth returns the original profile; the input is never changed
+  expect_equal(hpr_stem_profiles(b, as_sp("spruce"))$profiles$DiameterValue, p_sp$profiles$DiameterValue)
+  expect_equal(hpr_stem_profiles(b, as_sp("pine"))$profiles$DiameterValue, p_pi$profiles$DiameterValue)
+  expect_true(all(b$stems$est_species[b$stems$estimated] %in% c("spruce", "pine")))
+  # same as reading with the other species up front
+  b2 <- b; b2$est_cache <- NULL
+  e <- hpr_estimate_profiles(b2, read_hpr_logs(fixture("hpr_logsonly_synthetic.hpr"))$logs,
+                             read_hpr_dbh(fixture("hpr_logsonly_synthetic.hpr")), species_map = as_sp("pine"))
+  expect_equal(sort(e$st$d), sort(hpr_reestimate_profiles(b2, as_sp("pine"))$d))
+  # measured profiles are untouched
+  a <- read_hpr_stems(fixture("hpr_check_synthetic.hpr"))
+  expect_identical(hpr_reestimate_profiles(a, setNames(rep("pine", nrow(a$species)), a$species$key)), a)
+})

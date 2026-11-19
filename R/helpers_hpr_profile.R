@@ -90,6 +90,7 @@ hpr_estimate_profiles <- function(st, logs, dbh, species_map = NULL) {
   lgs <- split(logs, logs$stem_key)
   dbh_mm <- dbh$dbh_mm[match(s$stem_key, dbh$stem_key)]
   pos <- vector("list", nrow(s)); dd <- vector("list", nrow(s)); why <- rep(NA_character_, nrow(s))
+  est_in <- vector("list", nrow(s)); est_sp <- rep(NA_character_, nrow(s))
   for (i in which(s$kind == "single")) {
     l1 <- lgs[[s$stem_key[i]]]
     if (is.null(l1) || nrow(l1) == 0L) { why[i] <- "no recorded logs"; next }
@@ -102,12 +103,54 @@ hpr_estimate_profiles <- function(st, logs, dbh, species_map = NULL) {
     r <- .hpr_est_profile(P, sps, dbh_mm[i] / 10, off, end_cm)
     if (is.character(r)) { why[i] <- r; next }
     pos[[i]] <- r$pos; dd[[i]] <- r$d
+    # what a re-estimate needs when the species choice changes (hpr_reestimate_profiles())
+    est_in[[i]] <- list(P = P, dbh_cm = dbh_mm[i] / 10, off = off, end_cm = end_cm)
+    est_sp[i] <- if (identical(sps, "pine")) "pine" else "spruce"
   }
   n <- lengths(pos)
   st$stems$n_points <- as.integer(n)
   st$stems$category <- ifelse(n > 0L, "Over bark", s$category)
   st$stems$estimated <- n > 0L
+  st$stems$est_species <- est_sp; st$est_in <- est_in   # est_in: a list, so not a stems column (tables are written)
   st$idx <- rep.int(seq_len(nrow(s)), n)
   st$pos <- unlist(pos, use.names = FALSE); st$d <- unlist(dd, use.names = FALSE)
   list(st = st, n_estimated = sum(n > 0L), reasons = table(why[!is.na(why)]))
+}
+
+# Re-estimate the stems whose species choice changed since they were estimated (the group's species is
+# set in tab 1 after the file is read): the profile is rebuilt with the chosen species' taper curve for
+# the height fit. Stems that cannot be re-estimated keep their profile. Nothing to do (and the same
+# object back) for measured profiles or an unchanged choice. The last result is kept in `est_cache`
+# (an environment shared by copies of `st`), so repeated calls with one map cost nothing.
+#
+# @param st          read_hpr_stems() / combine_hpr_stems() result.
+# @param species_map Group key -> "spruce" / "pine" / "none" ("none" counts as spruce, as at read time).
+# @return `st` with idx/pos/d, stems$n_points and stems$est_species updated.
+hpr_reestimate_profiles <- function(st, species_map) {
+  s <- st$stems
+  if (is.null(s$estimated) || !any(s$estimated) || is.null(s$est_species) || is.null(st$est_in)) return(st)
+  want <- ifelse(unname(species_map[s$species_key]) %in% "pine", "pine", "spruce")
+  chg <- which(s$estimated & !is.na(s$est_species) & s$est_species != want)
+  if (!length(chg)) return(st)
+  key <- paste(chg, want[chg], collapse = ",")
+  cache <- st$est_cache
+  if (is.environment(cache) && identical(cache$key, key)) return(cache$st)
+  pos <- vector("list", length(chg)); dd <- pos; ok <- rep(FALSE, length(chg))
+  for (j in seq_along(chg)) {
+    e <- st$est_in[[chg[j]]]
+    r <- .hpr_est_profile(e$P, want[chg[j]], e$dbh_cm, e$off, e$end_cm)
+    if (is.character(r)) next
+    pos[[j]] <- r$pos; dd[[j]] <- r$d; ok[j] <- TRUE
+  }
+  chg <- chg[ok]; pos <- pos[ok]; dd <- dd[ok]
+  if (length(chg)) {
+    keep <- !(st$idx %in% chg)
+    idx <- c(st$idx[keep], rep.int(chg, lengths(pos)))
+    p <- c(st$pos[keep], unlist(pos, use.names = FALSE)); d <- c(st$d[keep], unlist(dd, use.names = FALSE))
+    o <- order(idx, p)
+    st$idx <- idx[o]; st$pos <- p[o]; st$d <- d[o]
+    st$stems$n_points[chg] <- lengths(pos); st$stems$est_species[chg] <- want[chg]
+  }
+  if (is.environment(cache)) { cache$key <- key; cache$st <- st }
+  st
 }
