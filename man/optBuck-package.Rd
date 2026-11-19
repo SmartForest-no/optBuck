@@ -20,7 +20,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Lennart Noordermeer \email{lennart.noordermeer@nibio.no} (\href{https://orcid.org/0000-0000-0000-0000}{ORCID})
+\strong{Maintainer}: Lennart Noordermeer \email{lennart.noordermeer@nibio.no} (\href{https://orcid.org/0000-0002-8840-0345}{ORCID})
 
 Other contributors:
 \itemize{

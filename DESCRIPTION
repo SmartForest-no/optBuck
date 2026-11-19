@@ -3,7 +3,7 @@ Title: Bucking Simulator and Bucking Analysis for Harvester Files
 Version: 0.3.6
 Authors@R: c(
     person("Lennart", "Noordermeer", email = "lennart.noordermeer@nibio.no",
-           role = c("aut", "cre"), comment = c(ORCID = "0000-0000-0000-0000")),
+           role = c("aut", "cre"), comment = c(ORCID = "0000-0002-8840-0345")),
     person("NIBIO", role = "cph"),
     person("SFI SmartForest", role = "fnd"))
 Description: Reads StanForD 2010 harvester production files (.hpr) and product
