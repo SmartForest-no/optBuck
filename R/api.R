@@ -67,7 +67,11 @@ NULL
 #' @param path,filename As for [read_hpr()].
 #' @param defs The result of [read_hpr()], if already read.
 #' @param chunk_bytes Bytes per chunk (the result does not depend on it).
-#' @usage read_hpr_stems(path, filename = basename(path), defs = NULL, chunk_bytes = HPR_STEM_CHUNK_BYTES)
+#' @param estimate_profiles If the file has recorded logs but no `StemDiameters`, estimate the stem profiles from
+#'   the log diameters and DBH (taperNOR/TapeR); the stems are then marked in `stems$estimated`.
+#' @param logs The file's recorded logs ([read_hpr_logs()]`$logs`), if already read (used for the estimate).
+#' @usage read_hpr_stems(path, filename = basename(path), defs = NULL, chunk_bytes = HPR_STEM_CHUNK_BYTES,
+#'   estimate_profiles = TRUE, logs = NULL)
 #' @return A list with `ok`, `stems` (one row per stem), `species` and the points of the profiles.
 #' @examples
 #' f <- system.file("extdata", "inputs", "test_fixtures", "hpr_check_synthetic.hpr", package = "optBuck")

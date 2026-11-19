@@ -89,6 +89,7 @@ Collate:
     'helpers_pin_export.R'
     'helpers_result_tables.R'
     'helpers_hpr_logs.R'
+    'helpers_hpr_profile.R'
     'helpers_check.R'
     'helpers_price_tuning.R'
     'helpers_distribution_edit.R'

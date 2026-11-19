@@ -4,7 +4,14 @@
 \alias{read_hpr_stems}
 \title{Read the measured stems of an .hpr file}
 \usage{
-read_hpr_stems(path, filename = basename(path), defs = NULL, chunk_bytes = HPR_STEM_CHUNK_BYTES)
+read_hpr_stems(
+  path,
+  filename = basename(path),
+  defs = NULL,
+  chunk_bytes = HPR_STEM_CHUNK_BYTES,
+  estimate_profiles = TRUE,
+  logs = NULL
+)
 }
 \arguments{
 \item{path, filename}{As for \code{\link[=read_hpr]{read_hpr()}}.}
@@ -12,6 +19,11 @@ read_hpr_stems(path, filename = basename(path), defs = NULL, chunk_bytes = HPR_S
 \item{defs}{The result of \code{\link[=read_hpr]{read_hpr()}}, if already read.}
 
 \item{chunk_bytes}{Bytes per chunk (the result does not depend on it).}
+
+\item{estimate_profiles}{If the file has recorded logs but no \code{StemDiameters}, estimate the stem profiles from
+the log diameters and DBH (taperNOR/TapeR); the stems are then marked in \code{stems$estimated}.}
+
+\item{logs}{The file's recorded logs (\code{\link[=read_hpr_logs]{read_hpr_logs()}}\verb{$logs}), if already read (used for the estimate).}
 }
 \value{
 A list with \code{ok}, \code{stems} (one row per stem), \code{species} and the points of the profiles.

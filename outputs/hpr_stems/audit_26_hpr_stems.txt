@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: .hpr stems (hpr Phase B)
-  Run: 2026-11-16 09:34:33.524533
+  Run: 2026-11-19 13:50:11.718437
 ============================================================= 
 
 --- 01. Reading the fixture's stems ---
@@ -31,7 +31,7 @@
   [PASS  ] Check 09: Stems without profiles (logs only) and a file without stems are errors | 'logs_only.hpr has 2 stems but no stem profile (StemDiameters). Bucking and the bucking analysis require stem profiles.' | 'no_stems.hpr contains no stems (definitions only).'
 
 --- 10. Privacy: coordinates, dates, operators and names are never read ---
-  [PASS  ] Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output | 18 tables, 66 columns | coordinate-like columns: none | invented values found: none | stem table columns: stem_key,species_key,kind,category,n_points
+  [PASS  ] Check 10: No coordinate-like column and none of the invented coordinates, dates, operator or object names in any output | 18 tables, 67 columns | coordinate-like columns: none | invented values found: none | stem table columns: stem_key,species_key,kind,category,n_points,estimated
 
 --- 11. End-to-end A/B run ---
   [PASS  ] Check 11: An A/B run on the fixture's stems: stems as trees, no plots, a comparison, higher NOK/m3 at higher sawlog prices | source hpr | trees 1,2,3,4,5 | plots 0 | excluded 8 | compared 5, changed 3 | NOK/m3 361.3 -> 468.6 | 15 logs in A

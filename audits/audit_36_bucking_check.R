@@ -189,11 +189,18 @@ rec("Check 09: by default (no box) the best possible bucking uses only the produ
 # ---- 10 --------------------------------------------------------------------------------------------
 section("10. File without stem profiles")
 tmp10 <- tempfile(fileext = ".hpr")
-writeLines(gsub("(?s)<StemDiameters.*?</StemDiameters>", "", txt, perl = TRUE), tmp10, useBytes = TRUE)
+no_sd <- gsub("(?s)<StemDiameters.*?</StemDiameters>", "", txt, perl = TRUE)
+# without DBH too nothing can be estimated: the old behaviour (recorded tables only)
+writeLines(gsub("<DBH>[^<]*</DBH>", "", no_sd), tmp10, useBytes = TRUE)
 x10 <- bucking_check(tmp10)
 ok10 <- isTRUE(x10$ok) && isTRUE(x10$no_profile) && is.null(x10$stems) && nrow(x10$assortments$recorded) >= 3L && !is.na(x10$manual$all) && is.null(x10$assortments$optimal)
-rec("Check 10: a file with logs but no StemDiameters gives no best bucking (no_profile), only the recorded tables and manual-cut shares",
-    ok(ok10), sprintf("no_profile %s | recorded products %d | manual share %.3f", x10$no_profile, nrow(x10$assortments$recorded), x10$manual$all))
+# with DBH the profiles are estimated from the log diameters (2026-11-19): a best possible bucking, labelled
+writeLines(no_sd, tmp10, useBytes = TRUE)
+x10e <- bucking_check(tmp10)
+ok10e <- isTRUE(x10e$ok) && !isTRUE(x10e$no_profile) && x10e$n_estimated > 0L && x10e$n_measured == 0L && is.finite(x10e$key_figures$yield[1L]) &&
+  any(grepl("^Stem profiles are estimated", x10e$warnings)) && !any(grepl("estimated", xu$warnings))
+rec("Check 10: a file with logs but no StemDiameters gives estimated, labelled profiles (best possible bucking); without DBH only the recorded tables and manual-cut shares (no_profile)",
+    ok(ok10 && ok10e), sprintf("no DBH: no_profile %s | recorded products %d | manual share %.3f || with DBH: %d estimated, yield %.3f", x10$no_profile, nrow(x10$assortments$recorded), x10$manual$all, x10e$n_estimated, x10e$key_figures$yield[1L]))
 unlink(tmp10)
 
 # ---- 11 --------------------------------------------------------------------------------------------

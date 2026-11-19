@@ -242,6 +242,8 @@ server <- function(input, output, session) {
       else div(class = "pm-msg-error", paste(c(if (!is.null(head)) head else if (!multi) L("err_file_unusable", ck$file),
                                                tr_msg(ck$errors, lang())), collapse = "\n")),
       failed,
+      if (isTRUE(ck$ok) && isTRUE(ck$n_estimated > 0L))      # estimated profiles are never mixed silently with measured ones
+        div(class = "note-muted", L("hs_profiles_count", fmt_int(ck$n_measured), fmt_int(ck$n_estimated))),
       warn_div(ck$warnings))
   })
 

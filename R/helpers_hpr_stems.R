@@ -213,7 +213,7 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
 #   species_key, kind "single"/"multi"/"other", category, n_points),
 #   idx/pos/d (profile points: stem row, cm from the cut, mm), seconds).
 read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
-                           chunk_bytes = HPR_STEM_CHUNK_BYTES) {
+                           chunk_bytes = HPR_STEM_CHUNK_BYTES, estimate_profiles = TRUE, logs = NULL) {
   t0 <- Sys.time()
   fail <- function(msg, w = character(0)) list(ok = FALSE, errors = msg, warnings = w, info = character(0),
                                                 file = filename)
@@ -235,18 +235,38 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
             gidx = unlist(Map(function(p, o) p$gidx + o, parts, off), use.names = FALSE),
             gpos = unlist(lapply(parts, `[[`, "gpos"), use.names = FALSE),
             gval = unlist(lapply(parts, `[[`, "gval"), use.names = FALSE))
-  errors <- character(0)
+  stems$estimated <- rep(FALSE, nrow(stems))
+  errors <- character(0); est_warn <- character(0); est_info <- character(0)
+  sp <- defs$species
+  sp$offset_cm  <- hpr_stump_offset(sp$dbh_height)
+  # A file with logs but no StemDiameters (older John Deere files): estimate the profiles from the log
+  # diameters and DBH (R/helpers_hpr_profile.R), marked per stem in `estimated`.
+  if (estimate_profiles && nrow(stems) > 0L && all(stems$n_points == 0L)) {
+    if (is.null(logs)) {
+      rl <- read_hpr_logs(path, filename, defs = defs, chunk_bytes = chunk_bytes)
+      logs <- if (isTRUE(rl$ok)) rl$logs else NULL
+    }
+    if (!is.null(logs) && nrow(logs) > 0L) {
+      e <- tryCatch(hpr_estimate_profiles(list(stems = stems, species = sp), logs, read_hpr_dbh(path, filename, chunk_bytes)),
+                    error = function(e) NULL)
+      if (!is.null(e) && e$n_estimated > 0L) {
+        stems <- e$st$stems; x$idx <- e$st$idx; x$pos <- e$st$pos; x$d <- e$st$d
+        est_warn <- "Stem profiles are estimated from the log diameters and DBH (taperNOR/TapeR) because the file has no StemDiameters. The yield index is typically about 1 percentage point lower than with measured profiles and suits comparison between files; the top of the stem is uncertain."
+        miss <- sum(stems$kind == "single" & !stems$estimated)
+        est_info <- sprintf("Estimated stem profiles for %s of %s stems (%s single-tree stems without usable logs or DBH).",
+                            format(e$n_estimated, big.mark = ","), format(nrow(stems), big.mark = ","), format(miss, big.mark = ","))
+      }
+    }
+  }
   if (nrow(stems) == 0L) errors <- sprintf("%s contains no stems (definitions only).", filename)
   else if (all(stems$n_points == 0L))
     errors <- sprintf("%s has %s stems but no stem profile (StemDiameters). Bucking and the bucking analysis require stem profiles.",
                       filename, format(nrow(stems), big.mark = ","))
-  sp <- defs$species
-  sp$offset_cm  <- hpr_stump_offset(sp$dbh_height)
   sp$n_stems    <- vapply(sp$key, function(k) sum(stems$species_key == k, na.rm = TRUE), 0L)
   sp$n_profiles <- vapply(sp$key, function(k) sum(stems$species_key == k & stems$n_points > 0L, na.rm = TRUE), 0L)
   info <- c(sprintf("Read %s stems from %s.", format(nrow(stems), big.mark = ","), filename),
-            "Recorded logs are not read; the stems are bucked from their profiles.")
-  list(ok = length(errors) == 0L, errors = errors, warnings = c(defs$warnings, src$warnings),
+            if (length(est_info)) est_info else "Recorded logs are not read; the stems are bucked from their profiles.")
+  list(ok = length(errors) == 0L, errors = errors, warnings = c(defs$warnings, src$warnings, est_warn),
        info = info, file = filename, species = sp, stems = stems,
        instruction = hpr_instruction_table(defs),
        idx = x$idx, pos = x$pos, d = x$d, gidx = x$gidx, gpos = x$gpos, gval = x$gval,
@@ -410,7 +430,9 @@ hpr_stem_checks <- function(st, species_map) {
   list(ok = length(errors) == 0L, errors = errors, warnings = warnings, info = info,
        file = st$file, n_read = n, n_used = length(use), use = use, species = species,
        offset = offset, last = last, group = group, reason = reason, species_used = species[use],
-       clean_counts = clean_counts)
+       clean_counts = clean_counts,
+       n_estimated = if (is.null(s$estimated)) 0L else sum(s$estimated[use] %in% TRUE),
+       n_measured = if (is.null(s$estimated)) length(use) else sum(!s$estimated[use] %in% TRUE))
 }
 
 # The stem grade at each 10 cm grid point (Phase 6). A grade runs from its
@@ -503,7 +525,7 @@ hpr_stem_profiles <- function(st, species_map, grades = FALSE, reject = NULL) {
   ck$tree_data <- data.frame(plot_id = rep(NA_character_, length(use)), treid = key,
                              sesong = rep(NA, length(use)), species_group = ck$species[use],
                              dbh_cm = dbh_mm / 10, height_m = height_m,
-                             height_source = rep("Measured profile", length(use)), stringsAsFactors = FALSE)
+                             height_source = if (is.null(s$estimated)) rep("Measured profile", length(use)) else ifelse(s$estimated[use] %in% TRUE, "Estimated profile", "Measured profile"), stringsAsFactors = FALSE)
   if (!is.null(rjl)) ck$profiles$reject <- unlist(lapply(prof, `[[`, "rej"), use.names = FALSE)
   if (grades) {
     ck$profiles$grade <- unlist(lapply(prof, `[[`, "grade"), use.names = FALSE)

@@ -260,7 +260,7 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
                n_products = length(unique(defs$HprProductKey[!defs$Type %in% "waste"])))
 
   # ---- stems ----------------------------------------------------------------------------------------------
-  st <- read_hpr_stems(path, filename, defs = h)
+  st <- read_hpr_stems(path, filename, defs = h, logs = rl$logs)
   if (!isTRUE(st$ok) || all(st$stems$n_points == 0L)) {
     base$no_profile <- TRUE
     base$logs <- lg
@@ -272,6 +272,12 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   # The stems' own checks say why none can be bucked (e.g. every profile fails the cleaning); report that.
   ck <- hpr_stem_checks(st, smap)
   if (!isTRUE(ck$ok)) return(fail(ck$errors, c(warnings, ck$warnings)))
+  # Notes the page and the PDF show with the warnings: estimated profiles, and a file without quality codes.
+  notes <- c(if (ck$n_estimated > 0L) st$warnings[grepl("^Stem profiles are estimated", st$warnings)],
+             if (ck$n_estimated > 0L) sprintf("%s of %s stems have estimated stem profiles.", format(ck$n_estimated, big.mark = ","), format(ck$n_estimated + ck$n_measured, big.mark = ",")),
+             if (hpr_no_grades(st, ck)) "The file has no quality codes; the best possible bucking assumes defect-free stems.")
+  base$warnings <- c(base$warnings, notes)
+  base$n_estimated <- ck$n_estimated; base$n_measured <- ck$n_measured
   reject <- if (reject_zones) { w <- lg[lg$waste, , drop = FALSE]
     data.frame(stem_key = w$stem_key, start = w$StartPos, length = w$LogLength, stringsAsFactors = FALSE) }
   # The products the best possible bucking may use (waste rows always).
@@ -530,6 +536,13 @@ check_control <- function(rec) {
        diff_pct = 100 * (sum(r$price_volume_m3) / sum(r$m3_price) - 1), share_above_2pct = 100 * mean(abs(d) > 0.02),
        mean_abs_pct = 100 * mean(abs(d)), n_outside = sum(rec$outside, na.rm = TRUE), n_unknown = sum(rec$unknown_product),
        n_unpriced = sum(!rec$waste & !is.na(rec$akey) & is.na(rec$PriceNOKperM3)))   # no price cell for the log's class: valued 0
+}
+
+# TRUE when (almost) none of the stems still bucked has grade data (StemGrade): the best possible bucking
+# then treats the stems as one grade (the group's StartGrade) and the page says so.
+hpr_no_grades <- function(st, ck, min_share = 0.05) {
+  if (length(ck$use) == 0L) return(FALSE)
+  mean(ck$use %in% unique(st$gidx)) < min_share
 }
 
 # The products a scenario takes over from an .hpr that is loaded in tab 1 (0.3.2): the file's default
