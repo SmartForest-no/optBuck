@@ -1,10 +1,10 @@
 ============================================================= 
   Audit: translations (Norsk / English)
-  Run: 2026-11-19 13:49:34.497982
+  Run: 2026-11-20 09:41:23.303691
 ============================================================= 
 
 --- 01. The table ---
-  [PASS  ] Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates | 806 rows (msg 169, ui 566, value 71) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none
+  [PASS  ] Check 01: table columns, unique ids, kinds, non-empty UTF-8 texts, same placeholders, no conflicting duplicates | 807 rows (msg 170, ui 566, value 71) | duplicated ids: none | bad kinds: none | empty: none | invalid UTF-8: none | placeholders differ: none | conflicting English: none
 
 --- 02. Ids used in the code ---
   [PASS  ] Check 02: every id the code uses exists; no ui id unused | 448 literal ids, 57 built | missing: none | unused ui ids: none | JS ids: TRUE

@@ -44,6 +44,17 @@ HPR_AUTOMATIC_REASONS <- c("Automatic", "Spinning")
     stringsAsFactors = FALSE)
 }
 
+# StartPos / StopPos of .hl_extract() rows: recorded when the file has them, else the previous start plus the
+# previous length (logs are in file order within a stem).
+.hl_add_positions <- function(lg) {
+  cum <- ave(lg$LogLength, lg$stem_key, FUN = function(x) c(0, cumsum(x)[-length(x)]))
+  lg$start_recorded <- !is.na(lg$StartPos_recorded)
+  lg$StartPos <- ifelse(lg$start_recorded, lg$StartPos_recorded, cum)
+  lg$StartPos_recorded <- NULL
+  lg$StopPos <- lg$StartPos + lg$LogLength
+  lg
+}
+
 # Read the recorded logs of a StanForD 2010 .hpr file (also .hpr.gz or an .hpr in a .zip).
 #
 # @param path     File path.
@@ -70,11 +81,7 @@ read_hpr_logs <- function(path, filename = basename(path), defs = NULL,
   rownames(lg) <- NULL
   # Start positions: recorded when the file has them (Extension/StartPos), else the previous start
   # plus the previous length (file5 has none). Logs are in file order within a stem.
-  cum <- ave(lg$LogLength, lg$stem_key, FUN = function(x) c(0, cumsum(x)[-length(x)]))
-  lg$start_recorded <- !is.na(lg$StartPos_recorded)
-  lg$StartPos <- ifelse(lg$start_recorded, lg$StartPos_recorded, cum)
-  lg$StartPos_recorded <- NULL
-  lg$StopPos <- lg$StartPos + lg$LogLength
+  lg <- .hl_add_positions(lg)
   lg$manual <- ifelse(is.na(lg$CuttingReason), NA, !lg$CuttingReason %in% HPR_AUTOMATIC_REASONS)
   uk <- defs$unclassified_keys
   if (is.null(uk) || length(uk) == 0L) uk <- "999999"

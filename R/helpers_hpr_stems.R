@@ -89,7 +89,7 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
 
 # Stream the complete stem records of a file and call FUN(records) per chunk
 # (records: character, bytes). Returns the list of FUN's results.
-.hpr_stem_chunks <- function(path, entry = NULL, FUN, chunk_bytes = HPR_STEM_CHUNK_BYTES) {
+.hpr_stem_chunks <- function(path, entry = NULL, FUN, chunk_bytes = HPR_STEM_CHUNK_BYTES, max_calls = Inf) {
   con <- if (is.null(entry)) gzfile(path, "rb") else unz(path, entry, open = "rb")
   on.exit(close(con))
   out <- list(); tail <- .as_bytes("")
@@ -111,7 +111,7 @@ hpr_height_above_ground <- function(pos_cm, offset_cm) pos_cm + offset_cm
       ends <- c(st[-1L] - 1L, n)[seq_along(starts)]
       out[[length(out) + 1L]] <- FUN(.as_bytes(substring(txt, starts, ends)))
     }
-    if (eof) break
+    if (eof || length(out) >= max_calls) break
     tail <- .as_bytes(substring(txt, st[length(st)], n))         # substring's default last is 1e6
   }
   out
@@ -240,6 +240,10 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
   errors <- character(0); est_warn <- character(0); est_info <- character(0)
   sp <- defs$species
   sp$offset_cm  <- hpr_stump_offset(sp$dbh_height)
+  # Unit of the grade start positions (the standard says cm; some control-system versions write dm).
+  gu <- tryCatch(.hpr_grade_unit(path, filename, x, stems, logs, chunk_bytes),
+                 error = function(e) list(unit = "cm", how = "undecided", n = 0L))
+  if (identical(gu$unit, "dm")) x$gpos <- x$gpos * 10
   # A file with logs but no StemDiameters (older John Deere files): estimate the profiles from the log
   # diameters and DBH (R/helpers_hpr_profile.R), marked per stem in `estimated`.
   if (estimate_profiles && nrow(stems) > 0L && all(stems$n_points == 0L)) {
@@ -267,11 +271,70 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
   sp$n_profiles <- vapply(sp$key, function(k) sum(stems$species_key == k & stems$n_points > 0L, na.rm = TRUE), 0L)
   info <- c(sprintf("Read %s stems from %s.", format(nrow(stems), big.mark = ","), filename),
             if (length(est_info)) est_info else "Recorded logs are not read; the stems are bucked from their profiles.")
-  list(ok = length(errors) == 0L, errors = errors, warnings = c(defs$warnings, src$warnings, est_warn),
-       info = info, file = filename, species = sp, stems = stems, est_in = est_in, est_cache = new.env(),
+  list(ok = length(errors) == 0L, errors = errors,
+       warnings = c(defs$warnings, src$warnings, est_warn,
+                    if (identical(gu$how, "undecided")) "Stem grade positions: the unit (cm or dm) cannot be determined from this file; centimetres are assumed."),
+       grade_unit = gu$unit, grade_unit_how = gu$how,
+       info = c(info, if (identical(gu$unit, "dm")) sprintf("Stem grade positions read as decimetres (%s).", if (identical(gu$how, "version")) "control-system version" else "grade changes coincide with log ends")), file = filename, species = sp, stems = stems, est_in = est_in, est_cache = new.env(),
        instruction = hpr_instruction_table(defs),
        idx = x$idx, pos = x$pos, d = x$d, gidx = x$gidx, gpos = x$gpos, gval = x$gval,
        seconds = as.numeric(difftime(Sys.time(), t0, units = "secs")))
+}
+
+
+# ---- unit of the stem grade positions (2026-11-20) -----------------------------------------
+# StanForD 2010 says gradeStartPosition is in cm and the element carries no unit. Eight older John Deere
+# files (TimbermaticH 1.27.17) write dm instead: a grade change then lies 10x too close to the butt and
+# the grade zones of the stem are wrong (best possible sawlog share far above the recorded one).
+# Decision, in this order: (1) the control-system version is one known to write dm
+# (HPR_GRADE_DM_APPS: 8 of 8 files of that version checked); (2) the positions themselves: stems with
+# a grade change and recorded logs, the share of changes within 10 cm of a log end read as cm and as dm
+# (cm files 0.91-1.00 vs 0.00-0.02; dm files 0.995-1.00 vs 0.004-0.02), needs HPR_GRADE_UNIT_MIN_CHANGES
+# changes; (3) otherwise cm and a note.
+HPR_GRADE_DM_APPS <- c("TimbermaticH 1.27.17")
+HPR_GRADE_UNIT_MIN_CHANGES <- 100L
+HPR_GRADE_UNIT_SAMPLE_CHUNKS <- 8L
+
+# The control-system version the file names (MachineApplicationVersion, else SenderApplication), from its first 256 kB.
+.hpr_app_version <- function(path, filename) {
+  src <- .hpr_source(path, filename)
+  if (length(src$errors)) return(NA_character_)
+  con <- if (is.null(src$entry)) gzfile(src$path, "rb") else unz(src$path, src$entry, open = "rb")
+  on.exit(close(con))
+  b <- readBin(con, "raw", 262144L); h <- .as_bytes(rawToChar(b[b != as.raw(0L)]))
+  v <- .hs_re1(h, "<MachineApplicationVersion[^>]*>([^<]*)</MachineApplicationVersion>")
+  if (is.na(v)) v <- .hs_re1(h, "<SenderApplication[^>]*>([^<]*)</SenderApplication>")
+  trimws(v)
+}
+
+# Share of grade changes (gpos > 0) within 10 cm of the end of a recorded log, with the positions as
+# they are and times 10. @param keys stem key per stem row; @param logs rows with stem_key, StopPos.
+hpr_grade_unit_shares <- function(gidx, gpos, keys, logs) {
+  g <- data.frame(k = keys[gidx], pos = gpos); g <- g[!is.na(g$pos) & g$pos > 0, , drop = FALSE]
+  ends <- split(logs$StopPos, logs$stem_key)
+  g$e <- ends[g$k]; g <- g[!vapply(g$e, is.null, TRUE), , drop = FALSE]
+  near <- function(m) mean(vapply(seq_len(nrow(g)), function(i) min(abs(g$e[[i]] - g$pos[i] * m)) <= 10, TRUE))
+  list(n = nrow(g), cm = if (nrow(g)) near(1) else NA_real_, dm = if (nrow(g)) near(10) else NA_real_)
+}
+
+# @return list(unit "cm"/"dm", how "none"/"version"/"positions"/"undecided", n changes used).
+.hpr_grade_unit <- function(path, filename, x, stems, logs = NULL, chunk_bytes = HPR_STEM_CHUNK_BYTES) {
+  if (!length(x$gpos) || !any(x$gpos > 0, na.rm = TRUE)) return(list(unit = "cm", how = "none", n = 0L))
+  if (isTRUE(trimws(.hpr_app_version(path, filename)) %in% HPR_GRADE_DM_APPS))
+    return(list(unit = "dm", how = "version", n = 0L))
+  if (is.null(logs)) {
+    src <- .hpr_source(path, filename)
+    parts <- .hpr_stem_chunks(src$path, src$entry, .hl_extract, chunk_bytes, max_calls = HPR_GRADE_UNIT_SAMPLE_CHUNKS)
+    logs <- if (length(parts)) .hl_add_positions(do.call(rbind, parts)) else NULL
+  }
+  if (is.null(logs) || nrow(logs) == 0L) return(list(unit = "cm", how = "undecided", n = 0L))
+  logs <- logs[!is.na(logs$StopPos), , drop = FALSE]
+  s <- hpr_grade_unit_shares(x$gidx, x$gpos, stems$stem_key, logs)
+  if (s$n >= HPR_GRADE_UNIT_MIN_CHANGES) {
+    if (s$dm >= 0.8 && s$dm - s$cm >= 0.5) return(list(unit = "dm", how = "positions", n = s$n))
+    if (s$cm >= 0.8 && s$cm - s$dm >= 0.5) return(list(unit = "cm", how = "positions", n = s$n))
+  }
+  list(unit = "cm", how = "undecided", n = s$n)
 }
 
 
