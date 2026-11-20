@@ -317,7 +317,7 @@ hpr_grade_unit_shares <- function(gidx, gpos, keys, logs) {
   list(n = nrow(g), cm = if (nrow(g)) near(1) else NA_real_, dm = if (nrow(g)) near(10) else NA_real_)
 }
 
-# @return list(unit "cm"/"dm", how "none"/"version"/"positions"/"undecided", n changes used).
+# @return list(unit "cm"/"dm", how "none"/"version"/"positions"/"assumed" (cm, silent)/"undecided" (cm, note), n changes used).
 .hpr_grade_unit <- function(path, filename, x, stems, logs = NULL, chunk_bytes = HPR_STEM_CHUNK_BYTES) {
   if (!length(x$gpos) || !any(x$gpos > 0, na.rm = TRUE)) return(list(unit = "cm", how = "none", n = 0L))
   if (isTRUE(trimws(.hpr_app_version(path, filename)) %in% HPR_GRADE_DM_APPS))
@@ -327,14 +327,17 @@ hpr_grade_unit_shares <- function(gidx, gpos, keys, logs) {
     parts <- .hpr_stem_chunks(src$path, src$entry, .hl_extract, chunk_bytes, max_calls = HPR_GRADE_UNIT_SAMPLE_CHUNKS)
     logs <- if (length(parts)) .hl_add_positions(do.call(rbind, parts)) else NULL
   }
-  if (is.null(logs) || nrow(logs) == 0L) return(list(unit = "cm", how = "undecided", n = 0L))
+  if (is.null(logs) || nrow(logs) == 0L) return(list(unit = "cm", how = "assumed", n = 0L))
   logs <- logs[!is.na(logs$StopPos), , drop = FALSE]
   s <- hpr_grade_unit_shares(x$gidx, x$gpos, stems$stem_key, logs)
   if (s$n >= HPR_GRADE_UNIT_MIN_CHANGES) {
     if (s$dm >= 0.8 && s$dm - s$cm >= 0.5) return(list(unit = "dm", how = "positions", n = s$n))
     if (s$cm >= 0.8 && s$cm - s$dm >= 0.5) return(list(unit = "cm", how = "positions", n = s$n))
   }
-  list(unit = "cm", how = "undecided", n = s$n)
+  # Not decided: cm is the standard and is read silently unless the positions look inconsistent with cm,
+  # i.e. the grade changes sit closer to log ends read as dm than as cm (and clearly so); then one note.
+  incons <- s$n > 0L && isTRUE(s$dm >= 0.5 && s$dm > s$cm)
+  list(unit = "cm", how = if (incons) "undecided" else "assumed", n = s$n)
 }
 
 

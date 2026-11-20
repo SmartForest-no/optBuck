@@ -26,10 +26,17 @@ test_that("a control-system version known to write dm decides, even with too few
   expect_gt(min(v$gpos[v$gpos > 0]), 250)
 })
 
-test_that("positions that cannot be decided stay cm with one note", {
+test_that("positions that cannot be decided stay cm; a note only when they look inconsistent with cm", {
+  # dm positions, few stems, unknown version: they look like dm but too few to decide -> cm and one note
+  tf <- tempfile(fileext = ".hpr")
+  writeLines(sub("TimbermaticH 1.27.17", "Invented 2.0", readLines(fixture("hpr_gradeunit_dm_version.hpr"), warn = FALSE), fixed = TRUE), tf)
+  n <- read_hpr_stems(tf)
+  expect_identical(c(n$grade_unit, n$grade_unit_how), c("cm", "undecided"))
+  expect_equal(sum(grepl("unit (cm or dm)", n$warnings, fixed = TRUE)), 1L)
+  # no recorded logs to compare with: nothing looks inconsistent -> cm, no note
   u <- read_hpr_stems(fixture("hpr_grades_synthetic.hpr"))        # 5 stems, no recorded logs
-  expect_identical(c(u$grade_unit, u$grade_unit_how), c("cm", "undecided"))
-  expect_equal(sum(grepl("unit (cm or dm)", u$warnings, fixed = TRUE)), 1L)
+  expect_identical(c(u$grade_unit, u$grade_unit_how), c("cm", "assumed"))
+  expect_equal(sum(grepl("unit (cm or dm)", u$warnings, fixed = TRUE)), 0L)
   expect_true(all(u$gpos %in% c(0, 300, 500, 800, 295, 0)))        # unchanged
   # a file without grade changes has nothing to decide and no note
   a <- read_hpr_stems(fixture("hpr_check_synthetic.hpr"))
