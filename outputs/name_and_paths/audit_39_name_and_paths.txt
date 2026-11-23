@@ -1,8 +1,8 @@
 ============================================================= 
   Audit: tool name and paths (2026-11-06)
-  Run: 2026-11-20 10:11:52.833176
+  Run: 2026-11-23 12:11:08.697059
 ============================================================= 
-  [PASS  ] Check 01: no tracked file name contains the old tool name | 320 tracked files; offending: none
+  [PASS  ] Check 01: no tracked file name contains the old tool name | 325 tracked files; offending: none
   [PASS  ] Check 02: no tracked text file contains the old name except Norwegian words | allowed lines in 19 files; offending: none
   [PASS  ] Check 03: options, variables and functions carry the package name (optbuck.*, OPTBUCK_*, optbuck_*) | present: OPTBUCK_WORKERS, optbuck.workers, optbuck_workers, OPTBUCK_LANG | environment variables read or set in R/ and inst/app: OPTBUCK_N_PLOTS | OPTBUCK_TUNE_MAX_ITER | OPTBUCK_HPR_MAX_MB | OPTBUCK_LANG | OPTBUCK_WORKERS | OPTBUCK_ROOT
   [PASS  ] Check 04: the package sets no OPTBUCK_ROOT; inst/app calls get_root_dir() once (app.R) | setters: none | get_root_dir() in inst/app: app.R
