@@ -643,7 +643,7 @@ Numbers marked (f4) come from file4 (3,176 stems, 8,983 logs), others from the s
 
 **Target layout.**
 ```
-DESCRIPTION  NAMESPACE (roxygen2)  LICENSE (MIT, year + holder)  LICENSE.md  README.md  NEWS.md  VERSION -> DESCRIPTION
+DESCRIPTION  NAMESPACE (roxygen2)  LICENSE (MIT, year + holder)  LICENSE.md  README.md  VERSION -> DESCRIPTION
 R/            all helpers_*.R (renamed by topic), run_bucking.R (the three runners), check_*.R (tab 5 engine), zzz.R
 inst/app/     app.R + the 14 app files + www/ (css, js, fonts with their OFL texts, icons)
 inst/extdata/ ProductData / LengthClasses / price matrices / i18n/translations.csv / NFI parquet (2 MB, coordinates: none) / synthetic fixtures (.hpr, .pin) / demo files
@@ -673,7 +673,7 @@ Method: all revisions of all branches (`git rev-list --all`), `git grep` over te
 - **Own code.** Both repos have one author (Lennart Noordermeer); the old package is LGPL-3 (LICENSE.md, DESCRIPTION), this repo has no licence file. Relicensing his own code to MIT is possible for the copyright holder, but the holder may be the employer: old optBuck was written while at NMBU (e-mail `@nmbu.no`, `affiliation: Norwegian University of Life Sciences` in CITATION.cff), this repo at NIBIO (question 1).
 - **Bundled third-party material.** Fonts Inter and Source Serif 4: SIL Open Font License 1.1 (texts already in `app/www/fonts/`; compatible with MIT, keep the texts and the notices; the fonts themselves stay OFL, not MIT). `smartforest_logo.jpg`: the SmartForest project logo (branding, not MIT-licensable by us; question 12). Default price tables: provenance unknown (A8). NFI data subset: NIBIO data, licence to be stated (question 9). StanForD XSD files are *not* in the repo (and must not be: unknown redistribution terms); element names in code are not a licence issue.
 - **Dependencies (none bundled, all loaded from CRAN/GitHub).** MIT/BSD/Apache: bslib, ggplot2, dplyr, readr, readxl, reactable, rhandsontable, writexl, xml2, jsonlite, future(LGPL-2.1), later, promises, arrow (Apache-2), taperNOR (MIT). **GPL:** shiny (`GPL-3 | file LICENSE`), htmltools (GPL >= 2), TapeR and nlme (GPL >= 2; TapeR via taperNOR), pkgload (GPL-3, dev only). **LGPL:** fieldPlot (LGPL >= 3, GitHub SkogRover/fieldPlot; maintainer is Lennart). An MIT package may *import* these packages (standard practice on CRAN); an installation that includes shiny is, as a whole, subject to the GPL terms of shiny when redistributed together (e.g. a Docker image). Recommended: app stack in Suggests (A7) and a README sentence. **No conflict** that blocks MIT.
-- **Old optBuck code.** Ported code is rewritten, but remains a derivative of LGPL-3 code unless the copyright holder relicenses it (same question 1). A short "history" note (credit the old package, DOI/citation) is added to README and NEWS.
+- **Old optBuck code.** Ported code is rewritten, but remains a derivative of LGPL-3 code unless the copyright holder relicenses it (same question 1). A short "history" note (credit the old package, DOI/citation) is added to README.
 
 ### A10 Leftovers (names of the old tab 2 "Assortments and prices")
 
@@ -724,7 +724,7 @@ Measured now (machine under load from the five reference runs): `read_hpr()` 1.0
 
 ```
 optBuck/ (this repo, branch optbuck-merge, version 0.3.0)
-  DESCRIPTION  NAMESPACE  LICENSE  LICENSE.md  NEWS.md  README.md  CITATION.cff  .Rbuildignore
+  DESCRIPTION  NAMESPACE  LICENSE  LICENSE.md  README.md  CITATION.cff  .Rbuildignore
   R/        all current helpers (names kept) + new: helpers_hpr_logs.R, helpers_check.R, helpers_check_tables.R,
             helpers_nfi_cache.R, run_bucking.R (the three runners from scripts/app_backend/01_*), api.R (exports), zzz.R
   inst/app/ app.R + app files (+ new check.R) + www/;  inst/extdata/ inputs, i18n, NFI table (+ LICENSE-data.md), fixtures
@@ -1215,7 +1215,7 @@ Working rule this run: one branch per item off the previous one, fast-forwarded 
 5. **App.** (a) tab 1 intro; (b) `scen_<a|b>_use_tab1` («Bruk samme .hpr som i fane 1») opens the import dialog for the .hpr of tab 1 (`hpr_file` argument of `scenario_server()`; with several files the one selected in the Stems panel), greyed out by `optbuck-disable` when tab 1 does not use .hpr stems that were read; (c) the table has no max butt, volume method or log position columns (`ASM_FORM_ONLY_COLS`; a difference in one of them marks the name; the edit dialog has max butt and method, and shows the log position read-only; the one-line rules in the detail panel are unchanged); (d) terminology «Fordelingsmatrise» / "Demand matrix" in the translations (UI, help, messages), README/NEWS; internal names (`Distribution`, `target_<n>` sheets, `tuning_target()`) unchanged, no exported argument was affected; (f) tab 4 text and layout; (g) type column 135 px, price grid format `0.[00]`, a hint instead of the empty panel.
    **(e) Why the quality warnings fired with the same file (found on file5):** the grade codes were read correctly and agree with the products (the file's own recorded bucking cut all 7,411 sawlogs from grade-2 sections and all grade-5/7 length into pulpwood). The check, however, warned for every sawlog product that permitted less than half of the species' *whole stem length*: in file5 54 % of the spruce length has grade 7 (taken by pulpwood products), so 10 of 13 sawlog products were flagged, including special-order products that permit rare grades. The "different jobs" sentence is only true for grades no product knows. New rule (`grade_mismatch_check()`, `GRADE_UNMATCHED_MIN_SHARE = 0.10`): a species is reported when at least 10 % of its stem length has grades that no assortment of the species permits; none on file3, file4, file5. Shown only in tab 2 (one line per species, details in a `<details>` element); tabs 3 and 4 no longer show them. The note "Kvalitetskodene i stammefila brukes ikke ..." (stems whose grades are not used, R5) is not a mismatch warning and stays in tabs 2, 3 and 4. Audit 30 (checks 11b, 11c rewritten) and 17 updated.
 6. **Audits 15 and 36 (found 2026-11-10; taperNOR is not the cause).** `taperNOR` 0.1.0 and `generate_taper_profile_one_tree()` work. Audit 36 check 14 asked `nfi_profiles_ready(tmp_cache)`, which takes the repository root (so it was always TRUE): fixed, passes. Audit 15 reads the prototype's own output files (`outputs/stem_profiles/stem_profiles_example_500trees.parquet`, the reference CSVs of scripts 06/08), which are gitignored, are not on this machine, and describe trees (for example 242251) whose numbers were permuted on 2026-11-04; its checks 5-17 are reported as REVIEW where that file is absent. Nothing to install.
-7. **Release.** Version 0.3.1, NEWS entry. Not tagged.
+7. **Release.** Version 0.3.1. Not tagged.
 
 ### optBuck 0.3.2 (2026-11-11; branches tuning-mixed-prices, tab2-simplify, assortment-source; not tagged)
 

@@ -43,7 +43,7 @@ The 31 dm sawlog price gap was filled by interpolation on 2026-08-03
 ## Repository layout
 
 The repository is the R package `optBuck` (roadmap 8, step 8): `DESCRIPTION`, `NAMESPACE` (roxygen2 from `R/api.R`),
-`LICENSE` (MIT, NIBIO), `NEWS.md`, `README.md`, `CITATION.cff`, `inst/CITATION`, `man/`, `tests/testthat/`, `.Rbuildignore`
+`LICENSE` (MIT, NIBIO), `README.md`, `CITATION.cff`, `inst/CITATION`, `man/`, `tests/testthat/`, `.Rbuildignore`
 (the folders below that are not part of the package: `audits/`, `scripts/`, `docs/`, `outputs/`, `figures/`, `logs/`,
 `data_raw/`, `data_processed/`). Check it with `R CMD build .` and `R CMD check --no-manual optBuck_*.tar.gz`; run the
 audits with `Rscript scripts/run_audits.R` (they use `pkgload::load_all()`).
