@@ -1,4 +1,6 @@
-# optBuck (development)
+# optBuck 0.4.0
+
+Release summary: estimated stem profiles for logs-only .hpr files (validation on 14 files with real profiles: profile RMSE 6.7 mm, spruce 6.4 and pine 9.7; yield index about 0.010 lower than with measured profiles); grade position unit fix for TimbermaticH 1.27.17 (dm instead of cm); re-estimation when a group's species changes; "DBH" wording; shorter tab 1 and tab 5 messages; stems with unpriced recorded logs or logs in non-imported products left out of the yield index; ORCID of the author in DESCRIPTION, CITATION.cff and inst/CITATION.
 
 * **"DBH" instead of "BHD"** in every user-facing text (Norwegian UI, help, downloads, PDF): table and figure labels, stem titles, the
   help text and the file name of the value-by-DBH-class download (`optBuck_verdi_etter_dbh_klasse.csv`).
