@@ -262,8 +262,8 @@ if (!requireNamespace("gridExtra", quietly = TRUE) || !requireNamespace("pdftool
   ok17 <- file.size(pdf_no) > 5000 && file.size(pdf_en) > 5000 && grepl("hpr_check_synthetic.hpr", t_no, fixed = TRUE) && grepl("hpr_check_synthetic.hpr", t_en, fixed = TRUE) &&
     grepl("Apteringsanalyse", t_no, fixed = TRUE) && grepl("Bucking analysis", t_en, fixed = TRUE) && grepl("05.11.2026", t_no, fixed = TRUE) &&
     grepl("Kvalitetskoder per sortiment", t_no, fixed = TRUE) && grepl("Quality codes per product", t_en, fixed = TRUE) &&
-    grepl("Apteringsgrad", t_no, fixed = TRUE) && grepl("utelatt på grunn av ufullstendige", t_no, fixed = TRUE) &&
-    grepl("left out because of incomplete", t_en, fixed = TRUE) && length(pdftools::pdf_text(pdf_no)) >= 1L
+    grepl("Apteringsgrad", t_no, fixed = TRUE) && grepl("utelatt fra apteringsgraden", t_no, fixed = TRUE) &&
+    grepl("left out of the yield index", t_en, fixed = TRUE) && length(pdftools::pdf_text(pdf_no)) >= 1L
   rec("Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line",
       ok(ok17), sprintf("pages %d/%d, bytes %d/%d", length(pdftools::pdf_text(pdf_no)), length(pdftools::pdf_text(pdf_en)), file.size(pdf_no), file.size(pdf_en)))
   unlink(c(pdf_no, pdf_en))
@@ -284,6 +284,21 @@ rec("Check 14: no cache in an empty folder; building three plots in chunks (prog
     ok(not_ready && same && length(prog_log) >= 2L && tail(prog_log, 1L) == nrow(nfi_cache_tree_data(root_dir, pl3)) && nrow(got) == nrow(ref) && nrow(ref) > 0L),
     sprintf("rows %d vs %d | progress %s", nrow(got), nrow(ref), paste(prog_log, collapse = "/")))
 unlink(tmp_cache, recursive = TRUE)
+
+# ---- 18 --------------------------------------------------------------------------------------------
+section("18. Stems with unpriced recorded logs, and the notes list")
+mk <- function(k, waste, unk, price, val) data.frame(stem_key = k, waste = waste, unknown_product = unk, PriceNOKperM3 = price, value_nok = val, stringsAsFactors = FALSE)
+rr <- rbind(mk("a", c(FALSE, FALSE), c(FALSE, FALSE), c(NA, NA), c(0, 0)),          # all logs unpriced, value 0: out
+            mk("b", c(FALSE, FALSE), c(FALSE, FALSE), c(300, NA), c(40, 0)),         # some value, one unpriced log in an imported product: stays
+            mk("c", c(FALSE, FALSE), c(FALSE, TRUE), c(300, NA), c(40, 0)),          # a log in a product that was not imported: out
+            mk("d", c(FALSE, TRUE), c(FALSE, FALSE), c(300, NA), c(40, 0)),          # an unpriced waste log only: stays
+            mk("e", c(FALSE, FALSE), c(FALSE, FALSE), c(300, 200), c(40, 20)))       # fully priced: stays
+ntx <- vapply(chk_notes(x, function(id, ...) tr(id, ..., lang = "en"), function(v, ...) format(v)), function(n) n$text, "")
+ok18 <- identical(sort(check_unpriced_stems(rr)), c("a", "c")) && length(ntx) == 2L && grepl("^1 stems are left out of the yield index", ntx[1L]) &&
+  grepl("no quality codes", ntx[2L]) && identical(tr_msg(CHECK_UNPRICED_REASON, "no"), "registrerte stokker uten pris (sortimentet er ikke importert, eller har ingen pris for stokkens klasse)") &&
+  x$control$n_unpriced == 1L && "4" %in% x$stems$StemKey[x$stems$use]
+rec("Check 18: stems whose recorded logs cannot be priced are left out of the yield index (a log in a product that was not imported, or no value at all although a log has no price), a stem with some value and one unpriced log stays and is counted in the control table; the notes list has the left-out line and the no-quality-codes line, one line each; the reason translates",
+    ok(ok18), sprintf("left out %s | notes: %s | unpriced in control %d", paste(sort(check_unpriced_stems(rr)), collapse = ","), paste(ntx, collapse = " / "), x$control$n_unpriced))
 
 write_audit_outputs(E$results, audit_csv, audit_txt)
 cat("Audit 36 complete.\n")

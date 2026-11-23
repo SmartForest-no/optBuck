@@ -278,6 +278,7 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
              if (hpr_no_grades(st, ck)) "The file has no quality codes; the best possible bucking assumes defect-free stems.")
   base$warnings <- c(base$warnings, notes)
   base$n_estimated <- ck$n_estimated; base$n_measured <- ck$n_measured
+  base$no_grades <- hpr_no_grades(st, ck)
   reject <- if (reject_zones) { w <- lg[lg$waste, , drop = FALSE]
     data.frame(stem_key = w$stem_key, start = w$StartPos, length = w$LogLength, stringsAsFactors = FALSE) }
   # The products the best possible bucking may use (waste rows always).
@@ -332,6 +333,10 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   stems$reason[stems$n_logs_rec == 0L] <- "no recorded logs"
   stems$reason[is.na(stems$reason) & stems$logged_cm < CHECK_MIN_COVER * stems$measured_cm] <- "recorded logs cover less than half of the measured stem"
   stems$reason[is.na(stems$reason) & stems$log_above_profile] <- "a recorded log ends above the measured profile"
+  # Stems whose recorded value is understated by logs that cannot be priced are left out of the yield index
+  # (0.3.8): see check_unpriced_stems().
+  unpriced <- check_unpriced_stems(rec)
+  stems$reason[is.na(stems$reason) & stems$StemKey %in% unpriced] <- CHECK_UNPRICED_REASON
   oks <- setNames(tsum$optimizer_status, as.character(tsum$treid))
   stems$opt_status <- unname(oks[stems$StemKey])
   stems$value_rec <- as.numeric(tapply(rec$value_nok, factor(rec$stem_key, levels = sk), sum))
@@ -348,6 +353,10 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
   stems$rec_gt_opt <- stems$use & stems$value_opt > 0 & stems$value_rec > stems$value_opt + 1e-9
   stems$outside <- as.logical(tapply(rec$outside, factor(rec$stem_key, levels = sk), any)) %in% TRUE
   use_keys <- stems$StemKey[stems$use]
+  unimported <- {   # file products with recorded logs on the stems checked that are not in the scenario (no priced cells)
+    k <- unique(rec$ProductKey[!rec$waste & rec$unknown_product %in% TRUE])
+    sort(unique(trimws(vapply(k, function(x) or_default(h$products[[as.character(x)]]$name, as.character(x)), ""))))
+  }
 
   excluded <- rbind(
     data.frame(treid = as.character(job$meta$excluded$treid), reason = job$meta$excluded$excluded_reason, stringsAsFactors = FALSE),
@@ -387,8 +396,27 @@ bucking_check <- function(path, species_map = NULL, filename = basename(path), r
     top = check_top(job, recu, optu),
     defect = check_defect(job, recu, pd, defs, smap, saw_grades),
     length_dist = check_length_dist(recu, optu, defs, pm, pr, ptype),
-    control = check_control(recu)))
+    control = check_control(rec[rec$stem_key %in% c(use_keys, stems$StemKey[stems$reason %in% CHECK_UNPRICED_REASON]), , drop = FALSE]),
+    unimported_products = unimported))
   list_out
+}
+
+CHECK_UNPRICED_REASON <- "recorded logs without a price (product not imported or no price for the log's class)"
+
+# Stems left out of the yield index because of recorded commercial logs that have no price (2026-11-23):
+# (a) a stem with a log in a product that was not imported (no priced cells; the product is not in the
+# scenario, so the log cannot be valued), and (b) a stem whose recorded value is 0 although it has an unpriced
+# commercial log (every priced log missing, e.g. one pulpwood log of 44 dm where the product ends at 43 dm):
+# its yield index would be 0 %. A stem that has some value and an unpriced log in an imported product stays,
+# valued with that log at 0 and counted in the control table (the rule of 2026-11-04).
+# @param rec recorded logs with stem_key, waste, unknown_product, PriceNOKperM3, value_nok.
+# @return stem keys.
+check_unpriced_stems <- function(rec) {
+  com <- !rec$waste
+  unk <- rec$stem_key[com & rec$unknown_product %in% TRUE]
+  np <- unique(rec$stem_key[com & is.na(rec$PriceNOKperM3)])
+  val <- tapply(ifelse(is.na(rec$value_nok), 0, rec$value_nok), rec$stem_key, sum)
+  unique(c(unk, np[np %in% names(val)[val == 0]]))
 }
 
 # ---- tables ---------------------------------------------------------------------------------------------------

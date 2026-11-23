@@ -86,18 +86,18 @@ check_server <- function(input, output, session, lang, hs_own, hs_map) {
     r <- res(); if (is.null(r)) return(NULL)
     l <- lang()
     if (!isTRUE(r$ok)) return(div(class = "note-warning", paste(vapply(r$errors, tr_msg, "", lang = l), collapse = " ")))
-    msgs <- unique(c(r$warnings))
     tb <- chk_tables(r, l)
     sec <- function(id, ...) tagList(h5(class = "section-label", L(id)), ...)
     head <- tagList(
-      if (length(msgs)) div(class = "note-warning", paste(vapply(msgs, tr_msg, "", lang = l), collapse = " ")),
+      if (length(tb$notes)) tags$ul(class = "pm-msg-warn chk-notes", lapply(tb$notes, function(n)
+        tags$li(n$text, if (!is.null(n$details)) tags$details(tags$summary(L("chk_note_details")), n$details)))),
       sec("chk_h_file", tbl(tb$file)),
       if (!is.null(tb$grades)) sec("chk_h_overview", tbl(tb$grades)))
     lim <- sec("chk_h_limits", lapply(tb$limits, function(x) p(x)))
     if (isTRUE(r$no_profile))
       return(tagList(head, div(class = "note-warning", L("chk_no_profile")),
         sec("chk_h_assort", tbl(tb$assort)), sec("chk_h_manual", tbl(tb$manual)), lim))
-    degree <- sec("chk_h_degree", tbl(tb$keyfig), div(class = "note-muted", tb$left_out), plotOutput("chk_fig_degree", height = "300px", width = "900px"),
+    degree <- sec("chk_h_degree", tbl(tb$keyfig), plotOutput("chk_fig_degree", height = "300px", width = "900px"),
                   h6(L("chk_stem_title")), div(class = "note-muted", L("chk_stem_hint")),
                   uiOutput("chk_stem_table_ui"), plotOutput("chk_stem_plot", height = "260px"))
     asm <- sec("chk_h_assort", tbl(tb$assort), p(tb$sawshare))

@@ -7,6 +7,20 @@
 #           (gridExtra is in Suggests).
 # Texts   : every text comes from inputs/i18n/translations.csv (ids chk_*).
 
+#' The notes that change how the results of a bucking_check() should be read, one line each and
+#' aggregated (0.3.8): estimated profiles, products without priced cells, stems left out of the yield
+#' index, a file without quality codes. Shown as a list on the page and in the PDF; the full list of
+#' messages stays in `r$warnings` (the PDF appendix). @return list of list(text, details).
+chk_notes <- function(r, L, num) {
+  if (!isTRUE(r$ok) || isTRUE(r$no_profile)) return(list())
+  n_est <- or_default(r$n_estimated, 0L); n_all <- n_est + or_default(r$n_measured, 0L)
+  un <- r$unimported_products
+  c(if (n_est > 0L) list(list(text = L("chk_note_est", num(n_est), num(n_all)), details = NULL)),
+    if (length(un)) list(list(text = L("chk_note_unpriced", num(length(un))), details = L("chk_note_unpriced_names", paste(un, collapse = ", ")))),
+    if (or_default(r$n_left_out, 0L) > 0L) list(list(text = L("chk_left_out", num(r$n_left_out)), details = NULL)),
+    if (isTRUE(r$no_grades)) list(list(text = L("chk_note_nograde"), details = NULL)))
+}
+
 #' The display tables of a bucking_check() result in language `lang`, as a named list of data.frames
 #' (translated, formatted text) plus the notes shown under them.
 chk_tables <- function(r, lang = "en") {
@@ -52,7 +66,7 @@ chk_tables <- function(r, lang = "en") {
                               num(kf$stems), num(kf$value_rec), num(kf$value_opt), num(kf$value_per_m3_rec), num(kf$value_per_m3_opt), num(kf$lost), pct(kf$yield)),
                    c(L("chk_c_species"), L("chk_k_stems_used"), paste(L("chk_c_recorded"), "–", L("chk_c_value")), paste(L("chk_c_best"), "–", L("chk_c_value")),
                      paste(L("chk_c_recorded"), "–", L("chk_c_value_m3")), paste(L("chk_c_best"), "–", L("chk_c_value_m3")), L("chk_c_lost"), L("chk_c_degree")))
-  out$left_out <- L("chk_left_out", num(r$n_left_out))
+  out$notes <- chk_notes(r, L, num)
   a <- r$assortments
   at <- merge(a$recorded[, c("key", "ProductName", "logs", "price_m3", "value")], a$optimal[, c("key", "logs", "price_m3", "value")],
               by = "key", all = TRUE, suffixes = c("_r", "_o"))
@@ -156,7 +170,7 @@ chk_report_pdf <- function(r, lang, file, file_name, date = Sys.Date()) {
   text(L("chk_title"), size = 17, face = "bold")
   text(L("chk_pdf_file", file_name), size = 10)
   text(L("chk_pdf_date", format(date, "%d.%m.%Y")), size = 10)
-  msgs <- unique(r$warnings); if (length(msgs)) text(vapply(msgs, tr_msg, "", lang = lang), colour = "#8A5A00")
+  for (n in tb$notes) { text(paste0("• ", n$text), colour = "#8A5A00"); if (!is.null(n$details)) text(paste0("   ", n$details), size = 8, colour = "#6A726E") }
   heading("chk_h_file"); table(tb$file)
   if (!is.null(tb$grades)) { heading("chk_h_overview"); table(tb$grades) }
   if (isTRUE(r$no_profile)) {
@@ -164,7 +178,7 @@ chk_report_pdf <- function(r, lang, file, file_name, date = Sys.Date()) {
     heading("chk_h_assort"); table(tb$assort)
     heading("chk_h_manual"); table(tb$manual)
   } else {
-    heading("chk_h_degree"); table(tb$keyfig); text(tb$left_out, colour = "#6A726E")
+    heading("chk_h_degree"); table(tb$keyfig)
     figure(chk_fig_density(r, lang, pdf = TRUE), 70)
     heading("chk_h_assort"); table(tb$assort); text(tb$sawshare, colour = "#6A726E")
     heading("chk_h_length")
@@ -175,5 +189,7 @@ chk_report_pdf <- function(r, lang, file, file_name, date = Sys.Date()) {
     heading("chk_h_top"); table(tb$top)
   }
   heading("chk_h_limits"); text(tb$limits)
+  msgs <- unique(r$warnings)                 # every message of the check, as a technical appendix
+  if (length(msgs)) { heading("chk_pdf_technical"); for (m in msgs) text(tr_msg(m, lang = lang), size = 7, colour = "#6A726E") }
   invisible(file)
 }

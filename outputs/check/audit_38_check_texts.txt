@@ -1,13 +1,13 @@
 ============================================================= 
   Audit: texts of the bucking check (roadmap 8)
-  Run: 2026-11-06 10:37:03.193003
+  Run: 2026-11-23 11:10:29.932499
 ============================================================= 
 
 --- 01. Ids used by app/check.R ---
-  [PASS  ] Check 01: every id app/check.R uses is a ui row with an English and a Norsk text | 75 ids; missing or empty: none
+  [PASS  ] Check 01: every id app/check.R uses is a ui row with an English and a Norsk text | 81 ids; missing or empty: none
 
 --- 02. No unused chk_* text ---
-  [PASS  ] Check 02: every chk_* ui row is used in app/check.R | 77 rows; unused: none
+  [PASS  ] Check 02: every chk_* ui row is used in app/check.R | 83 rows; unused: none
 
 --- 03. Backend messages ---
   [PASS  ] Check 03: every reason the check gives for a stem left out, and the failure message, has a msg row in both languages | 6 messages; without a row: none

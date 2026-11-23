@@ -46,7 +46,7 @@ Bark: the file's bark function (none) is not supported; barkNOR is used for the 
 1 stem dropped: multi-tree stem (no single-stem profile). | 1 stamme utelatt: flertrestamme (ingen enkeltstammeprofil).
 1 stem dropped: no stem profile (StemDiameters). | 1 stamme utelatt: ingen stammeprofil (StemDiameters).
 1 stem dropped: species group LAUV (447) is set to Not used. | 1 stamme utelatt: treslagsgruppen LAUV (447) er satt til Ikke brukt.
-1 stem dropped: profile ends below 1.3 m above ground (no DBH). | 1 stamme utelatt: profilen slutter under 1,3 m over bakken (ingen BHD).
+1 stem dropped: profile ends below 1.3 m above ground (no DBH). | 1 stamme utelatt: profilen slutter under 1,3 m over bakken (ingen DBH).
 Height above ground = position + 20 cm (130 cm - DBHHeight 110 cm) for GRAN. | Høyde over bakken = posisjon + 20 cm (130 cm - DBHHeight 110 cm) for GRAN.
 Height above ground = position + 10 cm (130 cm - DBHHeight 120 cm) for FURU. | Høyde over bakken = posisjon + 10 cm (130 cm - DBHHeight 120 cm) for FURU.
 No stems are left to buck: no stem has a usable profile in a species group set to spruce or pine. | Ingen stammer igjen å aptere: ingen stamme har en brukbar profil i en treslagsgruppe satt til gran eller furu.

@@ -1,6 +1,6 @@
 ============================================================= 
   Audit: bucking check (roadmap 8, tab 5)
-  Run: 2026-11-20 10:11:21.170079
+  Run: 2026-11-23 11:45:18.110348
 ============================================================= 
 
 --- 01. Reader ---
@@ -49,15 +49,18 @@
   [PASS  ] Check 16: stem 9 (one 100 cm waste log on 800 cm of profile) is left out as incomplete (n_incomplete 1, shown as 'left out'); the multi-tree stem is not counted as left out because of deviating data; the reason translates | reason 'recorded logs cover less than half of the measured stem' | incomplete 1 | left out 1
 
 --- 17. The PDF report ---
-  [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 58975/61636
+  [PASS  ] Check 17: The PDF report (A4, cairo) is created in Norsk and English and contains the file name, the title, the date, the translated sections (æøå intact) and the 'left out' line | pages 3/3, bytes 59219/61897
 
 --- 14. NFI stem profiles on demand ---
   [PASS  ] Check 14: no cache in an empty folder; building three plots in chunks (progress called per chunk, ending at the total) gives exactly the profiles of the existing cache (every diameter equal) | rows 5867 vs 5867 | progress 0/43
+
+--- 18. Stems with unpriced recorded logs, and the notes list ---
+  [PASS  ] Check 18: stems whose recorded logs cannot be priced are left out of the yield index (a log in a product that was not imported, or no value at all although a log has no price), a stem with some value and one unpriced log stays and is counted in the control table; the notes list has the left-out line and the no-quality-codes line, one line each; the reason translates | left out a,c | notes: 1 stems are left out of the yield index (incomplete or deviating data, or recorded logs without a price). / The file has no quality codes; the best possible bucking assumes defect-free stems. | unpriced in control 1
 ============================================================= 
   AUDIT FINAL SUMMARY
 ============================================================= 
   result  n
-1   PASS 17
+1   PASS 18
 
   Verdict: PASS 
 ============================================================= 

@@ -336,3 +336,8 @@ details.optbuck-card { margin-bottom: 16px; }
 .tn-reason { color: var(--optbuck-muted); margin-left: 8px; }
 .tn-scope { margin: 16px 0 8px; }
 .asm-type-select { font: inherit; padding: 1px 4px; border: 1px solid var(--optbuck-border, #E6E6E6); border-radius: 4px; background: var(--optbuck-input, #F3F4F3); }
+
+/* Tab 5: the short list of notes that change how the results are read (0.3.8) */
+.chk-notes { margin: 0 0 0.75rem; padding-left: 1.2rem; font-size: 0.88rem; }
+.chk-notes details { margin-top: 0.15rem; color: var(--optbuck-muted); }
+.chk-notes summary { cursor: pointer; }

@@ -2414,7 +2414,7 @@ if (!browser_ok) {
       })
       ok50 <- !nzchar(e50) && !c50$pos_col && identical(c50$run_before, 0L) && identical(c50$box, 0L) &&
         grepl("Sammenlign hogstmaskinens aptering", or_default(c50$intro, ""), fixed = TRUE) && grepl("^Fil: hpr_check_synthetic.hpr", or_default(c50$file_line, "")) && identical(c50$reset, 1L) &&
-        grepl("85,7", or_default(c50$text, ""), fixed = TRUE) && grepl("1 stammer er utelatt på grunn av ufullstendige eller avvikende data.", or_default(c50$text, ""), fixed = TRUE) &&
+        grepl("85,7", or_default(c50$text, ""), fixed = TRUE) && grepl("1 stammer er utelatt fra apteringsgraden (ufullstendige eller avvikende data, eller registrerte stokker uten pris).", or_default(c50$text, ""), fixed = TRUE) &&
         grepl("Kvalitetskoder per sortiment", or_default(c50$text, ""), fixed = TRUE) && !grepl("Stammer som er utelatt eller merket|Kontroll mot hogstmaskinens|Min toppdiameter", or_default(c50$text, "")) &&
         identical(c50$summary, 0L) && identical(c50$dl, 1L) && identical(c50$dl_csv, 0L) && c50$fig && identical(c50$nerr, 0L)
       rec(grep("^Check 50:", browser_checks, value = TRUE), if (ok50) PASS else FAIL,
@@ -2612,7 +2612,7 @@ if (!browser_ok) {
         length(nok_val) == 1L &&
         grepl("^Sortiment\\|Verdi A \\(kr\\)\\|Verdi B \\(kr\\)\\|Verdiendring \\(kr\\)", or_default(c37$products, "")) &&
         grepl("Totalt;", or_default(c37$type_rows, ""), fixed = TRUE) &&
-        grepl("Prøveflate|Tre|Treslag|BHD (cm)|Høyde (m)|Høydekilde|Stokker A", or_default(c37$trees, ""), fixed = TRUE) &&
+        grepl("Prøveflate|Tre|Treslag|DBH (cm)|Høyde (m)|Høydekilde|Stokker A", or_default(c37$trees, ""), fixed = TRUE) &&
         grepl(" av ", or_default(c37$pager, ""), fixed = TRUE) &&
         identical(c37$tally, "Prisdiameterklasse (cm) mot lengdeklasse (dm)") &&
         grepl("Sortiment", or_default(c37$logs, ""), fixed = TRUE) &&

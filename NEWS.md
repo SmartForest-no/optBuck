@@ -1,5 +1,17 @@
 # optBuck (development)
 
+* **"DBH" instead of "BHD"** in every user-facing text (Norwegian UI, help, downloads, PDF): table and figure labels, stem titles, the
+  help text and the file name of the value-by-DBH-class download (`optBuck_verdi_etter_dbh_klasse.csv`).
+* **Shorter tab 1 message for estimated profiles** («Stammeprofilene er estimert fra stokkdiametre og DBH, fordi filen ikke har målte
+  stammeprofiler.»); the yield-index and uncertain-top remarks moved to a help term («Estimerte stammeprofiler»).
+* **Tab 5 notes are a short list** (profiles estimated N of M; N products without priced cells not included, names under "Details"; N stems
+  left out of the yield index; no quality codes), the same list in the PDF. The other messages (e.g. volume top position) are no longer on
+  the screen; the PDF has them as a small technical appendix.
+* **Stems with a recorded log without a price are left out of the yield index** (the log's product was not imported, or its product has no
+  price for the log's length or diameter class). Before, such a log was valued 0, so a stem could get a yield index of 0 % although its
+  recorded and best bucking were nearly the same (for example a 44 dm pulpwood log recorded where the best bucking has 43 dm). The stems
+  are counted in the «left out» line and their logs stay in the control table (`CHECK_UNPRICED_REASON`).
+
 * **Stem grade positions in dm are read correctly.** Eight older John Deere files (TimbermaticH 1.27.17) write `gradeStartPosition` in dm, not cm as the standard says; `read_hpr_stems()` now decides the unit per file (known control-system version, else grade changes against recorded log ends, else cm with a note in tab 1). Tab 5's best possible sawlog share and yield index, and the simulator's grade options, were wrong for such files.
 * Estimated stem profiles follow the species chosen for a group in tab 1: a change re-estimates that group's stems (`hpr_reestimate_profiles()`).
 * **Estimated stem profiles for files with logs but no StemDiameters** (older John Deere files and others): `read_hpr_stems()` estimates the profile of each single-tree stem from DBH and the log diameters (Mid ob, Top ob, Butt ob where present) with `taperNOR::kublin_nor()`, the tree height from a bounded fit of `taperNOR::taperNOR()` at the file's DBH (`R/helpers_hpr_profile.R`). The profile ends 10 cm above the last log. Stems are marked in `stems$estimated`; tab 1 shows how many profiles are measured and how many estimated, tab 5 and the PDF carry the note, the Simulator's `height_source` says "Estimated profile". Validation on 14 files with real profiles: profile RMSE 6.7 mm (spruce 6.4, pine 9.7), yield index about 0.010 lower than with measured profiles. Reverses the decision of 2026-11-16 (Lennart, 2026-11-19).

@@ -64,7 +64,7 @@ test_that("a file without quality codes gets the note, a file with them does not
 })
 
 test_that("the new messages are translated", {
-  for (m in c("Stem profiles are estimated from the log diameters and DBH (taperNOR/TapeR) because the file has no StemDiameters. The yield index is typically about 1 percentage point lower than with measured profiles and suits comparison between files; the top of the stem is uncertain.",
+  for (m in c("Stem profiles are estimated from log diameters and DBH, because the file has no measured stem profiles.",
               "The file has no quality codes; the best possible bucking assumes defect-free stems.",
               "5 of 8 stems have estimated stem profiles."))
     expect_false(identical(tr_msg(m, "no"), m))

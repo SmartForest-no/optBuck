@@ -256,7 +256,7 @@ read_hpr_stems <- function(path, filename = basename(path), defs = NULL,
                     error = function(e) NULL)
       if (!is.null(e) && e$n_estimated > 0L) {
         stems <- e$st$stems; est_in <- e$st$est_in; x$idx <- e$st$idx; x$pos <- e$st$pos; x$d <- e$st$d
-        est_warn <- "Stem profiles are estimated from the log diameters and DBH (taperNOR/TapeR) because the file has no StemDiameters. The yield index is typically about 1 percentage point lower than with measured profiles and suits comparison between files; the top of the stem is uncertain."
+        est_warn <- "Stem profiles are estimated from log diameters and DBH, because the file has no measured stem profiles."
         miss <- sum(stems$kind == "single" & !stems$estimated)
         est_info <- sprintf("Estimated stem profiles for %s of %s stems (%s single-tree stems without usable logs or DBH).",
                             format(e$n_estimated, big.mark = ","), format(nrow(stems), big.mark = ","), format(miss, big.mark = ","))
